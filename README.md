@@ -127,6 +127,47 @@ concurrency 1, 5, and 10. Coding is intentionally excluded. Set
 `"profiles": "all"` in the configuration to make the mixed suite the default,
 and use `"suite_repetitions"` to repeat each deterministic case.
 
+## Built-in test prompts
+
+These are the exact prompts the built-in profiles send to models, together with
+the response shape each case expects:
+
+| Profile | Case | Prompt | Expected response |
+|---|---|---|---|
+| `chat-fast` | `chat-capital` | `Answer in one short sentence: What is the capital of France?` | Any non-empty response |
+| `chat-fast` | `chat-summary` | `Summarize in one sentence: A customer changed their email address and can no longer log in.` | Any non-empty response |
+| `chat-fast` | `chat-rewrite` | `Rewrite politely in one sentence: Send the report today.` | Any non-empty response |
+| `classification` | `class-billing` | `Classify as billing, technical, or account: I was charged twice.` | Exactly `billing` |
+| `classification` | `class-technical` | `Classify as billing, technical, or account: The mobile app crashes on startup.` | Exactly `technical` |
+| `classification` | `class-account` | `Classify as billing, technical, or account: I need to change my login email.` | Exactly `account` |
+| `structured-extraction` | `extract-ticket` | `Extract product and priority as high, medium, or low; map "Urgent" to high: "Urgent: payments are failing in Checkout."` | JSON containing `{"priority":"high","product":"Checkout"}` |
+| `structured-extraction` | `extract-person` | `Extract name and city: "Marta Novak lives in Bratislava."` | JSON containing `{"name":"Marta Novak","city":"Bratislava"}` |
+| `structured-extraction` | `extract-order` | `Extract order_id and quantity: "Order A-104 contains 7 units."` | JSON containing `{"order_id":"A-104","quantity":7}` |
+| `reasoning` | `reason-percent` | `A price of 80 increases by 25%. What is the new price?` | Numeric answer `100` |
+| `reasoning` | `reason-rate` | `A car travels 150 km in 3 hours. What is its average speed in km/h?` | Numeric answer `50` |
+| `reasoning` | `reason-sequence` | `What is the next number: 2, 6, 12, 20, 30?` | Numeric answer `42` |
+| `load` | `load-short` | `Reply with exactly: benchmark` | Exactly `benchmark` |
+
+Use a config-level `profiles` field when you want to run only a specific
+built-in test group. This works with a single profile or a comma-separated
+subset:
+
+```json
+{
+  "profiles": "classification"
+}
+```
+
+```json
+{
+  "profiles": "chat-fast,reasoning"
+}
+```
+
+If you want the mixed suite in a config file, set `"profiles": "all"`. If you
+need exactly one custom request instead of a built-in profile, keep the normal
+top-level `prompt` and skip `profiles` entirely.
+
 The catalog response is snapshotted into each result. Gemini discovery records
 token limits, supported methods, and its thinking flag. OpenRouter records
 pricing, context, modalities, tool/structured-output support, and reasoning

@@ -144,6 +144,40 @@ def test_run_benchmark_reports_live_model_and_request_progress(monkeypatch):
     assert result["total_estimated_cost_usd"] == pytest.approx(0.000042)
 
 
+def test_run_benchmark_can_select_profiles_from_config(monkeypatch):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_bench.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "profiles": "classification",
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 0,
+            "suite_repetitions": 1,
+        }
+    )
+    profile_names = [profile["name"] for profile in result["models"][0]["profiles"]]
+    assert profile_names == ["classification"]
+    assert result["settings"]["profiles"] == ["classification"]
+
+
 def test_report_ends_with_executive_summary_categories():
     def summary(latency, cost, success=1):
         return {

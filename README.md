@@ -145,9 +145,51 @@ python3 -m llm_bench.cli benchmark.json --prompt csv-review
 
 Or use `--interactive`; custom prompt names are listed after the built-in
 profiles. A configuration may retain the legacy top-level `prompt` as its
-default, or contain only `prompts` and require an explicit selection. Long text
-and CSV content can be embedded using JSON newline escapes. Do not place
-confidential data in a configuration that will be committed to source control.
+default, or contain only `prompts` and require an explicit selection.
+
+For short inputs, embed the data directly in JSON using newline escapes. For
+longer text, CSV, JSON, or other fixture data, put the file next to the
+benchmark config or in a subfolder and reference it with `prompt_file`:
+
+```text
+benchmarks/
+  benchmark.json
+  fixtures/
+    orders.csv
+```
+
+```json
+{
+  "prompts": [
+    {
+      "name": "csv-review",
+      "system_prompt": "Return concise JSON with invalid row IDs.",
+      "prompt_file": "fixtures/orders.csv",
+      "request": {
+        "temperature": 0,
+        "max_output_tokens": 500
+      },
+      "validation": {
+        "contains": "A-2"
+      }
+    }
+  ],
+  "models": [
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-mini"
+    }
+  ]
+}
+```
+
+`prompt_file` is resolved relative to the configuration file, must be a
+relative path, and cannot escape the config directory with `..`. Use either
+`prompt` or `prompt_file` for a custom prompt, not both. If you need
+instructions plus data, put both in the referenced file or use `system_prompt`
+for the instructions and the file for the user prompt body. Do not place
+confidential data in a configuration or fixture file that will be committed to
+source control.
 
 ### Example: source text to structured quiz
 

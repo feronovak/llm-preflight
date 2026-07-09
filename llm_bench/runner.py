@@ -19,7 +19,8 @@ from .profiles import evaluate_response, select_profiles
 
 
 def load_config(path: Path) -> dict[str, Any]:
-    config = json.loads(path.read_text())
+    config = json.loads(path.read_text(encoding="utf-8"))
+    config_dir = path.parent.resolve()
     prompts = config.get("prompts", [])
     if "prompt" not in config and not prompts:
         raise ValueError("config requires 'prompt' or 'prompts'")
@@ -31,6 +32,29 @@ def load_config(path: Path) -> dict[str, Any]:
             raise ValueError(f"prompts[{index}] must be an object")
         if not isinstance(prompt.get("name"), str) or not prompt["name"]:
             raise ValueError(f"prompts[{index}] requires 'name'")
+        if "prompt_file" in prompt:
+            if "prompt" in prompt:
+                raise ValueError(
+                    f"prompts[{index}] must use either 'prompt' or 'prompt_file'"
+                )
+            prompt_file = prompt["prompt_file"]
+            if not isinstance(prompt_file, str) or not prompt_file:
+                raise ValueError(f"prompts[{index}] requires a non-empty 'prompt_file'")
+            prompt_path = Path(prompt_file)
+            if prompt_path.is_absolute():
+                raise ValueError(f"prompts[{index}].prompt_file must be relative")
+            resolved_prompt_path = (config_dir / prompt_path).resolve()
+            if config_dir != resolved_prompt_path and config_dir not in (
+                resolved_prompt_path.parents
+            ):
+                raise ValueError(
+                    f"prompts[{index}].prompt_file must stay within the config directory"
+                )
+            if not resolved_prompt_path.is_file():
+                raise ValueError(
+                    f"prompts[{index}].prompt_file does not exist or is not a file"
+                )
+            prompt["prompt"] = resolved_prompt_path.read_text(encoding="utf-8")
         if not isinstance(prompt.get("prompt"), str) or not prompt["prompt"]:
             raise ValueError(f"prompts[{index}] requires a non-empty 'prompt'")
         prompt_names.append(prompt["name"])

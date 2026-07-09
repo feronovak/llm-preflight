@@ -22,6 +22,32 @@ def test_load_config_accepts_named_prompts_without_legacy_prompt(tmp_path):
     assert load_config(path)["prompts"][0]["name"] == "csv-review"
 
 
+def test_load_config_resolves_prompt_file_relative_to_config(tmp_path):
+    data_dir = tmp_path / "fixtures"
+    data_dir.mkdir()
+    (data_dir / "orders.csv").write_text("order_id,total\nA-1,20\nA-2,-5")
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompts":[{"name":"csv-review","prompt_file":"fixtures/orders.csv"}],'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    config = load_config(path)
+
+    assert config["prompts"][0]["prompt"] == "order_id,total\nA-1,20\nA-2,-5"
+
+
+def test_load_config_rejects_prompt_file_path_traversal(tmp_path):
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompts":[{"name":"csv-review","prompt_file":"../orders.csv"}],'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    with pytest.raises(ValueError, match="must stay within the config directory"):
+        load_config(path)
+
+
 def test_select_custom_prompt_applies_named_request_and_validation():
     config = {
         "prompts": [

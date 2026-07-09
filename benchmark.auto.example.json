@@ -1,0 +1,59 @@
+{
+  "name": "automatic-new-model-watch",
+  "prompt": "Summarize the following ticket in one sentence: The customer cannot log in after changing their email address.",
+  "repetitions": 5,
+  "warmups": 1,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "request": {
+    "temperature": 0,
+    "max_output_tokens": 128
+  },
+  "validation": {
+    "regex": "\\S+"
+  },
+  "discovery": [
+    {
+      "provider": "xai",
+      "include": "^grok-4\\.3$",
+      "limit": 1
+    },
+    {
+      "provider": "openrouter",
+      "include": "^qwen/",
+      "sort": "newest",
+      "output_modalities": "text",
+      "limit": 1
+    },
+    {
+      "provider": "openrouter",
+      "include": "^minimax/",
+      "sort": "newest",
+      "output_modalities": "text",
+      "limit": 1
+    },
+    {
+      "provider": "openrouter",
+      "include": "^deepseek/",
+      "sort": "newest",
+      "output_modalities": "text",
+      "limit": 1
+    },
+    {
+      "provider": "gemini",
+      "include": "^(gemini-3\\.5-flash|gemini-3\\.1-pro-preview)$",
+      "exclude": "(embedding|image|audio|tts)",
+      "limit": 20
+    },
+    {
+      "provider": "anthropic",
+      "limit": 3
+    },
+    {
+      "provider": "openai",
+      "include": "^(gpt-5\\.5|gpt-5\\.4-(mini|nano)|gpt-4\\.1(-mini|-nano)?)$",
+      "exclude": "(audio|realtime|transcribe|tts|image|search|codex)",
+      "limit": 30
+    }
+  ]
+}

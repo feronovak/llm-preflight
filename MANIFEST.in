@@ -1,0 +1,11 @@
+include .env.example
+include AGENTS.md
+include CONTRIBUTING.md
+include LICENSE
+include Makefile
+include README.md
+include SECURITY.md
+include benchmark.auto.example.json
+include benchmark.example.json
+recursive-include .github *.yml
+recursive-include tests *.py

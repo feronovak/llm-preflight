@@ -1,0 +1,309 @@
+from __future__ import annotations
+
+import json
+import os
+import time
+import urllib.error
+import urllib.request
+from abc import ABC, abstractmethod
+from typing import Any
+
+from .security import require_http_url
+
+TokenUsage = dict[str, int | None]
+
+
+PROVIDER_DEFAULTS = {
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "max_tokens_parameter": "max_completion_tokens",
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env": "OPENROUTER_API_KEY",
+    },
+    "xai": {
+        "base_url": "https://api.x.ai/v1",
+        "api_key_env": "XAI_API_KEY",
+    },
+    "anthropic": {
+        "base_url": "https://api.anthropic.com/v1",
+        "api_key_env": "ANTHROPIC_API_KEY",
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "api_key_env": "GEMINI_API_KEY",
+    },
+}
+
+
+def _supports_temperature(model: dict[str, Any]) -> bool:
+    provider = model.get("provider")
+    model_id = model["model"]
+    if provider == "openai":
+        return not (model_id == "gpt-5.5" or model_id.startswith("gpt-5.5-"))
+    if provider == "anthropic":
+        return model_id not in {
+            "claude-sonnet-5",
+            "claude-fable-5",
+            "claude-opus-4-8",
+        }
+    return True
+
+
+class ProviderClient(ABC):
+    """Provider adapter contract.
+
+    New providers only need to define endpoint/auth, request translation, and
+    streamed event translation. The runner and metrics remain provider-neutral.
+    """
+
+    def __init__(self, model: dict[str, Any], timeout: float):
+        self.model = model
+        self.timeout = timeout
+
+    @abstractmethod
+    def endpoint(self) -> str:
+        pass
+
+    @abstractmethod
+    def headers(self, api_key: str | None) -> dict[str, str]:
+        pass
+
+    @abstractmethod
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        """Return a text delta and any input/output token usage."""
+
+    def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
+        started = time.perf_counter()
+        key_env = self.model.get("api_key_env")
+        api_key = os.environ.get(key_env) if key_env else None
+        if key_env and not api_key:
+            return self._failure(
+                started, f"environment variable {key_env!r} is not set"
+            )
+
+        request = urllib.request.Request(
+            self.endpoint(),
+            data=json.dumps(self.body(prompt, request_options)).encode(),
+            headers={
+                "Content-Type": "application/json",
+                **self.headers(api_key),
+                **self.model.get("headers", {}),
+            },
+            method="POST",
+        )
+        first_token_at: float | None = None
+        content: list[str] = []
+        usage: dict[str, int] = {}
+        try:
+            with urllib.request.urlopen(  # nosec B310
+                request, timeout=self.timeout
+            ) as response:
+                for raw_line in response:
+                    line = raw_line.decode("utf-8", errors="replace").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if not payload or payload == "[DONE]":
+                        continue
+                    text, event_usage = self.parse_event(json.loads(payload))
+                    usage.update(
+                        {
+                            key: value
+                            for key, value in event_usage.items()
+                            if value is not None
+                        }
+                    )
+                    if text:
+                        if first_token_at is None:
+                            first_token_at = time.perf_counter()
+                        content.append(text)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read(2000).decode("utf-8", errors="replace")
+            return self._failure(started, f"HTTP {exc.code}: {detail}")
+        except (OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+            return self._failure(started, str(exc))
+
+        finished = time.perf_counter()
+        output_tokens = usage.get("output_tokens")
+        generation_seconds = finished - first_token_at if first_token_at else None
+        throughput = (
+            output_tokens / generation_seconds
+            if output_tokens is not None and generation_seconds
+            else None
+        )
+        return {
+            "ok": True,
+            "latency_seconds": finished - started,
+            "ttft_seconds": first_token_at - started if first_token_at else None,
+            "output_tokens_per_second": throughput,
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": output_tokens,
+            "response_chars": sum(map(len, content)),
+            "response": "".join(content),
+            "error": None,
+        }
+
+    @staticmethod
+    def _failure(started: float, error: str) -> dict[str, Any]:
+        return {
+            "ok": False,
+            "latency_seconds": time.perf_counter() - started,
+            "ttft_seconds": None,
+            "output_tokens_per_second": None,
+            "input_tokens": None,
+            "output_tokens": None,
+            "response_chars": 0,
+            "response": "",
+            "error": error,
+        }
+
+
+class OpenAICompatibleClient(ProviderClient):
+    def endpoint(self) -> str:
+        return self.model["base_url"].rstrip("/") + "/chat/completions"
+
+    def headers(self, api_key: str | None) -> dict[str, str]:
+        return {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        messages = []
+        if options.get("system_prompt"):
+            messages.append({"role": "system", "content": options["system_prompt"]})
+        messages.append({"role": "user", "content": prompt})
+        body: dict[str, Any] = {
+            "model": self.model["model"],
+            "messages": messages,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if "temperature" in options and _supports_temperature(self.model):
+            body["temperature"] = options["temperature"]
+        limit = options.get("max_output_tokens", options.get("max_tokens"))
+        if limit is not None:
+            parameter = self.model.get("max_tokens_parameter", "max_tokens")
+            body[parameter] = limit
+        body.update(options.get("provider_options", {}))
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        usage = event.get("usage") or {}
+        normalized = {
+            "input_tokens": usage.get("prompt_tokens"),
+            "output_tokens": usage.get("completion_tokens"),
+        }
+        choices = event.get("choices") or []
+        text = (choices[0].get("delta") or {}).get("content") if choices else None
+        return text, normalized
+
+
+class AnthropicClient(ProviderClient):
+    def endpoint(self) -> str:
+        return self.model["base_url"].rstrip("/") + "/messages"
+
+    def headers(self, api_key: str | None) -> dict[str, str]:
+        return {
+            "x-api-key": api_key or "",
+            "anthropic-version": self.model.get("api_version", "2023-06-01"),
+        }
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "model": self.model["model"],
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+            "max_tokens": options.get(
+                "max_output_tokens", options.get("max_tokens", 256)
+            ),
+        }
+        if "temperature" in options and _supports_temperature(self.model):
+            body["temperature"] = options["temperature"]
+        if options.get("system_prompt"):
+            body["system"] = options["system_prompt"]
+        body.update(options.get("provider_options", {}))
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        usage = event.get("usage") or (event.get("message") or {}).get("usage") or {}
+        normalized = {
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+        }
+        delta = event.get("delta") or {}
+        return delta.get("text"), normalized
+
+
+class GeminiClient(ProviderClient):
+    def endpoint(self) -> str:
+        model = self.model["model"]
+        return (
+            self.model["base_url"].rstrip("/")
+            + f"/models/{model}:streamGenerateContent?alt=sse"
+        )
+
+    def headers(self, api_key: str | None) -> dict[str, str]:
+        return {"x-goog-api-key": api_key or ""}
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {},
+        }
+        generation = body["generationConfig"]
+        if "temperature" in options:
+            generation["temperature"] = options["temperature"]
+        limit = options.get("max_output_tokens", options.get("max_tokens"))
+        if limit is not None:
+            generation["maxOutputTokens"] = limit
+        if options.get("system_prompt"):
+            body["systemInstruction"] = {"parts": [{"text": options["system_prompt"]}]}
+        body.update(options.get("provider_options", {}))
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        usage = event.get("usageMetadata") or {}
+        normalized = {
+            "input_tokens": usage.get("promptTokenCount"),
+            "output_tokens": usage.get("candidatesTokenCount"),
+        }
+        candidates = event.get("candidates") or []
+        parts = (
+            ((candidates[0].get("content") or {}).get("parts") or [])
+            if candidates
+            else []
+        )
+        text = "".join(part.get("text", "") for part in parts) or None
+        return text, normalized
+
+
+def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
+    provider = model.get("provider", "openai_compatible")
+    defaults = PROVIDER_DEFAULTS.get(provider, {})
+    resolved = {**defaults, **model}
+    if "base_url" not in resolved:
+        raise ValueError(
+            f"model {model.get('name', model.get('model'))!r} requires base_url "
+            f"for provider {provider!r}"
+        )
+    require_http_url(resolved["base_url"])
+    adapters: dict[str, Any] = {
+        "openai": OpenAICompatibleClient,
+        "openrouter": OpenAICompatibleClient,
+        "xai": OpenAICompatibleClient,
+        "openai_compatible": OpenAICompatibleClient,
+        "anthropic": AnthropicClient,
+        "gemini": GeminiClient,
+    }
+    try:
+        adapter = adapters[provider]
+    except KeyError as exc:
+        raise ValueError(
+            f"unsupported provider {provider!r}; choose {', '.join(sorted(adapters))}"
+        ) from exc
+    return adapter(resolved, timeout)

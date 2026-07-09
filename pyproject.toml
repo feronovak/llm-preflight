@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-speed-bench"
+version = "0.1.0"
+description = "Repeatable speed benchmarks across configurable LLM providers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["llm", "benchmark", "latency", "openai", "anthropic", "gemini"]
+dependencies = []
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Benchmark",
+]
+
+[project.optional-dependencies]
+dev = ["coverage>=7", "pytest>=7", "ruff>=0.15"]
+audit = ["bandit>=1.9", "detect-secrets>=1.5", "mypy>=1.19"]
+
+[project.scripts]
+llm-bench = "llm_bench.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["llm_bench*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+branch = true
+source = ["llm_bench"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

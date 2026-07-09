@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+build/
+dist/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+benchmark.json
+
+# Generated benchmark data and local diagnostics
+results/
+*.log
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*~

@@ -1,0 +1,63 @@
+{
+  "name": "cross-provider-customer-support",
+  "prompt": "Summarize the following ticket in one sentence: The customer cannot log in after changing their email address.",
+  "repetitions": 10,
+  "warmups": 1,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "save_responses": false,
+  "request": {
+    "system_prompt": "Be concise and factual.",
+    "temperature": 0,
+    "max_output_tokens": 128
+  },
+  "validation": {
+    "regex": "\\S+"
+  },
+  "models": [
+    {
+      "name": "openai-model",
+      "provider": "openai",
+      "model": "replace-with-openai-model-id",
+      "input_cost_per_million": 0,
+      "output_cost_per_million": 0
+    },
+    {
+      "name": "anthropic-model",
+      "provider": "anthropic",
+      "model": "replace-with-anthropic-model-id",
+      "input_cost_per_million": 0,
+      "output_cost_per_million": 0
+    },
+    {
+      "name": "gemini-model",
+      "provider": "gemini",
+      "model": "replace-with-gemini-model-id",
+      "input_cost_per_million": 0,
+      "output_cost_per_million": 0
+    },
+    {
+      "name": "model-through-openrouter",
+      "provider": "openrouter",
+      "model": "replace-with-openrouter-model-id",
+      "headers": {
+        "HTTP-Referer": "https://your-app.example",
+        "X-OpenRouter-Title": "LLM Speed Bench"
+      },
+      "input_cost_per_million": 0,
+      "output_cost_per_million": 0
+    },
+    {
+      "name": "grok-through-xai",
+      "provider": "xai",
+      "model": "grok-4.3"
+    },
+    {
+      "name": "local-or-other-compatible-model",
+      "provider": "openai_compatible",
+      "model": "replace-with-model-id",
+      "base_url": "http://localhost:11434/v1",
+      "api_key_env": null
+    }
+  ]
+}

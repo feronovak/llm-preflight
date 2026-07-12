@@ -30,6 +30,24 @@ def test_gpt_5_5_omits_unsupported_temperature():
     assert older.body("hello", {"temperature": 0})["temperature"] == 0
 
 
+def test_model_can_explicitly_override_temperature_support():
+    unsupported = create_client(
+        {
+            "provider": "openai",
+            "model": "custom-no-temp",
+            "capabilities": {"temperature": False},
+        },
+        10,
+    )
+    assert "temperature" not in unsupported.body("hello", {"temperature": 0.5})
+
+    supported = create_client(
+        {"provider": "openai", "model": "gpt-5.5", "supports_temperature": True},
+        10,
+    )
+    assert supported.body("hello", {"temperature": 0.5})["temperature"] == 0.5
+
+
 def test_openrouter_uses_compatible_adapter():
     client = create_client({"provider": "openrouter", "model": "vendor/model"}, 10)
     assert isinstance(client, OpenAICompatibleClient)
@@ -37,6 +55,44 @@ def test_openrouter_uses_compatible_adapter():
     body = client.body("hello", {"max_output_tokens": 1})
     assert body["max_tokens"] == 1
     assert "max_completion_tokens" not in body
+
+
+def test_openrouter_applies_provider_specific_options():
+    client = create_client({"provider": "openrouter", "model": "vendor/model"}, 10)
+    body = client.body(
+        "hello",
+        {
+            "provider_options": {
+                "gemini": {
+                    "generationConfig": {"responseMimeType": "application/json"}
+                },
+                "openrouter": {
+                    "response_format": {"type": "json_object"},
+                    "include_reasoning": False,
+                    "reasoning": {"enabled": False},
+                },
+            }
+        },
+    )
+
+    assert body["response_format"] == {"type": "json_object"}
+    assert body["include_reasoning"] is False
+    assert body["reasoning"] == {"enabled": False}
+    assert "gemini" not in body
+
+
+def test_compatible_client_ignores_other_provider_options():
+    client = create_client({"provider": "openai", "model": "model-a"}, 10)
+    body = client.body(
+        "hello",
+        {
+            "provider_options": {
+                "gemini": {"generationConfig": {"responseMimeType": "application/json"}}
+            }
+        },
+    )
+    assert "generationConfig" not in body
+    assert "gemini" not in body
 
 
 def test_xai_uses_native_compatible_api_defaults():
@@ -89,6 +145,60 @@ def test_gemini_request_and_events():
     )
     assert text == "hi"
     assert usage == {"input_tokens": 1, "output_tokens": 2}
+
+
+def test_gemini_merges_provider_specific_generation_config():
+    client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
+    body = client.body(
+        "hello",
+        {
+            "temperature": 0,
+            "max_output_tokens": 42,
+            "provider_options": {
+                "gemini": {
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "thinkingConfig": {
+                            "includeThoughts": False,
+                        },
+                    }
+                }
+            },
+        },
+    )
+
+    assert body["generationConfig"] == {
+        "temperature": 0,
+        "maxOutputTokens": 42,
+        "responseMimeType": "application/json",
+        "thinkingConfig": {"includeThoughts": False},
+    }
+
+
+def test_gemini_parser_ignores_thought_parts():
+    client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
+
+    text, usage = client.parse_event(
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {"text": "Draft: I should make JSON.", "thought": True},
+                            {"text": '{"questions":[]}'},
+                        ]
+                    }
+                }
+            ],
+            "usageMetadata": {
+                "promptTokenCount": 1,
+                "candidatesTokenCount": 8,
+            },
+        }
+    )
+
+    assert text == '{"questions":[]}'
+    assert usage == {"input_tokens": 1, "output_tokens": 8}
 
 
 def test_custom_compatible_provider():

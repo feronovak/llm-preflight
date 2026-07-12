@@ -35,10 +35,19 @@ PROVIDER_DEFAULTS = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
         "api_key_env": "GEMINI_API_KEY",
     },
+    "mock": {
+        "base_url": "https://mock.local/v1",
+    },
 }
 
 
 def _supports_temperature(model: dict[str, Any]) -> bool:
+    explicit = model.get("supports_temperature")
+    if explicit is not None:
+        return bool(explicit)
+    capabilities = model.get("capabilities", {})
+    if isinstance(capabilities, dict) and "temperature" in capabilities:
+        return bool(capabilities["temperature"])
     provider = model.get("provider")
     model_id = model["model"]
     if provider == "openai":
@@ -50,6 +59,18 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             "claude-opus-4-8",
         }
     return True
+
+
+def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
+    configured = options.get("provider_options", {})
+    if not isinstance(configured, dict):
+        return {}
+    provider_keys = set(PROVIDER_DEFAULTS) | {"all"}
+    if any(key in provider_keys for key in configured):
+        merged = dict(configured.get("all", {}))
+        merged.update(configured.get(provider, {}))
+        return merged
+    return dict(configured)
 
 
 class ProviderClient(ABC):
@@ -189,7 +210,9 @@ class OpenAICompatibleClient(ProviderClient):
         if limit is not None:
             parameter = self.model.get("max_tokens_parameter", "max_tokens")
             body[parameter] = limit
-        body.update(options.get("provider_options", {}))
+        body.update(
+            _provider_options(options, self.model.get("provider", "openai_compatible"))
+        )
         return body
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
@@ -226,7 +249,7 @@ class AnthropicClient(ProviderClient):
             body["temperature"] = options["temperature"]
         if options.get("system_prompt"):
             body["system"] = options["system_prompt"]
-        body.update(options.get("provider_options", {}))
+        body.update(_provider_options(options, "anthropic"))
         return body
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
@@ -263,7 +286,10 @@ class GeminiClient(ProviderClient):
             generation["maxOutputTokens"] = limit
         if options.get("system_prompt"):
             body["systemInstruction"] = {"parts": [{"text": options["system_prompt"]}]}
-        body.update(options.get("provider_options", {}))
+        provider_options = _provider_options(options, "gemini")
+        provider_generation = provider_options.pop("generationConfig", {})
+        generation.update(provider_generation)
+        body.update(provider_options)
         return body
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
@@ -278,8 +304,44 @@ class GeminiClient(ProviderClient):
             if candidates
             else []
         )
-        text = "".join(part.get("text", "") for part in parts) or None
+        text = (
+            "".join(part.get("text", "") for part in parts if not part.get("thought"))
+            or None
+        )
         return text, normalized
+
+
+class MockClient(ProviderClient):
+    def endpoint(self) -> str:
+        return self.model["base_url"]
+
+    def headers(self, api_key: str | None) -> dict[str, str]:
+        return {}
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        return {"prompt": prompt, **options}
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        return event.get("text"), event.get("usage", {})
+
+    def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
+        response = str(
+            self.model.get("response", request_options.get("response", "ok"))
+        )
+        input_tokens = max(1, len(prompt.split()))
+        output_tokens = max(1, len(response.split()))
+        return {
+            "ok": True,
+            "latency_seconds": float(self.model.get("latency_seconds", 0.001)),
+            "ttft_seconds": float(self.model.get("ttft_seconds", 0.001)),
+            "output_tokens_per_second": output_tokens
+            / float(self.model.get("latency_seconds", 0.001)),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "response_chars": len(response),
+            "response": response,
+            "error": None,
+        }
 
 
 def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
@@ -299,6 +361,7 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "openai_compatible": OpenAICompatibleClient,
         "anthropic": AnthropicClient,
         "gemini": GeminiClient,
+        "mock": MockClient,
     }
     try:
         adapter = adapters[provider]

@@ -35,5 +35,59 @@ def test_summary_excludes_failed_samples_and_calculates_cost():
     assert result["estimated_cost_usd"] == pytest.approx(0.00014)
 
 
+def test_summary_counts_billable_tokens_for_validation_failures():
+    samples = [
+        {
+            "ok": False,
+            "latency_seconds": 1,
+            "ttft_seconds": 0.1,
+            "output_tokens_per_second": 2,
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "error": "response did not match regex",
+        }
+    ]
+
+    result = summarize(
+        samples, {"input_cost_per_million": 1, "output_cost_per_million": 2}
+    )
+
+    assert result["successful"] == 0
+    assert result["input_tokens"] == 10
+    assert result["output_tokens"] == 5
+    assert result["estimated_cost_usd"] == pytest.approx(0.00002)
+
+
+def test_summary_adds_failure_diagnosis_hints():
+    samples = [
+        {
+            "ok": False,
+            "latency_seconds": 1,
+            "ttft_seconds": 0.1,
+            "output_tokens_per_second": 2,
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "error": "response did not match regex",
+            "response_preview": "No Markdown fences or commentary? Yes, I must output only JSON.",
+        },
+        {
+            "ok": False,
+            "latency_seconds": 1,
+            "ttft_seconds": 0.1,
+            "output_tokens_per_second": 2,
+            "input_tokens": 10,
+            "output_tokens": 0,
+            "error": "unsupported parameter: response_format",
+        },
+    ]
+
+    result = summarize(samples, {})
+
+    assert result["failure_hints"] == [
+        "reasoning or commentary appeared before the expected answer",
+        "provider rejected an unsupported request parameter",
+    ]
+
+
 def test_stats():
     assert stats([1, 3])["mean"] == 2

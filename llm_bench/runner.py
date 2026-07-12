@@ -15,7 +15,71 @@ from typing import Any
 from .catalog import resolve_models
 from .client import create_client
 from .metrics import summarize
+from .presets import expand_presets
 from .profiles import evaluate_response, select_profiles
+from .redaction import redact_secrets
+
+
+def _should_keep_response(config: dict[str, Any], sample: dict[str, Any]) -> bool:
+    setting = config.get("save_responses", False)
+    if setting is True:
+        return True
+    if setting == "failures":
+        return not sample["ok"] or sample.get("valid_output") is False
+    if isinstance(setting, int):
+        return setting > 0
+    return False
+
+
+def model_failed(model: dict[str, Any]) -> bool:
+    return model_has_api_error(model) or model_has_test_failure(model)
+
+
+def model_has_api_error(model: dict[str, Any]) -> bool:
+    profiles = model.get("profiles", [])
+    if profiles:
+        return any(profile["summary"].get("failed", 0) for profile in profiles)
+    return bool(model.get("summary", {}).get("failed", 0))
+
+
+def model_has_test_failure(model: dict[str, Any]) -> bool:
+    profiles = model.get("profiles", [])
+    if profiles:
+        return any(
+            profile["summary"].get("valid_output_rate", 1) < 1 for profile in profiles
+        )
+    return any(
+        sample.get("valid_output") is False for sample in model.get("samples", [])
+    )
+
+
+def result_failed(result: dict[str, Any]) -> bool:
+    return any(model_failed(model) for model in result["models"])
+
+
+def _invalid_output_count(samples: list[dict[str, Any]]) -> int:
+    return sum(sample.get("valid_output") is False for sample in samples)
+
+
+def _should_stop(config: dict[str, Any], model_result: dict[str, Any]) -> bool:
+    stop_on = config.get("stop_on")
+    if config.get("fail_fast") and stop_on is None:
+        stop_on = "any-fail"
+    if stop_on == "api-error":
+        return model_has_api_error(model_result)
+    if stop_on == "test-fail":
+        return model_has_test_failure(model_result)
+    if stop_on == "any-fail":
+        return model_failed(model_result)
+    return False
+
+
+def _add_response_preview(sample: dict[str, Any], limit: int = 240) -> None:
+    response = sample.get("response")
+    if (sample["ok"] and sample.get("valid_output") is not False) or not response:
+        return
+    preview = " ".join(str(response).split())
+    sample["response_preview"] = preview[:limit]
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -62,8 +126,13 @@ def load_config(path: Path) -> dict[str, Any]:
         raise ValueError("custom prompt names must be unique")
     if not config.get("models") and not config.get("discovery"):
         raise ValueError("config requires 'models' or 'discovery'")
+    aliases = config.get("aliases", {})
     for index, model in enumerate(config.get("models", [])):
-        if "model" not in model:
+        if isinstance(model, str):
+            if model not in aliases:
+                raise ValueError(f"models[{index}] references unknown alias {model!r}")
+            continue
+        if not isinstance(model, dict) or "model" not in model:
             raise ValueError(f"models[{index}] requires 'model'")
     return config
 
@@ -89,23 +158,91 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     return selected
 
 
+def _validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
+    if "json_schema" in validation:
+        return {"type": "json_schema", "schema": validation["json_schema"]}
+    if "regex" in validation:
+        return {"type": "regex", "regex": validation["regex"]}
+    if "contains" in validation:
+        return {"type": "contains", "contains": validation["contains"]}
+    return {"type": "nonempty"}
+
+
+def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
+    profile = {
+        "name": prompt["name"],
+        "description": prompt.get("description", "Custom prompt test."),
+        "cases": [
+            {
+                "id": prompt["name"],
+                "prompt": prompt["prompt"],
+                "evaluator": _validation_evaluator(prompt.get("validation", {})),
+            }
+        ],
+    }
+    if "request" in prompt:
+        profile["request"] = dict(prompt["request"])
+    if "presets" in prompt:
+        profile["presets"] = list(prompt["presets"])
+    if prompt.get("system_prompt"):
+        profile["system_prompt"] = prompt["system_prompt"]
+    return profile
+
+
+def select_test_profiles(config: dict[str, Any], selector: str) -> list[dict[str, Any]]:
+    requested = [item.strip() for item in selector.split(",") if item.strip()]
+    builtins_all = select_profiles("all")
+    builtin_names = [profile["name"] for profile in builtins_all]
+    custom_profiles = {
+        prompt["name"]: custom_prompt_profile(prompt)
+        for prompt in config.get("prompts", [])
+    }
+    if requested == ["all"]:
+        return builtins_all
+    unknown = sorted(set(requested) - set(builtin_names) - set(custom_profiles))
+    if unknown:
+        available = ", ".join([*builtin_names, *custom_profiles])
+        raise ValueError(
+            f"unknown profiles: {', '.join(unknown)}; choose all or {available}"
+        )
+    builtins = [profile for profile in builtins_all if profile["name"] in requested]
+    customs = [custom_profiles[name] for name in requested if name in custom_profiles]
+    return [*builtins, *customs]
+
+
 def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
     if not sample["ok"]:
+        sample["valid_output"] = False
+        sample["evaluation_error"] = "request failed"
         return
     response = sample["response"]
+    sample["valid_output"] = True
+    sample["evaluation_error"] = None
     if "contains" in validation and validation["contains"] not in response:
-        sample["ok"] = False
-        sample["error"] = f"response did not contain {validation['contains']!r}"
+        sample["valid_output"] = False
+        sample["evaluation_error"] = (
+            f"response did not contain {validation['contains']!r}"
+        )
     if "regex" in validation and not re.search(validation["regex"], response):
-        sample["ok"] = False
-        sample["error"] = f"response did not match regex {validation['regex']!r}"
+        sample["valid_output"] = False
+        sample["evaluation_error"] = (
+            f"response did not match regex {validation['regex']!r}"
+        )
+    if "json_schema" in validation:
+        evaluation = evaluate_response(
+            response, {"type": "json_schema", "schema": validation["json_schema"]}
+        )
+        if not evaluation["valid"]:
+            sample["valid_output"] = False
+            sample["evaluation_error"] = evaluation["error"]
+    _add_response_preview(sample)
 
 
 def _execute(
     client: Any,
     jobs: list[tuple[dict[str, Any], dict[str, Any], int | None]],
     concurrency: int,
-    save_responses: bool,
+    save_responses: bool | str,
     on_complete: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
 ) -> list[dict[str, Any]]:
     samples: list[dict[str, Any]] = []
@@ -133,7 +270,10 @@ def _execute(
             )
             if level is not None:
                 sample["concurrency"] = level
-            if not save_responses:
+            failed_output = not sample["ok"] or not sample.get("valid_output", True)
+            if save_responses != "failures" and not save_responses:
+                sample.pop("response", None)
+            elif save_responses == "failures" and not failed_output:
                 sample.pop("response", None)
             samples.append(sample)
             if on_complete:
@@ -166,7 +306,12 @@ def _profile_progress_callback(
         return None
 
     def report_case(sample: dict[str, Any], case: dict[str, Any]) -> None:
-        callback(sample, f"{profile_name}/{case['id']}")
+        suffix = (
+            f"@c{sample['concurrency']}"
+            if sample.get("concurrency") is not None
+            else ""
+        )
+        callback(sample, f"{profile_name}/{case['id']}{suffix}")
 
     return report_case
 
@@ -182,12 +327,15 @@ def _run_profiles(
     on_complete: Callable[[dict[str, Any], str], None] | None = None,
 ) -> list[dict[str, Any]]:
     repetitions = int(config.get("suite_repetitions", 1))
-    save_responses = bool(config.get("save_responses", False))
+    save_responses = config.get("save_responses", False)
     results = []
     for profile in profiles:
         progress_callback = _profile_progress_callback(on_complete, profile["name"])
         options = dict(request_options)
-        options.update(profile.get("request", {}))
+        profile_request = profile.get("request", {})
+        if profile.get("presets"):
+            profile_request = expand_presets(profile_request, profile["presets"])
+        options.update(profile_request)
         if profile.get("system_prompt"):
             options["system_prompt"] = profile["system_prompt"]
         for _ in range(warmups):
@@ -264,14 +412,41 @@ def _profile_request_count(profiles: list[dict[str, Any]], repetitions: int) -> 
     )
 
 
+def profile_request_breakdown(
+    profiles: list[dict[str, Any]], repetitions: int
+) -> list[dict[str, Any]]:
+    breakdown = []
+    for profile in profiles:
+        if profile["name"] == "load":
+            levels = [
+                (level, max(repetitions, level))
+                for level in profile["concurrency_levels"]
+            ]
+            breakdown.append(
+                {
+                    "name": profile["name"],
+                    "requests_per_model": sum(count for _, count in levels),
+                    "details": "load levels: "
+                    + ", ".join(f"c{level}={count}" for level, count in levels),
+                }
+            )
+        else:
+            count = len(profile["cases"]) * repetitions
+            breakdown.append(
+                {
+                    "name": profile["name"],
+                    "requests_per_model": count,
+                    "details": f"{len(profile['cases'])} cases x {repetitions} repetitions",
+                }
+            )
+    return breakdown
+
+
 def run_benchmark(
     config: dict[str, Any],
     profile_selector: str | None = None,
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
-    if "prompt" not in config:
-        raise ValueError("select a custom prompt before running the benchmark")
-    prompt = config["prompt"]
     repetitions = int(config.get("repetitions", 5))
     warmups = int(config.get("warmups", 1))
     concurrency = int(config.get("concurrency", 1))
@@ -287,7 +462,12 @@ def run_benchmark(
             if isinstance(configured_profiles, list)
             else str(configured_profiles)
         )
-    profiles = select_profiles(profile_selector) if profile_selector else []
+    profiles = (
+        select_test_profiles(config, profile_selector) if profile_selector else []
+    )
+    if "prompt" not in config and not profiles:
+        raise ValueError("select a custom prompt before running the benchmark")
+    prompt = config.get("prompt", "")
     models_result = []
     models = resolve_models(config)
     if not models:
@@ -328,7 +508,14 @@ def run_benchmark(
                         "input_tokens": sample.get("input_tokens"),
                         "output_tokens": sample.get("output_tokens"),
                         "estimated_cost_usd": _sample_cost(sample, model),
-                        "error": sample.get("error"),
+                        "error": redact_secrets(sample.get("error")),
+                        "valid_output": sample.get("valid_output"),
+                        "evaluation_error": redact_secrets(
+                            sample.get("evaluation_error")
+                        ),
+                        "response_preview": redact_secrets(
+                            sample.get("response_preview")
+                        ),
                     }
                 )
 
@@ -365,7 +552,7 @@ def run_benchmark(
                     sample = future.result()
                     _validate(sample, validation)
                     report_sample(sample, config.get("prompt_name", "config-prompt"))
-                    if not config.get("save_responses", False):
+                    if not _should_keep_response(config, sample):
                         sample.pop("response", None)
                     samples.append(sample)
         model_result = {
@@ -400,8 +587,11 @@ def run_benchmark(
                             "estimated_cost_usd",
                         )
                     },
+                    "invalid_outputs": _invalid_output_count(samples),
                 }
             )
+        if _should_stop(config, model_result):
+            break
 
     costs = [
         cost
@@ -433,6 +623,7 @@ def run_benchmark(
             "python": platform.python_version(),
         },
         "models": models_result,
+        "source_config": redact_secrets(config),
         "total_input_tokens": sum(
             model[summary]["input_tokens"]
             for model in models_result
@@ -447,10 +638,11 @@ def run_benchmark(
             sum(costs) if all(cost is not None for cost in costs) else None
         ),
     }
-    return result
+    return redact_secrets(result)
 
 
 def save_result(result: dict[str, Any], output_dir: Path) -> Path:
+    result = redact_secrets(result)
     output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     output_dir.chmod(0o700)
     stamp = result["timestamp"].replace(":", "").replace("+00:00", "Z")
@@ -458,6 +650,10 @@ def save_result(result: dict[str, Any], output_dir: Path) -> Path:
     path = output_dir / f"{stamp}-{name}-{result['run_id'][:8]}.json"
     _write_private(path, json.dumps(result, indent=2) + "\n")
     _write_private(path.with_suffix(".md"), report(result))
+    _write_private(
+        path.with_suffix(".summary.md"),
+        "\n".join(_executive_summary(result)).strip() + "\n",
+    )
     return path
 
 
@@ -572,6 +768,60 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _failed_tests(model: dict[str, Any]) -> str:
+    failed_profiles = [
+        profile["name"]
+        for profile in model.get("profiles", [])
+        if profile["summary"].get("failed", 0)
+        or profile["summary"].get("valid_output_rate", 1) < 1
+    ]
+    if failed_profiles:
+        return ", ".join(failed_profiles)
+    failure_reasons = model.get("summary", {}).get("failure_reasons", {})
+    if failure_reasons:
+        return ", ".join(failure_reasons)
+    if model.get("summary", {}).get("failed", 0):
+        return "request failed"
+    return "-"
+
+
+def _model_passed(model: dict[str, Any]) -> bool:
+    profiles = model.get("profiles", [])
+    if profiles:
+        return all(
+            profile["summary"].get("failed", 0) == 0
+            and profile["summary"].get("valid_output_rate", 1) == 1
+            for profile in profiles
+        )
+    return model.get("summary", {}).get("failed", 0) == 0
+
+
+def _pass_fail_rows(result: dict[str, Any]) -> list[list[str]]:
+    rows = []
+    for model in result["models"]:
+        passed = _model_passed(model)
+        rows.append(
+            [
+                model.get("name", model.get("model", "unknown")),
+                "PASS" if passed else "FAIL",
+                "-" if passed else _failed_tests(model),
+            ]
+        )
+    return rows
+
+
+def _markdown_pass_fail_dashboard(result: dict[str, Any]) -> list[str]:
+    rows = _pass_fail_rows(result)
+    lines = [
+        "## Pass/fail dashboard",
+        "",
+        "| Model | Result | Failed tests |",
+        "|---|---|---|",
+    ]
+    lines.extend(f"| {row[0]} | {row[1]} | {row[2]} |" for row in rows)
+    return lines
+
+
 def report(result: dict[str, Any]) -> str:
     profile_mode = any("profiles" in model for model in result["models"])
     prompt_label = (
@@ -629,6 +879,7 @@ def report(result: dict[str, Any]) -> str:
             f"| {format_seconds(summary['ttft_seconds']['p50'])} "
             f"| {token_rate_text} | {cost_text} |"
         )
+    lines.extend(["", *_markdown_pass_fail_dashboard(result)])
     lines.extend(_executive_summary(result))
     return "\n".join(lines) + "\n"
 
@@ -739,6 +990,18 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         *([f"Prompt {result['prompt_name']}"] if result.get("prompt_name") else []),
         "",
         *_terminal_table(headers, rows, colors),
+        "",
+        "\x1b[1;36mPass/fail dashboard\x1b[0m" if color else "Pass/fail dashboard",
+        *_terminal_table(
+            ["Model", "Result", "Failed tests"],
+            _pass_fail_rows(result),
+            [
+                "\x1b[32m" if row[1] == "PASS" else "\x1b[31m"
+                for row in _pass_fail_rows(result)
+            ]
+            if color
+            else None,
+        ),
         "",
         "\x1b[1;36mExecutive summary\x1b[0m" if color else "Executive summary",
     ]

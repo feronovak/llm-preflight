@@ -30,18 +30,67 @@ def stats(values: Iterable[float]) -> dict[str, float | None]:
     }
 
 
+def _failure_hints(samples: list[dict[str, Any]]) -> list[str]:
+    hints: list[str] = []
+
+    def add(hint: str) -> None:
+        if hint not in hints:
+            hints.append(hint)
+
+    for sample in samples:
+        if sample["ok"]:
+            continue
+        error = str(sample.get("error") or "").casefold()
+        preview = str(sample.get("response_preview") or "").strip()
+        preview_folded = preview.casefold()
+        output_tokens = sample.get("output_tokens")
+        if preview.startswith("```"):
+            add("response appears to be fenced Markdown instead of raw output")
+        if (
+            "did not match regex" in error or "invalid json" in error or "json" in error
+        ) and (
+            preview_folded.startswith("no markdown")
+            or preview_folded.startswith("note:")
+            or "i must output" in preview_folded
+        ):
+            add("reasoning or commentary appeared before the expected answer")
+        if "unsupported" in error and "parameter" in error:
+            add("provider rejected an unsupported request parameter")
+        if "rate limit" in error or "rate limited" in error:
+            add("provider rate limit or transient throttling occurred")
+        if (
+            output_tokens == 0
+            and sample.get("input_tokens")
+            and not preview
+            and not error
+        ):
+            add("provider returned no visible content after a billable request")
+    return hints
+
+
 def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str, Any]:
     successful = [sample for sample in samples if sample["ok"]]
+    failure_reasons: dict[str, int] = {}
+    for sample in samples:
+        if sample["ok"]:
+            continue
+        reason = sample.get("error") or "unknown error"
+        failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
 
-    def numbers(field: str) -> list[float]:
+    def successful_numbers(field: str) -> list[float]:
         return [
             float(sample[field])
             for sample in successful
             if sample.get(field) is not None
         ]
 
-    input_tokens = sum(numbers("input_tokens"))
-    output_tokens = sum(numbers("output_tokens"))
+    def usage_numbers(field: str) -> list[float]:
+        return [
+            float(sample[field]) for sample in samples if sample.get(field) is not None
+        ]
+
+    input_tokens = sum(usage_numbers("input_tokens"))
+    output_tokens = sum(usage_numbers("output_tokens"))
     input_price = model.get("input_cost_per_million")
     output_price = model.get("output_cost_per_million")
     cost = None
@@ -56,10 +105,14 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
         "successful": len(successful),
         "failed": len(samples) - len(successful),
         "success_rate": len(successful) / len(samples) if samples else 0,
-        "latency_seconds": stats(numbers("latency_seconds")),
-        "ttft_seconds": stats(numbers("ttft_seconds")),
-        "output_tokens_per_second": stats(numbers("output_tokens_per_second")),
+        "latency_seconds": stats(successful_numbers("latency_seconds")),
+        "ttft_seconds": stats(successful_numbers("ttft_seconds")),
+        "output_tokens_per_second": stats(
+            successful_numbers("output_tokens_per_second")
+        ),
         "input_tokens": int(input_tokens),
         "output_tokens": int(output_tokens),
         "estimated_cost_usd": cost,
+        "failure_reasons": failure_reasons,
+        "failure_hints": _failure_hints(samples),
     }

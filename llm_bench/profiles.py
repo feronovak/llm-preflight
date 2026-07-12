@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 
@@ -52,6 +53,7 @@ BUILTIN_PROFILES: list[dict[str, Any]] = [
         "name": "structured-extraction",
         "description": "JSON validity and exact required-field extraction.",
         "system_prompt": "Return only valid JSON with no Markdown formatting.",
+        "presets": ["structured"],
         "request": {"max_output_tokens": 512},
         "cases": [
             {
@@ -90,17 +92,28 @@ BUILTIN_PROFILES: list[dict[str, Any]] = [
         "cases": [
             {
                 "id": "reason-percent",
-                "prompt": "A price of 80 increases by 25%. What is the new price?",
+                "prompt": (
+                    "A price of 80 increases by 25%. What is the new price? "
+                    "Return only the numeric answer. Do not include units, words, "
+                    "or explanation."
+                ),
                 "evaluator": {"type": "numeric", "expected": 100, "tolerance": 0},
             },
             {
                 "id": "reason-rate",
-                "prompt": "A car travels 150 km in 3 hours. What is its average speed in km/h?",
+                "prompt": (
+                    "A car travels 150 km in 3 hours. What is its average speed "
+                    "in km/h? Return only the numeric answer. Do not include units, "
+                    "words, or explanation."
+                ),
                 "evaluator": {"type": "numeric", "expected": 50, "tolerance": 0},
             },
             {
                 "id": "reason-sequence",
-                "prompt": "What is the next number: 2, 6, 12, 20, 30?",
+                "prompt": (
+                    "What is the next number: 2, 6, 12, 20, 30? Return only the "
+                    "numeric answer. Do not include units, words, or explanation."
+                ),
                 "evaluator": {"type": "numeric", "expected": 42, "tolerance": 0},
             },
         ],
@@ -151,6 +164,22 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "valid": valid,
             "error": None if valid else "exact match failed",
         }
+    if evaluator_type == "contains":
+        expected = evaluator["contains"]
+        valid = expected in response
+        return {
+            "score": 1.0 if valid else 0.0,
+            "valid": valid,
+            "error": None if valid else f"response did not contain {expected!r}",
+        }
+    if evaluator_type == "regex":
+        pattern = evaluator["regex"]
+        valid = re.search(pattern, response) is not None
+        return {
+            "score": 1.0 if valid else 0.0,
+            "valid": valid,
+            "error": None if valid else f"response did not match regex {pattern!r}",
+        }
     if evaluator_type == "json_subset":
         try:
             parsed = json.loads(response)
@@ -164,6 +193,18 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "score": 1.0 if valid else 0.0,
             "valid": valid,
             "error": None if valid else "required JSON fields did not match",
+        }
+    if evaluator_type == "json_schema":
+        try:
+            parsed = json.loads(response)
+        except json.JSONDecodeError:
+            return {"score": 0.0, "valid": False, "error": "invalid JSON"}
+        error = _validate_json_schema(parsed, evaluator["schema"])
+        valid = error is None
+        return {
+            "score": 1.0 if valid else 0.0,
+            "valid": valid,
+            "error": error,
         }
     if evaluator_type == "numeric":
         try:
@@ -179,3 +220,51 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "error": None if valid else "numeric answer outside tolerance",
         }
     raise ValueError(f"unknown evaluator type {evaluator_type!r}")
+
+
+def _validate_json_schema(
+    value: Any, schema: dict[str, Any], path: str = ""
+) -> str | None:
+    expected_type = schema.get("type")
+    label = path or "value"
+    if expected_type == "object":
+        if not isinstance(value, dict):
+            return f"{label} must be an object"
+        for key in schema.get("required", []):
+            if key not in value:
+                return f"{key} is required"
+        properties = schema.get("properties", {})
+        for key, child_schema in properties.items():
+            if key in value:
+                child_path = f"{label}.{key}" if path else key
+                error = _validate_json_schema(value[key], child_schema, child_path)
+                if error:
+                    return error
+    elif expected_type == "array":
+        if not isinstance(value, list):
+            return f"{label} must be an array"
+        min_items = schema.get("minItems")
+        if min_items is not None and len(value) < int(min_items):
+            return f"{label} must contain at least {min_items} items"
+        max_items = schema.get("maxItems")
+        if max_items is not None and len(value) > int(max_items):
+            return f"{label} must contain at most {max_items} items"
+        if "items" in schema:
+            for index, item in enumerate(value):
+                error = _validate_json_schema(
+                    item, schema["items"], f"{label}[{index}]"
+                )
+                if error:
+                    return error
+    elif expected_type == "string" and not isinstance(value, str):
+        return f"{label} must be a string"
+    elif expected_type == "number" and not isinstance(value, int | float):
+        return f"{label} must be a number"
+    elif expected_type == "integer" and not isinstance(value, int):
+        return f"{label} must be an integer"
+    elif expected_type == "boolean" and not isinstance(value, bool):
+        return f"{label} must be a boolean"
+    if "enum" in schema and value not in schema["enum"]:
+        allowed = ", ".join(str(item) for item in schema["enum"])
+        return f"{label} must be one of: {allowed}"
+    return None

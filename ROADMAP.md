@@ -89,6 +89,64 @@ trustworthy live results and trustworthy cost data come before richer reporting.
 Each slice should land with focused TDD tests and deterministic provider
 fixtures.
 
+## MoSCoW Priorities
+
+This priority layer governs the detailed backlog below. A feature moves only
+when it preserves the product's narrow promise: trustworthy local model
+preflight, not a general evaluation platform.
+
+### Must Have
+
+- **Pricing refresh and cost integrity:** refreshable prices, one shared price
+  source for budgets and results, and explicit cost-confidence levels.
+- **Retry and load-aware failure integrity:** make retries, throttling, and
+  their latency impact visible rather than misclassifying them as model quality
+  failures.
+- **Unambiguous run safety:** keep request counts, retry-expanded cost bounds,
+  stop modes, and response-retention behavior clear before paid requests run.
+- **Secure, reproducible releases:** retain the verified TestPyPI gate and
+  GitHub Trusted Publishing workflow.
+
+### Should Have
+
+- **Interactive visual upgrades (current):** clearly separated sections,
+  readable milestones, and a stronger final-results view. These improve daily
+  use and first impressions, while safety and measurement semantics remain
+  unchanged.
+- **Production-real smoke packs and common validators:** recommended safe
+  preset, curated prompt packs, and deterministic validation primitives.
+- **First-run configuration UX:** `llm-bench init`, guided provider setup, and
+  stronger provider-specific `doctor` guidance.
+- **Catalog watch workflow:** snapshot, diff, and test only newly discovered
+  models; this is the primary differentiated workflow.
+- **Launch assets and focused OSS outreach:** terminal demo, result screenshot,
+  README topics, and the prepared technical posts.
+
+### Could Have
+
+- **Baseline regression comparisons:** threshold-based quality, latency, and
+  cost changes against a saved run.
+- **CI enhancements:** annotations, compact PR summaries, and templates beyond
+  the current exit-code and budget-enforcement behavior.
+- **HTML and expanded report artifacts:** model-by-test matrix, redacted failed
+  examples, and recommendation summaries after cost data is trustworthy.
+- Additional provider presets and advanced validators.
+
+### Won't Have Yet
+
+- Hosted observability, telemetry collection, shared dashboards, or a public
+  leaderboard.
+- Full RAG evaluation, broad red-teaming, large academic benchmark suites, or
+  a general LLM evaluation platform.
+
+### Recommended Release Order
+
+1. **1.0.2:** interactive visual upgrades, with output regression tests.
+2. **1.0.3:** pricing refresh and cost-integrity guarantees.
+3. **1.1.0:** production smoke packs, common validators, and first-run setup.
+4. **1.2.0:** catalog snapshots, diff, and `watch-new`.
+5. **Later:** baselines, CI annotations, and HTML reporting.
+
 ### 1. Run Plan, Cost, and Failure Semantics
 
 This is the next priority because users must understand what will happen before

@@ -24,6 +24,7 @@ from .features import (
     replay_config,
 )
 from .profiles import BUILTIN_PROFILES
+from .pricing import pricing_freshness_report
 from .redaction import redact_secrets
 from .runner import (
     console_report,
@@ -206,13 +207,15 @@ def _dry_run_plan(
     if profile_selector:
         budget_config["profiles"] = profile_selector
     budget = estimate_budget(budget_config)
+    models = resolve_models(config)
     return {
         "benchmark": config.get("name", "llm-benchmark"),
-        "models": catalog_output(resolve_models(config)),
+        "models": catalog_output(models),
         "tests": _selected_test_names(config, profile_selector),
         "test_breakdown": _test_breakdown(config, profile_selector),
         "requests": budget["requests"],
         "estimated_cost_usd": budget["estimated_cost_usd"],
+        "pricing_warnings": pricing_freshness_report(models)["warnings"],
         "presets": config.get("presets", []),
         "request": redact_secrets(
             config.get("request", {"temperature": 0, "max_output_tokens": 256})
@@ -439,6 +442,11 @@ def main() -> None:
         help="validate config, keys, and model resolution",
     )
     parser.add_argument(
+        "--pricing-check",
+        action="store_true",
+        help="check pricing freshness and unknown prices without benchmarking",
+    )
+    parser.add_argument(
         "--baseline", type=Path, help="compare this run with a previous result"
     )
     parser.add_argument(
@@ -570,6 +578,12 @@ def main() -> None:
                 if args.json
                 else _format_doctor(report_data)
             )
+            if not report_data["ok"]:
+                raise SystemExit(1)
+            return
+        if args.pricing_check:
+            report_data = pricing_freshness_report(resolve_models(config))
+            print(json.dumps(report_data, indent=2))
             if not report_data["ok"]:
                 raise SystemExit(1)
             return

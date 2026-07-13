@@ -74,11 +74,18 @@ def _failure_hints(samples: list[dict[str, Any]]) -> list[str]:
 def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str, Any]:
     successful = [sample for sample in samples if sample["ok"]]
     failure_reasons: dict[str, int] = {}
+    retry_reasons: dict[str, int] = {}
+    failure_categories: dict[str, int] = {}
     for sample in samples:
+        for reason in sample.get("retry_reasons", []):
+            retry_reasons[reason] = retry_reasons.get(reason, 0) + 1
         if sample["ok"]:
             continue
         reason = sample.get("error") or "unknown error"
         failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+        category = sample.get("failure_category")
+        if category:
+            failure_categories[category] = failure_categories.get(category, 0) + 1
 
     def successful_numbers(field: str) -> list[float]:
         return [
@@ -117,5 +124,8 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
         "output_tokens": int(output_tokens),
         "estimated_cost_usd": cost,
         "failure_reasons": failure_reasons,
+        "failure_categories": failure_categories,
+        "retry_count": sum(int(sample.get("retry_count") or 0) for sample in samples),
+        "retry_reasons": retry_reasons,
         "failure_hints": _failure_hints(samples),
     }

@@ -70,12 +70,20 @@ fast, local, cross-provider model validation.
   with an explicit `--env-file PATH`.
 - Saved result artifacts are checked by tests to ensure known fake secrets do
   not leak into JSON or Markdown outputs.
+- Retryable transport/provider failures are classified and retried once by
+  default, with configurable attempts and backoff through `request.retry`.
+- Result summaries include retry counts, retry reasons, and failure categories.
+- `--pricing-check`, `--dry-run`, and `--doctor` surface unknown or stale
+  pricing warnings before live generation requests.
+- Explicit user pricing overrides are marked in `pricing_metadata`; public
+  registry prices retain their `as_of` date.
 
 ## Next Steps
 
 These are the next product slices to implement in order. The order matters:
-trust and clarity come before richer reporting. Each slice should land with
-focused TDD tests and deterministic provider fixtures.
+trustworthy live results and trustworthy cost data come before richer reporting.
+Each slice should land with focused TDD tests and deterministic provider
+fixtures.
 
 ### 1. Run Plan, Cost, and Failure Semantics
 
@@ -110,7 +118,47 @@ the CLI spends money.
 - Add `--no-save` or `--no-report` for CI checks that only need stdout and exit
   code.
 
-### 2. Production-Real Smoke Tests and Custom Prompts
+### 2. Retry Hardening and Load-Aware Failure Classification
+
+This is table-stakes for live API smoke testing. A single provider-side 429 or
+network blip should not silently corrupt p95 latency, flip a model to FAIL, or
+make a model migration look worse than it is.
+
+The first retry/classification slice is shipped. Remaining work:
+
+- Add retry jitter support and tests.
+- Add shell-level output tests for retry summaries in terminal progress and
+  Markdown reports.
+- Make load tests stricter:
+  - label rate-limit-heavy load runs clearly
+  - separate steady-state quality failures from load-induced throttling
+  - do not let retry sleeps inflate normal p95 without being obvious
+
+### 3. Pricing Refresh and Cost Integrity
+
+Cost is a headline feature. Wrong pricing data silently corrupts the product's
+core promise more than an ugly report does.
+
+The first pricing freshness slice is shipped. Remaining work before HTML
+reports:
+
+- Add a pricing refresh workflow:
+
+  ```bash
+  llm-bench pricing-check benchmark.auto.json
+  llm-bench pricing-refresh benchmark.auto.json --write
+  ```
+
+- Compare public registry entries against live catalog prices when providers
+  expose pricing, especially OpenRouter.
+- Add tests proving budget estimates and result costs use the same price source.
+- Add docs for cost confidence levels:
+  - live catalog price
+  - public registry price with `as_of`
+  - explicit user override
+  - unknown price
+
+### 4. Production-Real Smoke Tests and Custom Prompts
 
 The built-ins should feel like production failure modes. Custom prompts should
 be the main value, not an advanced feature.
@@ -144,7 +192,7 @@ be the main value, not an advanced feature.
 - Make failure examples easy to inspect without saving every successful
   response.
 
-### 3. First-Run Configuration UX
+### 5. First-Run Configuration UX
 
 The tool should reach a useful first result in under five minutes.
 
@@ -158,11 +206,9 @@ The tool should reach a useful first result in under five minutes.
   - catalog reachability
   - selected model availability
   - unsupported option warnings
-  - missing pricing warnings
-  - stale public pricing warnings based on `pricing_metadata.as_of`
   - capability hints for unsupported normalized fields such as `temperature`
 
-### 4. Catalog Watch: The Killer Workflow
+### 6. Catalog Watch: The Killer Workflow
 
 Make model discovery a first-class workflow:
 
@@ -185,8 +231,6 @@ Implementation priorities:
   models.
 - Add `watch-new` to run only newly discovered models against selected smoke
   tests.
-- Add a pricing refresh workflow that compares public registry entries against
-  live catalog prices where providers expose them.
 - Add docs for the model-switching workflow:
 
   ```bash
@@ -196,10 +240,11 @@ Implementation priorities:
     --dry-run
   ```
 
-### 5. Reports and Output Artifacts
+### 7. Reports and Output Artifacts
 
-Reports come after safety and run clarity so that richer artifacts do not leak
-secrets or confuse result semantics.
+Reports come after safety, run clarity, retry classification, and pricing
+freshness so that richer artifacts do not leak secrets or amplify misleading
+results.
 
 - Add a single-file HTML report with:
   - model summary table
@@ -223,7 +268,7 @@ secrets or confuse result semantics.
   - cost
   - failure reason
 
-### 6. Baselines and Regression Testing
+### 8. Baselines and Regression Testing
 
 - Support `--baseline latest`.
 - Add threshold syntax:
@@ -242,7 +287,7 @@ secrets or confuse result semantics.
   - model rank changes
 - Store and compare model-by-test regressions, not only model-level summaries.
 
-### 7. CI Mode
+### 9. CI Mode
 
 - Make CI output compact and deterministic.
 - Support GitHub Actions annotations.

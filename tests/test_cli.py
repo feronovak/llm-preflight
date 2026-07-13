@@ -620,6 +620,42 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     assert output["presets"] == ["low-latency"]
     assert output["request"]["max_output_tokens"] == 256
     assert output["stop_on"] == "none"
+    assert output["pricing_warnings"] == []
+
+
+def test_main_dry_run_includes_pricing_warnings(monkeypatch, tmp_path, capsys):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","models":[{"provider":"openai_compatible",'
+        '"model":"local"}],"warmups":0}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run"])
+
+    cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["pricing_warnings"][0]["message"] == "pricing is unknown"
+
+
+def test_main_pricing_check_exits_nonzero_for_unknown_pricing(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","models":[{"provider":"openai_compatible","model":"local"}]}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--pricing-check"])
+
+    try:
+        cli.main()
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        raise AssertionError("expected pricing check to fail")
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["ok"] is False
+    assert output["warnings"][0]["message"] == "pricing is unknown"
 
 
 def test_main_dry_run_redacts_secrets(monkeypatch, tmp_path, capsys):

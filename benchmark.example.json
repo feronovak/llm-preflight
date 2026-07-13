@@ -9,7 +9,13 @@
   "request": {
     "system_prompt": "Be concise and factual.",
     "temperature": 0,
-    "max_output_tokens": 128
+    "max_output_tokens": 128,
+    "retry": {
+      "max_attempts": 2,
+      "initial_delay_seconds": 0.25,
+      "max_delay_seconds": 4,
+      "backoff_multiplier": 2
+    }
   },
   "validation": {
     "regex": "\\S+"

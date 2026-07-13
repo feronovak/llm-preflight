@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 
@@ -29,7 +30,9 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
         model.get("input_cost_per_million") is not None
         and model.get("output_cost_per_million") is not None
     ):
-        return model
+        if model.get("pricing_metadata"):
+            return model
+        return {**model, "pricing_metadata": {"source": "user override"}}
     key = (model.get("provider", "openai_compatible"), model["model"])
     pricing = PUBLIC_PRICING.get(key)
     if pricing is None:
@@ -44,3 +47,49 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
             "as_of": as_of,
         },
     }
+
+
+def pricing_freshness_report(
+    models: list[dict[str, Any]],
+    today: date | None = None,
+    max_age_days: int = 30,
+) -> dict[str, Any]:
+    current = today or date.today()
+    warnings = []
+    for model in models:
+        provider = model.get("provider", "openai_compatible")
+        name = model["model"]
+        metadata = model.get("pricing_metadata") or {}
+        source = metadata.get("source")
+        if (
+            model.get("input_cost_per_million") is None
+            or model.get("output_cost_per_million") is None
+        ):
+            warnings.append(
+                {
+                    "model": name,
+                    "provider": provider,
+                    "severity": "warning",
+                    "message": "pricing is unknown",
+                    "source": "unknown",
+                    "as_of": None,
+                }
+            )
+            continue
+        as_of = metadata.get("as_of")
+        if source == "public provider pricing" and as_of:
+            age_days = (current - date.fromisoformat(as_of)).days
+            if age_days > max_age_days:
+                warnings.append(
+                    {
+                        "model": name,
+                        "provider": provider,
+                        "severity": "warning",
+                        "message": (
+                            f"public provider pricing is stale by {age_days} days"
+                        ),
+                        "source": source,
+                        "as_of": as_of,
+                    }
+                )
+    return {"ok": not warnings, "warnings": warnings}

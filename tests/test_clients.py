@@ -284,3 +284,129 @@ def test_client_reports_missing_key_and_http_error(monkeypatch):
     sample = client.run("hello", {})
     assert sample["ok"] is False
     assert sample["error"] == 'HTTP 429: {"error":"rate limited"}'
+
+
+def test_client_retries_retryable_http_error_and_records_attempts(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"choices":[{"delta":{"content":"ok"}}]}\n',
+                    b'data: {"choices":[],"usage":{"prompt_tokens":2,"completion_tokens":1}}\n',
+                    b"data: [DONE]\n",
+                ]
+            )
+
+    calls = 0
+
+    def flaky_urlopen(request, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise urllib.error.HTTPError(
+                request.full_url,
+                429,
+                "rate limited",
+                {},
+                io.BytesIO(b'{"error":"rate limited"}'),
+            )
+        return FakeResponse()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", flaky_urlopen)
+    monkeypatch.setattr("time.sleep", lambda seconds: None)
+
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello",
+        {
+            "retry": {
+                "max_attempts": 2,
+                "initial_delay_seconds": 0,
+                "jitter": False,
+            }
+        },
+    )
+
+    assert sample["ok"] is True
+    assert sample["response"] == "ok"
+    assert sample["attempts"] == 2
+    assert sample["retry_count"] == 1
+    assert sample["retry_reasons"] == ["rate_limit"]
+
+
+def test_client_retries_rate_limit_once_by_default(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"choices":[{"delta":{"content":"ok"}}]}\n',
+                    b"data: [DONE]\n",
+                ]
+            )
+
+    calls = 0
+
+    def flaky_urlopen(request, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise urllib.error.HTTPError(
+                request.full_url,
+                429,
+                "rate limited",
+                {},
+                io.BytesIO(b'{"error":"rate limited"}'),
+            )
+        return FakeResponse()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", flaky_urlopen)
+    monkeypatch.setattr("time.sleep", lambda seconds: None)
+
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello", {}
+    )
+
+    assert calls == 2
+    assert sample["ok"] is True
+    assert sample["retry_reasons"] == ["rate_limit"]
+
+
+def test_client_does_not_retry_non_retryable_http_error(monkeypatch):
+    calls = 0
+
+    def bad_request(request, timeout):
+        nonlocal calls
+        calls += 1
+        raise urllib.error.HTTPError(
+            request.full_url,
+            400,
+            "bad request",
+            {},
+            io.BytesIO(b'{"error":"unsupported parameter"}'),
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", bad_request)
+
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello", {"retry": {"max_attempts": 3, "initial_delay_seconds": 0}}
+    )
+
+    assert calls == 1
+    assert sample["ok"] is False
+    assert sample["attempts"] == 1
+    assert sample["retry_count"] == 0
+    assert sample["failure_category"] == "unsupported_parameter"

@@ -375,8 +375,17 @@ python3 -m llm_bench.cli benchmark.json --tests source-to-quiz --dry-run
 ```
 
 The dry run prints resolved models, selected tests, request count, estimated
-cost when pricing is available, active presets, request options, and response
-retention behavior.
+cost when pricing is available, pricing freshness warnings, active presets,
+request options, and response retention behavior.
+
+Check only pricing confidence without generation requests:
+
+```bash
+python3 -m llm_bench.cli benchmark.json --pricing-check
+```
+
+The command exits non-zero when pricing is unknown or stale according to the
+configured freshness threshold.
 
 Run an ad hoc prompt without creating a config file:
 
@@ -606,6 +615,26 @@ validation, metrics, and output format need no changes.
   responses.
 - Treat provider token counts as authoritative; character-based approximations
   are deliberately not used.
+- Retryable API failures such as rate limits, selected 5xx responses, temporary
+  network failures, and timeouts retry once by default. Set `request.retry` to
+  control attempts and backoff:
+
+```json
+{
+  "request": {
+    "retry": {
+      "max_attempts": 3,
+      "initial_delay_seconds": 0.25,
+      "max_delay_seconds": 4,
+      "backoff_multiplier": 2
+    }
+  }
+}
+```
+
+Retries are recorded in saved JSON summaries as retry counts, retry reasons,
+and final failure categories. They are meant to protect smoke-test reliability,
+not to hide billable provider failures.
 
 ## Pricing
 
@@ -619,8 +648,10 @@ configuration override the registry.
 Estimated spend includes measured requests and warmups. It does not include
 provider-specific taxes, volume agreements, data-residency premiums, tool-call
 fees, cache discounts, or other account-specific adjustments.
-Use `--dry-run` after pricing edits to confirm the current request estimate
-before running a live benchmark.
+Use `--dry-run` or `--pricing-check` after pricing edits to confirm the current
+request estimate and pricing freshness before running a live benchmark.
+Saved Markdown reports include pricing warnings when costs are unknown or based
+on stale public registry entries.
 
 ## Security
 

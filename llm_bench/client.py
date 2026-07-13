@@ -73,6 +73,52 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
     return dict(configured)
 
 
+def _retry_config(options: dict[str, Any]) -> dict[str, Any]:
+    configured = options.get("retry", {})
+    if configured is True:
+        configured = {}
+    if not isinstance(configured, dict):
+        configured = {}
+    return {
+        "max_attempts": max(1, int(configured.get("max_attempts", 2))),
+        "initial_delay_seconds": max(
+            0.0, float(configured.get("initial_delay_seconds", 0.25))
+        ),
+        "max_delay_seconds": max(0.0, float(configured.get("max_delay_seconds", 4))),
+        "backoff_multiplier": max(1.0, float(configured.get("backoff_multiplier", 2))),
+        "retry_on": set(
+            configured.get(
+                "retry_on",
+                ["rate_limit", "timeout", "transient_provider", "network"],
+            )
+        ),
+    }
+
+
+def _classify_failure(error: str, status_code: int | None = None) -> str:
+    folded = error.casefold()
+    if "environment variable" in folded or status_code in {401, 403}:
+        return "credentials"
+    if "unsupported" in folded and "parameter" in folded:
+        return "unsupported_parameter"
+    if status_code == 429 or "rate limit" in folded or "rate limited" in folded:
+        return "rate_limit"
+    if status_code == 408 or "timed out" in folded or "timeout" in folded:
+        return "timeout"
+    if status_code is not None and 500 <= status_code <= 599:
+        return "transient_provider"
+    if any(text in folded for text in ("connection reset", "temporarily unavailable")):
+        return "network"
+    return "provider_error" if status_code is not None else "network"
+
+
+def _retry_delay(config: dict[str, Any], retry_index: int) -> float:
+    delay = config["initial_delay_seconds"] * (
+        config["backoff_multiplier"] ** max(0, retry_index - 1)
+    )
+    return min(delay, config["max_delay_seconds"])
+
+
 class ProviderClient(ABC):
     """Provider adapter contract.
 
@@ -106,73 +152,122 @@ class ProviderClient(ABC):
         api_key = os.environ.get(key_env) if key_env else None
         if key_env and not api_key:
             return self._failure(
-                started, f"environment variable {key_env!r} is not set"
+                started,
+                f"environment variable {key_env!r} is not set",
+                attempts=1,
+                retry_reasons=[],
+                failure_category="credentials",
             )
 
-        request = urllib.request.Request(
-            self.endpoint(),
-            data=json.dumps(self.body(prompt, request_options)).encode(),
-            headers={
-                "Content-Type": "application/json",
-                **self.headers(api_key),
-                **self.model.get("headers", {}),
-            },
-            method="POST",
-        )
-        first_token_at: float | None = None
-        content: list[str] = []
-        usage: dict[str, int] = {}
-        try:
-            with urllib.request.urlopen(  # nosec B310
-                request, timeout=self.timeout
-            ) as response:
-                for raw_line in response:
-                    line = raw_line.decode("utf-8", errors="replace").strip()
-                    if not line.startswith("data:"):
-                        continue
-                    payload = line[5:].strip()
-                    if not payload or payload == "[DONE]":
-                        continue
-                    text, event_usage = self.parse_event(json.loads(payload))
-                    usage.update(
-                        {
-                            key: value
-                            for key, value in event_usage.items()
-                            if value is not None
-                        }
-                    )
-                    if text:
-                        if first_token_at is None:
-                            first_token_at = time.perf_counter()
-                        content.append(text)
-        except urllib.error.HTTPError as exc:
-            detail = exc.read(2000).decode("utf-8", errors="replace")
-            return self._failure(started, f"HTTP {exc.code}: {detail}")
-        except (OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
-            return self._failure(started, str(exc))
+        retry = _retry_config(request_options)
+        retry_reasons: list[str] = []
+        last_error = ""
+        last_category = "provider_error"
+        for attempt in range(1, retry["max_attempts"] + 1):
+            request = urllib.request.Request(
+                self.endpoint(),
+                data=json.dumps(self.body(prompt, request_options)).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    **self.headers(api_key),
+                    **self.model.get("headers", {}),
+                },
+                method="POST",
+            )
+            first_token_at: float | None = None
+            content: list[str] = []
+            usage: dict[str, int] = {}
+            try:
+                with urllib.request.urlopen(  # nosec B310
+                    request, timeout=self.timeout
+                ) as response:
+                    for raw_line in response:
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if not line.startswith("data:"):
+                            continue
+                        payload = line[5:].strip()
+                        if not payload or payload == "[DONE]":
+                            continue
+                        text, event_usage = self.parse_event(json.loads(payload))
+                        usage.update(
+                            {
+                                key: value
+                                for key, value in event_usage.items()
+                                if value is not None
+                            }
+                        )
+                        if text:
+                            if first_token_at is None:
+                                first_token_at = time.perf_counter()
+                            content.append(text)
+            except urllib.error.HTTPError as exc:
+                detail = exc.read(2000).decode("utf-8", errors="replace")
+                last_error = f"HTTP {exc.code}: {detail}"
+                last_category = _classify_failure(last_error, exc.code)
+            except (OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+                last_error = str(exc)
+                last_category = _classify_failure(last_error)
+            else:
+                finished = time.perf_counter()
+                output_tokens = usage.get("output_tokens")
+                generation_seconds = (
+                    finished - first_token_at if first_token_at else None
+                )
+                throughput = (
+                    output_tokens / generation_seconds
+                    if output_tokens is not None and generation_seconds
+                    else None
+                )
+                return {
+                    "ok": True,
+                    "latency_seconds": finished - started,
+                    "ttft_seconds": first_token_at - started
+                    if first_token_at
+                    else None,
+                    "output_tokens_per_second": throughput,
+                    "input_tokens": usage.get("input_tokens"),
+                    "output_tokens": output_tokens,
+                    "response_chars": sum(map(len, content)),
+                    "response": "".join(content),
+                    "error": None,
+                    "attempts": attempt,
+                    "retry_count": attempt - 1,
+                    "retry_reasons": retry_reasons,
+                    "failure_category": None,
+                }
 
-        finished = time.perf_counter()
-        output_tokens = usage.get("output_tokens")
-        generation_seconds = finished - first_token_at if first_token_at else None
-        throughput = (
-            output_tokens / generation_seconds
-            if output_tokens is not None and generation_seconds
-            else None
+            if (
+                last_category not in retry["retry_on"]
+                or attempt == retry["max_attempts"]
+            ):
+                return self._failure(
+                    started,
+                    last_error,
+                    attempts=attempt,
+                    retry_reasons=retry_reasons,
+                    failure_category=last_category,
+                )
+            retry_reasons.append(last_category)
+            delay = _retry_delay(retry, attempt)
+            if delay:
+                time.sleep(delay)
+
+        return self._failure(
+            started,
+            last_error,
+            attempts=retry["max_attempts"],
+            retry_reasons=retry_reasons,
+            failure_category=last_category,
         )
-        return {
-            "ok": True,
-            "latency_seconds": finished - started,
-            "ttft_seconds": first_token_at - started if first_token_at else None,
-            "output_tokens_per_second": throughput,
-            "input_tokens": usage.get("input_tokens"),
-            "output_tokens": output_tokens,
-            "response_chars": sum(map(len, content)),
-            "response": "".join(content),
-            "error": None,
-        }
 
     @staticmethod
-    def _failure(started: float, error: str) -> dict[str, Any]:
+    def _failure(
+        started: float,
+        error: str,
+        attempts: int = 1,
+        retry_reasons: list[str] | None = None,
+        failure_category: str | None = None,
+    ) -> dict[str, Any]:
         return {
             "ok": False,
             "latency_seconds": time.perf_counter() - started,
@@ -183,6 +278,10 @@ class ProviderClient(ABC):
             "response_chars": 0,
             "response": "",
             "error": error,
+            "attempts": attempts,
+            "retry_count": max(0, attempts - 1),
+            "retry_reasons": retry_reasons or [],
+            "failure_category": failure_category or _classify_failure(error),
         }
 
 

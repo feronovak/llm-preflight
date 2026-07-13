@@ -873,6 +873,42 @@ def test_report_ends_with_executive_summary_categories():
     )
 
 
+def test_report_includes_pricing_warnings():
+    result = {
+        "benchmark": "pricing",
+        "run_id": "abc",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "prompt_sha256": "1234567890abcdef",
+        "pricing_warnings": [
+            {
+                "provider": "openai_compatible",
+                "model": "local",
+                "message": "pricing is unknown",
+            }
+        ],
+        "models": [
+            {
+                "name": "local",
+                "summary": {
+                    "requests": 1,
+                    "successful": 1,
+                    "failed": 0,
+                    "success_rate": 1,
+                    "latency_seconds": {"mean": 1, "p50": 1, "p95": 1},
+                    "ttft_seconds": {"p50": 0.5},
+                    "output_tokens_per_second": {"p50": 10},
+                    "estimated_cost_usd": None,
+                },
+            }
+        ],
+    }
+
+    rendered = report(result)
+
+    assert "## Pricing warnings" in rendered
+    assert "openai_compatible/local: pricing is unknown" in rendered
+
+
 def test_zero_reliability_model_cannot_rank_as_cheapest():
     result = {
         "benchmark": "failed-cheap",

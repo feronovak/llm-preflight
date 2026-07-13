@@ -16,6 +16,7 @@ from .catalog import resolve_models
 from .client import create_client
 from .metrics import summarize
 from .presets import expand_presets
+from .pricing import pricing_freshness_report
 from .profiles import evaluate_response, select_profiles
 from .redaction import redact_secrets
 
@@ -626,6 +627,7 @@ def run_benchmark(
             "python": platform.python_version(),
         },
         "models": models_result,
+        "pricing_warnings": pricing_freshness_report(models)["warnings"],
         "source_config": redact_secrets(config),
         "total_input_tokens": sum(
             model[summary]["input_tokens"]
@@ -889,6 +891,12 @@ def report(result: dict[str, Any]) -> str:
             f"| {format_seconds(summary['ttft_seconds']['p50'])} "
             f"| {token_rate_text} | {cost_text} |"
         )
+    if result.get("pricing_warnings"):
+        lines.extend(["", "## Pricing warnings", ""])
+        for warning in result["pricing_warnings"]:
+            lines.append(
+                f"- {warning['provider']}/{warning['model']}: {warning['message']}"
+            )
     lines.extend(["", *_markdown_pass_fail_dashboard(result)])
     lines.extend(_executive_summary(result))
     return "\n".join(lines) + "\n"

@@ -58,6 +58,39 @@ def test_summary_counts_billable_tokens_for_validation_failures():
     assert result["estimated_cost_usd"] == pytest.approx(0.00002)
 
 
+def test_summary_records_retry_accounting_and_failure_categories():
+    samples = [
+        {
+            "ok": True,
+            "latency_seconds": 1,
+            "ttft_seconds": 0.1,
+            "output_tokens_per_second": 2,
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "retry_count": 1,
+            "retry_reasons": ["rate_limit"],
+        },
+        {
+            "ok": False,
+            "latency_seconds": 1,
+            "ttft_seconds": None,
+            "output_tokens_per_second": None,
+            "input_tokens": None,
+            "output_tokens": None,
+            "retry_count": 2,
+            "retry_reasons": ["timeout", "timeout"],
+            "failure_category": "timeout",
+            "error": "timed out",
+        },
+    ]
+
+    result = summarize(samples, {})
+
+    assert result["retry_count"] == 3
+    assert result["retry_reasons"] == {"rate_limit": 1, "timeout": 2}
+    assert result["failure_categories"] == {"timeout": 1}
+
+
 def test_summary_adds_failure_diagnosis_hints():
     samples = [
         {

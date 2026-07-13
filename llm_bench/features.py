@@ -8,6 +8,7 @@ from typing import Any
 
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
+from .pricing import pricing_freshness_report
 from .presets import SUPPORTED_PRESETS, expand_presets
 from .runner import _profile_request_count
 
@@ -182,6 +183,15 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
                     "message": "configuration looks runnable",
                 }
             )
+    for warning in pricing_freshness_report(models)["warnings"]:
+        checks.append(
+            {
+                "ok": True,
+                "severity": warning["severity"],
+                "model": warning["model"],
+                "message": warning["message"],
+            }
+        )
     return {
         "ok": all(check["ok"] for check in checks),
         "models": len(models),

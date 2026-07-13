@@ -11,6 +11,11 @@ All notable changes to this project are documented here.
 - Visually separate interactive setup stages and final terminal results,
   quality-gate, and decision sections.
 
+### Fixed
+
+- Exclude models that fail any selected test from fastest, cheapest, and
+  best-value recommendations; list them with their failed test instead.
+
 ## 1.0.1 - 2026-07-13
 
 ### Fixed

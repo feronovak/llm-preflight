@@ -20,8 +20,6 @@ from .pricing import pricing_freshness_report
 from .profiles import evaluate_response, select_profiles
 from .redaction import redact_secrets
 
-MIN_BEST_VALUE_RELIABILITY = 0.8
-
 
 def _should_keep_response(config: dict[str, Any], sample: dict[str, Any]) -> bool:
     setting = config.get("save_responses", False)
@@ -679,14 +677,16 @@ def _ranking_metrics(model: dict[str, Any]) -> dict[str, Any]:
     profiles = model.get("profiles") or []
     if not profiles:
         summary = model["summary"]
+        reliability = summary.get("valid_output_rate", summary.get("success_rate", 0))
+        qualified = reliability == 1 and summary.get("failed", 0) == 0
         return {
             "name": model.get("name", model.get("model", "unknown")),
             "requests": summary.get("requests", 0),
-            "reliability": summary.get(
-                "valid_output_rate", summary.get("success_rate", 0)
-            ),
+            "reliability": reliability,
             "latency": summary.get("latency_seconds", {}).get("mean"),
             "cost": summary.get("estimated_cost_usd"),
+            "qualified": qualified,
+            "failed_tests": [] if qualified else ["config prompt"],
         }
 
     requests = sum(profile["summary"]["requests"] for profile in profiles)
@@ -701,12 +701,23 @@ def _ranking_metrics(model: dict[str, Any]) -> dict[str, Any]:
         for profile in profiles
     )
     costs = [profile["summary"].get("estimated_cost_usd") for profile in profiles]
+    failed_tests = [
+        profile["name"]
+        for profile in profiles
+        if profile["summary"].get("failed", 0)
+        or profile["summary"].get(
+            "valid_output_rate", profile["summary"].get("success_rate", 0)
+        )
+        < 1
+    ]
     return {
         "name": model.get("name", model.get("model", "unknown")),
         "requests": requests,
         "reliability": valid / requests if requests else 0,
         "latency": weighted_latency / requests if requests else None,
         "cost": sum(costs) if all(cost is not None for cost in costs) else None,
+        "qualified": not failed_tests,
+        "failed_tests": failed_tests,
     }
 
 
@@ -715,12 +726,12 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
     timed = [
         item
         for item in metrics
-        if item["latency"] is not None and item["requests"] and item["reliability"] > 0
+        if item["qualified"] and item["latency"] is not None and item["requests"]
     ]
     priced = [
         item
         for item in metrics
-        if item["cost"] is not None and item["requests"] and item["reliability"] > 0
+        if item["qualified"] and item["cost"] is not None and item["requests"]
     ]
     lines = ["", "## Executive summary", ""]
     if timed:
@@ -730,20 +741,17 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
             f"{fastest['latency']:.3f}s mean latency."
         )
     else:
-        lines.append("- Fastest: unavailable; no successful timed requests.")
+        lines.append("- Fastest: unavailable; no model passed every selected test.")
     if priced:
         cheapest = min(priced, key=lambda item: item["cost"])
         lines.append(
             f"- Cheapest: **{cheapest['name']}** — ${cheapest['cost']:.6f} total."
         )
     else:
-        lines.append("- Cheapest: unavailable; no pricing data.")
-    value_candidates = [
-        item
-        for item in priced
-        if item["latency"] is not None
-        and item["reliability"] >= MIN_BEST_VALUE_RELIABILITY
-    ]
+        lines.append(
+            "- Cheapest: unavailable; no priced model passed every selected test."
+        )
+    value_candidates = [item for item in priced if item["latency"] is not None]
     if value_candidates:
         min_latency = min(item["latency"] for item in value_candidates)
         min_cost = min(item["cost"] for item in value_candidates)
@@ -758,9 +766,15 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         )
     else:
         lines.append(
-            "- Best value: unavailable; latency, pricing, and at least "
-            f"{MIN_BEST_VALUE_RELIABILITY:.0%} reliability are required."
+            "- Best value: unavailable; no priced model passed every selected test."
         )
+    excluded = [item for item in metrics if item["requests"] and not item["qualified"]]
+    if excluded:
+        details = "; ".join(
+            f"**{item['name']}** (failed: {', '.join(item['failed_tests'])})"
+            for item in excluded
+        )
+        lines.append(f"- Excluded from recommendations: {details}.")
     total_cost = result.get("total_estimated_cost_usd")
     lines.append(
         "- Total spent: "
@@ -773,8 +787,8 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
     lines.extend(
         [
             "",
-            "Value equally weights valid-output reliability, relative speed, and relative cost "
-            f"among models with at least {MIN_BEST_VALUE_RELIABILITY:.0%} reliability.",
+            "Value equally weights reliability, relative speed, and relative cost "
+            "among models that passed every selected test.",
         ]
     )
     return lines

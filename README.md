@@ -108,11 +108,11 @@ Each run prints an aligned terminal table and writes full JSON plus a Markdown
 report under `results/`. Interactive terminals use color for successful,
 partial, and failed rows. Commit or archive the result files if you want durable
 trend history. The report ends with an executive summary naming the fastest
-model, the cheapest model, and the best value. Value equally weights
-valid-output reliability, relative speed, and relative measured cost among
-models with at least 80% reliable output. Models with zero reliable output are
-excluded from cheapest rankings; partially reliable models are penalized by the
-value score. New result files also record warmup usage and total estimated
+model, the cheapest model, and the best value among models that pass every
+selected test. Models that fail a required test are explicitly excluded from
+recommendations rather than being promoted for speed or cost alone. Value
+equally weights reliability, relative speed, and relative measured cost among
+qualified models. New result files also record warmup usage and total estimated
 spend for the complete run.
 
 See [ROADMAP.md](ROADMAP.md) for the product roadmap and OSS promotion plan.

@@ -864,13 +864,73 @@ def test_report_ends_with_executive_summary_categories():
     rendered = report(result)
     assert "## Executive summary" in rendered
     assert "- Fastest: **fast** — 1.000s mean latency." in rendered
-    assert "- Cheapest: **cheap-unreliable** — $0.000500 total." in rendered
+    assert "- Cheapest: **balanced** — $0.001000 total." in rendered
     assert "- Best value: **balanced**" in rendered
+    assert (
+        "- Excluded from recommendations: **cheap-unreliable** (failed: config prompt)."
+    ) in rendered
     assert "- Total spent: **$0.004500** including warmups." in rendered
     assert rendered.rstrip().endswith(
-        "Value equally weights valid-output reliability, relative speed, and relative cost "
-        "among models with at least 80% reliability."
+        "Value equally weights reliability, relative speed, and relative cost "
+        "among models that passed every selected test."
     )
+
+
+def test_executive_summary_excludes_models_that_fail_any_selected_profile():
+    def summary(latency, cost, reliability):
+        return {
+            "requests": 3,
+            "successful": 3,
+            "failed": 0,
+            "success_rate": 1,
+            "valid_output_rate": reliability,
+            "quality_score": reliability,
+            "latency_seconds": {"mean": latency, "p50": latency, "p95": latency},
+            "ttft_seconds": {"p50": latency},
+            "output_tokens_per_second": {"p50": 10},
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "estimated_cost_usd": cost,
+        }
+
+    result = {
+        "benchmark": "profile-gate",
+        "run_id": "abc",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "prompt_sha256": "1234567890abcdef",
+        "models": [
+            {
+                "name": "fast-cheap-but-failed",
+                "profiles": [
+                    {"name": "chat-fast", "summary": summary(0.5, 0.00001, 1)},
+                    {
+                        "name": "structured-extraction",
+                        "summary": summary(0.5, 0.00001, 2 / 3),
+                    },
+                ],
+            },
+            {
+                "name": "qualified",
+                "profiles": [
+                    {"name": "chat-fast", "summary": summary(1, 0.0001, 1)},
+                    {
+                        "name": "structured-extraction",
+                        "summary": summary(1, 0.0001, 1),
+                    },
+                ],
+            },
+        ],
+    }
+
+    rendered = report(result)
+
+    assert "- Fastest: **qualified** — 1.000s mean latency." in rendered
+    assert "- Cheapest: **qualified** — $0.000200 total." in rendered
+    assert "- Best value: **qualified**" in rendered
+    assert (
+        "- Excluded from recommendations: **fast-cheap-but-failed** "
+        "(failed: structured-extraction)."
+    ) in rendered
 
 
 def test_report_includes_pricing_warnings():

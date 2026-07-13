@@ -764,9 +764,16 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
             f"- Best value: **{best['name']}** — "
             f"{best['value_score']:.0%} composite score."
         )
+        lines.append(
+            f"- Recommended: **{best['name']}** — passed every selected test and "
+            "led the qualified value ranking."
+        )
     else:
         lines.append(
             "- Best value: unavailable; no priced model passed every selected test."
+        )
+        lines.append(
+            "- Recommended: unavailable; no priced model passed every selected test."
         )
     excluded = [item for item in metrics if item["requests"] and not item["qualified"]]
     if excluded:

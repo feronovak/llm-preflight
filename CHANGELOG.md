@@ -10,6 +10,10 @@ All notable changes to this project are documented here.
   without overwriting an existing configuration.
 - Visually separate interactive setup stages and final terminal results,
   quality-gate, and decision sections.
+- Render `--dry-run` as a readable terminal plan by default; retain JSON output
+  with `--json` for automation.
+- State the qualified recommendation explicitly and show the interactive
+  command after `--init` creates a mock configuration.
 
 ### Fixed
 

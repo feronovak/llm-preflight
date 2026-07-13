@@ -390,9 +390,9 @@ Preview the exact run plan without generation requests:
 python3 -m llm_bench.cli benchmark.json --tests source-to-quiz --dry-run
 ```
 
-The dry run prints resolved models, selected tests, request count, estimated
-cost when pricing is available, pricing freshness warnings, active presets,
-request options, and response retention behavior.
+The dry run prints a terminal-friendly plan with resolved models, selected
+tests, request count, retry maximum, estimated cost, stop mode, and response
+retention behavior. Add `--json` for the full machine-readable plan in CI.
 
 Check only pricing confidence without generation requests:
 

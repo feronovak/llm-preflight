@@ -867,6 +867,10 @@ def test_report_ends_with_executive_summary_categories():
     assert "- Cheapest: **balanced** — $0.001000 total." in rendered
     assert "- Best value: **balanced**" in rendered
     assert (
+        "- Recommended: **balanced** — passed every selected test and led the "
+        "qualified value ranking."
+    ) in rendered
+    assert (
         "- Excluded from recommendations: **cheap-unreliable** (failed: config prompt)."
     ) in rendered
     assert "- Total spent: **$0.004500** including warmups." in rendered

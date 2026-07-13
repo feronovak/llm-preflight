@@ -226,6 +226,41 @@ def _dry_run_plan(
     }
 
 
+def _format_dry_run_plan(plan: dict[str, Any]) -> str:
+    models = ", ".join(
+        f"{model.get('provider', 'openai_compatible')}:{model['model']}"
+        for model in plan["models"]
+    )
+    estimated_cost = plan["estimated_cost_usd"]
+    maximum_cost = plan["maximum_estimated_cost_usd"]
+    cost = (
+        "unavailable"
+        if estimated_cost is None
+        else f"${estimated_cost:.6f} nominal"
+        + ("" if maximum_cost is None else f"; up to ${maximum_cost:.6f} with retries")
+    )
+    lines = [
+        "=== RUN PLAN ===",
+        f"Benchmark: {plan['benchmark']}",
+        f"Models: {models}",
+        f"Tests: {', '.join(plan['tests'])}",
+        (
+            f"Requests: {plan['requests']} nominal; up to "
+            f"{plan['possible_requests']} with {plan['retry_max_attempts']} attempts"
+        ),
+        f"Cost: {cost}",
+        f"Stop on: {plan['stop_on']}",
+        f"Saved responses: {plan['save_responses']}",
+    ]
+    if plan["pricing_warnings"]:
+        lines.append("Pricing warnings:")
+        lines.extend(
+            f"- {warning['model']}: {warning['message']}"
+            for warning in plan["pricing_warnings"]
+        )
+    return "\n".join(lines) + "\n"
+
+
 def _budget_config(
     config: dict[str, Any], profile_selector: str | None
 ) -> dict[str, Any]:
@@ -584,6 +619,7 @@ def main() -> None:
             _write_starter_config(args.init)
             print(f"Created {args.init}")
             print(f"Run the no-key demo: llm-bench {args.init} --no-save")
+            print(f"Explore interactively: llm-bench {args.init} --interactive")
             return
         if args.no_env_file and args.env_file:
             parser.error("--no-env-file cannot be combined with --env-file")
@@ -676,7 +712,11 @@ def main() -> None:
                 return
             config, profile_selector = selection
         if args.dry_run:
-            print(json.dumps(_dry_run_plan(config, profile_selector), indent=2))
+            plan = _dry_run_plan(config, profile_selector)
+            print(
+                json.dumps(plan, indent=2) if args.json else _format_dry_run_plan(plan),
+                end="" if not args.json else "\n",
+            )
             return
         check_budget(_budget_config(config, profile_selector))
         use_color = sys.stdout.isatty()

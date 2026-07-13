@@ -303,7 +303,9 @@ def test_main_init_creates_a_no_key_mock_benchmark(monkeypatch, tmp_path, capsys
     ]
     assert config["validation"] == {"exact": "ok"}
     assert config["warmups"] == 0
-    assert "Created" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "Created" in output
+    assert f"Explore interactively: llm-bench {config_path} --interactive" in output
 
 
 def test_main_init_refuses_to_overwrite_a_config(monkeypatch, tmp_path, capsys):
@@ -656,7 +658,7 @@ def test_main_dry_run_prints_resolved_plan_without_running(
         raise AssertionError("dry-run must not run benchmark")
 
     monkeypatch.setattr(cli, "run_benchmark", fail_run)
-    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run"])
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run", "--json"])
 
     cli.main()
 
@@ -682,13 +684,35 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     assert output["pricing_warnings"] == []
 
 
+def test_main_dry_run_prints_human_readable_plan_by_default(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"name":"starter","prompt":"hello","models":[{"provider":"mock",'
+        '"model":"local","response":"ok"}],"warmups":0}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run"])
+
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert "=== RUN PLAN ===" in output
+    assert "Benchmark: starter" in output
+    assert "Models: mock:local" in output
+    assert "Tests: config prompt" in output
+    assert "Requests: 5 nominal; up to 10 with 2 attempts" in output
+    assert "Cost: unavailable" in output
+    assert "Stop on: none" in output
+
+
 def test_main_dry_run_includes_pricing_warnings(monkeypatch, tmp_path, capsys):
     config = tmp_path / "benchmark.json"
     config.write_text(
         '{"prompt":"hello","models":[{"provider":"openai_compatible",'
         '"model":"local"}],"warmups":0}'
     )
-    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run"])
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run", "--json"])
 
     cli.main()
 
@@ -727,7 +751,7 @@ def test_main_dry_run_redacts_secrets(monkeypatch, tmp_path, capsys):
         '"request":{"temperature":0,"metadata_token":"dry-run-redaction-secret"}}'
     )
 
-    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run"])
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--dry-run", "--json"])
 
     cli.main()
 
@@ -868,7 +892,9 @@ def test_main_dry_run_explains_all_tests_load_expansion(monkeypatch, tmp_path, c
         '{"prompt":"hello","models":[{"provider":"openai","model":"fake"}],"warmups":0}'
     )
     monkeypatch.setattr(
-        sys, "argv", ["llm-bench", str(config), "--tests", "all", "--dry-run"]
+        sys,
+        "argv",
+        ["llm-bench", str(config), "--tests", "all", "--dry-run", "--json"],
     )
 
     cli.main()

@@ -1,4 +1,4 @@
-.PHONY: audit coverage test test-one
+.PHONY: audit check-dist coverage package publish-test test test-one
 
 test:
 	python3 -m pytest -q
@@ -6,6 +6,15 @@ test:
 coverage:
 	python3 -m coverage run -m pytest -q
 	python3 -m coverage report
+
+package:
+	python3 -m build
+
+check-dist:
+	python3 -m twine check dist/*
+
+publish-test: package check-dist
+	python3 -m twine upload --repository testpypi dist/*
 
 audit:
 	ruff format --check . --exclude results

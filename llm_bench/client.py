@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import time
 import urllib.error
 import urllib.request
@@ -86,6 +87,7 @@ def _retry_config(options: dict[str, Any]) -> dict[str, Any]:
         ),
         "max_delay_seconds": max(0.0, float(configured.get("max_delay_seconds", 4))),
         "backoff_multiplier": max(1.0, float(configured.get("backoff_multiplier", 2))),
+        "jitter_seconds": max(0.0, float(configured.get("jitter_seconds", 0.1))),
         "retry_on": set(
             configured.get(
                 "retry_on",
@@ -116,7 +118,9 @@ def _retry_delay(config: dict[str, Any], retry_index: int) -> float:
     delay = config["initial_delay_seconds"] * (
         config["backoff_multiplier"] ** max(0, retry_index - 1)
     )
-    return min(delay, config["max_delay_seconds"])
+    delay = min(delay, config["max_delay_seconds"])
+    jitter = min(config["jitter_seconds"], config["max_delay_seconds"] - delay)
+    return delay + random.uniform(0, jitter) if jitter else delay  # nosec B311
 
 
 class ProviderClient(ABC):

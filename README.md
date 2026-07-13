@@ -16,6 +16,21 @@ who need to answer:
 > repetitions small while configuring a run, and review the interactive
 > confirmation before proceeding.
 
+## 60-second local demo
+
+Run a complete benchmark without an API key, network request, or result file:
+
+```bash
+python3 -m llm_bench.cli \
+  --quick "Reply with ok." \
+  --models mock:local \
+  --no-save
+```
+
+The mock provider returns a deterministic response so you can inspect the
+terminal report and exit behavior locally. Replace `mock:local` with a provider
+and model ID when you are ready to run paid requests.
+
 ## What it measures
 
 - Pass/fail behavior for built-in smoke tests and your custom tests
@@ -451,6 +466,8 @@ you set `save_responses` explicitly. Use `--stop-on api-error`,
 `--stop-on test-fail`, or `--stop-on any-fail` when you want a command to stop
 early. The older `--fail-fast` flag remains as an alias for
 `--stop-on any-fail`.
+Use `--no-save` in CI when stdout, the exit code, and an optional JSON result
+are sufficient and no result artifacts should be written.
 The deterministic evaluator supports exact matches, numeric answers, JSON
 subsets, regular expressions, contains checks, and a dependency-free structural
 `json_schema` subset. For no-network development checks, use the `mock`
@@ -618,7 +635,7 @@ validation, metrics, and output format need no changes.
   are deliberately not used.
 - Retryable API failures such as rate limits, selected 5xx responses, temporary
   network failures, and timeouts retry once by default. Set `request.retry` to
-  control attempts and backoff:
+  control attempts, backoff, and bounded jitter:
 
 ```json
 {
@@ -627,15 +644,18 @@ validation, metrics, and output format need no changes.
       "max_attempts": 3,
       "initial_delay_seconds": 0.25,
       "max_delay_seconds": 4,
-      "backoff_multiplier": 2
+      "backoff_multiplier": 2,
+      "jitter_seconds": 0.1
     }
   }
 }
 ```
 
 Retries are recorded in saved JSON summaries as retry counts, retry reasons,
-and final failure categories. They are meant to protect smoke-test reliability,
-not to hide billable provider failures.
+and final failure categories. Dry runs and interactive plans show nominal
+requests/cost alongside the retry-expanded upper bound; configured request and
+cost ceilings enforce that upper bound. Retries are meant to protect smoke-test
+reliability, not to hide billable provider failures.
 
 ## Pricing
 
@@ -669,6 +689,13 @@ on stale public registry entries.
   `.secrets.baseline`. Review new findings before updating the baseline; do not
   baseline real credentials.
 - See [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+
+## Release validation
+
+Install release tooling with `python3 -m pip install -e ".[release]"`, then
+run `make package` and `make check-dist`. Validate the exact artifacts on
+TestPyPI before publishing publicly; the full procedure is in
+[RELEASING.md](RELEASING.md).
 
 ## Project structure
 

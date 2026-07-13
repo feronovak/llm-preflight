@@ -1,9 +1,12 @@
 include .env.example
 include AGENTS.md
+include CHANGELOG.md
 include CONTRIBUTING.md
+include LAUNCH.md
 include LICENSE
 include Makefile
 include README.md
+include RELEASING.md
 include SECURITY.md
 include benchmark.auto.example.json
 include benchmark.example.json

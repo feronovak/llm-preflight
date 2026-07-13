@@ -1,4 +1,7 @@
 import json
+import os
+from pathlib import Path
+import subprocess
 import sys
 
 import pytest
@@ -311,7 +314,7 @@ def test_interactive_selection_shows_request_and_cost_estimate(monkeypatch):
         output_fn=output.append,
     )
 
-    assert any("2 paid requests" in line for line in output)
+    assert any("2 nominal requests, up to 4 with retries" in line for line in output)
     assert any("$0.000044" in line for line in output)
 
 
@@ -331,7 +334,7 @@ def test_interactive_selection_explains_all_tests_request_breakdown(monkeypatch)
 
     assert any("chat-fast: 3" in line for line in output)
     assert any("load: 16" in line and "c1=1, c5=5, c10=10" in line for line in output)
-    assert any("28 paid requests" in line for line in output)
+    assert any("28 nominal requests, up to 56 with retries" in line for line in output)
 
 
 def test_interactive_selection_shows_colored_run_plan_and_status_meaning(monkeypatch):
@@ -618,6 +621,7 @@ def test_main_dry_run_prints_resolved_plan_without_running(
         }
     ]
     assert output["requests"] == 5
+    assert output["possible_requests"] == 10
     assert output["estimated_cost_usd"] == 0.002565
     assert output["presets"] == ["low-latency"]
     assert output["request"]["max_output_tokens"] == 256
@@ -876,3 +880,111 @@ def test_main_exits_one_for_profile_validation_failures(monkeypatch, tmp_path, c
         raise AssertionError("expected failed validation exit")
 
     assert capsys.readouterr().out.strip() == "rendered"
+
+
+def test_main_no_save_skips_artifact_writes(monkeypatch, tmp_path, capsys):
+    config = tmp_path / "benchmark.json"
+    config.write_text('{"prompt":"hello","models":[{"model":"fake"}]}')
+    result = {"models": [{"summary": {"failed": 0}}]}
+
+    monkeypatch.setattr(cli, "run_benchmark", lambda *args, **kwargs: result)
+    monkeypatch.setattr(
+        cli,
+        "save_result",
+        lambda *args: (_ for _ in ()).throw(AssertionError("must not save")),
+    )
+    monkeypatch.setattr(cli, "console_report", lambda *args, **kwargs: "rendered")
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--no-save"])
+
+    cli.main()
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "rendered"
+    assert "Saved raw result" not in captured.err
+
+
+def test_cli_process_exit_codes_stop_modes_and_budget_enforcement(tmp_path):
+    def run(config: dict, *args: str) -> subprocess.CompletedProcess[str]:
+        config_path = tmp_path / f"{len(list(tmp_path.iterdir()))}.json"
+        config_path.write_text(json.dumps(config))
+        environment = dict(os.environ)
+        environment.pop("OPENAI_API_KEY", None)
+        return subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "llm_bench.cli",
+                str(config_path),
+                "--no-save",
+                "--json",
+                *args,
+            ],
+            cwd=Path(__file__).parents[1],
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    success = run(
+        {
+            "prompt": "hello",
+            "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+            "warmups": 0,
+        }
+    )
+    assert success.returncode == 0
+
+    validation_failure = run(
+        {
+            "prompt": "hello",
+            "validation": {"regex": "^ok$"},
+            "models": [{"provider": "mock", "model": "local", "response": "no"}],
+            "warmups": 0,
+        }
+    )
+    assert validation_failure.returncode == 1
+
+    config_failure = run({"prompt": "hello"})
+    assert config_failure.returncode == 2
+
+    test_stop = run(
+        {
+            "prompt": "hello",
+            "validation": {"regex": "^ok$"},
+            "models": [
+                {"provider": "mock", "model": "first", "response": "no"},
+                {"provider": "mock", "model": "second", "response": "ok"},
+            ],
+            "warmups": 0,
+        },
+        "--stop-on",
+        "test-fail",
+    )
+    assert test_stop.returncode == 1
+    assert len(json.loads(test_stop.stdout)["models"]) == 1
+
+    api_stop = run(
+        {
+            "prompt": "hello",
+            "models": [
+                {"provider": "openai", "model": "first"},
+                {"provider": "mock", "model": "second", "response": "ok"},
+            ],
+            "warmups": 0,
+        },
+        "--stop-on",
+        "api-error",
+    )
+    assert api_stop.returncode == 1
+    assert len(json.loads(api_stop.stdout)["models"]) == 1
+
+    budget_failure = run(
+        {
+            "prompt": "hello",
+            "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+            "warmups": 0,
+            "max_requests": 1,
+        }
+    )
+    assert budget_failure.returncode == 2

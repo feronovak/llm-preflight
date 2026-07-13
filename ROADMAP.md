@@ -72,7 +72,11 @@ fast, local, cross-provider model validation.
   not leak into JSON or Markdown outputs.
 - Retryable transport/provider failures are classified and retried once by
   default, with configurable attempts and backoff through `request.retry`.
+- Retry delays include bounded jitter, and plans distinguish nominal work from
+  the retry-expanded request and cost upper bound.
 - Result summaries include retry counts, retry reasons, and failure categories.
+- Shell-level CLI tests cover exit codes, stop modes, and budget enforcement.
+- `--no-save` supports CI checks that only need stdout and exit status.
 - `--pricing-check`, `--dry-run`, and `--doctor` surface unknown or stale
   pricing warnings before live generation requests.
 - Explicit user pricing overrides are marked in `pricing_metadata`; public
@@ -108,15 +112,6 @@ the CLI spends money.
   - `API FAIL`: request, credential, provider, network, rate-limit, or
     unsupported-parameter problem
   - `API OK / TEST FAIL`: the model responded but did not satisfy the validator
-- Add shell-level integration tests for:
-  - success exit `0`
-  - model/test failure exit `1`
-  - parser/config failure exit `2`
-  - `--stop-on api-error`
-  - `--stop-on test-fail`
-  - `--stop-on any-fail`
-- Add `--no-save` or `--no-report` for CI checks that only need stdout and exit
-  code.
 
 ### 2. Retry Hardening and Load-Aware Failure Classification
 
@@ -126,7 +121,6 @@ make a model migration look worse than it is.
 
 The first retry/classification slice is shipped. Remaining work:
 
-- Add retry jitter support and tests.
 - Add shell-level output tests for retry summaries in terminal progress and
   Markdown reports.
 - Make load tests stricter:

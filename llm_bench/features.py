@@ -99,9 +99,20 @@ def _request_count(config: dict[str, Any], models: list[dict[str, Any]]) -> int:
     return len(models) * (per_model + warmups_per_model)
 
 
+def _retry_max_attempts(config: dict[str, Any]) -> int:
+    retry = config.get("request", {}).get("retry", {})
+    if retry is True:
+        retry = {}
+    if not isinstance(retry, dict):
+        return 2
+    return max(1, int(retry.get("max_attempts", 2)))
+
+
 def estimate_budget(config: dict[str, Any]) -> dict[str, Any]:
     models = resolve_models(config)
     requests = _request_count(config, models)
+    retry_max_attempts = _retry_max_attempts(config)
+    possible_requests = requests * retry_max_attempts
     prompt_chars = len(config.get("prompt", ""))
     estimated_input_tokens = max(1, prompt_chars // 4)
     max_output_tokens = int(
@@ -127,18 +138,26 @@ def estimate_budget(config: dict[str, Any]) -> dict[str, Any]:
         else sum(item for item in costs if item is not None)
         * (requests / len(models) if models else 0)
     )
-    return {"requests": requests, "estimated_cost_usd": cost}
+    return {
+        "requests": requests,
+        "possible_requests": possible_requests,
+        "retry_max_attempts": retry_max_attempts,
+        "estimated_cost_usd": cost,
+        "maximum_estimated_cost_usd": (
+            cost * retry_max_attempts if cost is not None else None
+        ),
+    }
 
 
 def check_budget(config: dict[str, Any]) -> dict[str, Any]:
     budget = estimate_budget(config)
     max_requests = config.get("max_requests")
-    if max_requests is not None and budget["requests"] > int(max_requests):
+    if max_requests is not None and budget["possible_requests"] > int(max_requests):
         raise ValueError(
-            f"estimated requests {budget['requests']} exceed max_requests {max_requests}"
+            f"possible requests {budget['possible_requests']} exceed max_requests {max_requests}"
         )
     max_cost = config.get("max_estimated_cost_usd")
-    cost = budget["estimated_cost_usd"]
+    cost = budget["maximum_estimated_cost_usd"]
     if max_cost is not None:
         if cost is None:
             raise ValueError(

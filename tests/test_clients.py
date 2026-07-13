@@ -7,6 +7,7 @@ from llm_bench.client import (
     AnthropicClient,
     GeminiClient,
     OpenAICompatibleClient,
+    _retry_delay,
     create_client,
 )
 
@@ -410,3 +411,19 @@ def test_client_does_not_retry_non_retryable_http_error(monkeypatch):
     assert sample["attempts"] == 1
     assert sample["retry_count"] == 0
     assert sample["failure_category"] == "unsupported_parameter"
+
+
+def test_retry_delay_adds_bounded_jitter(monkeypatch):
+    monkeypatch.setattr("llm_bench.client.random.uniform", lambda low, high: 0.125)
+
+    delay = _retry_delay(
+        {
+            "initial_delay_seconds": 0.5,
+            "max_delay_seconds": 1,
+            "backoff_multiplier": 2,
+            "jitter_seconds": 0.2,
+        },
+        1,
+    )
+
+    assert delay == 0.625

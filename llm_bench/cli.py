@@ -212,7 +212,10 @@ def _dry_run_plan(
         "tests": _selected_test_names(config, profile_selector),
         "test_breakdown": _test_breakdown(config, profile_selector),
         "requests": budget["requests"],
+        "possible_requests": budget["possible_requests"],
+        "retry_max_attempts": budget["retry_max_attempts"],
         "estimated_cost_usd": budget["estimated_cost_usd"],
+        "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
         "pricing_warnings": pricing_freshness_report(models)["warnings"],
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -392,6 +395,7 @@ def interactive_selection(
     selected_config.setdefault("save_responses", "failures")
     budget = estimate_budget(selected_config)
     estimated_cost = budget["estimated_cost_usd"]
+    maximum_cost = budget["maximum_estimated_cost_usd"]
     profile_label = profile_selector or selected_config.get(
         "prompt_name", "config prompt"
     )
@@ -403,8 +407,10 @@ def interactive_selection(
     output_fn(f"  {_style('Stop on:', '1;31', color)} {stop_on or 'never'}")
     output_fn(
         f"  {_style('Estimate:', '1;33', color)} "
-        f"{budget['requests']} paid requests, "
-        f"{'cost unavailable' if estimated_cost is None else f'up to ${estimated_cost:.6f}'}."
+        f"{budget['requests']} nominal requests, up to "
+        f"{budget['possible_requests']} with retries; "
+        f"{'cost unavailable' if estimated_cost is None else f'${estimated_cost:.6f} nominal'}"
+        f"{' ' if maximum_cost is None else f' (up to ${maximum_cost:.6f} with retries)'}."
     )
     output_fn(
         "  "
@@ -437,6 +443,11 @@ def main() -> None:
         "config", type=Path, nargs="?", help="benchmark JSON configuration"
     )
     parser.add_argument("--output-dir", type=Path, default=Path("results"))
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="print results without writing result artifacts",
+    )
     parser.add_argument("--json", action="store_true", help="print full JSON result")
     parser.add_argument(
         "--env", dest="environment_name", help="apply a named config environment"
@@ -526,6 +537,7 @@ def main() -> None:
         help="interactively select models, tests, and repetitions",
     )
     args = parser.parse_args()
+    path: Path | None = None
     try:
         if args.no_env_file and args.env_file:
             parser.error("--no-env-file cannot be combined with --env-file")
@@ -636,7 +648,8 @@ def main() -> None:
             ),
         )
         result = redact_secrets(result)
-        path = save_result(result, args.output_dir)
+        if not args.no_save:
+            path = save_result(result, args.output_dir)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(redact_secrets(str(exc))))
     print(
@@ -651,7 +664,8 @@ def main() -> None:
         print(_format_diff(diff))
         if args.ci and not diff["ok"]:
             raise SystemExit(1)
-    print(f"Saved raw result to {path}", file=sys.stderr)
+    if path is not None:
+        print(f"Saved raw result to {path}", file=sys.stderr)
     if result_failed(result):
         raise SystemExit(1)
 

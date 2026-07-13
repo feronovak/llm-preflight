@@ -186,6 +186,28 @@ def test_estimated_budget_counts_warmups_per_profile():
     assert budget["requests"] == 8
 
 
+def test_estimated_budget_reports_retry_expanded_upper_bound():
+    budget = estimate_budget(
+        {
+            "prompt": "hi",
+            "models": [
+                {
+                    "model": "priced",
+                    "input_cost_per_million": 1,
+                    "output_cost_per_million": 2,
+                }
+            ],
+            "repetitions": 2,
+            "warmups": 0,
+            "request": {"max_output_tokens": 100, "retry": {"max_attempts": 3}},
+        }
+    )
+
+    assert budget["requests"] == 2
+    assert budget["possible_requests"] == 6
+    assert budget["maximum_estimated_cost_usd"] == budget["estimated_cost_usd"] * 3
+
+
 def test_aliases_and_environment_overlays_are_applied_to_configs():
     config = {
         "prompt": "hi",

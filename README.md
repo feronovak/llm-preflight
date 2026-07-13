@@ -108,6 +108,12 @@ Recommendations only consider models that pass every selected test.
   baselines, and request safety.
 - [Configuration](docs/configuration.md) — providers, custom prompts, presets,
   aliases, and environment overlays.
+- [CLI reference](docs/cli-reference.md) — every command-line option, default,
+  and incompatibility.
+- [Interactive mode](docs/interactive.md) — selection, paid-run preview, and
+  live progress.
+- [CI and JSON output](docs/ci.md) — machine-readable output and exit-code
+  gates.
 - [Tests, pricing, and safety](docs/tests-pricing-safety.md) — built-in tests,
   validators, pricing confidence, retries, and sensitive data.
 - [Contributing](CONTRIBUTING.md) — development setup and the TDD workflow.

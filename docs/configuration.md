@@ -71,4 +71,5 @@ values always win over preset defaults.
 
 Run an overlay with `llm-bench benchmark.json --env ci`. See
 [tests, pricing, and safety](tests-pricing-safety.md) for validation choices and
-data handling.
+data handling. See the [complete configuration reference](config-reference.md)
+for every supported key and default.

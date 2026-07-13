@@ -49,9 +49,10 @@ custom tests together:
 llm-bench benchmark.json --tests classification,source-to-quiz
 ```
 
-Choose `--stop-on api-error`, `test-fail`, `any-fail`, or `never`. `--fail-fast`
-remains an alias for `--stop-on any-fail`. Use `--no-save` when CI only needs
-stdout and an exit status.
+Choose `--stop-on api-error`, `test-fail`, or `any-fail`; omit `--stop-on` to
+run every selected model. `--fail-fast` remains an alias for
+`--stop-on any-fail`. Use `--no-save` when CI only needs stdout and an exit
+status. See [CI and JSON output](ci.md) for automation recipes.
 
 ## Compare and automate
 

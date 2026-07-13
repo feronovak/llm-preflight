@@ -1,6 +1,6 @@
 # Releasing
 
-## Validate 1.0.0 on TestPyPI
+## Release Process
 
 1. Start from a clean checkout of the release tag.
 2. Install release tooling:
@@ -31,12 +31,29 @@
    python3 -m pip install \
      --index-url https://test.pypi.org/simple/ \
      --extra-index-url https://pypi.org/simple/ \
-     llm-speed-bench==1.0.0
+     llm-speed-bench==<version>
    llm-bench --quick "Reply with ok." --models mock:local --no-save
    ```
 
 6. Verify package metadata, the console entry point, mock demo, and exit code.
-   Only then upload the same artifacts to PyPI.
 
-Do not regenerate artifacts after TestPyPI validation. A public release must
-use the identical wheel and source distribution.
+7. Create and publish a GitHub release for the matching `v<version>` tag.
+   GitHub Actions rebuilds the tagged source, validates the metadata, and
+   publishes to PyPI through Trusted Publishing. It does not use stored PyPI
+   API tokens.
+
+### Trusted Publishing setup
+
+On PyPI, open the `llm-speed-bench` project, select **Publishing**, and add a
+GitHub Actions publisher with:
+
+- Owner: `feronovak`
+- Repository: `llm-speed-bench`
+- Workflow filename: `release.yml`
+- Environment name: `pypi`
+
+In GitHub, create the `pypi` environment and require a manual reviewer before
+deployments. This approval is the final gate before a release is uploaded.
+
+The CI release build is independent of the TestPyPI artifacts. It rebuilds from
+the immutable release tag and verifies that the tag matches the package version.

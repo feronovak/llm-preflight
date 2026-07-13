@@ -1,3 +1,6 @@
+VERSION := $(shell python3 -c "from llm_bench import __version__; print(__version__)")
+DIST_FILES := dist/llm_speed_bench-$(VERSION)*
+
 .PHONY: audit check-dist coverage package publish-test test test-one
 
 test:
@@ -11,10 +14,10 @@ package:
 	python3 -m build
 
 check-dist:
-	python3 -m twine check dist/*
+	python3 -m twine check $(DIST_FILES)
 
 publish-test: package check-dist
-	python3 -m twine upload --repository testpypi dist/*
+	python3 -m twine upload --repository testpypi $(DIST_FILES)
 
 audit:
 	ruff format --check . --exclude results

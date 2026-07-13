@@ -19,6 +19,8 @@ All notable changes to this project are documented here.
 
 - Exclude models that fail any selected test from fastest, cheapest, and
   best-value recommendations; list them with their failed test instead.
+- Correct smoke-mode documentation: it reduces repetitions and warmups, but
+  does not suppress selected profile-case or load-test expansion.
 
 ## 1.0.1 - 2026-07-13
 

@@ -30,7 +30,7 @@ def _summary(latency, cost, success=1.0):
     }
 
 
-def test_smoke_mode_forces_one_measured_request_without_warmup():
+def test_smoke_mode_forces_one_repetition_without_warmup():
     config = apply_smoke_mode(
         {"prompt": "hi", "repetitions": 9, "warmups": 3, "suite_repetitions": 4}
     )

@@ -522,7 +522,9 @@ def main() -> None:
         "--env", dest="environment_name", help="apply a named config environment"
     )
     parser.add_argument(
-        "--smoke", action="store_true", help="run one request per model with no warmup"
+        "--smoke",
+        action="store_true",
+        help="run a reduced live benchmark: one repetition, no warmups",
     )
     parser.add_argument(
         "--doctor",

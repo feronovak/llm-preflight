@@ -371,11 +371,19 @@ live progress labels load requests as `load/load-short@c1`,
 
 ## Fast testing workflows
 
-Use smoke mode before a real benchmark. It forces one measured request per
-model, disables warmups, and keeps concurrency at one:
+Use smoke mode for a reduced live benchmark. It sets one repetition, disables
+warmups, and keeps normal concurrency at one:
 
 ```bash
 python3 -m llm_bench.cli benchmark.json --smoke
+```
+
+Smoke mode still makes paid provider requests. Selected profiles can include
+multiple deterministic cases, and the `load` profile retains its explicit
+concurrency expansion. Always inspect the exact request count first:
+
+```bash
+python3 -m llm_bench.cli benchmark.json --smoke --dry-run
 ```
 
 Check a configuration without generation requests:

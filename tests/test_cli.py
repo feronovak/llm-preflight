@@ -290,6 +290,18 @@ def test_help_lists_tests_before_profiles(monkeypatch, capsys):
     assert output.index("--tests") < output.index("--profiles")
 
 
+def test_help_describes_smoke_as_a_reduced_run(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["llm-bench", "--help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 0
+    output = " ".join(capsys.readouterr().out.split())
+    assert "reduced live benchmark" in output
+    assert "no warmups" in output
+
+
 def test_main_init_creates_a_no_key_mock_benchmark(monkeypatch, tmp_path, capsys):
     config_path = tmp_path / "first-benchmark.json"
     monkeypatch.setattr(sys, "argv", ["llm-bench", "--init", str(config_path)])

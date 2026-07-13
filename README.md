@@ -20,9 +20,18 @@ who need to answer:
 
 Create and run a complete benchmark without an API key or network request:
 
+With the installed CLI:
+
 ```bash
 llm-bench --init
 llm-bench benchmark.json --no-save
+```
+
+From a source checkout, use the Python module instead:
+
+```bash
+python3 -m llm_bench.cli --init
+python3 -m llm_bench.cli benchmark.json --no-save
 ```
 
 `--init` refuses to overwrite an existing file and creates a deterministic mock

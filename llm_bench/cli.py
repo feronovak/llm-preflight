@@ -312,6 +312,12 @@ def _write_starter_config(path: Path) -> None:
         raise ValueError(f"{path} already exists; refusing to overwrite it") from exc
 
 
+def _display_command() -> str:
+    if Path(sys.argv[0]).name == "cli.py":
+        return "python3 -m llm_bench.cli"
+    return "llm-bench"
+
+
 def _style(text: str, code: str, color: bool) -> str:
     return f"\x1b[{code}m{text}\x1b[0m" if color else text
 
@@ -621,9 +627,10 @@ def main() -> None:
             if args.config is not None:
                 parser.error("--init cannot be combined with a benchmark configuration")
             _write_starter_config(args.init)
+            command = _display_command()
             print(f"Created {args.init}")
-            print(f"Run the no-key demo: llm-bench {args.init} --no-save")
-            print(f"Explore interactively: llm-bench {args.init} --interactive")
+            print(f"Run the no-key demo: {command} {args.init} --no-save")
+            print(f"Explore interactively: {command} {args.init} --interactive")
             return
         if args.no_env_file and args.env_file:
             parser.error("--no-env-file cannot be combined with --env-file")

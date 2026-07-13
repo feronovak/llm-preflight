@@ -320,6 +320,29 @@ def test_main_init_creates_a_no_key_mock_benchmark(monkeypatch, tmp_path, capsys
     assert f"Explore interactively: llm-bench {config_path} --interactive" in output
 
 
+def test_main_init_prints_module_commands_when_run_with_python_module(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "first-benchmark.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(Path(cli.__file__)), "--init", str(config_path)],
+    )
+
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert (
+        f"Run the no-key demo: python3 -m llm_bench.cli {config_path} --no-save"
+        in output
+    )
+    assert (
+        f"Explore interactively: python3 -m llm_bench.cli {config_path} --interactive"
+        in output
+    )
+
+
 def test_main_init_refuses_to_overwrite_a_config(monkeypatch, tmp_path, capsys):
     config_path = tmp_path / "benchmark.json"
     config_path.write_text('{"prompt":"keep this"}\n')

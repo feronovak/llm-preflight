@@ -141,9 +141,10 @@ preflight, not a general evaluation platform.
 
 ### Recommended Release Order
 
-1. **1.0.2:** interactive visual upgrades, with output regression tests.
+1. **1.0.2:** interactive visual upgrades and first-run configuration UX, with
+   output regression tests and a no-key path to a useful first result.
 2. **1.0.3:** pricing refresh and cost-integrity guarantees.
-3. **1.1.0:** production smoke packs, common validators, and first-run setup.
+3. **1.1.0:** production smoke packs and common validators.
 4. **1.2.0:** catalog snapshots, diff, and `watch-new`.
 5. **Later:** baselines, CI annotations, and HTML reporting.
 

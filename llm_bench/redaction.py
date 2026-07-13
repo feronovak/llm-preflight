@@ -47,12 +47,23 @@ def _redact_text(value: str) -> str:
     return redacted
 
 
+def _redact_headers(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return REDACTED
+    return {
+        _redact_text(str(key)) if isinstance(key, str) else key: REDACTED
+        for key in value
+    }
+
+
 def redact_secrets(value: Any) -> Any:
     if isinstance(value, dict):
         redacted: dict[Any, Any] = {}
         for key, item in value.items():
             safe_key = _redact_text(str(key)) if isinstance(key, str) else key
-            if isinstance(key, str) and _is_sensitive_key(key):
+            if isinstance(key, str) and key.casefold() == "headers":
+                redacted[safe_key] = _redact_headers(item)
+            elif isinstance(key, str) and _is_sensitive_key(key):
                 redacted[safe_key] = REDACTED
             else:
                 redacted[safe_key] = redact_secrets(item)

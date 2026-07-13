@@ -142,6 +142,17 @@ def test_budget_check_rejects_excess_requests_and_cost():
         check_budget(config)
 
 
+def test_budget_check_rejects_cost_cap_when_pricing_is_unknown():
+    config = {
+        "prompt": "hi",
+        "models": [{"model": "unpriced"}],
+        "max_estimated_cost_usd": 0,
+    }
+
+    with pytest.raises(ValueError, match="pricing is unknown"):
+        check_budget(config)
+
+
 def test_budget_check_counts_mixed_builtin_and_custom_tests():
     config = {
         "models": [{"model": "fake"}],

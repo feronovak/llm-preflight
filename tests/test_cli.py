@@ -1,6 +1,8 @@
 import json
 import sys
 
+import pytest
+
 from llm_bench import cli
 from llm_bench.cli import catalog_output, format_progress_event, interactive_selection
 
@@ -822,6 +824,24 @@ def test_main_dry_run_explains_all_tests_load_expansion(monkeypatch, tmp_path, c
         "details": "load levels: c1=1, c5=5, c10=10",
     }
     assert output["requests"] == 28
+
+
+def test_main_enforces_budget_for_tests_selected_on_command_line(monkeypatch, tmp_path):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","models":[{"model":"fake"}],"warmups":0,"max_requests":6}'
+    )
+
+    def fail_run(*args, **kwargs):
+        raise AssertionError("budget failure must prevent benchmark execution")
+
+    monkeypatch.setattr(cli, "run_benchmark", fail_run)
+    monkeypatch.setattr(sys, "argv", ["llm-bench", str(config), "--tests", "all"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
 
 
 def test_main_exits_one_for_profile_validation_failures(monkeypatch, tmp_path, capsys):

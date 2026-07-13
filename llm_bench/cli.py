@@ -203,9 +203,7 @@ def _test_breakdown(
 def _dry_run_plan(
     config: dict[str, Any], profile_selector: str | None
 ) -> dict[str, Any]:
-    budget_config = dict(config)
-    if profile_selector:
-        budget_config["profiles"] = profile_selector
+    budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
     models = resolve_models(config)
     return {
@@ -223,6 +221,15 @@ def _dry_run_plan(
         "save_responses": config.get("save_responses", False),
         "stop_on": config.get("stop_on", "none"),
     }
+
+
+def _budget_config(
+    config: dict[str, Any], profile_selector: str | None
+) -> dict[str, Any]:
+    budget_config = dict(config)
+    if profile_selector:
+        budget_config["profiles"] = profile_selector
+    return budget_config
 
 
 def _load_config_env_file(config_path: Path, args: argparse.Namespace) -> None:
@@ -318,7 +325,7 @@ def interactive_selection(
     if profile_answer.casefold() == "all":
         profile_selector = "all"
     elif profile_answer:
-        selected_names = []
+        selected_names: list[str] = []
         for item in [
             part.strip() for part in profile_answer.split(",") if part.strip()
         ]:
@@ -411,9 +418,10 @@ def interactive_selection(
     )
     if profile_selector:
         output_fn("Request breakdown per model:")
-        for item in _test_breakdown(selected_config, profile_selector):
+        for breakdown_item in _test_breakdown(selected_config, profile_selector):
             output_fn(
-                f"  {item['name']}: {item['requests_per_model']} ({item['details']})"
+                f"  {breakdown_item['name']}: "
+                f"{breakdown_item['requests_per_model']} ({breakdown_item['details']})"
             )
     if confirmation_answer is None:
         confirmation_answer = input_fn("Run paid benchmark? [y/N]: ").strip().casefold()
@@ -612,7 +620,7 @@ def main() -> None:
         if args.dry_run:
             print(json.dumps(_dry_run_plan(config, profile_selector), indent=2))
             return
-        check_budget(config)
+        check_budget(_budget_config(config, profile_selector))
         use_color = sys.stdout.isatty()
         result = run_benchmark(
             config,

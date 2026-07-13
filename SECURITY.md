@@ -15,6 +15,7 @@ mitigation. Do not include active API keys.
   `.env.production` file.
 - The CLI does not execute `.env.production` as shell code.
 - Catalog output removes custom request headers.
+- Result artifacts redact every custom request-header value.
 - Result files can contain prompts, provider errors, model metadata, and
   optionally full responses. Treat `results/` as potentially sensitive.
 - Treat benchmark JSON as trusted input. It controls outbound HTTP(S)

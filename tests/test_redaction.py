@@ -32,6 +32,22 @@ def test_redact_secrets_masks_sensitive_keys_recursively():
     assert redacted["api_key"] == "[REDACTED]"
 
 
+def test_redact_secrets_masks_all_custom_header_values():
+    value = {
+        "headers": {
+            "X-Client-Credential": "custom-header-redaction-secret",
+            "X-Trace-Mode": "private",
+        }
+    }
+
+    redacted = redact_secrets(value)
+
+    assert redacted["headers"] == {
+        "X-Client-Credential": "[REDACTED]",
+        "X-Trace-Mode": "[REDACTED]",
+    }
+
+
 def test_redact_secrets_masks_secret_values_inside_strings():
     redacted = redact_secrets(
         {

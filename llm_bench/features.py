@@ -109,7 +109,7 @@ def estimate_budget(config: dict[str, Any]) -> dict[str, Any]:
         or config.get("request", {}).get("max_tokens")
         or 256
     )
-    costs = []
+    costs: list[float | None] = []
     for model in models:
         input_price = model.get("input_cost_per_million")
         output_price = model.get("output_cost_per_million")
@@ -124,7 +124,8 @@ def estimate_budget(config: dict[str, Any]) -> dict[str, Any]:
     cost = (
         None
         if any(item is None for item in costs)
-        else sum(costs) * (requests / len(models) if models else 0)
+        else sum(item for item in costs if item is not None)
+        * (requests / len(models) if models else 0)
     )
     return {"requests": requests, "estimated_cost_usd": cost}
 
@@ -138,10 +139,15 @@ def check_budget(config: dict[str, Any]) -> dict[str, Any]:
         )
     max_cost = config.get("max_estimated_cost_usd")
     cost = budget["estimated_cost_usd"]
-    if max_cost is not None and cost is not None and cost > float(max_cost):
-        raise ValueError(
-            f"estimated cost ${cost:.6f} exceeds max_estimated_cost_usd ${float(max_cost):.6f}"
-        )
+    if max_cost is not None:
+        if cost is None:
+            raise ValueError(
+                "pricing is unknown; cannot enforce max_estimated_cost_usd"
+            )
+        if cost > float(max_cost):
+            raise ValueError(
+                f"estimated cost ${cost:.6f} exceeds max_estimated_cost_usd ${float(max_cost):.6f}"
+            )
     return budget
 
 

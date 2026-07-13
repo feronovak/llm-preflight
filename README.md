@@ -421,7 +421,8 @@ python3 -m llm_bench.cli benchmark.json --tests all --matrix
 Use `--changed-since catalog.json` with discovery configs to run only models
 not present in a previous catalog snapshot. Use `"max_requests"` and
 `"max_estimated_cost_usd"` in a config to stop accidental expensive runs before
-requests are made.
+requests are made. A cost ceiling requires complete pricing for every selected
+model; the command refuses to run when it cannot calculate the estimate.
 
 Model aliases and environment overlays keep daily tests short:
 
@@ -595,7 +596,7 @@ Secrets are read only from environment variables or the selected env file.
 Catalog output removes custom headers. Dry-run output, saved JSON results,
 Markdown reports, source config snapshots, and common provider error strings are
 redacted for keys and values such as `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD`,
-`Authorization`, `X-API-Key`, and custom headers. Prompts, model metadata, and
+`Authorization`, `X-API-Key`, and every custom-header value. Prompts, model metadata, and
 saved failed responses can still contain business-sensitive content, so review
 result files before sharing them.
 

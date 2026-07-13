@@ -28,3 +28,19 @@ def test_pypi_trusted_publisher_isolated_to_release_workflow():
     assert "actions/download-artifact" in workflow
     assert "pypa/gh-action-pypi-publish@release/v1" in workflow
     assert "PYPI_API_TOKEN" not in workflow
+
+
+def test_testpypi_workflow_uses_oidc_and_verifies_the_published_package():
+    workflow = Path(".github/workflows/testpypi.yml").read_text()
+
+    assert "workflow_dispatch:" in workflow
+    assert "environment:" in workflow
+    assert "name: testpypi" in workflow
+    assert "id-token: write" in workflow
+    assert "repository-url: https://test.pypi.org/legacy/" in workflow
+    assert "llm-speed-bench==${VERSION}" in workflow
+    assert (
+        'llm-bench --quick "Reply with ok." --models mock:local --no-save' in workflow
+    )
+    assert "TWINE_PASSWORD" not in workflow
+    assert "PYPI_API_TOKEN" not in workflow

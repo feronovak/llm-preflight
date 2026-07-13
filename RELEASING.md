@@ -18,31 +18,23 @@
    make check-dist
    ```
 
-4. Upload only the validated artifacts to TestPyPI. Set `TWINE_USERNAME` to
-   `__token__` and `TWINE_PASSWORD` to a scoped TestPyPI token, then run:
+4. In GitHub Actions, run **TestPyPI validation** from `main`. It runs the
+   complete gate, publishes through TestPyPI Trusted Publishing, fresh-installs
+   the exact version, and runs the mock CLI demo. It does not use an API token.
 
-   ```bash
-   make publish-test
-   ```
-
-5. In a fresh virtual environment, install and smoke-test the published build:
-
-   ```bash
-   python3 -m pip install \
-     --index-url https://test.pypi.org/simple/ \
-     --extra-index-url https://pypi.org/simple/ \
-     llm-speed-bench==<version>
-   llm-bench --quick "Reply with ok." --models mock:local --no-save
-   ```
-
-6. Verify package metadata, the console entry point, mock demo, and exit code.
-
-7. Create and publish a GitHub release for the matching `v<version>` tag.
+5. Create and publish a GitHub release for the matching `v<version>` tag.
    GitHub Actions rebuilds the tagged source, validates the metadata, and
    publishes to PyPI through Trusted Publishing. It does not use stored PyPI
    API tokens.
 
 ### Trusted Publishing setup
+
+On TestPyPI, add a GitHub Actions publisher for the same project with:
+
+- Owner: `feronovak`
+- Repository: `llm-speed-bench`
+- Workflow filename: `testpypi.yml`
+- Environment name: `testpypi`
 
 On PyPI, open the `llm-speed-bench` project, select **Publishing**, and add a
 GitHub Actions publisher with:

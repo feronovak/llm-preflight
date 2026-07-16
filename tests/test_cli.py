@@ -407,11 +407,11 @@ def test_main_init_prints_module_commands_when_run_with_python_module(
 
     output = capsys.readouterr().out
     assert (
-        f"Run the no-key demo: python3 -m llm_bench.cli {config_path} --no-save"
+        f"Run the no-key demo: python3 -m llm_preflight {config_path} --no-save"
         in output
     )
     assert (
-        f"Explore interactively: python3 -m llm_bench.cli {config_path} --interactive"
+        f"Explore interactively: python3 -m llm_preflight {config_path} --interactive"
         in output
     )
 

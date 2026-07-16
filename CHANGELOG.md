@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## 2.0.1 - 2026-07-16
+
+### Fixed
+
+- Add the public `python3 -m llm_preflight` entry point for source checkouts
+  and generated guidance; retain `python3 -m llm_bench.cli` as a legacy import
+  path only.
+
 ## 2.0.0 - 2026-07-16
 
 ### Changed

@@ -28,8 +28,8 @@ llm-preflight benchmark.json --no-save
 From a source checkout:
 
 ```bash
-python3 -m llm_bench.cli --init
-python3 -m llm_bench.cli benchmark.json --no-save
+python3 -m llm_preflight --init
+python3 -m llm_preflight benchmark.json --no-save
 ```
 
 `--init` never overwrites an existing config. It creates a mock benchmark so
@@ -55,8 +55,8 @@ Python 3.10+ is required; there are no runtime dependencies.
 cp benchmark.example.json benchmark.json
 cp .env.example .env.production
 # Edit benchmark.json and add only the provider keys you use.
-python3 -m llm_bench.cli benchmark.json --dry-run
-python3 -m llm_bench.cli benchmark.json
+python3 -m llm_preflight benchmark.json --dry-run
+python3 -m llm_preflight benchmark.json
 ```
 
 The CLI reads `.env.production` beside the config without overriding environment

@@ -8,7 +8,7 @@ from llm_bench.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.0.0"
+    assert __version__ == "2.0.1"
 
 
 def test_preflight_is_the_primary_command_and_bench_remains_compatible(monkeypatch):
@@ -17,8 +17,16 @@ def test_preflight_is_the_primary_command_and_bench_remains_compatible(monkeypat
 
     pyproject = Path("pyproject.toml").read_text()
     assert 'name = "llm-preflight"' in pyproject
-    assert 'llm-preflight = "llm_bench.cli:main"' in pyproject
-    assert 'llm-bench = "llm_bench.cli:main"' in pyproject
+    assert 'llm-preflight = "llm_preflight.__main__:main"' in pyproject
+    assert 'llm-bench = "llm_preflight.__main__:main"' in pyproject
+
+
+def test_preflight_has_a_public_python_module_entry_point():
+    from llm_preflight import __version__ as public_version
+    from llm_preflight.__main__ import main
+
+    assert public_version == __version__
+    assert main is cli.main
 
 
 def test_legacy_pypi_distribution_is_a_dependency_only_compatibility_shim():
@@ -26,7 +34,7 @@ def test_legacy_pypi_distribution_is_a_dependency_only_compatibility_shim():
 
     assert 'name = "llm-speed-bench"' in shim
     assert "llm-preflight>=2.0.0,<3.0.0" in shim
-    assert 'llm-bench = "llm_bench.cli:main"' in shim
+    assert 'llm-bench = "llm_preflight.__main__:main"' in shim
     assert not (Path("legacy-pypi-shim") / "llm_bench").exists()
 
 
@@ -51,9 +59,9 @@ def test_legacy_installer_has_explicit_package_metadata_fallback():
     setup = Path("setup.py").read_text()
 
     assert 'name="llm-preflight"' in setup
-    assert 'version="2.0.0"' in setup
-    assert '"llm-preflight=llm_bench.cli:main"' in setup
-    assert '"llm-bench=llm_bench.cli:main"' in setup
+    assert 'version="2.0.1"' in setup
+    assert '"llm-preflight=llm_preflight.__main__:main"' in setup
+    assert '"llm-bench=llm_preflight.__main__:main"' in setup
 
 
 def test_example_does_not_present_unknown_model_pricing_as_free():

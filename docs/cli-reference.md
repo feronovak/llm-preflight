@@ -6,6 +6,7 @@ release. `config` is a benchmark JSON path and is required unless `--init`,
 
 `llm-preflight` is the primary command. `llm-bench` remains a fully supported
 compatibility command; both invoke the same program and accept the same flags.
+From a source checkout, use `python3 -m llm_preflight`.
 
 | Option | Default | Purpose |
 |---|---:|---|

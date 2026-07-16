@@ -28,9 +28,15 @@ Both commands execute the same installed program with the same flags and
 results. Existing JSON configurations, saved results, and the local
 `.llm-bench/` catalogue workspace do not need to move or change.
 
+From a source checkout, use the public module name:
+
+```bash
+python3 -m llm_preflight --init
+```
+
 ## Python integrations
 
-The Python module remains `llm_bench` for compatibility:
+The established Python import remains `llm_bench` for compatibility:
 
 ```python
 from llm_bench.runner import run_benchmark

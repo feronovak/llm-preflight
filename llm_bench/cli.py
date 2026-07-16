@@ -356,8 +356,8 @@ def _write_starter_config(path: Path) -> None:
 
 
 def _display_command() -> str:
-    if Path(sys.argv[0]).name == "cli.py":
-        return "python3 -m llm_bench.cli"
+    if Path(sys.argv[0]).name in {"cli.py", "__main__.py"}:
+        return "python3 -m llm_preflight"
     return "llm-preflight"
 
 

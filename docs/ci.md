@@ -43,6 +43,13 @@ rate drop, or a cost increase beyond its configured threshold. Costs are
 compared only when both result files contain a known estimate; retain
 `max_estimated_cost_usd` as the separate hard spend ceiling before a run.
 
+Default comparison thresholds are latency p95 **+25%**, request success
+**−5 percentage points**, validation rate **−5 percentage points**, and cost
+**+25%**. A zero baseline uses the corresponding absolute increase threshold
+for latency or cost because a percentage change is undefined.
+
+For the complete stable result structure, see [Result JSON schema](result-schema.md).
+
 ## Safe CI starter
 
 ```bash

@@ -175,6 +175,8 @@ Recommendations only consider models that pass every selected test.
   live progress.
 - [CI and JSON output](docs/ci.md) — machine-readable output and exit-code
   gates.
+- [Result JSON schema](docs/result-schema.md) — fields for integrations and
+  saved benchmark evidence.
 - [Model watch and approval](docs/model-watch.md) — discover, compare, and
   deliberately promote, re-test, and retire provider models.
 - [Troubleshooting](docs/troubleshooting.md) — installation, credentials,

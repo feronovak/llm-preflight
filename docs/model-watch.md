@@ -69,8 +69,10 @@ llm-bench catalog probe benchmarks/watch.json
 Select one or a few model numbers, then confirm. The probe sends one minimal
 request and may be billable. It stores no response text—only the outcome,
 adapter, safe request settings, and a provider fingerprint when available.
-Successful models become **Ready to benchmark** locally. A provider fingerprint
-change automatically expires that evidence and asks for a new probe.
+Successful models become **Ready to benchmark** locally. When the provider
+supplies a fingerprint (currently xAI), a change expires that evidence and asks
+for a new probe; providers without one keep their evidence until you probe
+again.
 
 Do not probe everything merely because it is listed. Use it for models you are
 actually considering. Account access, regions, and provider rollouts can make a

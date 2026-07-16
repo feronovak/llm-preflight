@@ -78,6 +78,30 @@ Markdown report under `results/`. The report compares:
 A fast response that fails JSON, exact-label, or numeric validation is a failed
 result. A model with `n/a` cost has unknown pricing; it is not free.
 
+### A first report, explained
+
+The mock demo produces the same kind of evidence as a paid run. Its Markdown
+report has a results table, a quality gate, and a decision section:
+
+```text
+Model  | Valid | Latency p95 | Cost
+local  | 100%  | 0.010s      | $0.000000
+
+QUALITY GATE
+local  PASS  -
+
+DECISION
+Recommended: local — passed every selected test and led the qualified value ranking.
+```
+
+`API OK` means the provider returned a response. `TEST OK` means that response
+also passed your rule; `API OK / TEST FAIL` is usable API connectivity but an
+invalid application result. `Recommended` compares only models that passed
+every selected test. It says `unavailable` when no model qualified, pricing is
+unknown for every qualified model, or there is no comparable latency evidence.
+Open the saved `.md` report for a readable record and the matching `.json` file
+when a script needs the detailed evidence.
+
 ## Choose your next path
 
 **You already know the models you want to compare.** Continue with

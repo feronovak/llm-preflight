@@ -39,6 +39,8 @@ cancelled at confirmation, so it made no network or paid request.
 
 - Models: enter numbers, a provider such as `openai`, a provider/family such as
   `openrouter/qwen`, or `all`.
+- If `provider/model-id` exactly matches one listed model, it selects that exact
+  model rather than similarly named hyphenated variants.
 - Tests: enter numbers, names, or `all`. Press Enter to use the config's
   default prompt instead of a built-in test suite.
 - Stop mode: choose whether to stop on an API error, failed test, either, or

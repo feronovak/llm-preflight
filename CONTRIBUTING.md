@@ -28,6 +28,20 @@ This project follows a strict red/green/refactor loop:
 Provider changes must include mocked protocol fixtures. Live requests may be
 used as optional verification, but never as part of the unit suite.
 
+## Code map
+
+- `llm_bench/cli.py` owns commands, interactive prompts, and output boundaries.
+- `runner.py` owns benchmark orchestration, validation application, reports, and
+  saved artifacts; `metrics.py` summarizes samples.
+- `client.py` owns provider adapters, request translation, retries, and timing.
+- `catalog.py`, `catalog_probe.py`, `catalog_watch.py`, and
+  `capability_ledger.py` own discovery and compatibility evidence.
+- `features.py` owns planning, budgets, baselines, CI comparison, and replay.
+- `profiles.py` defines built-in tests and deterministic evaluators;
+  `pricing.py`, `presets.py`, `env.py`, `redaction.py`, and `security.py` are
+  focused supporting modules.
+- Matching `tests/test_*.py` files are the executable behavior contract.
+
 ## Pull requests
 
 - Keep changes focused and explain user-visible behavior.

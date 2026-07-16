@@ -32,6 +32,32 @@ Do not copy catalogue internals such as `catalog_type`, `catalog_confidence`,
 or `adapter` into your JSON. The catalogue workflow discovers those details and
 keeps its compatibility evidence under `benchmarks/.llm-bench/` automatically.
 
+### OpenAI-compatible endpoints
+
+For vLLM, LiteLLM, a hosted Ollama service, or another OpenAI-style proxy, use
+the `openai_compatible` provider and supply its endpoint explicitly. Keep a
+key in an environment variable when the proxy requires one.
+
+```json
+{
+  "prompt": "Reply with exactly: ok",
+  "models": [{
+    "name": "local-llama",
+    "provider": "openai_compatible",
+    "model": "llama3.1",
+    "base_url": "https://llm.example.com/v1"
+  }],
+  "validation": {"exact": "ok"},
+  "warmups": 0,
+  "repetitions": 1
+}
+```
+
+If the endpoint needs a key, add `"api_key_env": "PROXY_API_KEY"` and set it
+in `.env.production` or your shell. The endpoint must be an HTTP(S) URL on a
+public host and is checked before requests are made; direct loopback and private
+network endpoints are intentionally rejected.
+
 ## Custom prompts
 
 Custom prompts are named, reusable tests:

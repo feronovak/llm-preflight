@@ -171,6 +171,8 @@ Recommendations only consider models that pass every selected test.
   baselines, and request safety.
 - [Configuration](docs/configuration.md) — providers, custom prompts, presets,
   aliases, and environment overlays.
+- [Configuration reference](docs/config-reference.md) — every supported config
+  key, default, and validation rule.
 - [Custom contract tests](docs/custom-tests.md) — copyable JSON extraction,
   exact-routing, and content-rule migration tests.
 - [CLI reference](docs/cli-reference.md) — every command-line option, default,
@@ -187,6 +189,8 @@ Recommendations only consider models that pass every selected test.
   catalogue, and benchmark-result recovery.
 - [Tests, pricing, and safety](docs/tests-pricing-safety.md) — built-in tests,
   validators, pricing confidence, retries, and sensitive data.
+- [Migrating from llm-speed-bench](docs/migrating-to-llm-preflight.md) — what
+  the 2.0 rename changes for existing installs, scripts, and imports.
 - [Contributing](CONTRIBUTING.md) — development setup and the TDD workflow.
 - [Security](SECURITY.md) — reporting vulnerabilities.
 

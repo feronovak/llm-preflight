@@ -949,7 +949,7 @@ def _approve_model_main(argv: list[str]) -> None:
 def _catalog_main(argv: list[str]) -> None:
     if not argv or argv[0] in {"-h", "--help"}:
         print(
-            "usage: llm-bench catalog {init,refresh,prepare,probe,test} ...\n\n"
+            f"usage: {_display_command()} catalog {{init,refresh,prepare,probe,test}} ...\n\n"
             "init [DIRECTORY] [--providers PROVIDERS] [--replace]\n"
             "refresh WATCH_CONFIG [watch options]\n"
             "prepare WATCH_CONFIG --against APPROVED --output CONFIG [--replace]\n"
@@ -1477,7 +1477,10 @@ def main() -> None:
             print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
             raise SystemExit(130) from None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            print(f"llm-bench: error: {redact_secrets(str(exc))}", file=sys.stderr)
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
             raise SystemExit(2) from None
         return
     if len(sys.argv) > 1 and sys.argv[1] == "models":
@@ -1487,7 +1490,10 @@ def main() -> None:
             print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
             raise SystemExit(130) from None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            print(f"llm-bench: error: {redact_secrets(str(exc))}", file=sys.stderr)
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
             raise SystemExit(2) from None
         return
     if len(sys.argv) > 1 and sys.argv[1] == "watch-new":
@@ -1497,7 +1503,10 @@ def main() -> None:
             print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
             raise SystemExit(130) from None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            print(f"llm-bench: error: {redact_secrets(str(exc))}", file=sys.stderr)
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
             raise SystemExit(2) from None
         return
     if len(sys.argv) > 1 and sys.argv[1] == "approve-model":
@@ -1507,7 +1516,10 @@ def main() -> None:
             print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
             raise SystemExit(130) from None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            print(f"llm-bench: error: {redact_secrets(str(exc))}", file=sys.stderr)
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
             raise SystemExit(2) from None
         return
     parser = argparse.ArgumentParser(description="Benchmark configurable LLM providers")

@@ -44,7 +44,7 @@ addopts = "--strict-markers"
 
 [tool.coverage.run]
 branch = true
-source = ["llm_bench"]
+source = ["llm_bench", "llm_preflight"]
 
 [tool.coverage.report]
 fail_under = 80

@@ -1166,7 +1166,7 @@ def test_watch_new_reports_existing_output_as_a_cli_error(
         cli.main()
 
     assert exc_info.value.code == 2
-    assert f"llm-bench: error: {output} already exists" in capsys.readouterr().err
+    assert f"llm-preflight: error: {output} already exists" in capsys.readouterr().err
 
 
 def test_interactive_watch_reviews_unapproved_models_on_first_snapshot(

@@ -22,10 +22,10 @@ publish-test: package check-dist
 audit:
 	ruff format --check . --exclude results
 	ruff check . --exclude results
-	mypy llm_bench
-	bandit -q -r llm_bench
+	mypy llm_bench llm_preflight
+	bandit -q -r llm_bench llm_preflight
 	detect-secrets-hook --baseline .secrets.baseline \
-		llm_bench tests .github .env.example \
+		llm_bench llm_preflight tests .github .env.example \
 		benchmark.example.json benchmark.auto.example.json pyproject.toml
 
 test-one:

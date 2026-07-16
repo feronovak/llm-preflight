@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## 2.0.3 - 2026-07-17
+
+### Fixed
+
+- Report `output_tokens_per_second` as unavailable when a provider delivers
+  the response as a terminal burst rather than an incremental stream (fewer
+  than two text chunks, or a generation window under 100 ms). Previously a
+  buffered response — observed with Gemini — inflated throughput by orders of
+  magnitude because the post-TTFT window measured transport, not generation.
+
+### Changed
+
+- README: add real cross-provider run output, a "How it compares" section,
+  precise wording for the no-third-party-dependencies claim and deterministic
+  validation, and absolute documentation links so the PyPI project page and
+  sdist README no longer point at files excluded from the distribution.
+- Remove the unused `_request_count` helper superseded by `estimate_budget`.
+- Raise test coverage from 81% to 86% (316 tests) with new error-branch and
+  validation tests across the runner, profiles, features, capability ledger,
+  and environment modules.
+- Mark the distribution as Beta (`Development Status :: 4 - Beta`).
+
 ## 2.0.2 - 2026-07-16
 
 LLM Preflight is a local, cross-provider preflight CLI for validating a model

@@ -121,6 +121,68 @@ def test_json_schema_reports_structural_mismatch():
     }
 
 
+def test_select_profiles_rejects_unknown_profile_names():
+    with pytest.raises(ValueError, match="unknown profiles: bogus"):
+        select_profiles("bogus")
+
+
+def test_numeric_evaluator_rejects_a_non_numeric_response():
+    result = evaluate_response(
+        "not a number", {"type": "numeric", "expected": 5, "tolerance": 0}
+    )
+    assert result == {"score": 0.0, "valid": False, "error": "not a numeric answer"}
+
+
+def test_numeric_answer_evaluator_accepts_a_matching_response():
+    result = evaluate_response(
+        "42", {"type": "numeric_answer", "expected": 42, "tolerance": 0}
+    )
+    assert result == {"score": 1.0, "valid": True, "error": None}
+
+
+def test_evaluate_response_rejects_an_unknown_evaluator_type():
+    with pytest.raises(ValueError, match="unknown evaluator type 'bogus'"):
+        evaluate_response("anything", {"type": "bogus"})
+
+
+@pytest.mark.parametrize(
+    ("schema", "response", "expected_error"),
+    [
+        ({"type": "object"}, '"just text"', "value must be an object"),
+        (
+            {"type": "object", "required": ["name"]},
+            "{}",
+            "name is required",
+        ),
+        ({"type": "array"}, '{"a":1}', "value must be an array"),
+        (
+            {"type": "object", "properties": {"name": {"type": "string"}}},
+            '{"name":123}',
+            "name must be a string",
+        ),
+        (
+            {"type": "object", "properties": {"amount": {"type": "number"}}},
+            '{"amount":"nope"}',
+            "amount must be a number",
+        ),
+        (
+            {"type": "object", "properties": {"count": {"type": "integer"}}},
+            '{"count":1.5}',
+            "count must be an integer",
+        ),
+        (
+            {"type": "object", "properties": {"flag": {"type": "boolean"}}},
+            '{"flag":"yes"}',
+            "flag must be a boolean",
+        ),
+    ],
+)
+def test_json_schema_reports_type_mismatches(schema, response, expected_error):
+    result = evaluate_response(response, {"type": "json_schema", "schema": schema})
+    assert result["valid"] is False
+    assert result["error"] == expected_error
+
+
 def test_json_schema_reports_nested_array_paths_and_enum():
     schema = {
         "type": "object",

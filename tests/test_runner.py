@@ -4,6 +4,8 @@ import sys
 import pytest
 
 from llm_preflight.runner import (
+    _failed_tests,
+    _profile_progress_callback,
     benchmark_run_lock,
     console_report,
     custom_prompt_profile,
@@ -12,6 +14,7 @@ from llm_preflight.runner import (
     run_benchmark,
     save_result,
     select_custom_prompt,
+    select_test_profiles,
     validate_config_validations,
 )
 
@@ -1342,6 +1345,383 @@ def test_save_result_redacts_secret_values_from_artifacts(tmp_path):
         json_path.with_suffix(".summary.md"),
     ]:
         assert "saved-redaction-secret" not in path.read_text()
+
+
+def test_save_responses_true_keeps_every_plain_prompt_response(monkeypatch):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 0,
+            "repetitions": 1,
+            "save_responses": True,
+        }
+    )
+
+    assert result["models"][0]["samples"][0]["response"] == "ok"
+
+
+def test_save_responses_unrecognized_value_drops_the_response(monkeypatch):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 0,
+            "repetitions": 1,
+            "save_responses": "always",
+        }
+    )
+
+    assert "response" not in result["models"][0]["samples"][0]
+
+
+def test_fail_fast_stops_on_first_failed_model_without_explicit_stop_on(monkeypatch):
+    class FakeClient:
+        def __init__(self, model):
+            self.model = {"base_url": "https://example.test", **model}
+
+        def run(self, prompt, options):
+            response = "bad" if self.model["model"] == "bad-model" else "expected"
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": len(response),
+                "response": response,
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient(model)
+    )
+
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [
+                {"provider": "openai", "model": "bad-model"},
+                {"provider": "openai", "model": "good-model"},
+            ],
+            "warmups": 0,
+            "repetitions": 1,
+            "validation": {"contains": "expected"},
+            "fail_fast": True,
+        }
+    )
+
+    assert [model["model"] for model in result["models"]] == ["bad-model"]
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        ('{"models":[{"model":"fake"}]}', "requires 'prompt' or 'prompts'"),
+        (
+            '{"prompts":"nope","models":[{"model":"fake"}]}',
+            "'prompts' must be a list",
+        ),
+        (
+            '{"prompts":["not-an-object"],"models":[{"model":"fake"}]}',
+            r"prompts\[0\] must be an object",
+        ),
+        (
+            '{"prompts":[{"prompt":"hi"}],"models":[{"model":"fake"}]}',
+            r"prompts\[0\] requires 'name'",
+        ),
+        (
+            '{"prompts":[{"name":"x","prompt":"hi","prompt_file":"f.txt"}],'
+            '"models":[{"model":"fake"}]}',
+            "must use either 'prompt' or 'prompt_file'",
+        ),
+        (
+            '{"prompts":[{"name":"x","prompt_file":""}],"models":[{"model":"fake"}]}',
+            "requires a non-empty 'prompt_file'",
+        ),
+        (
+            '{"prompts":[{"name":"x","prompt_file":"/etc/passwd"}],'
+            '"models":[{"model":"fake"}]}',
+            "prompt_file must be relative",
+        ),
+        (
+            '{"prompts":[{"name":"x","prompt_file":"missing.txt"}],'
+            '"models":[{"model":"fake"}]}',
+            "does not exist or is not a file",
+        ),
+        (
+            '{"prompts":[{"name":"x"}],"models":[{"model":"fake"}]}',
+            "requires a non-empty 'prompt'",
+        ),
+        (
+            '{"prompts":[{"name":"x","prompt":"a"},{"name":"x","prompt":"b"}],'
+            '"models":[{"model":"fake"}]}',
+            "custom prompt names must be unique",
+        ),
+        ('{"prompt":"hi"}', "requires 'models' or 'discovery'"),
+        (
+            '{"prompt":"hi","models":["missing-alias"]}',
+            "unknown alias 'missing-alias'",
+        ),
+        (
+            '{"prompt":"hi","models":[{"name":"x"}]}',
+            r"models\[0\] requires 'model'",
+        ),
+    ],
+)
+def test_load_config_rejects_malformed_configs(tmp_path, payload, match):
+    path = tmp_path / "benchmark.json"
+    path.write_text(payload)
+
+    with pytest.raises(ValueError, match=match):
+        load_config(path)
+
+
+def test_select_custom_prompt_rejects_unknown_name_and_lists_available():
+    config = {"prompts": [{"name": "csv-review", "prompt": "Review this CSV"}]}
+
+    with pytest.raises(
+        ValueError, match="unknown custom prompt 'missing'; choose csv-review"
+    ):
+        select_custom_prompt(config, "missing")
+
+
+def test_custom_prompt_profile_maps_exact_validation():
+    profile = custom_prompt_profile(
+        {"name": "label", "prompt": "Classify", "validation": {"exact": "billing"}}
+    )
+    assert profile["cases"][0]["evaluator"] == {"type": "exact", "expected": "billing"}
+
+
+def test_select_test_profiles_rejects_duplicate_and_colliding_custom_prompt_names():
+    with pytest.raises(ValueError, match="duplicate custom prompt names: dup"):
+        select_test_profiles(
+            {
+                "prompts": [
+                    {"name": "dup", "prompt": "a"},
+                    {"name": "dup", "prompt": "b"},
+                ]
+            },
+            "dup",
+        )
+
+    with pytest.raises(ValueError, match="collide with built-in profiles"):
+        select_test_profiles(
+            {"prompts": [{"name": "numeric-instruction-check", "prompt": "a"}]},
+            "numeric-instruction-check",
+        )
+
+
+def test_select_test_profiles_rejects_unknown_profile_names():
+    with pytest.raises(ValueError, match="unknown profiles: bogus"):
+        select_test_profiles({}, "bogus")
+
+
+def test_plain_prompt_regex_validation_records_the_failure_reason(monkeypatch):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": 2,
+                "response": "no match here",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 0,
+            "repetitions": 1,
+            "validation": {"regex": r"^\d+$"},
+        }
+    )
+
+    sample = result["models"][0]["samples"][0]
+    assert sample["valid_output"] is False
+    assert "did not match regex" in sample["evaluation_error"]
+
+
+def test_validate_config_validations_allows_none_and_rejects_non_dict_validation():
+    validate_config_validations({"validation": None})
+
+    with pytest.raises(ValueError, match="validation must be an object"):
+        validate_config_validations({"validation": "not-a-dict"})
+
+
+def test_validate_config_validations_rejects_duplicate_prompt_names():
+    with pytest.raises(ValueError, match="duplicate custom prompt names: dup"):
+        validate_config_validations(
+            {
+                "prompts": [
+                    {"name": "dup", "prompt": "a"},
+                    {"name": "dup", "prompt": "b"},
+                ]
+            }
+        )
+
+
+def test_client_creation_failure_falls_back_to_unavailable_client(monkeypatch):
+    def _raise(model, timeout):
+        raise OSError("could not connect")
+
+    monkeypatch.setattr("llm_preflight.runner.create_client", _raise)
+
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [
+                {"provider": "openai", "model": "fake", "base_url": "https://x.test"}
+            ],
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    model = result["models"][0]
+    assert model["base_url"] == "https://x.test"
+    sample = model["samples"][0]
+    assert sample["ok"] is False
+    assert "could not connect" in sample["error"]
+
+
+def test_profile_progress_callback_returns_none_without_a_callback():
+    assert _profile_progress_callback(None, "quick-migration-check") is None
+
+
+def test_run_profiles_execute_one_warmup_request_per_profile(monkeypatch):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 2,
+                "response_chars": 7,
+                "response": "billing",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 1,
+            "suite_repetitions": 1,
+        },
+        profile_selector="classification",
+    )
+
+    assert result["models"][0]["warmup_summary"]["requests"] == 1
+
+
+def test_run_benchmark_requires_a_prompt_or_selected_profiles():
+    with pytest.raises(ValueError, match="select a custom prompt"):
+        run_benchmark({"models": [{"model": "fake"}]})
+
+
+def test_run_benchmark_requires_at_least_one_resolved_model():
+    with pytest.raises(ValueError, match="model discovery returned no models"):
+        run_benchmark({"prompt": "hi", "models": []})
+
+
+def test_failed_tests_falls_back_to_dash_when_nothing_specific_is_recorded():
+    assert _failed_tests({}) == "-"
+
+
+def test_console_report_profile_mode_renders_quality_and_reliability_columns():
+    result = {
+        "benchmark": "console-profiles",
+        "run_id": "abc",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "prompt_sha256": "1234567890abcdef",
+        "models": [
+            {
+                "name": "model-a",
+                "profiles": [
+                    {
+                        "name": "exact-routing-check",
+                        "summary": {
+                            "requests": 3,
+                            "quality_score": 1.0,
+                            "valid_output_rate": 1.0,
+                            "success_rate": 1.0,
+                            "latency_seconds": {"p95": 1.2},
+                            "ttft_seconds": {"p50": 0.1},
+                            "output_tokens_per_second": {"p50": 10},
+                            "estimated_cost_usd": 0.0002,
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    rendered = console_report(result)
+
+    assert "Profile" in rendered
+    assert "Reliable" in rendered
+    assert "exact-routing-check" in rendered
+    assert "100%" in rendered
 
 
 def test_executive_summary_handles_zero_latency_mock_results():

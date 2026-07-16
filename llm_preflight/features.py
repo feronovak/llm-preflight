@@ -10,7 +10,7 @@ from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
 from .pricing import pricing_freshness_report
 from .presets import SUPPORTED_PRESETS, expand_presets
-from .runner import _profile_request_count, select_test_profiles
+from .runner import select_test_profiles
 
 
 def apply_smoke_mode(config: dict[str, Any]) -> dict[str, Any]:
@@ -93,24 +93,6 @@ def filter_changed_models(
         for model in models
         if (model.get("provider", "openai_compatible"), model["model"]) not in seen
     ]
-
-
-def _request_count(config: dict[str, Any], models: list[dict[str, Any]]) -> int:
-    profile_selector = config.get("profiles")
-    warmups = int(config["warmups"]) if "warmups" in config else 1
-    if profile_selector:
-        from .runner import select_test_profiles
-
-        profiles = select_test_profiles(config, str(profile_selector))
-        per_model = _profile_request_count(
-            profiles,
-            int(config.get("suite_repetitions", 1)),
-        )
-        warmups_per_model = warmups * len(profiles)
-    else:
-        per_model = int(config.get("repetitions", 5))
-        warmups_per_model = warmups
-    return len(models) * (per_model + warmups_per_model)
 
 
 def _retry_max_attempts(request: dict[str, Any]) -> int:

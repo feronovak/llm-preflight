@@ -38,6 +38,12 @@ with `mean`, `min`, `p50`, `p95`, and `max` (except where a metric only has a
 meaningful subset). They are `null` when unavailable. `estimated_cost_usd` is
 `null` for unknown pricing.
 
+`output_tokens_per_second` is also `null` when the stream was not observably
+incremental — fewer than two text chunks, or a generation window under 100 ms.
+Some providers buffer the whole response server-side and burst it at the end;
+the post-TTFT window then measures transport, not generation, and reporting a
+rate would inflate throughput by orders of magnitude.
+
 Failure and retry diagnostics are safe aggregates: `failure_reasons`,
 `failure_categories`, `retry_count`, `retry_reasons`, and `failure_hints`.
 

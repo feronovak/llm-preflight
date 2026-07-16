@@ -27,6 +27,32 @@ def test_missing_env_file_is_allowed(tmp_path):
     load_env_file(tmp_path / ".env.production")
 
 
+def test_load_env_file_strips_the_export_keyword(tmp_path, monkeypatch):
+    path = tmp_path / ".env.production"
+    path.write_text("export EXPORTED_KEY=value\n")
+    monkeypatch.delenv("EXPORTED_KEY", raising=False)
+
+    load_env_file(path)
+
+    assert os.environ["EXPORTED_KEY"] == "value"
+
+
+def test_load_env_file_rejects_a_line_without_an_equals_sign(tmp_path):
+    path = tmp_path / ".env.production"
+    path.write_text("NOT_AN_ASSIGNMENT\n")
+
+    with pytest.raises(ValueError, match="expected KEY=value"):
+        load_env_file(path)
+
+
+def test_load_env_file_rejects_an_invalid_variable_name(tmp_path):
+    path = tmp_path / ".env.production"
+    path.write_text("1INVALID=value\n")
+
+    with pytest.raises(ValueError, match="invalid variable name '1INVALID'"):
+        load_env_file(path)
+
+
 def test_load_env_file_strips_unquoted_inline_comments(tmp_path, monkeypatch):
     path = tmp_path / ".env.production"
     path.write_text('PLAIN_KEY=value # comment\nQUOTED_KEY="value # not comment"\n')

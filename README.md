@@ -39,13 +39,55 @@ you can see the report and exit behavior before making a paid request.
 - You want local result artifacts instead of a hosted dashboard.
 
 It measures deterministic test validity, end-to-end latency (p50/p95), time to
-first token, throughput when usage is available, token totals, and estimated
-cost. Result files retain request metadata and per-request observations for
+first token, throughput when the stream is incremental and usage is available,
+token totals, and estimated cost. Result files retain request metadata and per-request observations for
 reproducibility.
+
+"Deterministic" describes the validator, not the model: every response is
+checked against explicit structural rules — a regular expression, a JSON shape,
+an exact routing label — so the same response always produces the same verdict.
+The tool does not score semantic quality; that is your task-specific
+evaluation, and it stays out of scope on purpose.
+
+## What a live run reports
+
+Real output from a cross-provider run (2026-07-16, one short support prompt,
+three repetitions per model, total spend under $0.05):
+
+| Model | Success | Latency p50 | Latency p95 | TTFT p50 | Tokens/s p50 | Cost |
+|---|---:|---:|---:|---:|---:|---:|
+| gpt-5.6-luna | 100% | 1.379s | 1.579s | 0.726s | 139.0 | $0.001686 |
+| gpt-5.4-mini | 100% | 1.779s | 3.628s | 1.061s | 126.6 | $0.001143 |
+| claude-fable-5 | 100% | 6.497s | 7.573s | 2.908s | 56.5 | $0.033610 |
+| claude-opus-4-8 | 100% | 3.859s | 4.267s | 1.350s | 54.3 | $0.010205 |
+| gemini-3.5-flash | 100% | 2.924s | 2.955s | 2.895s | n/a | $0.001084 |
+| minimax-m3 | 100% | 3.356s | 3.631s | 1.719s | 90.4 | n/a |
+
+Tokens/s reads `n/a` when a provider delivers the response as a terminal
+burst instead of an incremental stream — the observable window measures
+transport, not generation, so no rate is reported. Cost reads `n/a` when
+pricing for the model is unknown.
+
+The report ends with a decision block:
+
+```
+- Fastest: gpt-5.6-luna — 1.423s mean latency.
+- Cheapest: gemini-3.5-flash — $0.001084 total.
+- Best value: gpt-5.6-luna — 88% composite score.
+- Recommended: gpt-5.6-luna — passed every selected test and led the
+  qualified value ranking.
+```
+
+Numbers like these are evidence for one environment at one time, not a
+leaderboard. Latency depends on your network and region; run the preflight
+from the host that will serve production traffic.
 
 ## First live run
 
-Python 3.10+ is required; there are no runtime dependencies.
+Python 3.10+ is required. There are no third-party runtime dependencies:
+`pip install llm-preflight` installs this package and nothing else, and the
+CLI runs on the Python standard library alone. Development tools (pytest,
+ruff, mypy) are optional extras that never reach a production install.
 
 ```bash
 cp benchmark.example.json benchmark.json
@@ -88,18 +130,18 @@ compatibility check, not a statistical performance conclusion.
 When that passes, run the task-specific checks that match your application—for
 example `exact-routing-check` or `structured-output-check`—before approving a
 switch.
-Use [custom contract tests](docs/custom-tests.md) to express the outputs your
+Use [custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) to express the outputs your
 own feature must preserve.
 
 ## Choose your path
 
 **I am new and want to see the tool safely.** Start with the
-[Getting started guide](docs/getting-started.md). It uses a no-key local mock
+[Getting started guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started.md). It uses a no-key local mock
 before any provider request.
 
 **I know the current and candidate model IDs.** Edit one config, run the
 [migration check](#change-a-model-safely), then add a
-[custom contract test](docs/custom-tests.md) for the output your feature must
+[custom contract test](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) for the output your feature must
 preserve. You do not need the catalogue.
 
 **I want to find and review provider releases.** Use the local catalogue
@@ -120,10 +162,10 @@ llm-preflight benchmarks/candidates.json --interactive \
 Refresh reads metadata only. A probe sends one minimal request only for text
 candidates you select and confirm. The interactive benchmark then lets you
 approve passing models explicitly. Follow the complete
-[catalogue tutorial](docs/model-watch.md) for the decision points.
+[catalogue tutorial](https://github.com/feronovak/llm-preflight/blob/main/docs/model-watch.md) for the decision points.
 
 **I am automating an established contract.** Use
-[CI and JSON output](docs/ci.md), with a saved baseline and `--ci` where a
+[CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/ci.md), with a saved baseline and `--ci` where a
 regression should fail the pipeline.
 
 ## Useful commands once you know your path
@@ -143,9 +185,9 @@ llm-preflight --quick "Return only valid JSON with a status field." \
 ```
 
 For advanced discovery, interactive runs, CI, baselines, replay, and stop
-modes, see [workflows](docs/workflows.md). For models, environment files,
+modes, see [workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/workflows.md). For models, environment files,
 custom prompts, and provider-specific options, see
-[configuration](docs/configuration.md).
+[configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/configuration.md).
 
 ## What makes a comparison useful
 
@@ -159,36 +201,55 @@ The CLI distinguishes `API FAIL` (transport, credentials, provider, or request
 failure) from `API OK / TEST FAIL` (a response that fails your validator).
 Recommendations only consider models that pass every selected test.
 
+## How it compares
+
+Several good tools live near this space. Use them when their job is your job:
+
+- **promptfoo, deepeval** — full evaluation suites: scored quality metrics,
+  red-teaming, large ongoing test matrices in CI. Use them to grade prompt and
+  model quality over time.
+- **llmci** — CI merge gates and prompt migration; it rewrites prompts for a
+  new model. Use it when the prompt should adapt to the model.
+- **Braintrust, LangSmith** — hosted platforms: tracing, dashboards, team
+  collaboration, production observability.
+- **`llm` (Simon Willison)** — a general multi-provider CLI for running
+  prompts, not a comparison harness.
+
+LLM Preflight does one narrower job: the local go/no-go check in the moment
+before a model switch. Your prompt, candidate models, structural validation,
+latency, and cost — one command, one report, no hosted service, no telemetry,
+and no vendor between you and the verdict.
+
 ## Documentation
 
-- [Getting started](docs/getting-started.md) — safe demo, first paid run, and
+- [Getting started](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started.md) — safe demo, first paid run, and
   choosing the right workflow.
-- [Workflows](docs/workflows.md) — discovery, smoke mode, CI, replay, matrix,
+- [Workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/workflows.md) — discovery, smoke mode, CI, replay, matrix,
   baselines, and request safety.
-- [Configuration](docs/configuration.md) — providers, custom prompts, presets,
+- [Configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/configuration.md) — providers, custom prompts, presets,
   aliases, and environment overlays.
-- [Configuration reference](docs/config-reference.md) — every supported config
+- [Configuration reference](https://github.com/feronovak/llm-preflight/blob/main/docs/config-reference.md) — every supported config
   key, default, and validation rule.
-- [Custom contract tests](docs/custom-tests.md) — copyable JSON extraction,
+- [Custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) — copyable JSON extraction,
   exact-routing, and content-rule migration tests.
-- [CLI reference](docs/cli-reference.md) — every command-line option, default,
+- [CLI reference](https://github.com/feronovak/llm-preflight/blob/main/docs/cli-reference.md) — every command-line option, default,
   and incompatibility.
-- [Interactive mode](docs/interactive.md) — selection, paid-run preview, and
+- [Interactive mode](https://github.com/feronovak/llm-preflight/blob/main/docs/interactive.md) — selection, paid-run preview, and
   live progress.
-- [CI and JSON output](docs/ci.md) — machine-readable output and exit-code
+- [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/ci.md) — machine-readable output and exit-code
   gates.
-- [Result JSON schema](docs/result-schema.md) — fields for integrations and
+- [Result JSON schema](https://github.com/feronovak/llm-preflight/blob/main/docs/result-schema.md) — fields for integrations and
   saved benchmark evidence.
-- [Model watch and approval](docs/model-watch.md) — discover, compare, and
+- [Model watch and approval](https://github.com/feronovak/llm-preflight/blob/main/docs/model-watch.md) — discover, compare, and
   deliberately promote, re-test, and retire provider models.
-- [Troubleshooting](docs/troubleshooting.md) — installation, credentials,
+- [Troubleshooting](https://github.com/feronovak/llm-preflight/blob/main/docs/troubleshooting.md) — installation, credentials,
   catalogue, and benchmark-result recovery.
-- [Tests, pricing, and safety](docs/tests-pricing-safety.md) — built-in tests,
+- [Tests, pricing, and safety](https://github.com/feronovak/llm-preflight/blob/main/docs/tests-pricing-safety.md) — built-in tests,
   validators, pricing confidence, retries, and sensitive data.
-- [Contributing](CONTRIBUTING.md) — development setup and the TDD workflow.
-- [Security](SECURITY.md) — reporting vulnerabilities.
+- [Contributing](https://github.com/feronovak/llm-preflight/blob/main/CONTRIBUTING.md) — development setup and the TDD workflow.
+- [Security](https://github.com/feronovak/llm-preflight/blob/main/SECURITY.md) — reporting vulnerabilities.
 
 ## Contributing and license
 
-Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Released
-under the [MIT License](LICENSE).
+Contributions are welcome; see [CONTRIBUTING.md](https://github.com/feronovak/llm-preflight/blob/main/CONTRIBUTING.md). Released
+under the [MIT License](https://github.com/feronovak/llm-preflight/blob/main/LICENSE).

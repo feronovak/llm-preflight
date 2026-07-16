@@ -280,6 +280,139 @@ def test_budget_uses_profile_case_prompts_and_profile_request_limits():
         check_budget(config)
 
 
+def test_apply_environment_rejects_an_unknown_environment_name():
+    with pytest.raises(ValueError, match="unknown environment 'staging'"):
+        apply_environment({"environments": {"ci": {}}}, "staging")
+
+
+def test_apply_model_aliases_rejects_unknown_alias_and_passes_through_dict_models():
+    config = {
+        "aliases": {"fast": {"provider": "openai", "model": "gpt-fast"}},
+        "models": ["fast", {"provider": "openai", "model": "direct"}],
+    }
+
+    resolved = apply_model_aliases(config)
+
+    assert resolved["models"] == [
+        {"provider": "openai", "model": "gpt-fast"},
+        {"provider": "openai", "model": "direct"},
+    ]
+
+    with pytest.raises(ValueError, match="unknown model alias 'missing'"):
+        apply_model_aliases(
+            {"aliases": {"fast": {"model": "gpt-fast"}}, "models": ["missing"]}
+        )
+
+
+def test_apply_provider_presets_rejects_an_unknown_preset():
+    with pytest.raises(ValueError, match="unknown presets: bogus"):
+        apply_provider_presets({"presets": ["bogus"]})
+
+
+def test_estimate_budget_treats_bare_retry_true_as_default_attempts():
+    budget = estimate_budget(
+        {
+            "prompt": "hi",
+            "models": [{"model": "fake"}],
+            "repetitions": 1,
+            "warmups": 0,
+            "request": {"retry": True},
+        }
+    )
+    assert budget["possible_requests"] == 2
+
+
+def test_estimate_budget_treats_a_malformed_retry_value_as_default_attempts():
+    budget = estimate_budget(
+        {
+            "prompt": "hi",
+            "models": [{"model": "fake"}],
+            "repetitions": 1,
+            "warmups": 0,
+            "request": {"retry": "not-a-dict"},
+        }
+    )
+    assert budget["possible_requests"] == 2
+
+
+def test_doctor_report_surfaces_discovery_errors_as_not_ok():
+    report = doctor_report({"discovery": [{"provider": "bogus", "limit": 1}]})
+
+    assert report["ok"] is False
+    assert report["models"] == 0
+    assert "unsupported for provider" in report["checks"][0]["message"]
+
+
+def test_doctor_report_flags_missing_base_url_and_confirms_a_runnable_model(
+    monkeypatch,
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "configured")
+    report = doctor_report(
+        {
+            "prompt": "hi",
+            "models": [
+                {"provider": "openai_compatible", "model": "custom-model"},
+                {"provider": "openai", "model": "gpt-test"},
+            ],
+        }
+    )
+
+    assert report["checks"][0]["ok"] is False
+    assert report["checks"][0]["message"] == "base_url is required"
+    assert report["checks"][1]["ok"] is True
+    assert report["checks"][1]["message"] == "configuration looks runnable"
+
+
+def test_compare_results_reports_new_models_as_added_without_regressions():
+    baseline = {"models": []}
+    current = {"models": [{"name": "brand-new", "summary": _summary(1.0, 0.01)}]}
+
+    diff = compare_results(baseline, current)
+
+    assert diff["models"] == [
+        {"name": "brand-new", "status": "added", "regressions": []}
+    ]
+    assert diff["ok"] is True
+
+
+def test_replay_config_requires_a_saved_source_config():
+    with pytest.raises(ValueError, match="cannot replay exactly"):
+        replay_config({"models": []})
+
+
+def test_replay_config_restores_the_recorded_request_options():
+    result = {
+        "source_config": {"prompt": "hi", "models": []},
+        "models": [],
+        "settings": {"repetitions": 1, "request": {"temperature": 0.2}},
+    }
+
+    config = replay_config(result)
+
+    assert config["request"] == {"temperature": 0.2}
+
+
+def test_matrix_report_shows_na_for_a_model_missing_a_profile():
+    result = {
+        "models": [
+            {
+                "name": "model-a",
+                "profiles": [
+                    {"name": "classification", "summary": {"valid_output_rate": 1}}
+                ],
+            },
+            {
+                "name": "model-b",
+                "profiles": [],
+            },
+        ]
+    }
+
+    rendered = matrix_report(result)
+
+    assert "| model-b | n/a |" in rendered
+
+
 def test_aliases_and_environment_overlays_are_applied_to_configs():
     config = {
         "prompt": "hi",

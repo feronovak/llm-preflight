@@ -317,6 +317,100 @@ def test_compatible_client_streams_text_and_usage(monkeypatch):
     assert sample["error"] is None
 
 
+def test_single_chunk_response_reports_no_throughput(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"choices":[{"delta":{"content":"whole body at once"}}],'
+                    b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n',
+                    b"data: [DONE]\n",
+                ]
+            )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: FakeResponse()
+    )
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello", {"max_output_tokens": 4}
+    )
+    assert sample["ok"] is True
+    assert sample["output_tokens"] == 140
+    assert sample["output_tokens_per_second"] is None
+
+
+def test_incremental_stream_reports_throughput(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"choices":[{"delta":{"content":"first"}}]}\n',
+                    b'data: {"choices":[{"delta":{"content":" second"}}],'
+                    b'"usage":{"prompt_tokens":3,"completion_tokens":2}}\n',
+                    b"data: [DONE]\n",
+                ]
+            )
+
+    ticks = iter(i * 0.5 for i in range(100))
+    monkeypatch.setattr("llm_preflight.client.time.perf_counter", lambda: next(ticks))
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: FakeResponse()
+    )
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello", {"max_output_tokens": 4}
+    )
+    assert sample["ok"] is True
+    assert sample["output_tokens_per_second"] is not None
+    assert sample["output_tokens_per_second"] > 0
+
+
+def test_burst_stream_below_generation_window_reports_no_throughput(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [
+                    b'data: {"choices":[{"delta":{"content":"first"}}]}\n',
+                    b'data: {"choices":[{"delta":{"content":" second"}}],'
+                    b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n',
+                    b"data: [DONE]\n",
+                ]
+            )
+
+    # Everything after the first token arrives within 1 ms — a terminal
+    # burst, not incremental generation.
+    ticks = iter([0.0, 3.0, 3.001, 3.002])
+    monkeypatch.setattr("llm_preflight.client.time.perf_counter", lambda: next(ticks))
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: FakeResponse()
+    )
+    sample = create_client({"provider": "openai", "model": "model-a"}, 10).run(
+        "hello", {"max_output_tokens": 4}
+    )
+    assert sample["ok"] is True
+    assert sample["output_tokens_per_second"] is None
+
+
 def test_client_reports_missing_key_and_http_error(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     client = create_client({"provider": "openai", "model": "model-a"}, 10)

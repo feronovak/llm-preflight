@@ -13,6 +13,7 @@ from .security import require_http_url
 
 TokenUsage = dict[str, int | None]
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+MIN_GENERATION_WINDOW_SECONDS = 0.1
 
 
 PROVIDER_DEFAULTS = {
@@ -240,9 +241,17 @@ class ProviderClient(ABC):
                 generation_seconds = (
                     finished - first_token_at if first_token_at else None
                 )
+                # Some providers buffer the whole body server-side and burst
+                # it in one or a few chunks at the end. The post-TTFT window
+                # is then transport time, not generation speed, and would
+                # inflate throughput by orders of magnitude. Report a rate
+                # only when the stream was observably incremental.
                 throughput = (
                     output_tokens / generation_seconds
-                    if output_tokens is not None and generation_seconds
+                    if output_tokens is not None
+                    and generation_seconds is not None
+                    and generation_seconds >= MIN_GENERATION_WINDOW_SECONDS
+                    and len(content) >= 2
                     else None
                 )
                 return {

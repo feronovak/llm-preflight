@@ -1,5 +1,7 @@
 # LLM Preflight
 
+![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
+
 Know whether a model change is safe before it reaches production. LLM Preflight
 runs a small local preflight across providers and compares validated
 output, response speed, tokens, and estimated cost.

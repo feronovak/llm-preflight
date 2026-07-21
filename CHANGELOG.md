@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 2.0.5 - 2026-07-21
+
+### Fixed
+
+- Let `json_schema` contracts explicitly accept one Markdown-fenced JSON block
+  when that matches the deployed consumer, while retaining raw JSON as the
+  default and rejecting ambiguous multiple blocks or unfenced prose objects.
+- Preserve the structured-response parsing policy in result samples and failure
+  artifacts so a failed response can be interpreted against its real contract.
+
+### Changed
+
+- Document parser-aligned JSON contracts and include a deterministic
+  fence-tolerant mock example.
+
 ## 2.0.4 - 2026-07-17
 
 ### Added

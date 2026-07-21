@@ -1,3 +1,4 @@
+import json
 import stat
 import sys
 
@@ -139,6 +140,30 @@ def test_custom_prompt_profile_converts_validation_to_single_case():
             "evaluator": {"type": "regex", "regex": '"questions"\\s*:\\s*\\['},
         }
     ]
+
+
+def test_custom_prompt_profile_preserves_fenced_json_policy():
+    profile = custom_prompt_profile(
+        {
+            "name": "parser-aligned-contract",
+            "prompt": "Return JSON",
+            "validation": {
+                "json_schema": {"required": ["exclude"]},
+                "allow_fenced_json": True,
+            },
+        }
+    )
+
+    assert profile["cases"][0]["evaluator"] == {
+        "type": "json_schema",
+        "schema": {"required": ["exclude"]},
+        "allow_fenced_json": True,
+    }
+
+
+def test_validation_rejects_fenced_json_policy_without_a_json_validator():
+    with pytest.raises(ValueError, match="allow_fenced_json requires json_schema"):
+        validate_config_validations({"validation": {"allow_fenced_json": True}})
 
 
 def test_report_handles_missing_usage():
@@ -892,7 +917,9 @@ def test_failed_profile_validation_keeps_response_preview(monkeypatch):
     assert "response" not in sample
 
 
-def test_validation_failure_summary_hints_use_real_pipeline_samples(monkeypatch):
+def test_validation_failure_summary_hints_use_real_pipeline_samples(
+    monkeypatch, tmp_path
+):
     class FakeClient:
         model = {"base_url": "https://example.test"}
 
@@ -920,6 +947,7 @@ def test_validation_failure_summary_hints_use_real_pipeline_samples(monkeypatch)
             "models": [{"provider": "openai", "model": "fake"}],
             "warmups": 0,
             "repetitions": 1,
+            "save_responses": "failures",
             "validation": {"json_schema": {"required": ["questions"]}},
         }
     )
@@ -927,6 +955,66 @@ def test_validation_failure_summary_hints_use_real_pipeline_samples(monkeypatch)
     assert result["models"][0]["summary"]["failure_hints"] == [
         "response appears to be fenced Markdown instead of raw output"
     ]
+    sample = result["models"][0]["samples"][0]
+    assert sample["json_parsing_policy"] == "raw_json"
+    assert sample["response_preview"] == "```json {} ```"
+    assert sample["response"] == "```json\n{}\n```"
+    artifact = json.loads(save_result(result, tmp_path).read_text())
+    saved_sample = artifact["models"][0]["samples"][0]
+    assert saved_sample["json_parsing_policy"] == "raw_json"
+    assert saved_sample["response"] == "```json\n{}\n```"
+
+
+def test_custom_fenced_json_contract_keeps_successful_output_out_of_artifacts(
+    monkeypatch,
+):
+    class FakeClient:
+        model = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            response = '```json\n{"exclude":[2,3,4]}\n```'
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "response_chars": len(response),
+                "response": response,
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "models": [{"provider": "openai", "model": "fake"}],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "exclude-contract",
+                    "prompt": "Return JSON",
+                    "validation": {
+                        "json_schema": {
+                            "type": "object",
+                            "required": ["exclude"],
+                        },
+                        "allow_fenced_json": True,
+                    },
+                }
+            ],
+        },
+        profile_selector="exclude-contract",
+    )
+
+    sample = result["models"][0]["profiles"][0]["samples"][0]
+    assert sample["valid_output"] is True
+    assert sample["json_parsing_policy"] == "single_fenced_block"
+    assert "response" not in sample
 
 
 def test_profile_validation_failure_summary_hints_use_real_pipeline_samples(

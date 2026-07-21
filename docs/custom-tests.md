@@ -116,6 +116,27 @@ llm-preflight benchmark.json --tests ticket-contract --dry-run
 llm-preflight benchmark.json --tests ticket-contract
 ```
 
+## Match the deployed JSON parser
+
+The default `json_schema` contract requires raw JSON. That is the right choice
+when the application sends the model response straight to `json.loads` or an
+equivalent strict parser. If the deployed consumer accepts one complete fenced
+JSON block, make that acceptance explicit instead of treating a fenced response
+as a model-quality failure:
+
+```json
+"validation": {
+  "json_schema": {"type": "object", "required": ["product"]},
+  "allow_fenced_json": true
+}
+```
+
+This mode accepts raw JSON or exactly one ` ```json ` (or untagged ` ``` `)
+block, including when prose surrounds that block. It deliberately rejects
+multiple blocks and unfenced JSON objects in prose, because preflight should not
+guess which payload a production parser would consume. Failed-response artifacts
+record `json_parsing_policy` alongside the retained response preview.
+
 ## Keep contracts useful
 
 - Use real but non-sensitive examples drawn from production failure modes.

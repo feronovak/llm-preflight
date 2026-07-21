@@ -21,6 +21,7 @@ from .pricing import pricing_freshness_report
 from .profiles import (
     PROFILE_ALIASES,
     evaluate_response,
+    json_parsing_policy,
     normalize_profile_selector,
     select_profiles,
 )
@@ -187,7 +188,10 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
 
 def _validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
     if "json_schema" in validation:
-        return {"type": "json_schema", "schema": validation["json_schema"]}
+        evaluator = {"type": "json_schema", "schema": validation["json_schema"]}
+        if "allow_fenced_json" in validation:
+            evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
+        return evaluator
     if "regex" in validation:
         return {"type": "regex", "regex": validation["regex"]}
     if "contains" in validation:
@@ -275,7 +279,11 @@ def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
         sample["evaluation_error"] = "exact match failed"
     if "json_schema" in validation:
         evaluation = evaluate_response(
-            response, {"type": "json_schema", "schema": validation["json_schema"]}
+            response,
+            _validation_evaluator(validation),
+        )
+        sample["json_parsing_policy"] = json_parsing_policy(
+            _validation_evaluator(validation)
         )
         if not evaluation["valid"]:
             sample["valid_output"] = False
@@ -291,7 +299,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             return
         if not isinstance(validation, dict):
             raise ValueError(f"{location} must be an object")
-        allowed = {"contains", "regex", "json_schema", "exact"}
+        allowed = {"contains", "regex", "json_schema", "exact", "allow_fenced_json"}
         unknown = sorted(set(validation) - allowed)
         if unknown:
             raise ValueError(f"unknown validation keys: {', '.join(unknown)}")
@@ -299,6 +307,11 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             not isinstance(validation["contains"], str) or not validation["contains"]
         ):
             raise ValueError(f"{location}.contains must be a non-empty string")
+        if "allow_fenced_json" in validation:
+            if "json_schema" not in validation:
+                raise ValueError(f"{location}.allow_fenced_json requires json_schema")
+            if not isinstance(validation["allow_fenced_json"], bool):
+                raise ValueError(f"{location}.allow_fenced_json must be a boolean")
 
     validate_rules(config.get("validation", {}), "validation")
     for prompt_config in config.get("prompts", []):
@@ -404,6 +417,9 @@ def _execute(
                     "evaluation_error": evaluation["error"],
                 }
             )
+            parsing_policy = json_parsing_policy(case["evaluator"])
+            if parsing_policy:
+                sample["json_parsing_policy"] = parsing_policy
             _add_response_preview(sample)
             if level is not None:
                 sample["concurrency"] = level
@@ -657,6 +673,7 @@ def run_benchmark(
                         "evaluation_error": redact_secrets(
                             sample.get("evaluation_error")
                         ),
+                        "json_parsing_policy": sample.get("json_parsing_policy"),
                         "response_preview": redact_secrets(
                             sample.get("response_preview")
                         ),

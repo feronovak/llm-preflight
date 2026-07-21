@@ -102,6 +102,71 @@ def test_invalid_json_is_a_scored_failure():
     assert result == {"score": 0.0, "valid": False, "error": "invalid JSON"}
 
 
+@pytest.mark.parametrize("evaluator_type", ["json_subset", "json_schema"])
+@pytest.mark.parametrize("fence", ["```json", "```"])
+def test_json_evaluators_accept_one_complete_fenced_block_when_enabled(
+    evaluator_type, fence
+):
+    evaluator = {
+        "type": evaluator_type,
+        "allow_fenced_json": True,
+        **(
+            {"expected": {"priority": "high"}}
+            if evaluator_type == "json_subset"
+            else {
+                "schema": {
+                    "type": "object",
+                    "required": ["priority"],
+                    "properties": {"priority": {"type": "string"}},
+                }
+            }
+        ),
+    }
+
+    result = evaluate_response(f'{fence}\n{{"priority": "high"}}\n```', evaluator)
+
+    assert result == {"score": 1.0, "valid": True, "error": None}
+
+
+def test_fenced_json_option_accepts_one_block_surrounded_by_prose():
+    result = evaluate_response(
+        'Explanation:\n```json\n{"priority":"high"}\n```\nDone.',
+        {
+            "type": "json_schema",
+            "allow_fenced_json": True,
+            "schema": {"type": "object", "required": ["priority"]},
+        },
+    )
+
+    assert result == {"score": 1.0, "valid": True, "error": None}
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        'The answer is {"priority":"high"}.',
+        '```json\n{"priority":"high"}\n```\n```json\n{"priority":"low"}\n```',
+    ],
+)
+def test_fenced_json_option_does_not_guess_a_payload_from_unfenced_prose_or_multiple_blocks(
+    response,
+):
+    result = evaluate_response(
+        response,
+        {
+            "type": "json_schema",
+            "allow_fenced_json": True,
+            "schema": {"type": "object", "required": ["priority"]},
+        },
+    )
+
+    assert result == {
+        "score": 0.0,
+        "valid": False,
+        "error": "invalid JSON (expected raw JSON or exactly one fenced JSON block)",
+    }
+
+
 def test_json_schema_reports_structural_mismatch():
     result = evaluate_response(
         '{"questions":[]}',

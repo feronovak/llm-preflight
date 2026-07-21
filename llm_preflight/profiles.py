@@ -183,6 +183,35 @@ def select_profiles(selector: str) -> list[dict[str, Any]]:
     return [profile for profile in BUILTIN_PROFILES if profile["name"] in requested]
 
 
+def json_parsing_policy(evaluator: dict[str, Any]) -> str | None:
+    """Return the response contract used by a structured evaluator."""
+    if evaluator.get("type") not in {"json_subset", "json_schema"}:
+        return None
+    return "single_fenced_block" if evaluator.get("allow_fenced_json") else "raw_json"
+
+
+def _load_json_response(
+    response: str, allow_fenced_json: bool
+) -> tuple[Any | None, str | None]:
+    try:
+        return json.loads(response), None
+    except json.JSONDecodeError:
+        pass
+    if allow_fenced_json:
+        blocks = re.findall(
+            r"```(?:json)?\s*(.*?)```",
+            response,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if len(blocks) == 1:
+            try:
+                return json.loads(blocks[0].strip()), None
+            except json.JSONDecodeError:
+                pass
+        return None, "invalid JSON (expected raw JSON or exactly one fenced JSON block)"
+    return None, "invalid JSON"
+
+
 def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any]:
     evaluator_type = evaluator["type"]
     if evaluator_type == "nonempty":
@@ -218,10 +247,11 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "error": None if valid else f"response did not match regex {pattern!r}",
         }
     if evaluator_type == "json_subset":
-        try:
-            parsed = json.loads(response)
-        except json.JSONDecodeError:
-            return {"score": 0.0, "valid": False, "error": "invalid JSON"}
+        parsed, parse_error = _load_json_response(
+            response, bool(evaluator.get("allow_fenced_json"))
+        )
+        if parse_error:
+            return {"score": 0.0, "valid": False, "error": parse_error}
         expected = evaluator["expected"]
         valid = isinstance(parsed, dict) and all(
             parsed.get(key) == value for key, value in expected.items()
@@ -232,10 +262,11 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "error": None if valid else "required JSON fields did not match",
         }
     if evaluator_type == "json_schema":
-        try:
-            parsed = json.loads(response)
-        except json.JSONDecodeError:
-            return {"score": 0.0, "valid": False, "error": "invalid JSON"}
+        parsed, parse_error = _load_json_response(
+            response, bool(evaluator.get("allow_fenced_json"))
+        )
+        if parse_error:
+            return {"score": 0.0, "valid": False, "error": parse_error}
         error = _validate_json_schema(parsed, evaluator["schema"])
         valid = error is None
         return {

@@ -72,7 +72,11 @@ name, and either non-empty `prompt` or a relative
 `system_prompt`, `request`, `validation`, and `presets`.
 
 Validation supports non-empty `contains`, `regex`, `exact`, and `json_schema`; an absent
-custom validation means non-empty output. Unknown validation keys are rejected
+custom validation means non-empty output. `json_schema` is strict raw JSON by
+default. Set `"allow_fenced_json": true` alongside it only when the deployed
+consumer accepts exactly one complete Markdown-fenced JSON block; surrounding
+prose is allowed, but multiple blocks and unfenced prose objects still fail.
+Unknown validation keys are rejected
 before a benchmark can run. Built-in packs also use numeric and JSON-subset
 evaluators. The supported JSON Schema subset handles object
 `required`/`properties`, arrays and item limits, primitive `type`, and `enum`.

@@ -12,7 +12,7 @@
       "name": "local-example",
       "provider": "mock",
       "model": "local",
-      "response": "{\"product\":\"Checkout\",\"priority\":\"high\"}"
+      "response": "```json\n{\"product\":\"Checkout\",\"priority\":\"high\"}\n```"
     }
   ],
   "prompts": [
@@ -30,7 +30,8 @@
             "product": {"type": "string"},
             "priority": {"type": "string", "enum": ["high", "medium", "low"]}
           }
-        }
+        },
+        "allow_fenced_json": true
       }
     }
   ]

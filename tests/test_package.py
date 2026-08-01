@@ -27,11 +27,23 @@ def test_preflight_has_a_public_python_module_entry_point():
     assert main is cli.main
 
 
-def test_build_backend_supports_editable_installs_without_an_unnecessary_floor():
+def test_build_backend_is_pinned_for_reproducible_release_artifacts():
     pyproject = Path("pyproject.toml").read_text()
 
-    assert 'requires = ["setuptools>=64"]' in pyproject
+    assert 'requires = ["setuptools==83.0.0"]' in pyproject
     assert 'build-backend = "setuptools.build_meta"' in pyproject
+
+
+def test_ci_and_release_workflows_install_committed_tool_locks():
+    ci_workflow = Path(".github/workflows/tests.yml").read_text()
+    release_workflow = Path(".github/workflows/release.yml").read_text()
+
+    assert "python -m pip install --requirement requirements/ci.lock" in ci_workflow
+    assert "python -m pip install --no-deps -e ." in ci_workflow
+    assert (
+        "python -m pip install --requirement requirements/release.lock"
+        in release_workflow
+    )
 
 
 def test_setup_py_has_only_the_single_console_entry_point():

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools==83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -26,9 +26,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["coverage>=7", "pytest>=7", "ruff>=0.15"]
-audit = ["bandit>=1.9", "detect-secrets>=1.5", "mypy>=1.19"]
-release = ["build>=1.2", "twine>=6"]
+dev = ["coverage==7.15.2", "pytest==9.0.3", "ruff==0.16.1"]
+audit = ["bandit==1.9.4", "detect-secrets==1.5.0", "mypy==2.2.0"]
+release = ["build==1.5.0", "twine==6.2.0"]
 
 [project.scripts]
 llm-preflight = "llm_preflight.__main__:main"
@@ -40,6 +40,9 @@ include = ["llm_preflight*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--strict-markers"
+
+[tool.ruff]
+target-version = "py310"
 
 [tool.coverage.run]
 branch = true

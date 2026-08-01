@@ -313,9 +313,39 @@ def json_parsing_policy(evaluator: dict[str, Any]) -> str | None:
     return "single_fenced_block" if evaluator.get("allow_fenced_json") else "raw_json"
 
 
+_MAX_JSON_NESTING = 1_000
+
+
+def _exceeds_json_nesting_limit(value: str) -> bool:
+    """Reject deeply nested payloads consistently across Python versions."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for character in value:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character in "[{":
+            depth += 1
+            if depth > _MAX_JSON_NESTING:
+                return True
+        elif character in "]}":
+            depth -= 1
+    return False
+
+
 def _load_json_response(
     response: str, parsing_policy: str
 ) -> tuple[Any | None, str | None]:
+    if _exceeds_json_nesting_limit(response):
+        return None, "invalid JSON"
     try:
         return json.loads(response), None
     except RecursionError:

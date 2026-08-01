@@ -15,7 +15,7 @@ def load_ledger(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
         raise ValueError(f"invalid capability ledger: {path}")
     if not isinstance(payload.get("probes"), dict):
-        raise ValueError(f"invalid capability ledger probes: {path}")
+        raise ValueError(f"invalid capability ledger probes: {path}")  # noqa: TRY004
     return payload
 
 

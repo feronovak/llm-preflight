@@ -4,15 +4,16 @@ import argparse
 import json
 import os
 import sys
-from collections.abc import Callable
 from collections import Counter
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .capability_ledger import apply_probe_evidence, load_ledger
 from .catalog import classify_catalog_model, resolve_models
-from .client import PROVIDER_DEFAULTS
+from .catalog_probe import probe_model
 from .catalog_watch import (
     build_candidate_config,
     catalog_diff,
@@ -21,8 +22,7 @@ from .catalog_watch import (
     save_snapshot,
     snapshot_catalog,
 )
-from .catalog_probe import probe_model
-from .capability_ledger import apply_probe_evidence, load_ledger
+from .client import PROVIDER_DEFAULTS
 from .env import load_env_file
 from .features import (
     apply_environment,
@@ -39,10 +39,9 @@ from .features import (
     matrix_report,
     replay_config,
 )
-from .profiles import BUILTIN_PROFILES
 from .pricing import pricing_freshness_report
+from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
-from .source_audit import audit_source
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -50,13 +49,13 @@ from .runner import (
     model_failed,
     profile_request_breakdown,
     result_failed,
-    validate_config_validations,
     run_benchmark,
     save_result,
     select_custom_prompt,
     select_test_profiles,
+    validate_config_validations,
 )
-
+from .source_audit import audit_source
 
 _ENV_TEMPLATE = """# Copy this file to .env.production beside your benchmark configuration.
 # Fill only the providers you use. Never commit .env.production.

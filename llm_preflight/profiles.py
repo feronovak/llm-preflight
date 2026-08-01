@@ -4,7 +4,6 @@ import json
 import re
 from typing import Any
 
-
 BUILTIN_PROFILES: list[dict[str, Any]] = [
     {
         "name": "quick-migration-check",

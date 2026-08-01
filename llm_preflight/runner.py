@@ -6,9 +6,9 @@ import os
 import platform
 import re
 import uuid
-from contextlib import contextmanager
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,8 +23,8 @@ from .profiles import (
     evaluate_consumer_response,
     evaluate_response,
     golden_expected,
-    normalize_golden,
     json_parsing_policy,
+    normalize_golden,
     normalize_profile_selector,
     select_profiles,
 )
@@ -127,11 +127,11 @@ def load_config(path: Path) -> dict[str, Any]:
     if "prompt" not in config and not prompts:
         raise ValueError("config requires 'prompt' or 'prompts'")
     if not isinstance(prompts, list):
-        raise ValueError("'prompts' must be a list")
+        raise ValueError("'prompts' must be a list")  # noqa: TRY004
     prompt_names = []
     for index, prompt in enumerate(prompts):
         if not isinstance(prompt, dict):
-            raise ValueError(f"prompts[{index}] must be an object")
+            raise ValueError(f"prompts[{index}] must be an object")  # noqa: TRY004
         if not isinstance(prompt.get("name"), str) or not prompt["name"]:
             raise ValueError(f"prompts[{index}] requires 'name'")
         if "prompt_file" in prompt:
@@ -341,7 +341,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
         if validation is None:
             return
         if not isinstance(validation, dict):
-            raise ValueError(f"{location} must be an object")
+            raise ValueError(f"{location} must be an object")  # noqa: TRY004
         allowed = {
             "contains",
             "regex",
@@ -506,7 +506,7 @@ def _safe_client_run(
 ) -> dict[str, Any]:
     try:
         return client.run(prompt, options)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - provider adapters may raise arbitrary errors
         return _request_exception_sample(exc)
 
 
@@ -585,9 +585,9 @@ def _execute(
             if level is not None:
                 sample["concurrency"] = level
             failed_output = not sample["ok"] or not sample.get("valid_output", True)
-            if save_responses != "failures" and not save_responses:
-                sample.pop("response", None)
-            elif save_responses == "failures" and not failed_output:
+            if (save_responses != "failures" and not save_responses) or (
+                save_responses == "failures" and not failed_output
+            ):
                 sample.pop("response", None)
             samples.append(sample)
             if on_complete:
@@ -815,7 +815,12 @@ def run_benchmark(
         warmup_samples: list[dict[str, Any]] = []
         completed_requests = 0
 
-        def report_sample(sample: dict[str, Any], phase: str) -> None:
+        def report_sample(
+            sample: dict[str, Any],
+            phase: str,
+            request_total: int = request_total,
+            model: dict[str, Any] = model,
+        ) -> None:
             nonlocal completed_requests
             completed_requests += 1
             if progress:
@@ -1158,8 +1163,10 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
     lines.extend(
         [
             "",
-            "Value equally weights reliability, relative speed, and relative cost "
-            "among models that passed every selected test.",
+            (
+                "Value equally weights reliability, relative speed, and relative cost "
+                "among models that passed every selected test."
+            ),
         ]
     )
     return lines

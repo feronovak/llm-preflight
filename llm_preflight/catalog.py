@@ -11,7 +11,6 @@ from .client import PROVIDER_DEFAULTS
 from .pricing import apply_public_pricing
 from .security import open_public_url, require_http_url
 
-
 _MAX_CATALOG_RESPONSE_BYTES = 8 * 1024 * 1024
 
 _NON_CHAT_NAME_TYPES = {
@@ -331,10 +330,16 @@ def discover_models(source: dict[str, Any]) -> list[dict[str, Any]]:
     include = source.get("include")
     exclude = source.get("exclude")
     if include:
-        models = [model for model in models if re.search(include, model["model"], re.I)]
+        models = [
+            model
+            for model in models
+            if re.search(include, model["model"], re.IGNORECASE)
+        ]
     if exclude:
         models = [
-            model for model in models if not re.search(exclude, model["model"], re.I)
+            model
+            for model in models
+            if not re.search(exclude, model["model"], re.IGNORECASE)
         ]
     if not source.get("sort") and any(
         model.get("created") is not None for model in models

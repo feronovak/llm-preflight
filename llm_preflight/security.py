@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import urllib.parse
+import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 from ipaddress import ip_address
-import socket
 
 
 def require_http_url(url: str, *, resolve_host: bool = True) -> None:

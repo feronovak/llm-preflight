@@ -8,9 +8,8 @@ from typing import Any, cast
 
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
-from .pricing import pricing_freshness_report
-from .pricing import estimate_sample_cost
 from .presets import SUPPORTED_PRESETS, expand_presets
+from .pricing import estimate_sample_cost, pricing_freshness_report
 from .runner import select_test_profiles
 
 

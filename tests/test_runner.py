@@ -1,6 +1,7 @@
 import json
 import stat
 import sys
+from typing import ClassVar
 
 import pytest
 
@@ -12,11 +13,11 @@ from llm_preflight.runner import (
     custom_prompt_profile,
     load_config,
     report,
+    result_failed,
     run_benchmark,
     save_result,
     select_custom_prompt,
     select_test_profiles,
-    result_failed,
     validate_config_validations,
 )
 
@@ -32,9 +33,11 @@ def test_benchmark_run_lock_reports_existing_run(tmp_path, monkeypatch):
 
     monkeypatch.setitem(sys.modules, "fcntl", BusyFcntl)
 
-    with pytest.raises(ValueError, match="already running"):
-        with benchmark_run_lock(tmp_path / "results"):
-            pass
+    with (
+        pytest.raises(ValueError, match="already running"),
+        benchmark_run_lock(tmp_path / "results"),
+    ):
+        pass
 
 
 def test_result_with_a_model_that_produced_no_samples_fails_closed():
@@ -498,7 +501,7 @@ def test_plain_prompt_supports_exact_validation_and_rejects_unknown_rules():
 
 def test_unexpected_per_model_request_exception_is_saved_as_api_failure(monkeypatch):
     class Client:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def __init__(self, fail):
             self.fail = fail
@@ -540,7 +543,7 @@ def test_unexpected_per_model_request_exception_is_saved_as_api_failure(monkeypa
 
 def test_profile_run_groups_quality_and_operational_metrics(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = "billing"
@@ -580,7 +583,7 @@ def test_profile_run_groups_quality_and_operational_metrics(monkeypatch):
 
 def test_run_benchmark_reports_live_model_and_request_progress(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -707,7 +710,7 @@ def test_wholly_unpriced_run_with_no_warmups_has_unknown_cost_confidence():
 
 def test_profile_progress_reports_invalid_outputs_separately(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -748,7 +751,7 @@ def test_profile_progress_reports_invalid_outputs_separately(monkeypatch):
 
 def test_load_profile_progress_includes_concurrency_level(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -786,7 +789,7 @@ def test_load_profile_progress_includes_concurrency_level(monkeypatch):
 
 def test_run_benchmark_can_select_profiles_from_config(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -820,7 +823,7 @@ def test_run_benchmark_can_select_profiles_from_config(monkeypatch):
 
 def test_run_benchmark_can_mix_builtin_and_custom_prompt_profiles(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = '{"questions":[]}' if "quiz" in prompt else "billing"
@@ -871,7 +874,7 @@ def test_custom_prompt_profile_presets_expand_into_request_options(monkeypatch):
     captured_options = []
 
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             captured_options.append(dict(options))
@@ -918,7 +921,7 @@ def test_custom_prompt_profile_presets_expand_into_request_options(monkeypatch):
 
 def test_profile_runs_can_save_only_failed_responses(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def __init__(self):
             self.calls = 0
@@ -967,7 +970,7 @@ def test_profile_runs_can_save_only_failed_responses(monkeypatch):
 
 def test_run_benchmark_records_failure_reasons_and_can_save_only_failures(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def __init__(self):
             self.calls = 0
@@ -1139,7 +1142,7 @@ def test_run_benchmark_stop_on_test_fail_stops_on_invalid_output(monkeypatch):
 
 def test_failed_validation_keeps_response_preview_without_full_response(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = "I cannot produce that shape."
@@ -1178,7 +1181,7 @@ def test_failed_validation_keeps_response_preview_without_full_response(monkeypa
 
 def test_failed_profile_validation_keeps_response_preview(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = "wrong"
@@ -1218,7 +1221,7 @@ def test_validation_failure_summary_hints_use_real_pipeline_samples(
     monkeypatch, tmp_path
 ):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = "```json\n{}\n```"
@@ -1266,7 +1269,7 @@ def test_custom_fenced_json_contract_keeps_successful_output_out_of_artifacts(
     monkeypatch,
 ):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = '```json\n{"exclude":[2,3,4]}\n```'
@@ -1318,7 +1321,7 @@ def test_profile_validation_failure_summary_hints_use_real_pipeline_samples(
     monkeypatch,
 ):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             response = "Note: I must output only JSON."
@@ -1734,7 +1737,7 @@ def test_save_result_redacts_secret_values_from_artifacts(tmp_path):
 
 def test_save_responses_true_keeps_every_plain_prompt_response(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -1768,7 +1771,7 @@ def test_save_responses_true_keeps_every_plain_prompt_response(monkeypatch):
 
 def test_save_responses_unrecognized_value_drops_the_response(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -1857,8 +1860,10 @@ def test_fail_fast_stops_on_first_failed_model_without_explicit_stop_on(monkeypa
             r"prompts\[0\] requires 'name'",
         ),
         (
-            '{"prompts":[{"name":"x","prompt":"hi","prompt_file":"f.txt"}],'
-            '"models":[{"model":"fake"}]}',
+            (
+                '{"prompts":[{"name":"x","prompt":"hi","prompt_file":"f.txt"}],'
+                '"models":[{"model":"fake"}]}'
+            ),
             "must use either 'prompt' or 'prompt_file'",
         ),
         (
@@ -1866,13 +1871,17 @@ def test_fail_fast_stops_on_first_failed_model_without_explicit_stop_on(monkeypa
             "requires a non-empty 'prompt_file'",
         ),
         (
-            '{"prompts":[{"name":"x","prompt_file":"/etc/passwd"}],'
-            '"models":[{"model":"fake"}]}',
+            (
+                '{"prompts":[{"name":"x","prompt_file":"/etc/passwd"}],'
+                '"models":[{"model":"fake"}]}'
+            ),
             "prompt_file must be relative",
         ),
         (
-            '{"prompts":[{"name":"x","prompt_file":"missing.txt"}],'
-            '"models":[{"model":"fake"}]}',
+            (
+                '{"prompts":[{"name":"x","prompt_file":"missing.txt"}],'
+                '"models":[{"model":"fake"}]}'
+            ),
             "does not exist or is not a file",
         ),
         (
@@ -1880,8 +1889,10 @@ def test_fail_fast_stops_on_first_failed_model_without_explicit_stop_on(monkeypa
             "requires a non-empty 'prompt'",
         ),
         (
-            '{"prompts":[{"name":"x","prompt":"a"},{"name":"x","prompt":"b"}],'
-            '"models":[{"model":"fake"}]}',
+            (
+                '{"prompts":[{"name":"x","prompt":"a"},{"name":"x","prompt":"b"}],'
+                '"models":[{"model":"fake"}]}'
+            ),
             "custom prompt names must be unique",
         ),
         ('{"prompt":"hi"}', "requires 'models' or 'discovery'"),
@@ -1954,7 +1965,7 @@ def test_select_test_profiles_deduplicates_selected_custom_prompts_in_order():
 
 def test_plain_prompt_regex_validation_records_the_failure_reason(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {
@@ -2037,7 +2048,7 @@ def test_profile_progress_callback_returns_none_without_a_callback():
 
 def test_run_profiles_execute_one_warmup_request_per_profile(monkeypatch):
     class FakeClient:
-        model = {"base_url": "https://example.test"}
+        model: ClassVar = {"base_url": "https://example.test"}
 
         def run(self, prompt, options):
             return {

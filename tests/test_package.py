@@ -2,8 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from llm_preflight import __version__
-from llm_preflight import cli
+from llm_preflight import __version__, cli
 from llm_preflight.runner import run_benchmark
 
 

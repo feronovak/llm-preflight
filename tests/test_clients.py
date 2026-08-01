@@ -4,9 +4,9 @@ import urllib.error
 import pytest
 
 from llm_preflight.client import (
+    MAX_RESPONSE_BYTES,
     AnthropicClient,
     GeminiClient,
-    MAX_RESPONSE_BYTES,
     OpenAICompatibleClient,
     OpenAIResponsesClient,
     _retry_delay,
@@ -346,8 +346,10 @@ def test_single_chunk_response_reports_no_throughput(monkeypatch):
         def __iter__(self):
             return iter(
                 [
-                    b'data: {"choices":[{"delta":{"content":"whole body at once"}}],'
-                    b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n',
+                    (
+                        b'data: {"choices":[{"delta":{"content":"whole body at once"}}],'
+                        b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n'
+                    ),
                     b"data: [DONE]\n",
                 ]
             )
@@ -376,8 +378,10 @@ def test_incremental_stream_reports_throughput(monkeypatch):
             return iter(
                 [
                     b'data: {"choices":[{"delta":{"content":"first"}}]}\n',
-                    b'data: {"choices":[{"delta":{"content":" second"}}],'
-                    b'"usage":{"prompt_tokens":3,"completion_tokens":2}}\n',
+                    (
+                        b'data: {"choices":[{"delta":{"content":" second"}}],'
+                        b'"usage":{"prompt_tokens":3,"completion_tokens":2}}\n'
+                    ),
                     b"data: [DONE]\n",
                 ]
             )
@@ -408,8 +412,10 @@ def test_burst_stream_below_generation_window_reports_no_throughput(monkeypatch)
             return iter(
                 [
                     b'data: {"choices":[{"delta":{"content":"first"}}]}\n',
-                    b'data: {"choices":[{"delta":{"content":" second"}}],'
-                    b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n',
+                    (
+                        b'data: {"choices":[{"delta":{"content":" second"}}],'
+                        b'"usage":{"prompt_tokens":3,"completion_tokens":140}}\n'
+                    ),
                     b"data: [DONE]\n",
                 ]
             )

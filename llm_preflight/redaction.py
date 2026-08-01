@@ -43,9 +43,11 @@ def _redact_text(value: str) -> str:
         if prefix_group is None:
             redacted = pattern.sub(REDACTED, redacted)
         else:
-            redacted = pattern.sub(
-                lambda match: match.group(prefix_group) + REDACTED, redacted
-            )
+
+            def redact_match(match: re.Match[str], group: int = prefix_group) -> str:
+                return match.group(group) + REDACTED
+
+            redacted = pattern.sub(redact_match, redacted)
     return redacted
 
 

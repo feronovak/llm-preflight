@@ -54,8 +54,7 @@ def _failure_hints(samples: list[dict[str, Any]]) -> list[str]:
         if (
             "did not match regex" in error or "invalid json" in error or "json" in error
         ) and (
-            preview_folded.startswith("no markdown")
-            or preview_folded.startswith("note:")
+            preview_folded.startswith(("no markdown", "note:"))
             or "i must output" in preview_folded
         ):
             add("reasoning or commentary appeared before the expected answer")

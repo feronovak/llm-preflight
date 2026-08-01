@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-
 SUPPORTED_PRESETS = {"json", "no-reasoning", "low-latency", "structured"}
 
 

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
-
 
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
 # do not consistently return prices, so these public rates fill that gap.
@@ -112,7 +111,7 @@ def pricing_freshness_report(
     today: date | None = None,
     max_age_days: int = 30,
 ) -> dict[str, Any]:
-    current = today or date.today()
+    current = today or datetime.now(timezone.utc).date()
     warnings = []
     for model in models:
         provider = model.get("provider", "openai_compatible")

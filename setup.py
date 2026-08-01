@@ -2,7 +2,6 @@
 
 from setuptools import find_packages, setup
 
-
 setup(
     name="llm-preflight",
     version="2.2.0",

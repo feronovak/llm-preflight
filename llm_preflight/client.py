@@ -56,9 +56,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
     model_id = model["model"]
     if provider == "openai":
         return not (
-            model_id == "gpt-5.5"
-            or model_id.startswith("gpt-5.5-")
-            or model_id.startswith("gpt-5.6-")
+            model_id == "gpt-5.5" or model_id.startswith(("gpt-5.5-", "gpt-5.6-"))
         )
     if provider == "anthropic":
         return model_id not in {

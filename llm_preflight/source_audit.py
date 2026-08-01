@@ -6,7 +6,6 @@ from typing import Any
 
 from .pricing import PUBLIC_PRICING
 
-
 _SOURCE_SUFFIXES = {
     ".py",
     ".js",
@@ -25,7 +24,7 @@ _QUOTED = re.compile(
 )
 _MODEL_PREFIX = re.compile(
     r"^(?:(?:anthropic|openai|google|xai|x-ai)/)?(?:gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|o[1-9](?:-|$))",
-    re.I,
+    re.IGNORECASE,
 )
 _YAML_MODEL = re.compile(
     r"\bmodel(?:_id)?\s*:\s*(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)"

@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from llm_preflight.features import (
@@ -574,3 +577,12 @@ def test_matrix_report_shows_model_by_profile_quality():
     rendered = matrix_report(result)
     assert "| Model | classification | reasoning |" in rendered
     assert "| model-a | 100% | 50% |" in rendered
+
+
+def test_v1_result_fixture_remains_comparable_and_replayable():
+    fixture = json.loads(Path("tests/fixtures/v1-result.json").read_text())
+
+    assert compare_results(fixture, fixture)["ok"] is True
+    assert replay_config(fixture)["models"] == [
+        {"provider": "mock", "model": "local", "name": "local"}
+    ]

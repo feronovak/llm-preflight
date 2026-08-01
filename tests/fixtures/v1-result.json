@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "run_id": "v1-fixture",
+  "timestamp": "2026-07-21T00:00:00+00:00",
+  "benchmark": "v1-fixture",
+  "source_config": {"prompt": "Reply with ok.", "models": [{"provider": "mock", "model": "local"}], "repetitions": 1, "warmups": 0},
+  "settings": {"repetitions": 1, "warmups": 0, "concurrency": 1, "request": {}},
+  "models": [{"name": "local", "provider": "mock", "model": "local", "summary": {"requests": 1, "successful": 1, "failed": 0, "success_rate": 1.0, "valid_output_rate": 1.0, "latency_seconds": {"p95": 0.1}, "estimated_cost_usd": 0.0}}]
+}

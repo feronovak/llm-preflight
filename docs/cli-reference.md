@@ -13,11 +13,12 @@ release. `config` is a benchmark JSON path and is required unless `--init`,
 | `--no-save` | off | Do not create result artifacts. |
 | `--json` | off | Print the full result, plan, doctor report, or diff as JSON. |
 | `--env NAME` | — | Apply a named configuration overlay. |
-| `--smoke` | off | Set one repetition, no warmups, and concurrency one. |
+| `--smoke` | off | Set one repetition, no warmups, and concurrency one. It still makes paid requests; use `--dry-run` first. |
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
+| `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
 | `--doctor` | off | Validate configuration, keys, and model resolution; no generation. |
 | `--pricing-check` | off | Report unknown or stale prices; no generation. |
-| `--baseline PATH` | — | Compare a completed run with a saved result. |
+| `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. |
 | `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. |
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
@@ -27,9 +28,9 @@ release. `config` is a benchmark JSON path and is required unless `--init`,
 | `--replay PATH` | — | Re-run the saved source configuration in a result artifact. |
 | `--changed-since PATH` | — | With discovery, run models absent from a prior catalog JSON. |
 | `--catalog` | off | Discover and print selected models; no generation. |
-| `--tests LIST` | — | Comma-separated built-in/custom test selector. |
+| `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |
 | `--profiles LIST` | — | Compatibility alias for `--tests`. |
-| `--dry-run` | off | Print resolved work and cost estimate; no generation. |
+| `--dry-run` | off | Safe preview: print resolved work and cost estimate; no generation. |
 | `--no-env-file` | off | Do not load the adjacent `.env.production`. |
 | `--env-file PATH` | — | Load this env file instead of the default adjacent file. |
 | `--stop-on MODE` | — | Stop after `api-error`, `test-fail`, or `any-fail`. |

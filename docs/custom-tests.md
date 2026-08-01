@@ -160,6 +160,37 @@ multiple blocks and unfenced JSON objects in prose, because preflight should not
 guess which payload a production parser would consume. Failed-response artifacts
 record `json_parsing_policy` alongside the retained response preview.
 
+To make the deployed consumer explicit, declare its parsing profile. The
+benchmark remains strict unless `allow_fenced_json` is set. Results identify
+responses accepted by the consumer as contract-only failures; conversely, a
+response rejected by the declared consumer fails the run even if the configured
+validator accepts it:
+
+```json
+"validation": {
+  "consumer": "fenced_ok",
+  "json_schema": {"type": "object", "required": ["product"]}
+}
+```
+
+Supported consumers are `raw_json`, `fenced_ok`, and `prose_tolerant` (exactly
+one JSON value embedded in prose). This is a declaration, not permission for
+LLM Preflight to execute application code.
+
+## Golden answers
+
+Use `golden` for a deterministic known-answer case when structure alone is not
+enough to rank candidates:
+
+```json
+"validation": {"golden": "billing"}
+```
+
+It compares case-insensitively after trimming whitespace, then reports
+per-profile `golden_accuracy` and expected-versus-observed confusion counts.
+Use it for stable labels and known answers; open-ended semantic grading remains
+outside the deterministic preflight contract.
+
 ## Keep generated contracts in sync
 
 When an application assembles prompts dynamically, keep the prompt builder and

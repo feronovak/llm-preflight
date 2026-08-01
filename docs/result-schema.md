@@ -14,7 +14,8 @@ guessing its meaning.
 | `settings` | Effective repetitions, warmups, concurrency, timeout, request options, and selected profiles. |
 | `environment` | Hostname and Python version that produced the evidence. |
 | `models` | One result object per attempted model, in run order. |
-| `total_input_tokens`, `total_output_tokens`, `total_estimated_cost_usd` | Totals including warmups. Cost is `null` if any model has unknown pricing. |
+| `total_input_tokens`, `total_output_tokens`, `total_estimated_cost_usd` | Totals including warmups. Total cost is `null` whenever any selected model has unknown pricing. |
+| `priced_cost_usd`, `cost_confidence`, `unpriced_models` | Additive cost detail: the partial sum of priced requests, whether coverage is `complete`, `partial`, or `unknown`, and the resolved models excluded from a partial or unknown total. |
 | `pricing_warnings` | Pricing freshness or availability warnings. |
 | `source_config` | Redacted input configuration, retained for replay and audit. |
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |
@@ -48,6 +49,15 @@ rate would inflate throughput by orders of magnitude.
 
 Failure and retry diagnostics are safe aggregates: `failure_reasons`,
 `failure_categories`, `retry_count`, `retry_reasons`, and `failure_hints`.
+Every summary includes `contract_only_failures`, `consumer_rejections`,
+`golden_accuracy`, and `golden_confusion`. The latter two are `null`/empty when
+the run has no golden cases. A consumer rejection fails the benchmark even when
+the configured validator otherwise passes; a contract-only failure is rejected
+by the configured contract but accepted by the declared consumer parser.
+
+Golden samples include normalized `golden_expected`, `golden_observed`, and
+`golden_valid`. Consumer-profile samples include `consumer_valid_output`,
+`contract_only_failure`, and `consumer_rejection`.
 
 ## Samples and profile cases
 

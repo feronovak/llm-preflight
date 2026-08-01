@@ -44,6 +44,24 @@ def test_interactive_selection_accepts_providers_families_profiles_and_repetitio
     assert profiles == "quick-migration-check,numeric-instruction-check"
 
 
+def test_audit_source_is_a_no_config_no_spend_json_command(
+    monkeypatch, tmp_path, capsys
+):
+    source = tmp_path / "app.py"
+    source.write_text('model = "gpt-5.4-mini"\n')
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "--audit-source", str(tmp_path), "--json"],
+    )
+
+    cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["network_accessed"] is False
+    assert output["references"][0]["path"] == "app.py"
+
+
 def test_interactive_selection_can_cancel(monkeypatch):
     monkeypatch.setattr(
         "llm_preflight.cli.resolve_models",
@@ -78,6 +96,24 @@ def test_interactive_all_selects_functional_tests_but_not_load(monkeypatch):
         in line
         for line in output
     )
+
+
+def test_interactive_selection_recommends_agent_smoke(monkeypatch):
+    models = [{"provider": "mock", "model": "local", "response": "ok"}]
+    monkeypatch.setattr("llm_preflight.cli.resolve_models", lambda config: models)
+    answers = iter(["all", "agent-smoke", "", "", "n"])
+    prompts = []
+    output = []
+
+    selected = interactive_selection(
+        {"prompt": "test", "models": models},
+        input_fn=lambda prompt: (prompts.append(prompt), next(answers))[1],
+        output_fn=output.append,
+    )
+
+    assert selected is None
+    assert any("Recommended: agent-smoke" in line for line in output)
+    assert any("numbers/names/agent-smoke/all" in prompt for prompt in prompts)
 
 
 def test_interactive_selection_clears_screen_at_start(monkeypatch):
@@ -343,6 +379,19 @@ def test_help_describes_smoke_as_a_reduced_run(monkeypatch, capsys):
     output = " ".join(capsys.readouterr().out.split())
     assert "reduced live benchmark" in output
     assert "no warmups" in output
+
+
+def test_help_explains_safe_agent_smoke_preflight(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 0
+    output = " ".join(capsys.readouterr().out.split())
+    assert "cross-provider preflight" in output
+    assert "agent-smoke is the recommended" in output
+    assert "safe preview" in output
 
 
 def test_migration_check_dry_run_uses_fast_response_contract(
@@ -1878,6 +1927,39 @@ def test_main_json_with_baseline_emits_one_parseable_document(
 
     output = json.loads(capsys.readouterr().out)
     assert output["baseline_diff"]["ok"] is True
+
+
+def test_main_json_with_failing_baseline_emits_evidence_before_ci_exit(
+    tmp_path, monkeypatch, capsys
+):
+    config = tmp_path / "benchmark.json"
+    baseline = tmp_path / "baseline.json"
+    config.write_text(
+        '{"prompt":"Reply with ok.","models":[{"provider":"mock","model":"local"}],"warmups":0,"repetitions":1}'
+    )
+    baseline.write_text('{"models": []}')
+    monkeypatch.setattr(
+        "llm_preflight.cli.compare_results", lambda *_: {"ok": False, "models": []}
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(config),
+            "--baseline",
+            str(baseline),
+            "--json",
+            "--ci",
+            "--no-save",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 1
+    assert json.loads(capsys.readouterr().out)["baseline_diff"]["ok"] is False
 
 
 def test_replay_loads_env_file_beside_the_recorded_source_config(tmp_path, monkeypatch):

@@ -136,6 +136,11 @@ llm-preflight benchmark.json --tests all --matrix
 llm-preflight benchmark.auto.json --changed-since catalog.json --dry-run
 ```
 
+With `--json`, `--baseline` emits one JSON result document with the comparison
+under `baseline_diff`; it is safe to pipe into a JSON parser. `--replay` loads
+the saved result's source configuration and the `.env.production` file beside
+that configuration unless an explicit environment-file option overrides it.
+
 `--changed-since` runs only discovered models absent from a previous catalog
 snapshot. Set `max_requests` and `max_estimated_cost_usd` in a config to stop
 surprise spend before requests are sent; a cost ceiling requires complete

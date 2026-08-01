@@ -315,13 +315,16 @@ def json_parsing_policy(evaluator: dict[str, Any]) -> str | None:
 
 
 def _load_json_response(
-    response: str, allow_fenced_json: bool
+    response: str, parsing_policy: str
 ) -> tuple[Any | None, str | None]:
     try:
         return json.loads(response), None
+    except RecursionError:
+        # The stdlib decoder enforces the interpreter recursion limit; reject safely.
+        return None, "invalid JSON"
     except json.JSONDecodeError:
         pass
-    if allow_fenced_json:
+    if parsing_policy == "single_fenced_block":
         blocks = re.findall(
             r"```(?:json)?\s*(.*?)```",
             response,
@@ -330,10 +333,87 @@ def _load_json_response(
         if len(blocks) == 1:
             try:
                 return json.loads(blocks[0].strip()), None
+            except RecursionError:
+                return None, "invalid JSON"
             except json.JSONDecodeError:
                 pass
         return None, "invalid JSON (expected raw JSON or exactly one fenced JSON block)"
+    if parsing_policy == "prose_tolerant":
+        decoder = json.JSONDecoder()
+        values = []
+        index = 0
+        while index < len(response):
+            character = response[index]
+            if character not in "{[":
+                index += 1
+                continue
+            try:
+                value, end = decoder.raw_decode(response[index:])
+            except RecursionError:
+                return None, "invalid JSON"
+            except json.JSONDecodeError:
+                index += 1
+                continue
+            values.append(value)
+            index += end
+        if len(values) == 1:
+            return values[0], None
+        return None, "invalid JSON (expected exactly one JSON value in prose)"
     return None, "invalid JSON"
+
+
+def _structured_parsing_policy(evaluator: dict[str, Any]) -> str:
+    return evaluator.get(
+        "parsing_policy",
+        "single_fenced_block" if evaluator.get("allow_fenced_json") else "raw_json",
+    )
+
+
+def _with_consumer_parser(evaluator: dict[str, Any], consumer: str) -> dict[str, Any]:
+    copied = dict(evaluator)
+    if copied.get("type") == "all":
+        copied["evaluators"] = [
+            _with_consumer_parser(child, consumer)
+            for child in copied.get("evaluators", [])
+        ]
+    elif copied.get("type") in {
+        "json_subset",
+        "json_schema",
+        "json_object",
+        "json_array",
+        "exact_count",
+    }:
+        copied["parsing_policy"] = {
+            "raw_json": "raw_json",
+            "fenced_ok": "single_fenced_block",
+            "prose_tolerant": "prose_tolerant",
+        }[consumer]
+    return copied
+
+
+def evaluate_consumer_response(
+    response: str, evaluator: dict[str, Any]
+) -> dict[str, Any] | None:
+    consumer = evaluator.get("consumer_parser")
+    if consumer is None:
+        return None
+    evaluated = dict(evaluator)
+    evaluated.pop("consumer_parser", None)
+    return evaluate_response(response, _with_consumer_parser(evaluated, consumer))
+
+
+def golden_expected(evaluator: dict[str, Any]) -> str | None:
+    if evaluator.get("type") == "golden":
+        return str(evaluator["expected"])
+    if evaluator.get("type") == "all":
+        for child in evaluator.get("evaluators", []):
+            if (expected := golden_expected(child)) is not None:
+                return expected
+    return None
+
+
+def normalize_golden(value: str) -> str:
+    return value.strip().casefold()
 
 
 def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any]:
@@ -360,6 +440,14 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "valid": valid,
             "error": None if valid else "exact match failed",
         }
+    if evaluator_type == "golden":
+        golden_value = str(evaluator["expected"])
+        valid = normalize_golden(response) == normalize_golden(golden_value)
+        return {
+            "score": 1.0 if valid else 0.0,
+            "valid": valid,
+            "error": None if valid else "golden answer did not match",
+        }
     if evaluator_type == "contains":
         expected = evaluator["contains"]
         valid = bool(expected) and expected in response
@@ -378,7 +466,7 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
         }
     if evaluator_type == "json_subset":
         parsed, parse_error = _load_json_response(
-            response, bool(evaluator.get("allow_fenced_json"))
+            response, _structured_parsing_policy(evaluator)
         )
         if parse_error:
             return {"score": 0.0, "valid": False, "error": parse_error}
@@ -393,7 +481,7 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
         }
     if evaluator_type == "json_schema":
         parsed, parse_error = _load_json_response(
-            response, bool(evaluator.get("allow_fenced_json"))
+            response, _structured_parsing_policy(evaluator)
         )
         if parse_error:
             return {"score": 0.0, "valid": False, "error": parse_error}
@@ -406,7 +494,7 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
         }
     if evaluator_type in {"json_object", "json_array", "exact_count"}:
         parsed, parse_error = _load_json_response(
-            response, bool(evaluator.get("allow_fenced_json"))
+            response, _structured_parsing_policy(evaluator)
         )
         if parse_error:
             return {"score": 0.0, "valid": False, "error": parse_error}

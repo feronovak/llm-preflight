@@ -53,6 +53,7 @@ def test_benchmark_records_the_source_config_path_without_putting_it_in_config()
     )
 
     assert result["source_config_path"] == "/workspace/benchmark.json"
+    assert result["schema_version"] == 1
     assert "_source_config_path" not in result["source_config"]
 
 
@@ -287,6 +288,192 @@ def test_plain_prompt_validation_failure_cannot_pass_or_be_recommended():
     )
 
 
+def test_consumer_parser_reports_raw_json_contract_only_failure():
+    result = run_benchmark(
+        {
+            "models": [
+                {
+                    "provider": "mock",
+                    "model": "local",
+                    "response": 'Explanation\n```json\n{"route":"billing"}\n```',
+                }
+            ],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "routing",
+                    "prompt": "Route this request.",
+                    "validation": {
+                        "consumer": "fenced_ok",
+                        "json_schema": {
+                            "type": "object",
+                            "required": ["route"],
+                        },
+                    },
+                }
+            ],
+        },
+        profile_selector="routing",
+    )
+
+    sample = result["models"][0]["profiles"][0]["samples"][0]
+    assert sample["valid_output"] is False
+    assert sample["consumer_valid_output"] is True
+    assert sample["contract_only_failure"] is True
+    assert result["models"][0]["profiles"][0]["summary"]["contract_only_failures"] == 1
+    assert "contract-only failure" in report(result)
+
+
+def test_profile_consumer_rejection_is_in_human_contract_diagnostics():
+    result = run_benchmark(
+        {
+            "models": [
+                {"provider": "mock", "model": "local", "response": "```json\n{}\n```"}
+            ],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "profile",
+                    "prompt": "JSON",
+                    "validation": {
+                        "consumer": "raw_json",
+                        "json_object": True,
+                        "allow_fenced_json": True,
+                    },
+                }
+            ],
+        },
+        profile_selector="profile",
+    )
+
+    assert "consumer rejection(s)" in report(result)
+    assert "consumer rejection(s)" in console_report(result)
+
+
+def test_consumer_rejection_fails_a_benchmark_that_is_more_permissive_than_production():
+    result = run_benchmark(
+        {
+            "prompt": "Return JSON.",
+            "validation": {
+                "consumer": "raw_json",
+                "json_object": True,
+                "allow_fenced_json": True,
+            },
+            "models": [
+                {"provider": "mock", "model": "local", "response": "```json\n{}\n```"}
+            ],
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    sample = result["models"][0]["samples"][0]
+    assert sample["valid_output"] is False
+    assert sample["consumer_valid_output"] is False
+    assert result["models"][0]["summary"]["consumer_rejections"] == 1
+    assert result_failed(result) is True
+    assert "consumer rejection(s)" in report(result)
+    assert "consumer rejection(s)" in console_report(result)
+
+
+def test_golden_answer_reports_accuracy_and_expected_observed_confusion():
+    result = run_benchmark(
+        {
+            "models": [
+                {"provider": "mock", "model": "right", "response": "billing"},
+                {"provider": "mock", "model": "wrong", "response": "account"},
+            ],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "route-golden",
+                    "prompt": "Route this request.",
+                    "validation": {"golden": "billing"},
+                }
+            ],
+        },
+        profile_selector="route-golden",
+    )
+
+    right = result["models"][0]["profiles"][0]["summary"]
+    wrong = result["models"][1]["profiles"][0]["summary"]
+    assert right["golden_accuracy"] == 1
+    assert wrong["golden_accuracy"] == 0
+    assert wrong["golden_confusion"] == [
+        {"expected": "billing", "observed": "account", "count": 1}
+    ]
+
+
+def test_golden_accuracy_is_independent_of_other_contracts_and_normalizes_confusion():
+    result = run_benchmark(
+        {
+            "models": [{"provider": "mock", "model": "local", "response": "BILLING"}],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "golden",
+                    "prompt": "Route",
+                    "validation": {"golden": "billing", "max_chars": 3},
+                }
+            ],
+        },
+        profile_selector="golden",
+    )
+
+    summary = result["models"][0]["profiles"][0]["summary"]
+    assert summary["golden_accuracy"] == 1
+    assert summary["golden_confusion"] == [
+        {"expected": "billing", "observed": "billing", "count": 1}
+    ]
+
+
+def test_transport_error_is_excluded_from_golden_evidence():
+    result = run_benchmark(
+        {
+            "models": [{"provider": "invalid", "model": "broken"}],
+            "warmups": 0,
+            "suite_repetitions": 1,
+            "prompts": [
+                {
+                    "name": "golden",
+                    "prompt": "Route",
+                    "validation": {"golden": "billing"},
+                }
+            ],
+        },
+        profile_selector="golden",
+    )
+
+    summary = result["models"][0]["profiles"][0]["summary"]
+    assert summary["golden_accuracy"] is None
+    assert summary["golden_confusion"] == []
+
+
+def test_deep_json_run_saves_an_invalid_output_artifact(tmp_path):
+    result = run_benchmark(
+        {
+            "prompt": "Return JSON.",
+            "validation": {"json_array": True},
+            "models": [
+                {
+                    "provider": "mock",
+                    "model": "local",
+                    "response": "[" * 2_000 + "0" + "]" * 2_000,
+                }
+            ],
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    assert result["models"][0]["samples"][0]["evaluation_error"] == "invalid JSON"
+    assert save_result(result, tmp_path).exists()
+
+
 def test_plain_prompt_supports_exact_validation_and_rejects_unknown_rules():
     result = run_benchmark(
         {
@@ -465,6 +652,57 @@ def test_run_benchmark_reports_live_model_and_request_progress(monkeypatch):
     )
     assert result["models"][0]["warmup_summary"]["requests"] == 1
     assert result["total_estimated_cost_usd"] == pytest.approx(0.000042)
+
+
+def test_benchmark_reports_partial_cost_and_unpriced_models():
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [
+                {
+                    "name": "priced",
+                    "provider": "mock",
+                    "model": "priced-model",
+                    "input_cost_per_million": 1,
+                    "output_cost_per_million": 2,
+                },
+                {
+                    "name": "unpriced",
+                    "provider": "mock",
+                    "model": "unpriced-model",
+                },
+            ],
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    assert result["schema_version"] == 1
+    assert result["total_estimated_cost_usd"] is None
+    assert result["priced_cost_usd"] == pytest.approx(0.000003)
+    assert result["cost_confidence"] == "partial"
+    assert result["unpriced_models"] == [
+        {"name": "unpriced", "provider": "mock", "model": "unpriced-model"}
+    ]
+    assert (
+        "- Total spent: unavailable; one or more models lack pricing. Priced spend: "
+        "**$0.000003** including warmups."
+    ) in report(result)
+
+
+def test_wholly_unpriced_run_with_no_warmups_has_unknown_cost_confidence():
+    result = run_benchmark(
+        {
+            "prompt": "test",
+            "models": [{"provider": "mock", "model": "unpriced"}],
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    assert result["total_estimated_cost_usd"] is None
+    assert result["priced_cost_usd"] is None
+    assert result["cost_confidence"] == "unknown"
 
 
 def test_profile_progress_reports_invalid_outputs_separately(monkeypatch):

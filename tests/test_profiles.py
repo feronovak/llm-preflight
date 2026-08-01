@@ -227,6 +227,60 @@ def test_fenced_json_option_does_not_guess_a_payload_from_unfenced_prose_or_mult
     }
 
 
+def test_prose_tolerant_parser_accepts_one_nested_json_value():
+    result = evaluate_response(
+        'Answer: {"a": {"b": 1}}.',
+        {
+            "type": "json_schema",
+            "parsing_policy": "prose_tolerant",
+            "schema": {"type": "object", "required": ["a"]},
+        },
+    )
+
+    assert result["valid"] is True
+
+
+def test_prose_tolerant_parser_rejects_two_separate_json_values():
+    result = evaluate_response(
+        'First: {"a": 1}; second: {"b": 2}',
+        {"type": "json_object", "parsing_policy": "prose_tolerant"},
+    )
+
+    assert result == {
+        "score": 0.0,
+        "valid": False,
+        "error": "invalid JSON (expected exactly one JSON value in prose)",
+    }
+
+
+@pytest.mark.parametrize(
+    "policy", ["raw_json", "single_fenced_block", "prose_tolerant"]
+)
+def test_deeply_nested_json_is_an_invalid_output_not_a_crash(policy):
+    response = "[" * 2_000 + "0" + "]" * 2_000
+
+    result = evaluate_response(
+        response,
+        {
+            "type": "json_array",
+            "parsing_policy": policy,
+        },
+    )
+
+    assert result == {"score": 0.0, "valid": False, "error": "invalid JSON"}
+
+
+def test_prose_prefixed_deep_json_aborts_the_prose_scan():
+    response = "x " + "[" * 2_000 + "0" + "]" * 2_000
+
+    result = evaluate_response(
+        response,
+        {"type": "json_array", "parsing_policy": "prose_tolerant"},
+    )
+
+    assert result == {"score": 0.0, "valid": False, "error": "invalid JSON"}
+
+
 def test_json_schema_reports_structural_mismatch():
     result = evaluate_response(
         '{"questions":[]}',

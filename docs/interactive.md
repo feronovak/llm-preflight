@@ -45,8 +45,10 @@ swap in your own model IDs and prompts to reproduce it.
   `openrouter/qwen`, or `all`.
 - If `provider/model-id` exactly matches one listed model, it selects that exact
   model rather than similarly named hyphenated variants.
-- Tests: enter numbers, names, or `all`. Press Enter to use the config's
-  default prompt instead of a built-in test suite.
+- Tests: enter numbers, names, `agent-smoke`, or `all`. `agent-smoke` is the
+  recommended five-check production-shaped suite and excludes load testing.
+  Press Enter to use the config's default prompt instead of a built-in test
+  suite.
 - Stop mode: choose whether to stop on an API error, failed test, either, or
   **never**. “Never” is the menu wording for “run every selected model”; on the
   command line, simply omit `--stop-on`.

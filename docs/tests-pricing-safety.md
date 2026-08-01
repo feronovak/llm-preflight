@@ -16,9 +16,13 @@ a model switch. It is not a reliable latency ranking; use several repetitions
 for that, and run `concurrency-health-check` separately for concurrency behaviour.
 
 Use `"profiles": "all"` for the full built-in suite or select a mixed subset
-with `--tests`. The evaluator supports exact matches, numeric answers, JSON
-subsets, regular expressions, contains checks, and a structural `json_schema`
-subset. Validation failures are test failures even when the API responded.
+with `--tests`. For a low-cost production-shaped first pass, use
+`--tests agent-smoke --smoke`; it selects five functional checks and excludes
+load testing. The evaluator supports exact matches, controlled values, numeric
+answers with tolerances, JSON object/array shape and count checks, size and
+Markdown limits, regular expressions, contains checks, and a structural
+`json_schema` subset. Validation failures are test failures even when the API
+responded.
 
 ## Fair comparisons and retries
 

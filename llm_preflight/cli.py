@@ -42,6 +42,7 @@ from .features import (
 from .profiles import BUILTIN_PROFILES
 from .pricing import pricing_freshness_report
 from .redaction import redact_secrets
+from .source_audit import audit_source
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -530,6 +531,10 @@ def interactive_watch_selection(
 
     output_fn("")
     output_fn("=== Tests ===")
+    output_fn(
+        "  Recommended: agent-smoke — five production-shaped functional checks; "
+        "excludes load."
+    )
     tests = [(profile["name"], profile["description"]) for profile in BUILTIN_PROFILES]
     tests.extend(
         (prompt["name"], prompt.get("description", "Custom prompt test."))
@@ -538,7 +543,7 @@ def interactive_watch_selection(
     for index, (name, description) in enumerate(tests, 1):
         output_fn(f"  {index}. {name} — {description}")
     answer = input_fn(
-        "Select tests (numbers/names/all) or Enter for the config prompt: "
+        "Select tests (numbers/names/agent-smoke/all) or Enter for the config prompt: "
     ).strip()
     if answer.casefold() == "all":
         selected_tests = ",".join(
@@ -1326,6 +1331,10 @@ def interactive_selection(
     if selected_profile_selector is None:
         output_fn("")
         output_fn(_stage_heading("Tests", "35", color))
+        output_fn(
+            "  Recommended: agent-smoke — five production-shaped functional checks; "
+            "excludes load."
+        )
         tests: list[tuple[str, str, str]] = []
         for profile in BUILTIN_PROFILES:
             tests.append(("profile", profile["name"], profile["description"]))
@@ -1344,7 +1353,8 @@ def interactive_selection(
                 f"{_style(name, '1', color)} — {description}"
             )
         profile_answer = input_fn(
-            "Select tests (numbers/names/all) or Enter for the config prompt: "
+            "Select tests (numbers/names/agent-smoke/all) or Enter for the config "
+            "prompt: "
         ).strip()
         if profile_answer.casefold() == "all":
             profile_selector = ",".join(
@@ -1529,7 +1539,12 @@ def main() -> None:
             )
             raise SystemExit(2) from None
         return
-    parser = argparse.ArgumentParser(description="Benchmark configurable LLM providers")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Local, cross-provider preflight for a model change: validate output, "
+            "latency, usage, and estimated cost before production."
+        )
+    )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
@@ -1549,7 +1564,7 @@ def main() -> None:
     parser.add_argument(
         "--smoke",
         action="store_true",
-        help="run a reduced live benchmark: one repetition, no warmups",
+        help="run a reduced live benchmark: one repetition, no warmups; preview with --dry-run first",
     )
     parser.add_argument(
         "--migration-check",
@@ -1567,7 +1582,9 @@ def main() -> None:
         help="check pricing freshness and unknown prices without benchmarking",
     )
     parser.add_argument(
-        "--baseline", type=Path, help="compare this run with a previous result"
+        "--baseline",
+        type=Path,
+        help="compare this run with a previous result; --json embeds baseline_diff",
     )
     parser.add_argument(
         "--ci", action="store_true", help="fail when baseline thresholds regress"
@@ -1584,11 +1601,14 @@ def main() -> None:
         help="create a no-key mock benchmark configuration",
     )
     parser.add_argument(
-        "--models", help="comma-separated provider:model list for --quick"
+        "--models",
+        help="comma-separated provider:model list for --quick; unprefixed IDs are OpenAI only",
     )
     parser.add_argument("--diff", nargs=2, type=Path, metavar=("BASELINE", "CURRENT"))
     parser.add_argument(
-        "--replay", type=Path, help="re-run the exact saved source config"
+        "--replay",
+        type=Path,
+        help="re-run the saved source config and load its adjacent environment file",
     )
     parser.add_argument(
         "--changed-since",
@@ -1601,9 +1621,14 @@ def main() -> None:
         help="discover and print selected models without benchmarking them",
     )
     parser.add_argument(
+        "--audit-source",
+        type=Path,
+        help="statically audit literal model IDs in a repository without provider requests",
+    )
+    parser.add_argument(
         "--tests",
         dest="tests",
-        help="alias for --profiles; comma-separated built-in or custom tests",
+        help="alias for --profiles; comma-separated built-in/custom tests; agent-smoke is the recommended suite",
     )
     parser.add_argument(
         "--profiles",
@@ -1612,7 +1637,7 @@ def main() -> None:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="print resolved models, tests, request count, and cost without running",
+        help="safe preview: print resolved models, tests, request count, and cost without generation",
     )
     parser.add_argument(
         "--no-env-file",
@@ -1642,7 +1667,7 @@ def main() -> None:
     parser.add_argument(
         "--interactive",
         action="store_true",
-        help="interactively select models, tests, and repetitions",
+        help="guided paid-run selector with a separate cost confirmation",
     )
     parser.add_argument(
         "--approve-to",
@@ -1668,6 +1693,20 @@ def main() -> None:
             print(json.dumps(diff, indent=2) if args.json else _format_diff(diff))
             if args.ci and not diff["ok"]:
                 raise SystemExit(1)
+            return
+        if args.audit_source:
+            audit = audit_source(args.audit_source)
+            if args.json:
+                print(json.dumps(audit, indent=2))
+            else:
+                print(
+                    f"Audited {audit['files_scanned']} files; {len(audit['references'])} model references."
+                )
+                for finding in audit["findings"]:
+                    print(
+                        f"{finding['path']}:{finding['line']}: {finding['model']} — "
+                        f"{finding['status']}"
+                    )
             return
         if args.migration_check and args.quick:
             parser.error("--migration-check requires a benchmark configuration")
@@ -1811,10 +1850,10 @@ def main() -> None:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(redact_secrets(str(exc))))
     baseline_diff: dict[str, Any] | None = None
+    ci_failed = False
     if args.baseline:
         baseline_diff = compare_results(load_json(args.baseline), result)
-        if args.ci and not baseline_diff["ok"]:
-            raise SystemExit(1)
+        ci_failed = args.ci and not baseline_diff["ok"]
         if args.json:
             result["baseline_diff"] = baseline_diff
     print(
@@ -1828,6 +1867,8 @@ def main() -> None:
         print(_format_diff(baseline_diff))
     if path is not None:
         print(f"Saved raw result to {path}", file=sys.stderr)
+    if ci_failed:
+        raise SystemExit(1)
     if args.approve_to and path is not None:
         interactive_promote_models(result, path, args.approve_to)
     if result_failed(result):

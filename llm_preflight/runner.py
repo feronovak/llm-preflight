@@ -20,7 +20,10 @@ from .presets import expand_presets
 from .pricing import pricing_freshness_report
 from .profiles import (
     PROFILE_ALIASES,
+    evaluate_consumer_response,
     evaluate_response,
+    golden_expected,
+    normalize_golden,
     json_parsing_policy,
     normalize_profile_selector,
     select_profiles,
@@ -233,13 +236,18 @@ def _validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
         evaluators.append({"type": "contains", "contains": validation["contains"]})
     if "exact" in validation:
         evaluators.append({"type": "exact", "expected": validation["exact"]})
+    if "golden" in validation:
+        evaluators.append({"type": "golden", "expected": validation["golden"]})
     if not evaluators:
         return {"type": "nonempty"}
-    return (
+    evaluator = (
         evaluators[0]
         if len(evaluators) == 1
         else {"type": "all", "evaluators": evaluators}
     )
+    if "consumer" in validation:
+        evaluator["consumer_parser"] = validation["consumer"]
+    return evaluator
 
 
 def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
@@ -302,6 +310,24 @@ def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
     evaluation = evaluate_response(sample["response"], evaluator)
     sample["valid_output"] = evaluation["valid"]
     sample["evaluation_error"] = evaluation["error"]
+    consumer_evaluation = evaluate_consumer_response(sample["response"], evaluator)
+    if consumer_evaluation is not None:
+        sample["consumer_valid_output"] = consumer_evaluation["valid"]
+        sample["contract_only_failure"] = (
+            not evaluation["valid"] and consumer_evaluation["valid"]
+        )
+        sample["consumer_rejection"] = (
+            evaluation["valid"] and not consumer_evaluation["valid"]
+        )
+        if sample["consumer_rejection"]:
+            sample["valid_output"] = False
+            sample["evaluation_error"] = "declared consumer rejected response"
+    if sample["ok"] and (expected := golden_expected(evaluator)) is not None:
+        sample["golden_expected"] = normalize_golden(expected)
+        sample["golden_observed"] = normalize_golden(sample["response"])
+        sample["golden_valid"] = evaluate_response(
+            sample["response"], {"type": "golden", "expected": expected}
+        )["valid"]
     parsing_policy = json_parsing_policy(evaluator)
     if parsing_policy:
         sample["json_parsing_policy"] = parsing_policy
@@ -330,6 +356,8 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             "numeric_answer",
             "numeric_tolerance",
             "max_chars",
+            "consumer",
+            "golden",
         }
         unknown = sorted(set(validation) - allowed)
         if unknown:
@@ -338,6 +366,10 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             not isinstance(validation["contains"], str) or not validation["contains"]
         ):
             raise ValueError(f"{location}.contains must be a non-empty string")
+        if "golden" in validation and (
+            not isinstance(validation["golden"], str) or not validation["golden"]
+        ):
+            raise ValueError(f"{location}.golden must be a non-empty string")
         for key in ("json_object", "json_array", "no_markdown"):
             if key in validation and not isinstance(validation[key], bool):
                 raise ValueError(f"{location}.{key} must be a boolean")
@@ -401,6 +433,20 @@ def validate_config_validations(config: dict[str, Any]) -> None:
                 )
             if not isinstance(validation["allow_fenced_json"], bool):
                 raise ValueError(f"{location}.allow_fenced_json must be a boolean")
+        if "consumer" in validation:
+            if validation["consumer"] not in {
+                "raw_json",
+                "fenced_ok",
+                "prose_tolerant",
+            }:
+                raise ValueError(
+                    f"{location}.consumer must be raw_json, fenced_ok, or prose_tolerant"
+                )
+            if not any(
+                validation.get(key)
+                for key in ("json_schema", "json_object", "json_array")
+            ):
+                raise ValueError(f"{location}.consumer requires a JSON validator")
 
     validate_rules(config.get("validation", {}), "validation")
     for prompt_config in config.get("prompts", []):
@@ -506,6 +552,32 @@ def _execute(
                     "evaluation_error": evaluation["error"],
                 }
             )
+            if (
+                sample["ok"]
+                and (expected := golden_expected(case["evaluator"])) is not None
+            ):
+                sample["golden_expected"] = normalize_golden(expected)
+                sample["golden_observed"] = normalize_golden(response)
+                sample["golden_valid"] = evaluate_response(
+                    response, {"type": "golden", "expected": expected}
+                )["valid"]
+            consumer_evaluation = (
+                evaluate_consumer_response(response, case["evaluator"])
+                if sample["ok"]
+                else None
+            )
+            if consumer_evaluation is not None:
+                sample["consumer_valid_output"] = consumer_evaluation["valid"]
+                sample["contract_only_failure"] = (
+                    not evaluation["valid"] and consumer_evaluation["valid"]
+                )
+                sample["consumer_rejection"] = (
+                    evaluation["valid"] and not consumer_evaluation["valid"]
+                )
+                if sample["consumer_rejection"]:
+                    sample["quality_score"] = 0.0
+                    sample["valid_output"] = False
+                    sample["evaluation_error"] = "declared consumer rejected response"
             parsing_policy = json_parsing_policy(case["evaluator"])
             if parsing_policy:
                 sample["json_parsing_policy"] = parsing_policy
@@ -844,13 +916,27 @@ def run_benchmark(
             break
 
     costs = [
-        cost
+        model[summary]["estimated_cost_usd"]
         for model in models_result
-        for cost in (
-            model["summary"]["estimated_cost_usd"],
-            model["warmup_summary"]["estimated_cost_usd"],
+        for summary in ("summary", "warmup_summary")
+        if model[summary]["requests"] > 0
+    ]
+    known_costs = [cost for cost in costs if cost is not None]
+    unpriced_models = [
+        {
+            "name": model["name"],
+            "provider": model["provider"],
+            "model": model["model"],
+        }
+        for model in models_result
+        if any(
+            model[summary]["estimated_cost_usd"] is None
+            for summary in ("summary", "warmup_summary")
         )
     ]
+    cost_confidence = (
+        "complete" if not unpriced_models else "partial" if known_costs else "unknown"
+    )
     result = {
         "schema_version": 1,
         "run_id": str(uuid.uuid4()),
@@ -891,9 +977,10 @@ def run_benchmark(
             for model in models_result
             for summary in ("summary", "warmup_summary")
         ),
-        "total_estimated_cost_usd": (
-            sum(costs) if all(cost is not None for cost in costs) else None
-        ),
+        "total_estimated_cost_usd": (sum(known_costs) if not unpriced_models else None),
+        "priced_cost_usd": sum(known_costs) if known_costs else None,
+        "cost_confidence": cost_confidence,
+        "unpriced_models": unpriced_models,
     }
     if config.get("_source_config_path"):
         result["source_config_path"] = config["_source_config_path"]
@@ -1045,12 +1132,27 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         )
         lines.append(f"- Excluded from recommendations: {details}.")
     total_cost = result.get("total_estimated_cost_usd")
+    priced_cost = result.get("priced_cost_usd")
+    unpriced_names = ", ".join(
+        model.get("name", model.get("model", "unknown"))
+        for model in result.get("unpriced_models", [])
+    )
     lines.append(
         "- Total spent: "
         + (
-            f"**${total_cost:.6f}** including warmups."
+            (
+                f"**${total_cost:.6f}** including warmups; partial because pricing is "
+                f"unknown for {unpriced_names}."
+                if result.get("cost_confidence") == "partial"
+                else f"**${total_cost:.6f}** including warmups."
+            )
             if total_cost is not None
-            else "unavailable; one or more models lack pricing."
+            else (
+                f"unavailable; one or more models lack pricing. Priced spend: "
+                f"**${priced_cost:.6f}** including warmups."
+                if priced_cost is not None
+                else "unavailable; one or more models lack pricing."
+            )
         )
     )
     lines.extend(
@@ -1110,6 +1212,27 @@ def _markdown_pass_fail_dashboard(result: dict[str, Any]) -> list[str]:
     ]
     lines.extend(f"| {row[0]} | {row[1]} | {row[2]} |" for row in rows)
     return lines
+
+
+def _contract_diagnostics(result: dict[str, Any]) -> list[str]:
+    diagnostics = []
+    for model in result["models"]:
+        profiles = model.get("profiles", [])
+        entries = (
+            [(profile["name"], profile["summary"]) for profile in profiles]
+            if profiles
+            else [("config prompt", model.get("summary", {}))]
+        )
+        for name, summary in entries:
+            if summary.get("contract_only_failures"):
+                diagnostics.append(
+                    f"- {model['name']}/{name}: {summary['contract_only_failures']} contract-only failure(s); the declared consumer accepted the response."
+                )
+            if summary.get("consumer_rejections"):
+                diagnostics.append(
+                    f"- {model['name']}/{name}: {summary['consumer_rejections']} consumer rejection(s); the declared consumer rejected the response and the run failed."
+                )
+    return diagnostics
 
 
 def report(result: dict[str, Any]) -> str:
@@ -1175,6 +1298,10 @@ def report(result: dict[str, Any]) -> str:
             lines.append(
                 f"- {warning['provider']}/{warning['model']}: {warning['message']}"
             )
+    diagnostics = _contract_diagnostics(result)
+    if diagnostics:
+        lines.extend(["", "## Contract diagnostics", ""])
+        lines.extend(diagnostics)
     lines.extend(["", *_markdown_pass_fail_dashboard(result)])
     lines.extend(_executive_summary(result))
     return "\n".join(lines) + "\n"
@@ -1309,6 +1436,9 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         section("DECISION"),
         "Executive summary",
     ]
+    diagnostics = _contract_diagnostics(result)
+    if diagnostics:
+        lines.extend(["", section("CONTRACT DIAGNOSTICS"), *diagnostics])
     for line in _executive_summary(result)[3:]:
         if not line:
             lines.append("")

@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here.
 
+## 2.2.0 - 2026-08-01
+
+### Added
+
+- Add declared JSON consumer profiles (`raw_json`, `fenced_ok`, and
+  `prose_tolerant`) and report contract-only failures when a stricter benchmark
+  validator rejects a response accepted by the declared consumer.
+- Add deterministic `golden` answer validation with per-profile accuracy and
+  expected-versus-observed confusion counts.
+- Add local-only `--audit-source PATH` for advisory literal model-ID and
+  bundled-pricing findings with file and line evidence; it never imports
+  application code or contacts providers.
+- Add `priced_cost_usd`, `cost_confidence`, and `unpriced_models` while
+  retaining the v1 all-or-null `total_estimated_cost_usd` contract.
+
+### Fixed
+
+- Fail a benchmark when its declared consumer parser rejects a response, and
+  surface consumer rejections in terminal and Markdown contract diagnostics.
+- Treat deeply nested JSON as invalid output rather than crashing a run.
+- Emit the JSON result and embedded baseline comparison before `--baseline --ci
+  --json` exits for a regression.
+
+### Changed
+
+- Clarify the product mission, vision, niche, and safe default validation
+  workflow for coding agents.
+
 ## 2.1.1 - 2026-07-21
 
 ### Fixed

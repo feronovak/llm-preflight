@@ -35,7 +35,7 @@ one top-level `prompt` or one or more named `prompts`.
 | Key | Default | Meaning |
 |---|---:|---|
 | `temperature` | provider default | Sampling temperature, unless the model disables it. |
-| `max_output_tokens` | `256` for planning | Maximum generated tokens. `max_tokens` is accepted for compatibility. |
+| `max_output_tokens` | `256` | Maximum generated tokens for native providers. `max_tokens` is accepted for compatibility. |
 | `system_prompt` | — | Shared system instructions. |
 | `provider_options` | `{}` | Provider request body fields; one object or `{all, provider}` maps (`openai_compatible` is valid for a custom OpenAI-style endpoint). |
 | `retry` | two attempts | `true` or an object described below. |
@@ -52,10 +52,13 @@ and `retry_on` (`rate_limit`, `timeout`, `transient_provider`, `network`).
 A model requires `model`; `provider` defaults to `openai_compatible`. Useful
 optional model fields are `name`, `base_url`, `api_key_env`, `api_version`,
 `headers`, `input_cost_per_million`, `output_cost_per_million`,
-`max_tokens_parameter`, and `supports_temperature`. `capabilities` is advanced
-provider metadata; catalogue refresh and probes maintain it automatically, so
-most users should not set it manually. Mock models also accept `response`,
-`latency_seconds`, and `ttft_seconds` for deterministic local fixtures.
+`cached_input_cost_per_million`, `pricing_tiers`, `max_tokens_parameter`, and
+`supports_temperature`. `pricing_tiers` is an ordered per-request price list;
+each tier may set `up_to_input_tokens` before the next tier applies.
+`capabilities` is advanced provider metadata; catalogue refresh and probes
+maintain it automatically, so most users should not set it manually. Mock
+models also accept `response`, `latency_seconds`, and `ttft_seconds` for
+deterministic local fixtures.
 
 Supported provider names are `openai`, `anthropic`, `gemini`, `xai`,
 `openrouter`, `openai_compatible`, and `mock`. A discovery object requires
@@ -71,15 +74,22 @@ name, and either non-empty `prompt` or a relative
 `prompt_file` within the config directory. Optional keys are `description`,
 `system_prompt`, `request`, `validation`, and `presets`.
 
-Validation supports non-empty `contains`, `regex`, `exact`, and `json_schema`; an absent
-custom validation means non-empty output. `json_schema` is strict raw JSON by
-default. Set `"allow_fenced_json": true` alongside it only when the deployed
+Validation supports non-empty `contains`, `regex`, `exact`, `golden`, `json_schema`,
+`json_object`, `json_array`, `exact_count`, `allowed_values`, `numeric_answer`,
+`numeric_tolerance`, `max_chars`, and `no_markdown`; an absent custom validation
+means non-empty output. `exact_count` requires `json_array`, and
+`numeric_tolerance` requires `numeric_answer`. `json_schema` is strict raw JSON
+by default. Set `"allow_fenced_json": true` alongside it only when the deployed
 consumer accepts exactly one complete Markdown-fenced JSON block; surrounding
 prose is allowed, but multiple blocks and unfenced prose objects still fail.
-Unknown validation keys are rejected
-before a benchmark can run. Built-in packs also use numeric and JSON-subset
-evaluators. The supported JSON Schema subset handles object
-`required`/`properties`, arrays and item limits, primitive `type`, and `enum`.
+`consumer` may declare the deployed JSON consumer as `raw_json`, `fenced_ok`,
+or `prose_tolerant`; it records contract-only failures without weakening the
+configured validator, and rejects a response the declared consumer cannot
+parse even if that validator otherwise passes. `golden` is a deterministic trimmed,
+case-insensitive expected-answer check.
+Unknown validation keys are rejected before a benchmark can run. The supported
+JSON Schema subset handles object `required`/`properties`, arrays and item
+limits, primitive `type`, and `enum`.
 
 `aliases` maps a name to a model object; use its name in `models`. An
 `environments` item is a shallow overlay—its top-level keys replace the base

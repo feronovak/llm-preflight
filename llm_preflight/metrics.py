@@ -117,6 +117,11 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
         if len(known_sample_costs) == len(sample_costs)
         else None
     )
+    golden_samples = [sample for sample in samples if "golden_expected" in sample]
+    confusion: dict[tuple[str, str], int] = {}
+    for sample in golden_samples:
+        key = (str(sample["golden_expected"]), str(sample.get("golden_observed", "")))
+        confusion[key] = confusion.get(key, 0) + 1
 
     return {
         "requests": len(samples),
@@ -129,6 +134,22 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
             if samples
             else 0
         ),
+        "contract_only_failures": sum(
+            sample.get("contract_only_failure") is True for sample in samples
+        ),
+        "consumer_rejections": sum(
+            sample.get("consumer_rejection") is True for sample in samples
+        ),
+        "golden_accuracy": (
+            sum(sample.get("golden_valid") is True for sample in golden_samples)
+            / len(golden_samples)
+            if golden_samples
+            else None
+        ),
+        "golden_confusion": [
+            {"expected": expected, "observed": observed, "count": count}
+            for (expected, observed), count in sorted(confusion.items())
+        ],
         "latency_seconds": stats(successful_numbers("latency_seconds")),
         "ttft_seconds": stats(successful_numbers("ttft_seconds")),
         "output_tokens_per_second": stats(

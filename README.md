@@ -2,13 +2,34 @@
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
-Know whether a model change is safe before it reaches production. LLM Preflight
-runs a small local preflight across providers and compares validated
-output, response speed, tokens, and estimated cost.
+Know whether an AI-generated LLM integration is safe before it reaches
+production. LLM Preflight is the local validation gate for model, prompt,
+structured-output, and provider-call changes. It runs a small cross-provider
+preflight and compares validated output, response speed, tokens, and estimated
+cost.
 
 It is a local preflight tool—not a hosted evaluation platform, tracing system,
 RAG framework, or public leaderboard. Its results are evidence for your
 account, network, prompts, and validation rules.
+
+## Purpose
+
+**Mission:** make every LLM integration change evidence-based before production.
+
+**Vision:** AI-assisted software delivery where an agent can validate its LLM
+changes as routinely as it runs tests, while people retain control of spend and
+production approval.
+
+**Positioning:** LLM Preflight is the fast, local, cross-provider validation
+gate for AI-powered application changes. It is not a general evaluation,
+observability, or autonomous-deployment platform.
+
+It is built for engineers and coding agents working on AI features: teams that
+need to check a real application contract against live model APIs before a
+model ID, prompt, parser, tool definition, or provider option ships. Read the
+[product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product-positioning.md)
+and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md)
+for the intended workflow and boundaries.
 
 > [!WARNING]
 > Live benchmarks make paid API requests. Start with the no-key demo, preview
@@ -144,6 +165,28 @@ switch.
 Use [custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) to express the outputs your
 own feature must preserve.
 
+## Using a coding agent
+
+Give an agent the same evidence you would use yourself: a reviewed config, an
+explicit output contract, and a dry run before paid work. Start with the
+recommended five-check suite:
+
+```bash
+# No generation request: inspect credentials, model selection, and paid-work plan.
+llm-preflight benchmark.json --doctor --json
+llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json
+
+# Paid run, only after reviewing the plan.
+llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
+```
+
+An agent should not infer model IDs, weaken a validator to turn a failure into
+a pass, or approve a model without an explicit instruction. The compact
+[LLM and coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/llm-guide.md)
+covers commands, result JSON, exit codes, and automation guardrails. The
+[AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md)
+shows how to make this validation an agent's default testing step.
+
 ## Choose your path
 
 **I am new and want to see the tool safely.** Start with the
@@ -245,6 +288,12 @@ and no vendor between you and the verdict.
   exact-routing, and content-rule migration tests.
 - [CLI reference](https://github.com/feronovak/llm-preflight/blob/main/docs/cli-reference.md) — every command-line option, default,
   and incompatibility.
+- [LLM and coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/llm-guide.md) — safe command sequence,
+  result semantics, exit codes, and automation guardrails.
+- [Product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product-positioning.md) — mission, vision, niche,
+  and product boundaries.
+- [AI implementation testing](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md) — a safe
+  default validation workflow for coding agents.
 - [Interactive mode](https://github.com/feronovak/llm-preflight/blob/main/docs/interactive.md) — selection, paid-run preview, and
   live progress.
 - [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/ci.md) — machine-readable output and exit-code

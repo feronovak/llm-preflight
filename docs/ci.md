@@ -32,11 +32,13 @@ llm-preflight --diff baseline.json current.json --json --ci > comparison.json
 ```
 
 The second command exits 1 when configured baseline thresholds regress and
-otherwise exits 0. This two-command form keeps each stdout stream valid JSON.
+otherwise exits 0. This two-command form writes a standalone comparison
+artifact.
 
-`--baseline baseline.json --ci` also gates a live run, but its final diff is
-human-readable after the result JSON. Prefer the two-command form when another
-CI step parses stdout.
+`--baseline baseline.json --ci` also gates a live run. With `--json`, it emits
+exactly one JSON document and embeds the comparison as `baseline_diff`; with
+human output, it prints the report followed by a readable diff. Prefer the
+two-command form when a later CI step needs a standalone comparison artifact.
 
 The CI comparison fails for a latency increase, a request-success or validation
 rate drop, or a cost increase beyond its configured threshold. Costs are
@@ -47,6 +49,11 @@ Default comparison thresholds are latency p95 **+25%**, request success
 **−5 percentage points**, validation rate **−5 percentage points**, and cost
 **+25%**. A zero baseline uses the corresponding absolute increase threshold
 for latency or cost because a percentage change is undefined.
+
+When any custom threshold is configured, unspecified gates keep their defaults.
+A baseline model missing from the current run is a failure, as is missing
+validation evidence; request success alone does not substitute for a validated
+output.
 
 For the complete stable result structure, see [Result JSON schema](result-schema.md).
 

@@ -14,7 +14,7 @@ from typing import Any
 
 from . import __version__
 from .capability_ledger import apply_probe_evidence, load_ledger
-from .catalog import classify_catalog_model, resolve_models
+from .catalog import classify_catalog_model, discover_models, resolve_models
 from .catalog_probe import probe_model
 from .catalog_watch import (
     build_candidate_config,
@@ -41,7 +41,7 @@ from .features import (
     matrix_report,
     replay_config,
 )
-from .pricing import pricing_freshness_report
+from .pricing import pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
 from .runner import (
@@ -393,6 +393,7 @@ def _write_starter_config(
         raise ValueError(f"{path} is a symbolic link; refusing to replace it")
     if path.exists() and not force:
         raise ValueError(f"{path} already exists; refusing to overwrite it")
+    mode = path.stat().st_mode & 0o777 if force and path.exists() else None
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
@@ -400,6 +401,8 @@ def _write_starter_config(
     temporary_path = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            if mode is not None:
+                os.fchmod(handle.fileno(), mode)
             json.dump(config or _starter_config(), handle, indent=2)
             handle.write("\n")
             handle.flush()
@@ -479,6 +482,70 @@ def _init_main(argv: list[str]) -> None:
     else:
         print(f"Run the no-key demo: {command} {args.path} --no-save")
         print(f"Explore interactively: {command} {args.path} --interactive")
+
+
+def _pricing_refresh_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog=f"{_display_command()} pricing-refresh")
+    parser.add_argument("config", type=Path)
+    parser.add_argument("--write", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--provider", choices=("openrouter",))
+    parser.add_argument("--max-age-days", type=int, default=30)
+    args = parser.parse_args(argv)
+    if args.max_age_days < 0:
+        parser.error("--max-age-days must be zero or greater")
+    config = load_config(args.config)
+    providers = {args.provider} if args.provider else {"openrouter"}
+    sources = [
+        {**source, "limit": 1000, "api_key_env": None}
+        for source in config.get("discovery", [])
+        if source.get("provider") in providers
+    ]
+    if not sources and any(
+        model.get("provider") == "openrouter" for model in config.get("models", [])
+    ):
+        sources = [{"provider": "openrouter", "limit": 1000, "api_key_env": None}]
+    catalog: list[dict[str, Any]] = []
+    if not args.offline:
+        for source in sources:
+            catalog.extend(discover_models(source))
+    resolution = resolve_pricing(
+        config.get("models", []),
+        {
+            "catalog": catalog,
+            "source_url": "https://openrouter.ai/api/v1/models",
+        }
+        if catalog
+        else None,
+    )
+    models = resolution["models"]
+    payload = {
+        "ok": True,
+        "changes": resolution["changes"],
+        "written": args.write,
+        "offline": args.offline,
+        "pricing_fingerprint": resolution["fingerprint"],
+        "pricing_warnings": pricing_freshness_report(
+            models, max_age_days=args.max_age_days
+        )["warnings"],
+    }
+    if args.write:
+        updated = dict(config)
+        updated["models"] = models
+        _write_starter_config(args.config, updated, force=True)
+    print(
+        json.dumps(payload, indent=2)
+        if args.json
+        else "\n".join(
+            [f"Pricing changes: {len(payload['changes'])}"]
+            + [
+                f"- {change['provider']}:{change['model']}: "
+                f"{change['before']} -> {change['after']}"
+                for change in payload["changes"]
+            ]
+        )
+    )
 
 
 def _display_command() -> str:
@@ -1607,6 +1674,19 @@ def interactive_selection(
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "pricing-refresh":
+        try:
+            _pricing_refresh_main(sys.argv[2:])
+        except (KeyboardInterrupt, EOFError):
+            print("Pricing refresh cancelled; no files changed.", file=sys.stderr)
+            raise SystemExit(130) from None
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "init":
         try:
             _init_main(sys.argv[2:])

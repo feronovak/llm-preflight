@@ -162,8 +162,11 @@ def _request_cost(
     )
 
 
-def estimate_budget(config: dict[str, Any]) -> dict[str, Any]:
-    models = resolve_models(config)
+def estimate_budget(
+    config: dict[str, Any], models: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Estimate against an already-resolved pricing ledger when supplied."""
+    models = models if models is not None else resolve_models(config)
     work = _budget_work(config)
     requests = len(work) * len(models)
     possible_requests = len(models) * sum(

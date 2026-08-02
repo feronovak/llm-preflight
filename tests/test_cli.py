@@ -607,6 +607,63 @@ def test_init_force_refuses_a_symlink_destination(monkeypatch, tmp_path, capsys)
     assert "symbolic link" in capsys.readouterr().err
 
 
+def test_pricing_refresh_requires_write_before_mutating(monkeypatch, tmp_path, capsys):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"ok","models":[{"provider":"openrouter","model":"vendor/model"}]}'
+    )
+    config.chmod(0o644)
+    monkeypatch.setattr(
+        cli,
+        "discover_models",
+        lambda source: [
+            {
+                "provider": "openrouter",
+                "model": "vendor/model",
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "pricing-refresh", str(config), "--json"]
+    )
+    cli.main()
+    assert (
+        json.loads(config.read_text())["models"][0].get("input_cost_per_million")
+        is None
+    )
+    assert json.loads(capsys.readouterr().out)["written"] is False
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "pricing-refresh", str(config), "--write"]
+    )
+    cli.main()
+    assert (
+        json.loads(config.read_text())["models"][0]["pricing_metadata"]["source"]
+        == "live catalog"
+    )
+    assert config.stat().st_mode & 0o777 == 0o644
+
+
+def test_pricing_refresh_mock_and_offline_never_discover_models(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text('{"prompt":"ok","models":[{"provider":"mock","model":"local"}]}')
+    monkeypatch.setattr(
+        cli, "discover_models", lambda _source: pytest.fail("network discovery")
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "pricing-refresh", str(config), "--offline", "--json"],
+    )
+
+    cli.main()
+
+    assert json.loads(capsys.readouterr().out)["changes"] == []
+
+
 def test_init_mock_rejects_env_example_without_mutating_files(
     monkeypatch, tmp_path, capsys
 ):

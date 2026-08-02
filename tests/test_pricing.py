@@ -2,7 +2,67 @@ from datetime import date
 
 import pytest
 
-from llm_preflight.pricing import apply_public_pricing, pricing_freshness_report
+from llm_preflight.pricing import (
+    apply_live_catalog_pricing,
+    apply_public_pricing,
+    pricing_freshness_report,
+    resolve_pricing,
+)
+
+
+def test_live_catalog_pricing_preserves_overrides_and_marks_live_prices():
+    models, changes = apply_live_catalog_pricing(
+        [
+            {
+                "provider": "openrouter",
+                "model": "a",
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+            },
+            {
+                "provider": "openrouter",
+                "model": "b",
+                "input_cost_per_million": 9,
+                "output_cost_per_million": 9,
+                "pricing_metadata": {"source": "user override"},
+            },
+        ],
+        [
+            {
+                "provider": "openrouter",
+                "model": "a",
+                "input_cost_per_million": 3,
+                "output_cost_per_million": 4,
+            },
+            {
+                "provider": "openrouter",
+                "model": "b",
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 1,
+            },
+        ],
+        today=date(2026, 8, 2),
+    )
+    assert models[0]["pricing_metadata"]["source"] == "live catalog"
+    assert models[0]["input_cost_per_million"] == 3
+    assert models[1]["input_cost_per_million"] == 9
+    assert changes == [
+        {"provider": "openrouter", "model": "a", "before": (1, 2), "after": (3, 4)}
+    ]
+
+
+def test_resolve_pricing_returns_a_stable_ledger_for_the_costing_models():
+    resolution = resolve_pricing([{"provider": "openai", "model": "gpt-5.4-mini"}])
+
+    assert resolution["models"][0]["input_cost_per_million"] == 0.75
+    assert resolution["ledger"][0]["source"] == "official snapshot"
+    assert len(resolution["fingerprint"]) == 64
+    assert (
+        resolution["fingerprint"]
+        == resolve_pricing([{"provider": "openai", "model": "gpt-5.4-mini"}])[
+            "fingerprint"
+        ]
+    )
 
 
 def test_public_pricing_marks_user_overrides():

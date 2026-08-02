@@ -8,7 +8,7 @@ import urllib.request
 from typing import Any
 
 from .client import PROVIDER_DEFAULTS
-from .pricing import apply_public_pricing
+from .pricing import resolve_pricing
 from .security import open_public_url, require_http_url
 
 _MAX_CATALOG_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -355,10 +355,12 @@ def discover_models(source: dict[str, Any]) -> list[dict[str, Any]]:
         )
         if key in source
     }
-    return [
-        apply_public_pricing(classify_catalog_model({**model, **inherited}))
-        for model in models[: int(source["limit"])]
-    ]
+    return resolve_pricing(
+        [
+            classify_catalog_model({**model, **inherited})
+            for model in models[: int(source["limit"])]
+        ]
+    )["models"]
 
 
 def resolve_models(config: dict[str, Any]) -> list[dict[str, Any]]:
@@ -371,8 +373,8 @@ def resolve_models(config: dict[str, Any]) -> list[dict[str, Any]]:
         identity = (model.get("provider", "openai_compatible"), model["model"])
         if identity not in seen:
             seen.add(identity)
-            unique.append(apply_public_pricing(classify_catalog_model(model)))
-    return _enrich_from_openrouter(unique)
+            unique.append(classify_catalog_model(model))
+    return resolve_pricing(_enrich_from_openrouter(unique))["models"]
 
 
 def _enrich_from_openrouter(models: list[dict[str, Any]]) -> list[dict[str, Any]]:

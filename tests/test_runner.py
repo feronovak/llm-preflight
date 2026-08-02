@@ -58,6 +58,8 @@ def test_benchmark_records_the_source_config_path_without_putting_it_in_config()
     assert result["source_config_path"] == "/workspace/benchmark.json"
     assert result["schema_version"] == 1
     assert "_source_config_path" not in result["source_config"]
+    assert result["pricing_ledger"][0]["source"] == "unknown"
+    assert len(result["pricing_fingerprint"]) == 64
 
 
 def test_load_config_accepts_named_prompts_without_legacy_prompt(tmp_path):

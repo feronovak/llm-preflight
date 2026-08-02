@@ -18,6 +18,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
 | `--doctor` | off | Validate configuration, keys, and model resolution; no generation. |
 | `--pricing-check` | off | Report unknown or stale prices; no generation. |
+| `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices; no generation. |
 | `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. |
 | `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. |
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |

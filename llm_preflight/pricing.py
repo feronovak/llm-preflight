@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -150,3 +152,93 @@ def pricing_freshness_report(
                     }
                 )
     return {"ok": not warnings, "warnings": warnings}
+
+
+def apply_live_catalog_pricing(
+    models: list[dict[str, Any]],
+    catalog: list[dict[str, Any]],
+    today: date | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Apply authoritative catalog prices without replacing explicit overrides."""
+    resolution = resolve_pricing(models, {"catalog": catalog, "today": today})
+    return resolution["models"], resolution["changes"]
+
+
+def resolve_pricing(
+    models: list[dict[str, Any]], policy: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Resolve every model through one deterministic pricing ledger.
+
+    Callers use the returned models for both planning and result costing, and
+    persist the ledger fingerprint beside their result.  ``catalog`` is an
+    optional authoritative refresh input; explicit user overrides always win.
+    """
+    policy = policy or {}
+    today = policy.get("today")
+    current = (today or datetime.now(timezone.utc).date()).isoformat()
+    refreshed_at = policy.get("refreshed_at") or datetime.now(timezone.utc).isoformat()
+    source_url = policy.get("source_url")
+    catalog = policy.get("catalog", [])
+    prices = {
+        (item.get("provider"), item.get("model")): item
+        for item in catalog
+        if item.get("input_cost_per_million") is not None
+        and item.get("output_cost_per_million") is not None
+    }
+    updated: list[dict[str, Any]] = []
+    changes: list[dict[str, Any]] = []
+    for model in models:
+        item = dict(model)
+        metadata = item.get("pricing_metadata") or {}
+        key = (item.get("provider", "openai_compatible"), item.get("model"))
+        live = prices.get(key)
+        if metadata.get("source") != "user override" and live is not None:
+            before = (
+                item.get("input_cost_per_million"),
+                item.get("output_cost_per_million"),
+            )
+            after = (live["input_cost_per_million"], live["output_cost_per_million"])
+            item.update(
+                input_cost_per_million=after[0], output_cost_per_million=after[1]
+            )
+            item["pricing_metadata"] = {
+                "source": "live catalog",
+                "confidence": "live",
+                "as_of": current,
+                "refreshed_at": refreshed_at,
+                **({"source_url": source_url} if source_url else {}),
+            }
+            if before != after or metadata.get("source") != "live catalog":
+                changes.append(
+                    {
+                        "provider": key[0],
+                        "model": key[1],
+                        "before": before,
+                        "after": after,
+                    }
+                )
+        updated.append(apply_public_pricing(item))
+    ledger = [
+        {
+            "provider": model.get("provider", "openai_compatible"),
+            "model": model["model"],
+            "input_cost_per_million": model.get("input_cost_per_million"),
+            "output_cost_per_million": model.get("output_cost_per_million"),
+            "source": (model.get("pricing_metadata") or {}).get("source", "unknown"),
+            "as_of": (model.get("pricing_metadata") or {}).get("as_of"),
+            "refreshed_at": (model.get("pricing_metadata") or {}).get("refreshed_at"),
+            "source_url": (model.get("pricing_metadata") or {}).get("source_url"),
+        }
+        for model in updated
+    ]
+    ledger.sort(key=lambda entry: (str(entry["provider"]), str(entry["model"])))
+    fingerprint = hashlib.sha256(
+        json.dumps(ledger, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "models": updated,
+        "ledger": ledger,
+        "fingerprint": fingerprint,
+        "refreshed_at": refreshed_at if catalog else None,
+        "changes": changes,
+    }

@@ -70,6 +70,28 @@ Set `max_requests` and `max_estimated_cost_usd` in the config to prevent
 unexpected spend. Unknown pricing prevents cost-ceiling enforcement, so treat a
 failed `--pricing-check` as a failed preflight.
 
+Refresh OpenRouter catalog prices locally, review the printed field-level diff,
+then write only when it is expected. The catalog lookup is public and does not
+load `.env.production`; `--offline` verifies the local price ledger without a
+network call.
+
+```bash
+llm-preflight pricing-refresh benchmark.json
+llm-preflight pricing-refresh benchmark.json --write
+llm-preflight pricing-refresh benchmark.json --offline --json
+```
+
+## MCP setup
+
+2.4.0 ships a local modern MCP server. Configure your coding-agent client to
+start `llm-preflight-mcp --workspace /absolute/path/to/repository`. It exposes
+config validation, dry-run planning, explicit preflight execution, and baseline
+diffing. Read-only tools do not contact providers or load credentials. A live
+run requires explicit paid-run confirmation; only then does it read the
+config-adjacent `.env.production` or an explicit workspace-relative env file.
+Alternatively, configure the required provider key in the MCP client process
+environment. The server is modern MCP 2026-07-28 only.
+
 ## GitHub Actions starter
 
 Copy [the fork-safe mock workflow](../examples/github-actions/preflight.yml) to

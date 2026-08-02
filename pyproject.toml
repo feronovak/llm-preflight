@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-preflight"
-version = "2.3.0"
+version = "2.4.0"
 description = "Local, cross-provider preflight checks for an LLM model switch"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,7 @@ release = ["build==1.5.0", "twine==6.2.0"]
 
 [project.scripts]
 llm-preflight = "llm_preflight.__main__:main"
+llm-preflight-mcp = "llm_preflight.mcp:main"
 
 [tool.setuptools.packages.find]
 include = ["llm_preflight*"]

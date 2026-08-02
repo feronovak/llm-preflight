@@ -17,7 +17,7 @@ from .catalog import resolve_models
 from .client import create_client
 from .metrics import summarize
 from .presets import expand_presets
-from .pricing import pricing_freshness_report
+from .pricing import pricing_freshness_report, resolve_pricing
 from .profiles import (
     PROFILE_ALIASES,
     evaluate_consumer_response,
@@ -786,7 +786,8 @@ def run_benchmark(
         raise ValueError("select a custom prompt before running the benchmark")
     prompt = config.get("prompt", "")
     models_result = []
-    models = resolve_models(config)
+    pricing_resolution = resolve_pricing(resolve_models(config))
+    models = pricing_resolution["models"]
     if not models:
         raise ValueError("model discovery returned no models")
 
@@ -964,6 +965,8 @@ def run_benchmark(
             "python": platform.python_version(),
         },
         "models": models_result,
+        "pricing_ledger": pricing_resolution["ledger"],
+        "pricing_fingerprint": pricing_resolution["fingerprint"],
         "pricing_warnings": pricing_freshness_report(models)["warnings"],
         "source_config": redact_secrets(
             {

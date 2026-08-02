@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## 2.4.0 - 2026-08-02
+
+### Added
+
+- Add a local modern stdio MCP server with validate, dry-run, explicit-run, and
+  baseline-diff tools.
+- Add explicit OpenRouter live-catalog price refresh with user-override safety.
+
 ## 2.3.0 - 2026-08-02
 
 ### Added

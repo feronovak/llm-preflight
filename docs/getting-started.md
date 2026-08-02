@@ -15,13 +15,30 @@ This creates a deterministic mock benchmark. It needs no API key, network, or
 paid request:
 
 ```bash
-llm-preflight --init
+llm-preflight init
 llm-preflight benchmark.json --no-save
 ```
 
 The terminal report separates provider failures from failed output validation.
 `--init` refuses to overwrite an existing config. Press Ctrl-C at any prompt or
 run to cancel; the command exits 130 and saves no partial artifact.
+
+`llm-preflight --init` remains a compatibility alias. To create a conservative
+live-provider starter without ever putting a key in a file, supply the provider,
+model, and *environment-variable name* explicitly:
+
+```bash
+llm-preflight init benchmark.json --template provider \
+  --provider openai --model your-model-id --api-key-env OPENAI_API_KEY \
+  --write-env-example
+llm-preflight benchmark.json --doctor
+llm-preflight benchmark.json --smoke --dry-run
+```
+
+The generated live starter limits requests and estimated spend, saves only
+failed responses, and excludes the opt-in `load` test. Add the actual key to
+your shell, secret manager, or an uncommitted `.env.production` file; never put
+it in the configuration.
 
 ## Then run a quick migration check
 

@@ -40,18 +40,18 @@ for the intended workflow and boundaries.
 Create and run a deterministic local benchmark—no API key or network request:
 
 ```bash
-llm-preflight --init
+llm-preflight init
 llm-preflight benchmark.json --no-save
 ```
 
 From a source checkout:
 
 ```bash
-python3 -m llm_preflight --init
+python3 -m llm_preflight init
 python3 -m llm_preflight benchmark.json --no-save
 ```
 
-`--init` never overwrites an existing config. It creates a mock benchmark so
+`init` never overwrites an existing config. It creates a mock benchmark so
 you can see the report and exit behavior before making a paid request.
 
 ## Use it when

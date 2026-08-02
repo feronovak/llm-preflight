@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
+import tempfile
 from collections import Counter
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -343,6 +345,8 @@ def _starter_config() -> dict[str, Any]:
                 "provider": "mock",
                 "model": "local",
                 "response": "ok",
+                "input_cost_per_million": 0,
+                "output_cost_per_million": 0,
             }
         ],
         "repetitions": 1,
@@ -351,13 +355,130 @@ def _starter_config() -> dict[str, Any]:
     }
 
 
-def _write_starter_config(path: Path) -> None:
+def _provider_starter_config(
+    provider: str, model: str, api_key_env: str
+) -> dict[str, Any]:
+    if provider not in PROVIDER_DEFAULTS or provider in {"mock", "openai_compatible"}:
+        raise ValueError(f"unsupported starter provider {provider!r}")
+    if not model.strip():
+        raise ValueError("--model must not be empty")
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", api_key_env):
+        raise ValueError("--api-key-env must be a valid environment variable name")
+    return {
+        "name": f"{provider}-starter",
+        "prompt": "Reply with ok.",
+        "validation": {"exact": "ok"},
+        "models": [
+            {
+                "name": f"{provider}-{model}",
+                "provider": provider,
+                "model": model,
+                "api_key_env": api_key_env,
+            }
+        ],
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "max_requests": 3,
+        "max_estimated_cost_usd": 0.05,
+        "save_responses": "failures",
+        "request": {"temperature": 0, "max_output_tokens": 128},
+    }
+
+
+def _write_starter_config(
+    path: Path, config: dict[str, Any] | None = None, *, force: bool = False
+) -> None:
+    if force and path.is_symlink():
+        raise ValueError(f"{path} is a symbolic link; refusing to replace it")
+    if path.exists() and not force:
+        raise ValueError(f"{path} already exists; refusing to overwrite it")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+    )
+    temporary_path = Path(temporary_name)
     try:
-        with path.open("x", encoding="utf-8") as handle:
-            json.dump(_starter_config(), handle, indent=2)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(config or _starter_config(), handle, indent=2)
             handle.write("\n")
-    except FileExistsError as exc:
-        raise ValueError(f"{path} already exists; refusing to overwrite it") from exc
+            handle.flush()
+            os.fsync(handle.fileno())
+        if force:
+            os.replace(temporary_path, path)
+        else:
+            try:
+                os.link(temporary_path, path)
+            except FileExistsError as exc:
+                raise ValueError(
+                    f"{path} already exists; refusing to overwrite it"
+                ) from exc
+            temporary_path.unlink()
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+
+def _write_env_example(path: Path, api_key_env: str) -> None:
+    if path.exists():
+        raise ValueError(f"{path} already exists; refusing to overwrite it")
+    path.write_text(
+        "# Set this value locally or as a CI secret. Never commit real credentials.\n"
+        f'{api_key_env}=""\n',
+        encoding="utf-8",
+    )
+
+
+def _init_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog=f"{_display_command()} init")
+    parser.add_argument("path", nargs="?", type=Path, default=Path("benchmark.json"))
+    parser.add_argument("--template", choices=("mock", "provider"), default="mock")
+    parser.add_argument("--provider")
+    parser.add_argument("--model")
+    parser.add_argument("--api-key-env")
+    parser.add_argument("--write-env-example", action="store_true")
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args(argv)
+    if args.path.exists() and args.path.is_dir():
+        parser.error("destination must be a file, not a directory")
+    if args.template == "mock":
+        if args.write_env_example:
+            parser.error("--write-env-example requires --template provider")
+        if any((args.provider, args.model, args.api_key_env)):
+            parser.error("provider options require --template provider")
+        config = _starter_config()
+        live = False
+    else:
+        if not all((args.provider, args.model, args.api_key_env)):
+            parser.error(
+                "--template provider requires --provider, --model and --api-key-env"
+            )
+        try:
+            config = _provider_starter_config(
+                args.provider, args.model, args.api_key_env
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+        live = True
+    if args.path.exists() and not args.force:
+        parser.error(f"{args.path} already exists; refusing to overwrite it")
+    if args.force and args.path.is_symlink():
+        parser.error(f"{args.path} is a symbolic link; refusing to replace it")
+    env_example = args.path.parent / ".env.example"
+    if args.write_env_example and env_example.exists():
+        parser.error(f"{env_example} already exists; refusing to overwrite it")
+    _write_starter_config(args.path, config, force=args.force)
+    if args.write_env_example:
+        _write_env_example(env_example, args.api_key_env)
+    command = _display_command()
+    print(f"Created {args.path}")
+    if live:
+        print("Live provider starter: review the plan before paid requests.")
+        print(f"Next: {command} {args.path} --doctor")
+        print(f"Then: {command} {args.path} --smoke --dry-run")
+    else:
+        print(f"Run the no-key demo: {command} {args.path} --no-save")
+        print(f"Explore interactively: {command} {args.path} --interactive")
 
 
 def _display_command() -> str:
@@ -1486,6 +1607,19 @@ def interactive_selection(
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "init":
+        try:
+            _init_main(sys.argv[2:])
+        except (KeyboardInterrupt, EOFError):
+            print("Setup cancelled; no artifacts saved.", file=sys.stderr)
+            raise SystemExit(130) from None
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "catalog":
         try:
             _catalog_main(sys.argv[2:])

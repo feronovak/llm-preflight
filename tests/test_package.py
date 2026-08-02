@@ -7,7 +7,7 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.2.0"
+    assert __version__ == "2.3.0"
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -50,7 +50,7 @@ def test_setup_py_has_only_the_single_console_entry_point():
     setup = Path("setup.py").read_text()
 
     assert 'name="llm-preflight"' in setup
-    assert 'version="2.2.0"' in setup
+    assert 'version="2.3.0"' in setup
     assert '"llm-preflight=llm_preflight.__main__:main"' in setup
     assert "llm-bench" not in setup
     assert "llm_bench" not in setup
@@ -178,6 +178,39 @@ def test_source_distribution_manifest_keeps_only_public_release_material():
     for excluded in ("exclude AGENTS.md", "exclude CONTRIBUTING.md", "prune docs"):
         assert excluded in manifest
     assert "legacy-pypi-shim" not in manifest
+
+
+def test_first_run_starters_and_github_workflow_are_safe_and_documented():
+    mock = json.loads(Path("examples/starter/mock-benchmark.json").read_text())
+    assert mock["models"][0]["provider"] == "mock"
+    assert mock["models"][0]["response"] == "ok"
+    assert run_benchmark(mock)["models"][0]["summary"]["failed"] == 0
+
+    workflow = Path("examples/github-actions/preflight.yml").read_text()
+    for required in (
+        "pull_request:",
+        "workflow_dispatch:",
+        "contents: read",
+        "actions/checkout@",
+        "actions/setup-python@",
+        "actions/upload-artifact@",
+        "if: always()",
+        "retention-days:",
+        "llm-preflight==2.3.0",
+        "--doctor --json",
+        "--pricing-check",
+        "--smoke --dry-run --json",
+        "--no-save",
+    ):
+        assert required in workflow
+    assert "pull_request_target" not in workflow
+    assert "contents: write" not in workflow
+    assert "${{ secrets." not in workflow
+
+    getting_started = Path("docs/getting-started.md").read_text()
+    ci = Path("docs/ci.md").read_text()
+    assert "llm-preflight init" in getting_started
+    assert "examples/github-actions/preflight.yml" in ci
 
 
 def test_pypi_trusted_publisher_isolated_to_release_workflow():

@@ -1,0 +1,20 @@
+{
+  "name": "first-run",
+  "prompt": "Reply with ok.",
+  "validation": {
+    "exact": "ok"
+  },
+  "models": [
+    {
+      "name": "local-mock",
+      "provider": "mock",
+      "model": "local",
+      "response": "ok",
+      "input_cost_per_million": 0,
+      "output_cost_per_million": 0
+    }
+  ],
+  "repetitions": 1,
+  "warmups": 0,
+  "save_responses": false
+}

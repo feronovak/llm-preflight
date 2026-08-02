@@ -1,7 +1,7 @@
 # CLI reference
 
 Run `llm-preflight --help` for the installed version. The options below match this
-release. `config` is a benchmark JSON path and is required unless `--init`,
+release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
 `--quick`, `--diff`, or `--replay` is used.
 
 `llm-preflight` is the primary command. From a source checkout, use
@@ -23,6 +23,7 @@ release. `config` is a benchmark JSON path and is required unless `--init`,
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
 | `--init [PATH]` | `benchmark.json` | Create a no-key mock config without overwriting a file. |
+| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, and API-key environment-variable name. |
 | `--models LIST` | — | Comma-separated `provider:model` list for `--quick`. An unprefixed ID is accepted only for recognizable OpenAI IDs. |
 | `--diff BASELINE CURRENT` | — | Compare two saved JSON result files; no benchmark run. |
 | `--replay PATH` | — | Re-run the saved source configuration in a result artifact. |
@@ -53,6 +54,7 @@ release. `config` is a benchmark JSON path and is required unless `--init`,
 
 - `--quick` requires `--models` and does not use a config file.
 - `--init` cannot be combined with `config`.
+- `init` is the preferred first-run command. `--init` remains a compatibility alias.
 - `--diff` runs alone; it compares its two positional JSON files.
 - `--profiles` and `--tests` cannot be combined.
 - `--migration-check` cannot be combined with `--profiles`, `--tests`,

@@ -1,0 +1,41 @@
+name: LLM preflight
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llm-preflight-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mock-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.10"
+      - name: Install the released CLI
+        run: python -m pip install "llm-preflight==2.3.0"
+      - name: Validate the mock configuration
+        run: |
+          mkdir -p results
+          llm-preflight examples/starter/mock-benchmark.json --doctor --json > results/doctor.json
+          llm-preflight examples/starter/mock-benchmark.json --pricing-check > results/pricing-check.txt
+          llm-preflight examples/starter/mock-benchmark.json --smoke --dry-run --json > results/plan.json
+      - name: Run the no-key preflight
+        run: llm-preflight examples/starter/mock-benchmark.json --smoke --json --no-save > results/current.json
+      - name: Compare a baseline when the repository provides one
+        if: ${{ hashFiles('benchmark.baseline.json') != '' }}
+        run: llm-preflight --diff benchmark.baseline.json results/current.json --json --ci > results/comparison.json
+      - name: Upload redacted preflight evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: llm-preflight-results
+          path: results/
+          retention-days: 14

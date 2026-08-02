@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 2.3.0 - 2026-08-02
+
+### Added
+
+- Add `llm-preflight init` with a no-key mock default and conservative explicit
+  provider starter configurations that never write a secret.
+- Add a fork-safe GitHub Actions preflight workflow example that pins its
+  dependencies, uploads redacted evidence, and supports an optional baseline.
+
+### Changed
+
+- `init` is intentionally non-interactive in 2.3.0: it provides a deterministic
+  mock default and explicit provider flags. Guided provider setup is deferred to
+  a later release.
+
 ## 2.2.0 - 2026-08-01
 
 ### Added

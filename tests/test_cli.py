@@ -456,7 +456,14 @@ def test_main_init_creates_a_no_key_mock_benchmark(monkeypatch, tmp_path, capsys
     config = json.loads(config_path.read_text())
     assert config["name"] == "first-run"
     assert config["models"] == [
-        {"name": "local-mock", "provider": "mock", "model": "local", "response": "ok"}
+        {
+            "name": "local-mock",
+            "provider": "mock",
+            "model": "local",
+            "response": "ok",
+            "input_cost_per_million": 0,
+            "output_cost_per_million": 0,
+        }
     ]
     assert config["validation"] == {"exact": "ok"}
     assert config["warmups"] == 0
@@ -499,6 +506,192 @@ def test_main_init_refuses_to_overwrite_a_config(monkeypatch, tmp_path, capsys):
     assert exc_info.value.code == 2
     assert config_path.read_text() == '{"prompt":"keep this"}\n'
     assert "already exists" in capsys.readouterr().err
+
+
+def test_init_provider_template_is_safe_and_writes_no_secret(monkeypatch, tmp_path):
+    config_path = tmp_path / "benchmark.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--template",
+            "provider",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-test",
+            "--api-key-env",
+            "TEST_OPENAI_KEY",
+            "--write-env-example",
+        ],
+    )
+
+    cli.main()
+
+    config = json.loads(config_path.read_text())
+    assert config["models"] == [
+        {
+            "name": "openai-gpt-test",
+            "provider": "openai",
+            "model": "gpt-test",
+            "api_key_env": "TEST_OPENAI_KEY",
+        }
+    ]
+    assert config["max_requests"] == 3
+    assert config["save_responses"] == "failures"
+    assert "load" not in config.get("profiles", [])
+    assert 'TEST_OPENAI_KEY=""' in (tmp_path / ".env.example").read_text()
+    assert "sk-test-secret" not in config_path.read_text()
+
+
+def test_init_provider_template_requires_complete_noninteractive_options(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(tmp_path / "benchmark.json"),
+            "--template",
+            "provider",
+            "--provider",
+            "openai",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert "--model and --api-key-env" in capsys.readouterr().err
+
+
+def test_init_force_replaces_only_the_requested_config(monkeypatch, tmp_path):
+    config_path = tmp_path / "benchmark.json"
+    config_path.write_text('{"prompt":"old"}\n')
+    sibling = tmp_path / "keep.txt"
+    sibling.write_text("keep\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "init", str(config_path), "--force"],
+    )
+
+    cli.main()
+
+    assert json.loads(config_path.read_text())["name"] == "first-run"
+    assert sibling.read_text() == "keep\n"
+
+
+def test_init_force_refuses_a_symlink_destination(monkeypatch, tmp_path, capsys):
+    target = tmp_path / "keep.json"
+    target.write_text('{"prompt":"keep"}\n')
+    config_path = tmp_path / "benchmark.json"
+    config_path.symlink_to(target)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "init", str(config_path), "--force"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert target.read_text() == '{"prompt":"keep"}\n'
+    assert "symbolic link" in capsys.readouterr().err
+
+
+def test_init_mock_rejects_env_example_without_mutating_files(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "benchmark.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "init", str(config_path), "--write-env-example"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert not config_path.exists()
+    assert not (tmp_path / ".env.example").exists()
+    assert "requires --template provider" in capsys.readouterr().err
+
+
+def test_init_validates_env_example_destination_before_writing_config(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "benchmark.json"
+    env_example = tmp_path / ".env.example"
+    env_example.write_text("EXISTING=1\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--template",
+            "provider",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-test",
+            "--api-key-env",
+            "TEST_KEY",
+            "--write-env-example",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert not config_path.exists()
+    assert env_example.read_text() == "EXISTING=1\n"
+    assert "already exists" in capsys.readouterr().err
+
+
+def test_init_force_preserves_existing_config_when_rendering_fails(
+    monkeypatch, tmp_path
+):
+    config_path = tmp_path / "benchmark.json"
+    config_path.write_text('{"prompt":"keep"}\n')
+    monkeypatch.setattr(
+        cli.json,
+        "dump",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("write failed")),
+    )
+
+    with pytest.raises(OSError, match="write failed"):
+        cli._write_starter_config(config_path, {"prompt": "new"}, force=True)
+
+    assert config_path.read_text() == '{"prompt":"keep"}\n'
+
+
+def test_init_fails_cleanly_without_hard_link_support(monkeypatch, tmp_path, capsys):
+    config_path = tmp_path / "benchmark.json"
+
+    def _unsupported(source, destination):
+        raise OSError("hard links are not supported")
+
+    monkeypatch.setattr(cli.os, "link", _unsupported)
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "init", str(config_path)])
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert "hard links are not supported" in capsys.readouterr().err
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_interactive_selection_shows_request_and_cost_estimate(monkeypatch):

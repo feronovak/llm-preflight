@@ -6,6 +6,7 @@ include SECURITY.md
 include benchmark.auto.example.json
 include benchmark.example.json
 recursive-include examples *.json
+recursive-include examples *.yml
 
 exclude AGENTS.md
 exclude CONTRIBUTING.md

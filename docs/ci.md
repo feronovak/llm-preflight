@@ -69,3 +69,22 @@ llm-preflight benchmark.json --smoke --json --no-save > current.json
 Set `max_requests` and `max_estimated_cost_usd` in the config to prevent
 unexpected spend. Unknown pricing prevents cost-ceiling enforcement, so treat a
 failed `--pricing-check` as a failed preflight.
+
+## GitHub Actions starter
+
+Copy [the fork-safe mock workflow](../examples/github-actions/preflight.yml) to
+`.github/workflows/llm-preflight.yml`, and also copy
+`examples/starter/mock-benchmark.json` into the same relative path in your
+repository (or update the four workflow commands to your chosen mock config).
+It uses no secrets, makes no paid request, and uploads JSON evidence even when
+a check fails. It is safe for fork pull requests because it uses
+`pull_request`, has read-only permissions, and does not use
+`pull_request_target`.
+
+The example pins the released CLI version and every action by commit SHA. Update
+the CLI pin deliberately with each release. Add a live-provider job only in a
+trusted branch workflow, with explicit repository-secret mapping, a reviewed
+configuration, `max_requests`, and `max_estimated_cost_usd`; never run that job
+against fork-controlled code. The example cancels superseded runs for the same
+pull request. Do not copy that concurrency setting into a paid job unless the
+provider requests are independently idempotent and cancellation-safe.

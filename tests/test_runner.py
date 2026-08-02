@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import pytest
 
+from llm_preflight.features import estimate_budget
 from llm_preflight.runner import (
     _failed_tests,
     _profile_progress_callback,
@@ -20,7 +21,6 @@ from llm_preflight.runner import (
     select_test_profiles,
     validate_config_validations,
 )
-from llm_preflight.features import estimate_budget
 
 
 def test_benchmark_run_lock_reports_existing_run(tmp_path, monkeypatch):

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 2.4.2 - 2026-08-02
+
+### Fixed
+
+- Restore compatibility with the repository's pinned CI Ruff release.
+
 ## 2.4.1 - 2026-08-02
 
 ### Fixed

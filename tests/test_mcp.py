@@ -4,7 +4,6 @@ import sys
 
 from llm_preflight import mcp
 
-
 META = {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}
 
 
@@ -141,6 +140,20 @@ def test_tool_schema_rejects_unknown_arguments(tmp_path):
         },
         tmp_path,
     )
+    assert response["error"]["code"] == -32602
+
+
+def test_non_object_params_return_a_protocol_error(tmp_path):
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": [],
+        },
+        tmp_path,
+    )
+
     assert response["error"]["code"] == -32602
 
 

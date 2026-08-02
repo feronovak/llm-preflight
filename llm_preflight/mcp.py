@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .catalog import resolve_models
 from .env import load_env_file
 from .features import compare_results, estimate_budget
 from .pricing import pricing_freshness_report
 from .redaction import redact_secrets
 from .runner import load_config, run_benchmark, validate_config_validations
-from .catalog import resolve_models
 
 PROTOCOL_VERSION = "2026-07-28"
 
@@ -246,7 +246,7 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
         method = message["method"]
         params = message.get("params", {})
         if not isinstance(params, dict):
-            raise ValueError("params must be an object")
+            raise TypeError("params must be an object")
         metadata = _meta(params)
         if method == "server/discover":
             result: dict[str, Any] = {
@@ -264,7 +264,13 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                 result = _call(name, arguments, workspace, metadata)
             except ProtocolError:
                 raise
-            except (OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
+            except (
+                OSError,
+                TypeError,
+                ValueError,
+                json.JSONDecodeError,
+                KeyError,
+            ) as exc:
                 result = _tool_result({"error": str(exc)}, error=True)
         else:
             return {
@@ -278,7 +284,7 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
         if exc.data is not None:
             error["data"] = exc.data
         return {"jsonrpc": "2.0", "id": request_id, "error": error}
-    except (OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, KeyError) as exc:
         return {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -297,14 +303,14 @@ def main() -> None:
         try:
             message = json.loads(raw)
             if not isinstance(message, dict):
-                raise ValueError("JSON-RPC message must be an object")
+                raise TypeError("JSON-RPC message must be an object")
             response = _response(message, workspace)
             if response is not None:
                 print(
                     json.dumps(redact_secrets(response), separators=(",", ":")),
                     flush=True,
                 )
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
             print(
                 json.dumps(
                     {

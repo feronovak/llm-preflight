@@ -20,6 +20,7 @@ from llm_preflight.runner import (
     select_test_profiles,
     validate_config_validations,
 )
+from llm_preflight.features import estimate_budget
 
 
 def test_benchmark_run_lock_reports_existing_run(tmp_path, monkeypatch):
@@ -60,6 +61,53 @@ def test_benchmark_records_the_source_config_path_without_putting_it_in_config()
     assert "_source_config_path" not in result["source_config"]
     assert result["pricing_ledger"][0]["source"] == "unknown"
     assert len(result["pricing_fingerprint"]) == 64
+
+
+def test_budget_and_result_share_the_tiered_cached_pricing_ledger(monkeypatch):
+    class CachedUsageClient:
+        def __init__(self, model):
+            self.model = {"base_url": "https://mock.local", **model}
+
+        def run(self, _prompt, _request):
+            return {
+                "ok": True,
+                "latency_seconds": 0.001,
+                "ttft_seconds": 0.001,
+                "output_tokens_per_second": 10_000,
+                "input_tokens": 200_001,
+                "cached_input_tokens": 3,
+                "output_tokens": 10,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    config = {
+        "prompt": "x" * 800_004,
+        "models": [{"provider": "gemini", "model": "gemini-3.1-pro-preview"}],
+        "repetitions": 1,
+        "warmups": 0,
+        "request": {"max_output_tokens": 10},
+    }
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client",
+        lambda model, _timeout: CachedUsageClient(model),
+    )
+
+    budget = estimate_budget(config)
+    result = run_benchmark(config)
+
+    assert budget["estimated_cost_usd"] == pytest.approx(0.800184)
+    assert result["models"][0]["summary"]["estimated_cost_usd"] == pytest.approx(
+        0.8001732
+    )
+    assert budget["pricing_ledger"] == result["pricing_ledger"]
+    assert budget["pricing_fingerprint"] == result["pricing_fingerprint"]
+    assert budget["pricing_ledger"][0]["pricing_tiers"][1] == {
+        "input_cost_per_million": 4.0,
+        "output_cost_per_million": 18.0,
+        "cached_input_cost_per_million": 0.4,
+    }
 
 
 def test_load_config_accepts_named_prompts_without_legacy_prompt(tmp_path):

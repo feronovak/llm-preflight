@@ -170,6 +170,41 @@ def test_replay_config_preserves_model_endpoint_and_auth_metadata():
     ]
 
 
+def test_replay_config_uses_the_recorded_pricing_ledger_over_current_prices():
+    result = {
+        "source_config": {"prompt": "hi", "models": []},
+        "models": [{"provider": "gemini", "model": "tiered"}],
+        "pricing_ledger": [
+            {
+                "provider": "gemini",
+                "model": "tiered",
+                "input_cost_per_million": 4,
+                "output_cost_per_million": 8,
+                "cached_input_cost_per_million": 0.4,
+                "pricing_tiers": [
+                    {
+                        "up_to_input_tokens": 2,
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 2,
+                    },
+                    {"input_cost_per_million": 4, "output_cost_per_million": 8},
+                ],
+                "pricing_metadata": {
+                    "source": "official snapshot",
+                    "as_of": "2026-01-01",
+                },
+            }
+        ],
+    }
+
+    config = replay_config(result)
+
+    assert config["models"][0]["input_cost_per_million"] == 4
+    assert config["models"][0]["cached_input_cost_per_million"] == 0.4
+    assert config["models"][0]["pricing_tiers"][1]["output_cost_per_million"] == 8
+    assert config["models"][0]["pricing_metadata"]["as_of"] == "2026-01-01"
+
+
 def test_budget_check_rejects_excess_requests_and_cost():
     config = {
         "prompt": "hi",

@@ -228,6 +228,15 @@ def resolve_pricing(
             "as_of": (model.get("pricing_metadata") or {}).get("as_of"),
             "refreshed_at": (model.get("pricing_metadata") or {}).get("refreshed_at"),
             "source_url": (model.get("pricing_metadata") or {}).get("source_url"),
+            **{
+                key: model[key]
+                for key in (
+                    "cached_input_cost_per_million",
+                    "pricing_tiers",
+                    "pricing_metadata",
+                )
+                if key in model
+            },
         }
         for model in updated
     ]

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## 2.4.1 - 2026-08-02
+
+### Fixed
+
+- Preserve the recorded price ledger, including cached-input and tier pricing,
+  when replaying a saved result.
+- Add coverage that proves budget planning and result costing share the same
+  resolved tiered/cached price evidence.
+
 ## 2.4.0 - 2026-08-02
 
 ### Added

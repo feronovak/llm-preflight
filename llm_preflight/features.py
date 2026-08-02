@@ -9,7 +9,7 @@ from typing import Any, cast
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
 from .presets import SUPPORTED_PRESETS, expand_presets
-from .pricing import estimate_sample_cost, pricing_freshness_report
+from .pricing import estimate_sample_cost, pricing_freshness_report, resolve_pricing
 from .runner import select_test_profiles
 
 
@@ -166,7 +166,10 @@ def estimate_budget(
     config: dict[str, Any], models: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:
     """Estimate against an already-resolved pricing ledger when supplied."""
-    models = models if models is not None else resolve_models(config)
+    pricing_resolution = resolve_pricing(
+        models if models is not None else resolve_models(config)
+    )
+    models = pricing_resolution["models"]
     work = _budget_work(config)
     requests = len(work) * len(models)
     possible_requests = len(models) * sum(
@@ -210,6 +213,8 @@ def estimate_budget(
         "retry_max_attempts": retry_max_attempts,
         "estimated_cost_usd": cost,
         "maximum_estimated_cost_usd": (maximum_cost),
+        "pricing_ledger": pricing_resolution["ledger"],
+        "pricing_fingerprint": pricing_resolution["fingerprint"],
     }
 
 
@@ -399,9 +404,29 @@ def replay_config(result: dict[str, Any]) -> dict[str, Any]:
         "capabilities",
         "supports_temperature",
     )
+    pricing_model_keys = (
+        "input_cost_per_million",
+        "output_cost_per_million",
+        "cached_input_cost_per_million",
+        "pricing_tiers",
+        "pricing_metadata",
+    )
+    pricing_ledger = {
+        (entry.get("provider", "openai_compatible"), entry.get("model")): entry
+        for entry in result.get("pricing_ledger", [])
+        if isinstance(entry, dict) and entry.get("model")
+    }
     config["models"] = [
-        {key: model[key] for key in replay_model_keys if key in model}
+        {
+            **{key: model[key] for key in replay_model_keys if key in model},
+            **{key: pricing[key] for key in pricing_model_keys if key in pricing},
+        }
         for model in result["models"]
+        for pricing in [
+            pricing_ledger.get(
+                (model.get("provider", "openai_compatible"), model["model"]), {}
+            )
+        ]
     ]
     config["discovery"] = []
     settings = result.get("settings", {})

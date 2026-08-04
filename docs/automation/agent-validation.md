@@ -80,4 +80,4 @@ production deployment remain separate approval steps.
 > Report the dry-run plan and any validation evidence with your change.
 
 For the full command and result contract, see the
-[LLM and coding-agent guide](llm-guide.md).
+[LLM and coding-agent guide](coding-agents.md).

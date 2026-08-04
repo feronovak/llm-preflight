@@ -30,13 +30,13 @@ It has three stages:
    request. Progress reports distinguish
    `API FAIL` from `API OK / TEST FAIL`.
 
-![Interactive comparison of two commercial models on two custom chat prompts, from selection through cost preview to the results table and decision](images/interactive-demo.gif)
+![Interactive comparison of two commercial models on two custom chat prompts, from selection through cost preview to the results table and decision](../images/interactive-demo.gif)
 
 This capture is a real paid run: two flagship models compared on two custom
 chat prompts, selected interactively. The plan screen shows the request and
 cost ceiling before confirmation, every request line reports its own cost,
 and the whole run cost $0.0052. The config is
-[examples/flagship-comparison.json](../examples/flagship-comparison.json) —
+[examples/flagship-comparison.json](../../examples/flagship-comparison.json) —
 swap in your own model IDs and prompts to reproduce it.
 
 ## How to answer the prompts
@@ -84,5 +84,5 @@ approval. It never adds them silently.
 Interactive benchmark mode cannot be combined with `--catalog`, `--tests`,
 `--profiles`, `--prompt`, or `--migration-check`. For scripted equivalents and
 every flag, see the
-[CLI reference](cli-reference.md). For the complete model lifecycle, see
-[Model catalogue](model-watch.md).
+[CLI reference](../reference/cli.md). For the complete model lifecycle, see
+[Model catalogue](model-catalog.md).

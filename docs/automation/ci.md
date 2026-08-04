@@ -55,7 +55,7 @@ A baseline model missing from the current run is a failure, as is missing
 validation evidence; request success alone does not substitute for a validated
 output.
 
-For the complete stable result structure, see [Result JSON schema](result-schema.md).
+For the complete stable result structure, see [Result JSON schema](../reference/results.md).
 
 ## Safe CI starter
 
@@ -81,20 +81,13 @@ llm-preflight pricing-refresh benchmark.json --write
 llm-preflight pricing-refresh benchmark.json --offline --json
 ```
 
-## MCP setup
-
-2.4.0 ships a local modern MCP server. Configure your coding-agent client to
-start `llm-preflight-mcp --workspace /absolute/path/to/repository`. It exposes
-config validation, dry-run planning, explicit preflight execution, and baseline
-diffing. Read-only tools do not contact providers or load credentials. A live
-run requires explicit paid-run confirmation; only then does it read the
-config-adjacent `.env.production` or an explicit workspace-relative env file.
-Alternatively, configure the required provider key in the MCP client process
-environment. The server is modern MCP 2026-07-28 only.
+For coding-agent integration, use the dedicated [MCP server guide](mcp.md).
+It documents the bounded local tool set, workspace rules, and explicit paid-run
+confirmation separately from the CI workflow.
 
 ## GitHub Actions starter
 
-Copy [the fork-safe mock workflow](../examples/github-actions/preflight.yml) to
+Copy [the fork-safe mock workflow](../../examples/github-actions/preflight.yml) to
 `.github/workflows/llm-preflight.yml`, and also copy
 `examples/starter/mock-benchmark.json` into the same relative path in your
 repository (or update the four workflow commands to your chosen mock config).

@@ -73,4 +73,4 @@ provider errors. Prompts, model metadata, and retained failed responses can
 still contain business data: review result artifacts before sharing them.
 
 Never commit `.env.production`, raw results, private prompts, or provider
-responses. See [SECURITY.md](../SECURITY.md) to report a vulnerability.
+responses. See [SECURITY.md](../../SECURITY.md) to report a vulnerability.

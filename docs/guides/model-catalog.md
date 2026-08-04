@@ -123,7 +123,7 @@ llm-preflight benchmarks/candidates.json --interactive \
 Interactive mode has one clear job: select the benchmark work, preview its
 maximum request count and estimated cost, then confirm the run. A compatibility
 screen with one repetition answers “does this model work for this suite?” It is
-not enough evidence for a stable latency ranking. See [Interactive mode](interactive.md).
+not enough evidence for a stable latency ranking. See [Interactive mode](interactive-runs.md).
 
 ### 5. Keep only passing models
 
@@ -193,8 +193,8 @@ llm-preflight benchmarks/candidates.json --pricing-check
 Unknown pricing is shown as `n/a`, not free. Keep `max_requests` and, where
 pricing is complete, `max_estimated_cost_usd` in `watch.json` to limit risk.
 
-For the complete command forms, see the [CLI reference](cli-reference.md). For
-common problems, see [Troubleshooting](troubleshooting.md).
+For the complete command forms, see the [CLI reference](../reference/cli.md). For
+common problems, see [Troubleshooting](../operations/troubleshooting.md).
 
 `watch-new` and `approve-model` remain compatibility aliases for older scripts.
 Use the `catalog` and `models` commands in new work.

@@ -46,6 +46,6 @@ an LLM-related change as complete. The preflight may automatically inspect and
 test within the approved repository scope, but paid requests, budget changes,
 and model approval remain explicit human decisions.
 
-See [AI implementation testing](ai-implementation-testing.md) for the
-operational workflow and [LLM and coding-agent guide](llm-guide.md) for CLI
+See [AI implementation testing](../automation/agent-validation.md) for the
+operational workflow and [LLM and coding-agent guide](../automation/coding-agents.md) for CLI
 semantics and guardrails.

@@ -84,7 +84,7 @@ inside that directory; `..` paths are rejected. Use `prompt` or `prompt_file`,
 not both, and do not commit sensitive fixture data.
 
 For a migration-focused tutorial and runnable JSON, routing, and content-rule
-examples, see [Custom contract tests](custom-tests.md).
+examples, see [Custom contract tests](../guides/output-contracts.md).
 
 ## Presets, aliases, and environments
 
@@ -125,6 +125,6 @@ profile.
 ```
 
 Run an overlay with `llm-preflight benchmark.json --env ci`. See
-[tests, pricing, and safety](tests-pricing-safety.md) for validation choices and
-data handling. See the [complete configuration reference](config-reference.md)
+[tests, pricing, and safety](../guides/pricing-and-safety.md) for validation choices and
+data handling. See the [complete configuration reference](configuration-schema.md)
 for every supported key and default.

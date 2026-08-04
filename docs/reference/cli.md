@@ -117,4 +117,4 @@ llm-preflight benchmarks/candidates.json --interactive \
 
 `watch-new` and `approve-model` are compatibility aliases for existing scripts.
 They expose legacy options and are not the recommended workflow. See
-[Model watch and approval](model-watch.md) for the complete tutorial.
+[Model watch and approval](../guides/model-catalog.md) for the complete tutorial.

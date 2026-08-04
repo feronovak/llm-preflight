@@ -122,15 +122,15 @@ when a script needs the detailed evidence.
 ## Choose your next path
 
 **You already know the models you want to compare.** Continue with
-[Configuration](configuration.md), then write one [custom contract test](custom-tests.md)
+[Configuration](../reference/configuration.md), then write one [custom contract test](../guides/output-contracts.md)
 that represents the output your feature must preserve.
 
-**You want help finding newly released models.** Follow [Model catalogue](model-watch.md).
+**You want help finding newly released models.** Follow [Model catalogue](../guides/model-catalog.md).
 It creates a local list, classifies provider models, asks before any small
 compatibility probe, and lets you approve only models that pass your tests.
 
-**You are automating a known benchmark.** Start with [CI and JSON output](ci.md).
+**You are automating a known benchmark.** Start with [CI and JSON output](../automation/ci.md).
 
-The [Workflows](workflows.md) page collects the common commands, and
-[Tests, pricing, and safety](tests-pricing-safety.md) explains how to interpret
+The [Workflows](../guides/model-change.md) page collects the common commands, and
+[Tests, pricing, and safety](../guides/pricing-and-safety.md) explains how to interpret
 the numbers safely.

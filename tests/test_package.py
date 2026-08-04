@@ -80,14 +80,14 @@ def test_custom_contract_examples_are_parseable_and_documented():
             run_benchmark(config)["models"][0]["profiles"][0]["summary"]["failed"] == 0
         )
 
-    tutorial = Path("docs/custom-tests.md").read_text()
+    tutorial = Path("docs/guides/output-contracts.md").read_text()
     for example in examples:
         assert example in tutorial
 
 
 def test_public_docs_make_the_catalog_lifecycle_primary():
-    cli_reference = Path("docs/cli-reference.md").read_text()
-    tutorial = Path("docs/model-watch.md").read_text()
+    cli_reference = Path("docs/reference/cli.md").read_text()
+    tutorial = Path("docs/guides/model-catalog.md").read_text()
 
     for command in (
         "catalog init",
@@ -103,24 +103,24 @@ def test_public_docs_make_the_catalog_lifecycle_primary():
     assert "compatibility aliases" in cli_reference
     assert "compatibility aliases" in tutorial
     assert "catalog prepare" in Path("README.md").read_text()
-    assert "catalog prepare" in Path("docs/workflows.md").read_text()
-    assert "--approve-to" in Path("docs/interactive.md").read_text()
+    assert "catalog prepare" in Path("docs/guides/model-change.md").read_text()
+    assert "--approve-to" in Path("docs/guides/interactive-runs.md").read_text()
     assert "--migration-check" in Path("README.md").read_text()
-    assert "--migration-check" in Path("docs/getting-started.md").read_text()
-    assert "--migration-check" in Path("docs/cli-reference.md").read_text()
-    assert Path("docs/troubleshooting.md").exists()
+    assert "--migration-check" in Path("docs/getting-started/safe-demo.md").read_text()
+    assert "--migration-check" in Path("docs/reference/cli.md").read_text()
+    assert Path("docs/operations/troubleshooting.md").exists()
 
 
 def test_public_docs_give_beginner_and_scripted_users_clear_starting_paths():
     readme = Path("README.md").read_text()
-    getting_started = Path("docs/getting-started.md").read_text()
+    getting_started = Path("docs/getting-started/safe-demo.md").read_text()
 
     assert "## Choose your path" in readme
     for destination in (
-        "docs/getting-started.md",
-        "docs/custom-tests.md",
-        "docs/model-watch.md",
-        "docs/ci.md",
+        "docs/getting-started/safe-demo.md",
+        "docs/guides/output-contracts.md",
+        "docs/guides/model-catalog.md",
+        "docs/automation/ci.md",
     ):
         assert destination in readme
     assert "## Choose your next path" in getting_started
@@ -129,7 +129,7 @@ def test_public_docs_give_beginner_and_scripted_users_clear_starting_paths():
 
 
 def test_public_markdown_links_resolve_locally():
-    markdown_files = (Path("README.md"), *Path("docs").glob("*.md"))
+    markdown_files = (Path("README.md"), *Path("docs").rglob("*.md"))
     link_pattern = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 
     for document in markdown_files:
@@ -209,8 +209,8 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert "contents: write" not in workflow
     assert "${{ secrets." not in workflow
 
-    getting_started = Path("docs/getting-started.md").read_text()
-    ci = Path("docs/ci.md").read_text()
+    getting_started = Path("docs/getting-started/safe-demo.md").read_text()
+    ci = Path("docs/automation/ci.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
 

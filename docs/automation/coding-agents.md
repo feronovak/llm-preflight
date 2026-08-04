@@ -74,7 +74,7 @@ expects a raw JSON object with a known routing label and caps output:
 
 Use `allow_fenced_json` only if the real consumer accepts exactly one complete
 Markdown-fenced JSON block. Do not enable it merely because a model returned
-fences during a preflight. See [Configuration reference](config-reference.md)
+fences during a preflight. See [Configuration reference](../reference/configuration-schema.md)
 for all validation and pricing fields. Add `max_estimated_cost_usd` only after
 every selected model has known pricing (or an explicit reviewed price); an
 unknown price cannot safely enforce a cost ceiling.

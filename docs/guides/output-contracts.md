@@ -55,9 +55,9 @@ and candidate models, and replace the prompt and expected rule with a real case.
 
 | Example | Protects | Deterministic rule |
 |---|---|---|
-| [`ticket-extraction.json`](../examples/custom-contracts/ticket-extraction.json) | JSON extraction for a downstream workflow | JSON shape, required fields, and allowed priority values |
-| [`intent-routing.json`](../examples/custom-contracts/intent-routing.json) | Exact routing to a queue or action | A full-response regular expression |
-| [`content-rule.json`](../examples/custom-contracts/content-rule.json) | A required term or statement in a response | Required text fragment |
+| [`ticket-extraction.json`](../../examples/custom-contracts/ticket-extraction.json) | JSON extraction for a downstream workflow | JSON shape, required fields, and allowed priority values |
+| [`intent-routing.json`](../../examples/custom-contracts/intent-routing.json) | Exact routing to a queue or action | A full-response regular expression |
+| [`content-rule.json`](../../examples/custom-contracts/content-rule.json) | A required term or statement in a response | Required text fragment |
 
 ## Choose the right rule
 
@@ -223,6 +223,6 @@ CLI permission to execute project code.
   verifies basic response behaviour, not your feature contract.
 - Use `--dry-run` before every paid test and `--pricing-check` when cost matters.
 
-See [Configuration](configuration.md) for every supported field and
-[Tests, pricing, and safety](tests-pricing-safety.md) for validation and data
+See [Configuration](../reference/configuration.md) for every supported field and
+[Tests, pricing, and safety](pricing-and-safety.md) for validation and data
 handling guidance.

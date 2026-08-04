@@ -27,8 +27,8 @@ observability, or autonomous-deployment platform.
 It is built for engineers and coding agents working on AI features: teams that
 need to check a real application contract against live model APIs before a
 model ID, prompt, parser, tool definition, or provider option ships. Read the
-[product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product-positioning.md)
-and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md)
+[product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product/positioning.md)
+and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
 for the intended workflow and boundaries.
 
 > [!WARNING]
@@ -53,6 +53,21 @@ python3 -m llm_preflight benchmark.json --no-save
 
 `init` never overwrites an existing config. It creates a mock benchmark so
 you can see the report and exit behavior before making a paid request.
+
+## What is new in 2.2–2.4
+
+- **Validate the deployed contract.** Declare the JSON consumer your feature
+  really uses and add deterministic golden answers when structure alone is not
+  enough.
+- **Start and automate safely.** Create a no-key mock or explicit provider
+  starter with `init`, then use the fork-safe GitHub Actions example for
+  redacted evidence and baseline checks.
+- **Trust the cost evidence.** Refresh OpenRouter prices deliberately, see
+  pricing confidence, and replay saved results against their recorded price
+  ledger.
+- **Give coding agents bounded access.** The local MCP server can validate a
+  config, produce a dry-run plan, run an explicitly confirmed preflight, and
+  compare a baseline.
 
 ## Use it when
 
@@ -110,7 +125,7 @@ the terminal, read the cost ceiling before anything is sent, watch each
 request report its own cost, and end on the decision. This capture is a real
 two-model paid run that cost half a cent
 ([config](https://github.com/feronovak/llm-preflight/blob/main/examples/flagship-comparison.json),
-[details](https://github.com/feronovak/llm-preflight/blob/main/docs/interactive.md)):
+[details](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md)):
 
 ![Interactive comparison of two commercial models on two custom chat prompts, from selection through cost preview to the results table and decision](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/interactive-demo.gif)
 
@@ -162,7 +177,7 @@ compatibility check, not a statistical performance conclusion.
 When that passes, run the task-specific checks that match your application—for
 example `exact-routing-check` or `structured-output-check`—before approving a
 switch.
-Use [custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) to express the outputs your
+Use [custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md) to express the outputs your
 own feature must preserve.
 
 ## Using a coding agent
@@ -182,20 +197,42 @@ llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
 
 An agent should not infer model IDs, weaken a validator to turn a failure into
 a pass, or approve a model without an explicit instruction. The compact
-[LLM and coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/llm-guide.md)
+[LLM and coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
 covers commands, result JSON, exit codes, and automation guardrails. The
-[AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md)
+[AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
 shows how to make this validation an agent's default testing step.
+
+## MCP for coding agents
+
+Use the local stdio MCP server when an agent needs the preflight evidence
+without shell parsing or arbitrary command execution:
+
+```json
+{
+  "mcpServers": {
+    "llm-preflight": {
+      "command": "llm-preflight-mcp",
+      "args": ["--workspace", "/absolute/path/to/repository"]
+    }
+  }
+}
+```
+
+It exposes only four tools: validate a config, prepare a dry-run plan, run an
+explicitly confirmed preflight, and compare saved baselines. The first, second,
+and fourth tools never contact providers or load credentials. A live run still
+needs an explicit paid-run confirmation. See the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md) for tool
+semantics, workspace boundaries, and the safe agent workflow.
 
 ## Choose your path
 
 **I am new and want to see the tool safely.** Start with the
-[Getting started guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started.md). It uses a no-key local mock
+[Getting started guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/safe-demo.md). It uses a no-key local mock
 before any provider request.
 
 **I know the current and candidate model IDs.** Edit one config, run the
 [migration check](#change-a-model-safely), then add a
-[custom contract test](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) for the output your feature must
+[custom contract test](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md) for the output your feature must
 preserve. You do not need the catalogue.
 
 **I want to find and review provider releases.** Use the local catalogue
@@ -216,10 +253,10 @@ llm-preflight benchmarks/candidates.json --interactive \
 Refresh reads metadata only. A probe sends one minimal request only for text
 candidates you select and confirm. The interactive benchmark then lets you
 approve passing models explicitly. Follow the complete
-[catalogue tutorial](https://github.com/feronovak/llm-preflight/blob/main/docs/model-watch.md) for the decision points.
+[catalogue tutorial](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md) for the decision points.
 
 **I am automating an established contract.** Use
-[CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/ci.md), with a saved baseline and `--ci` where a
+[CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md), with a saved baseline and `--ci` where a
 regression should fail the pipeline.
 
 ## Useful commands once you know your path
@@ -239,9 +276,9 @@ llm-preflight --quick "Return only valid JSON with a status field." \
 ```
 
 For advanced discovery, interactive runs, CI, baselines, replay, and stop
-modes, see [workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/workflows.md). For models, environment files,
+modes, see [workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md). For models, environment files,
 custom prompts, and provider-specific options, see
-[configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/configuration.md).
+[configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/configuration.md).
 
 ## What makes a comparison useful
 
@@ -276,36 +313,22 @@ and no vendor between you and the verdict.
 
 ## Documentation
 
-- [Getting started](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started.md) — safe demo, first paid run, and
-  choosing the right workflow.
-- [Workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/workflows.md) — discovery, smoke mode, CI, replay, matrix,
-  baselines, and request safety.
-- [Configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/configuration.md) — providers, custom prompts, presets,
-  aliases, and environment overlays.
-- [Configuration reference](https://github.com/feronovak/llm-preflight/blob/main/docs/config-reference.md) — every supported config
-  key, default, and validation rule.
-- [Custom contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/custom-tests.md) — copyable JSON extraction,
-  exact-routing, and content-rule migration tests.
-- [CLI reference](https://github.com/feronovak/llm-preflight/blob/main/docs/cli-reference.md) — every command-line option, default,
-  and incompatibility.
-- [LLM and coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/llm-guide.md) — safe command sequence,
-  result semantics, exit codes, and automation guardrails.
-- [Product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product-positioning.md) — mission, vision, niche,
-  and product boundaries.
-- [AI implementation testing](https://github.com/feronovak/llm-preflight/blob/main/docs/ai-implementation-testing.md) — a safe
-  default validation workflow for coding agents.
-- [Interactive mode](https://github.com/feronovak/llm-preflight/blob/main/docs/interactive.md) — selection, paid-run preview, and
-  live progress.
-- [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/ci.md) — machine-readable output and exit-code
-  gates.
-- [Result JSON schema](https://github.com/feronovak/llm-preflight/blob/main/docs/result-schema.md) — fields for integrations and
-  saved benchmark evidence.
-- [Model watch and approval](https://github.com/feronovak/llm-preflight/blob/main/docs/model-watch.md) — discover, compare, and
-  deliberately promote, re-test, and retire provider models.
-- [Troubleshooting](https://github.com/feronovak/llm-preflight/blob/main/docs/troubleshooting.md) — installation, credentials,
-  catalogue, and benchmark-result recovery.
-- [Tests, pricing, and safety](https://github.com/feronovak/llm-preflight/blob/main/docs/tests-pricing-safety.md) — built-in tests,
-  validators, pricing confidence, retries, and sensitive data.
+Start at the [documentation homepage](https://github.com/feronovak/llm-preflight/blob/main/docs/index.md), then choose the path that matches your work:
+
+- **Start safely:** [safe demo](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/safe-demo.md) and
+  [model change](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md).
+- **Validate a change:** [output contracts](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md),
+  [model catalogue](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md), and
+  [pricing and safety](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/pricing-and-safety.md).
+- **Automate:** [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md),
+  [coding agents](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md), and
+  [MCP](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+- **Look up details:** [CLI reference](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/cli.md),
+  [configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/configuration.md),
+  [result JSON](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/results.md), and
+  [troubleshooting](https://github.com/feronovak/llm-preflight/blob/main/docs/operations/troubleshooting.md).
+- **Understand the product:** [positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product/positioning.md) and
+  [AI implementation testing](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md).
 - [Contributing](https://github.com/feronovak/llm-preflight/blob/main/CONTRIBUTING.md) — development setup and the TDD workflow.
 - [Security](https://github.com/feronovak/llm-preflight/blob/main/SECURITY.md) — reporting vulnerabilities.
 

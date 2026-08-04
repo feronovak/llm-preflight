@@ -1,6 +1,6 @@
 # Workflows
 
-Use this page after choosing a path in [Getting started](getting-started.md).
+Use this page after choosing a path in [Getting started](../getting-started/safe-demo.md).
 It is the command reference for repeatable work; it is not a required sequence.
 
 - **Known models:** start with the migration check below, then use a custom
@@ -31,7 +31,7 @@ llm-preflight benchmark.json --tests structured-output-check
 llm-preflight benchmark.json --tests exact-routing-check
 ```
 
-See [Custom contract tests](custom-tests.md) for copyable examples and guidance
+See [Custom contract tests](output-contracts.md) for copyable examples and guidance
 on choosing strict JSON, exact-routing, or content rules.
 
 Use several repetitions only when you need a dependable performance comparison;
@@ -65,7 +65,7 @@ To run your permanent baseline later, create its runnable test plan with
 interactively. To retire a permanent model, use `models remove PROVIDER:MODEL
 --approved APPROVED`; it asks for confirmation and retains past evidence.
 
-See [Model watch and approval](model-watch.md) for the full first-run and
+See [Model watch and approval](model-catalog.md) for the full first-run and
 re-review process. `watch-new` is retained only for compatibility with older
 scripts.
 
@@ -124,7 +124,7 @@ llm-preflight benchmark.json --tests exact-routing-check,source-to-quiz
 Choose `--stop-on api-error`, `test-fail`, or `any-fail`; omit `--stop-on` to
 run every selected model. `--fail-fast` remains an alias for
 `--stop-on any-fail`. Use `--no-save` when CI only needs stdout and an exit
-status. See [CI and JSON output](ci.md) for automation recipes.
+status. See [CI and JSON output](../automation/ci.md) for automation recipes.
 
 ## Compare and automate
 
@@ -146,4 +146,4 @@ snapshot. Set `max_requests` and `max_estimated_cost_usd` in a config to stop
 surprise spend before requests are sent; a cost ceiling requires complete
 pricing for every selected model.
 
-See [configuration](configuration.md) for aliases and environment overlays.
+See [configuration](../reference/configuration.md) for aliases and environment overlays.

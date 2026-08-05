@@ -92,6 +92,5 @@ adopted: 6e43dbdffdaeed0e7c0bd573a8e5ce13a48a1ce2
 next-steps: local     # internal prioritisation; not published
 release-flow: local   # release runbook; not published
 prds: local           # PRD-*.md, gitignored
-scaffold: 1           # FEATURE_MAP is the only document still a skeleton
 critical-paths:       # nothing here fabricates a result a user acts on
 ```

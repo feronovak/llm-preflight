@@ -1,0 +1,27 @@
+name: project-standard
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Not optional. The release gate, the attribution checks and the
+          # freshness checks all read history and tags; a shallow clone makes
+          # them unanswerable, and they are then reported as skipped rather
+          # than silently passing.
+          fetch-depth: 0
+
+      - name: Validate documentation, release flow and git hygiene
+        # `--profile=ci` skips the checks a runner genuinely cannot answer —
+        # whether a developer workstation has the authorship hooks installed —
+        # and reports them as skipped. Stdlib only, so there is nothing to
+        # install.
+        run: PYTHONPATH=scripts python3 -m project_standard.cli check --profile=ci

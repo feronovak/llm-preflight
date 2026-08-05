@@ -34,3 +34,23 @@ security_best_practices_report.md
 .idea/
 .vscode/
 *~
+
+# project-standard: local-only
+logs/
+test_results/
+test-results/
+.ruff_cache/
+.mypy_cache/
+docs/exec-summaries/
+session-notes/
+.agenthub/
+.playwright-mcp/
+.interface-design/
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.codex/cache/
+.cursor/cache/
+.aider.chat.history.md
+.aider.input.history
+.windsurf/cache/

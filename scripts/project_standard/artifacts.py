@@ -41,6 +41,7 @@ class Slot:
     describes: str = ""
     satisfied_by: str = None
     local: bool = False
+    declared_local: bool = False
 
 
 def required_for(resolved, contract):
@@ -99,6 +100,7 @@ def resolve_slots(ctx):
             continue
         key = LOCAL_ALLOWED.get(slot.name)
         if key and str(ctx.contract.raw.get(key, "")).strip() == "local":
+            slot.declared_local = True
             for cand in slot.candidates:
                 if (Path(ctx.repo) / cand).is_file():
                     slot.satisfied_by = cand
@@ -121,6 +123,14 @@ def check(ctx):
                     path=slot.satisfied_by))
             continue
         if slot.name == "direction" and _direction_declared(ctx):
+            continue
+        if slot.declared_local:
+            # Declared local and not on disk: this is a clone, and a clone
+            # cannot see it. Skipped, not missing — a check that could not run
+            # must never read as one that failed.
+            out.append(F.skipped(
+                "1", f"{slot.name} is declared local; a clone cannot see it, "
+                     f"so this cannot be answered here"))
             continue
         expected = " or ".join(f"`{c}`" for c in slot.candidates[:2])
         check_id = "30" if slot.name == "direction" else "1"

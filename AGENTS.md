@@ -88,7 +88,7 @@ Every tracked document is indexed in [`docs/DOCMAP.md`](docs/DOCMAP.md).
 ## project-standard
 
 ```yaml
-adopted: ADOPTED_PLACEHOLDER
+adopted: 6e43dbdffdaeed0e7c0bd573a8e5ce13a48a1ce2
 next-steps: local     # internal prioritisation; not published
 release-flow: local   # release runbook; not published
 prds: local           # PRD-*.md, gitignored

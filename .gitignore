@@ -37,6 +37,7 @@ security_best_practices_report.md
 
 # project-standard: local-only
 logs/
+scratchpad/
 test_results/
 test-results/
 .ruff_cache/

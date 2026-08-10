@@ -6,6 +6,27 @@ from typing import Any
 SUPPORTED_PRESETS = {"json", "no-reasoning", "low-latency", "structured"}
 
 
+def preset_warnings(
+    config: dict[str, Any], models: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    """Return comparability warnings implied by the selected request presets."""
+    presets = {str(preset) for preset in config.get("presets", [])}
+    if not {"json", "structured"} & presets:
+        return []
+    return [
+        {
+            "provider": "anthropic",
+            "model": model["model"],
+            "message": (
+                "the json preset cannot request Anthropic JSON mode; compare its "
+                "results cautiously with providers using native JSON mode"
+            ),
+        }
+        for model in models
+        if model.get("provider") == "anthropic"
+    ]
+
+
 def _setdefault_nested(
     target: dict[str, Any], path: tuple[str, ...], value: Any
 ) -> None:

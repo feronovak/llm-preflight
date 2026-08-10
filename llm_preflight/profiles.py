@@ -304,6 +304,7 @@ def json_parsing_policy(evaluator: dict[str, Any]) -> str | None:
         return policies.pop() if len(policies) == 1 else None
     if evaluator.get("type") not in {
         "json_subset",
+        "json_set",
         "json_schema",
         "json_object",
         "json_array",
@@ -367,6 +368,16 @@ def _load_json_response(
             except json.JSONDecodeError:
                 pass
         return None, "invalid JSON (expected raw JSON or exactly one fenced JSON block)"
+    if parsing_policy == "first_fenced_block":
+        match = re.search(
+            r"```(?:json)?\s*(.*?)```", response, re.IGNORECASE | re.DOTALL
+        )
+        if match:
+            try:
+                return json.loads(match.group(1).strip()), None
+            except (RecursionError, json.JSONDecodeError):
+                pass
+        return None, "invalid JSON (expected raw JSON or a fenced JSON block)"
     if parsing_policy == "prose_tolerant":
         decoder = json.JSONDecoder()
         values = []
@@ -388,6 +399,16 @@ def _load_json_response(
         if len(values) == 1:
             return values[0], None
         return None, "invalid JSON (expected exactly one JSON value in prose)"
+    if parsing_policy == "first_json_value":
+        decoder = json.JSONDecoder()
+        for index, character in enumerate(response):
+            if character not in "{[":
+                continue
+            try:
+                return decoder.raw_decode(response[index:])[0], None
+            except (RecursionError, json.JSONDecodeError):
+                continue
+        return None, "invalid JSON (expected a JSON value in prose)"
     return None, "invalid JSON"
 
 
@@ -407,6 +428,7 @@ def _with_consumer_parser(evaluator: dict[str, Any], consumer: str) -> dict[str,
         ]
     elif copied.get("type") in {
         "json_subset",
+        "json_set",
         "json_schema",
         "json_object",
         "json_array",
@@ -416,6 +438,8 @@ def _with_consumer_parser(evaluator: dict[str, Any], consumer: str) -> dict[str,
             "raw_json": "raw_json",
             "fenced_ok": "single_fenced_block",
             "prose_tolerant": "prose_tolerant",
+            "first_fenced_block": "first_fenced_block",
+            "first_json_value": "first_json_value",
         }[consumer]
     return copied
 
@@ -507,6 +531,27 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
             "score": 1.0 if valid else 0.0,
             "valid": valid,
             "error": None if valid else "required JSON fields did not match",
+        }
+    if evaluator_type == "json_set":
+        parsed, parse_error = _load_json_response(
+            response, _structured_parsing_policy(evaluator)
+        )
+        if parse_error:
+            return {"score": 0.0, "valid": False, "error": parse_error}
+        actual = parsed.get(evaluator["key"]) if isinstance(parsed, dict) else None
+        expected = evaluator["expected"]
+        canonical = lambda values: {
+            json.dumps(value, sort_keys=True) for value in values
+        }
+        valid = (
+            isinstance(actual, list)
+            and len(actual) == len(canonical(actual))
+            and canonical(actual) == canonical(expected)
+        )
+        return {
+            "score": 1.0 if valid else 0.0,
+            "valid": valid,
+            "error": None if valid else "JSON set did not match",
         }
     if evaluator_type == "json_schema":
         parsed, parse_error = _load_json_response(
@@ -640,9 +685,13 @@ def _validate_json_schema(
                     return error
     elif expected_type == "string" and not isinstance(value, str):
         return f"{label} must be a string"
-    elif expected_type == "number" and not isinstance(value, int | float):
+    elif expected_type == "number" and (
+        isinstance(value, bool) or not isinstance(value, int | float)
+    ):
         return f"{label} must be a number"
-    elif expected_type == "integer" and not isinstance(value, int):
+    elif expected_type == "integer" and (
+        isinstance(value, bool) or not isinstance(value, int)
+    ):
         return f"{label} must be an integer"
     elif expected_type == "boolean" and not isinstance(value, bool):
         return f"{label} must be a boolean"

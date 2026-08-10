@@ -1888,6 +1888,7 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     assert output["request"]["max_output_tokens"] == 256
     assert output["stop_on"] == "none"
     assert output["pricing_warnings"] == []
+    assert output["configuration_warnings"] == []
 
 
 def test_main_dry_run_prints_human_readable_plan_by_default(
@@ -1928,6 +1929,7 @@ def test_dry_run_summarizes_large_model_and_pricing_lists():
             {"model": f"gpt-{index}", "message": "pricing is unknown"}
             for index in range(12)
         ],
+        "configuration_warnings": [],
         "save_responses": False,
         "stop_on": "none",
     }
@@ -1954,6 +1956,28 @@ def test_main_dry_run_includes_pricing_warnings(monkeypatch, tmp_path, capsys):
 
     output = json.loads(capsys.readouterr().out)
     assert output["pricing_warnings"][0]["message"] == "pricing is unknown"
+
+
+def test_main_dry_run_warns_when_json_preset_includes_anthropic(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","presets":["json"],"models":[{"provider":"anthropic",'
+        '"model":"claude-test"}],"warmups":0}'
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--json"]
+    )
+
+    cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["configuration_warnings"][0]["provider"] == "anthropic"
+    assert (
+        "cannot request Anthropic JSON mode"
+        in output["configuration_warnings"][0]["message"]
+    )
 
 
 def test_main_pricing_check_exits_nonzero_for_unknown_pricing(

@@ -16,7 +16,7 @@ from typing import Any
 from .catalog import resolve_models
 from .client import create_client
 from .metrics import summarize
-from .presets import expand_presets
+from .presets import expand_presets, preset_warnings
 from .pricing import pricing_freshness_report, resolve_pricing
 from .profiles import (
     PROFILE_ALIASES,
@@ -217,6 +217,11 @@ def _validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
         if "allow_fenced_json" in validation:
             evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
         evaluators.append(evaluator)
+    if "json_set" in validation:
+        evaluator = {"type": "json_set", **validation["json_set"]}
+        if "allow_fenced_json" in validation:
+            evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
+        evaluators.append(evaluator)
     if validation.get("no_markdown"):
         evaluators.append({"type": "no_markdown"})
     if "allowed_values" in validation:
@@ -346,6 +351,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             "contains",
             "regex",
             "json_schema",
+            "json_set",
             "exact",
             "allow_fenced_json",
             "json_object",
@@ -362,6 +368,27 @@ def validate_config_validations(config: dict[str, Any]) -> None:
         unknown = sorted(set(validation) - allowed)
         if unknown:
             raise ValueError(f"unknown validation keys: {', '.join(unknown)}")
+        if "json_schema" in validation:
+            _validate_json_schema_config(
+                validation["json_schema"], f"{location}.json_schema"
+            )
+        if "json_set" in validation:
+            json_set = validation["json_set"]
+            if (
+                not isinstance(json_set, dict)
+                or set(json_set) != {"key", "expected"}
+                or not isinstance(json_set["key"], str)
+                or not json_set["key"]
+                or not isinstance(json_set["expected"], list)
+            ):
+                raise ValueError(f"{location}.json_set requires key and expected array")
+            expected_values = {
+                json.dumps(value, sort_keys=True) for value in json_set["expected"]
+            }
+            if len(expected_values) != len(json_set["expected"]):
+                raise ValueError(
+                    f"{location}.json_set.expected must not contain duplicates"
+                )
         if "contains" in validation and (
             not isinstance(validation["contains"], str) or not validation["contains"]
         ):
@@ -426,7 +453,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
         if "allow_fenced_json" in validation:
             if not any(
                 validation.get(key)
-                for key in ("json_schema", "json_object", "json_array")
+                for key in ("json_schema", "json_set", "json_object", "json_array")
             ):
                 raise ValueError(
                     f"{location}.allow_fenced_json requires a JSON validator"
@@ -438,13 +465,13 @@ def validate_config_validations(config: dict[str, Any]) -> None:
                 "raw_json",
                 "fenced_ok",
                 "prose_tolerant",
+                "first_fenced_block",
+                "first_json_value",
             }:
-                raise ValueError(
-                    f"{location}.consumer must be raw_json, fenced_ok, or prose_tolerant"
-                )
+                raise ValueError(f"{location}.consumer is not supported")
             if not any(
                 validation.get(key)
-                for key in ("json_schema", "json_object", "json_array")
+                for key in ("json_schema", "json_set", "json_object", "json_array")
             ):
                 raise ValueError(f"{location}.consumer requires a JSON validator")
 
@@ -472,6 +499,29 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             "custom prompt names collide with built-in profiles: "
             + ", ".join(collisions)
         )
+
+
+def _validate_json_schema_config(schema: Any, location: str) -> None:
+    supported = {"object", "array", "string", "number", "integer", "boolean"}
+    if not isinstance(schema, dict):
+        raise ValueError(f"{location} must be an object")  # noqa: TRY004
+    schema_type = schema.get("type")
+    if schema_type not in supported:
+        raise ValueError(
+            f"{location}.type must be one of: {', '.join(sorted(supported))}"
+        )
+    if "required" in schema and (
+        not isinstance(schema["required"], list)
+        or any(not isinstance(key, str) or not key for key in schema["required"])
+    ):
+        raise ValueError(f"{location}.required must be a list of strings")
+    if "properties" in schema:
+        if not isinstance(schema["properties"], dict):
+            raise ValueError(f"{location}.properties must be an object")
+        for key, child in schema["properties"].items():
+            _validate_json_schema_config(child, f"{location}.properties.{key}")
+    if "items" in schema:
+        _validate_json_schema_config(schema["items"], f"{location}.items")
 
 
 def _request_exception_sample(exc: Exception) -> dict[str, Any]:
@@ -968,6 +1018,7 @@ def run_benchmark(
         "pricing_ledger": pricing_resolution["ledger"],
         "pricing_fingerprint": pricing_resolution["fingerprint"],
         "pricing_warnings": pricing_freshness_report(models)["warnings"],
+        "configuration_warnings": preset_warnings(config, models),
         "source_config": redact_secrets(
             {
                 key: value

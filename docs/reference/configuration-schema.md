@@ -75,7 +75,7 @@ name, and either non-empty `prompt` or a relative
 `system_prompt`, `request`, `validation`, and `presets`.
 
 Validation supports non-empty `contains`, `regex`, `exact`, `golden`, `json_schema`,
-`json_object`, `json_array`, `exact_count`, `allowed_values`, `numeric_answer`,
+`json_set`, `json_object`, `json_array`, `exact_count`, `allowed_values`, `numeric_answer`,
 `numeric_tolerance`, `max_chars`, and `no_markdown`; an absent custom validation
 means non-empty output. `exact_count` requires `json_array`, and
 `numeric_tolerance` requires `numeric_answer`. `json_schema` is strict raw JSON
@@ -83,13 +83,20 @@ by default. Set `"allow_fenced_json": true` alongside it only when the deployed
 consumer accepts exactly one complete Markdown-fenced JSON block; surrounding
 prose is allowed, but multiple blocks and unfenced prose objects still fail.
 `consumer` may declare the deployed JSON consumer as `raw_json`, `fenced_ok`,
-or `prose_tolerant`; it records contract-only failures without weakening the
-configured validator, and rejects a response the declared consumer cannot
-parse even if that validator otherwise passes. `golden` is a deterministic trimmed,
+`prose_tolerant`, `first_fenced_block`, or `first_json_value`; it records
+contract-only failures without weakening the configured validator, and rejects
+a response the declared consumer cannot parse even if that validator otherwise
+passes. The two `first_*` policies intentionally model consumers that choose
+the first matching payload; use them only when that is the deployed behavior.
+`json_set` checks an object key as an unordered array with no duplicate values,
+for example `{"json_set":{"key":"exclude","expected":[2,3,4]}}`.
+`golden` is a deterministic trimmed,
 case-insensitive expected-answer check.
 Unknown validation keys are rejected before a benchmark can run. The supported
 JSON Schema subset handles object `required`/`properties`, arrays and item
-limits, primitive `type`, and `enum`.
+limits, primitive `type`, and `enum`. Every schema node must declare one of the
+supported types; a missing or misspelled type is a configuration error rather
+than a silently ignored constraint.
 
 `aliases` maps a name to a model object; use its name in `models`. An
 `environments` item is a shallow overlay—its top-level keys replace the base

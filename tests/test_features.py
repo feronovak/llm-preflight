@@ -17,6 +17,7 @@ from llm_preflight.features import (
     matrix_report,
     replay_config,
 )
+from llm_preflight.presets import preset_warnings
 
 
 def _summary(latency, cost, success=1.0):
@@ -42,6 +43,27 @@ def test_smoke_mode_forces_one_repetition_without_warmup():
     assert config["suite_repetitions"] == 1
     assert config["warmups"] == 0
     assert config["name"].endswith("-smoke")
+
+
+def test_json_preset_warns_when_anthropic_results_are_not_directly_comparable():
+    warnings = preset_warnings(
+        {"presets": ["json"]},
+        [
+            {"provider": "anthropic", "model": "claude-test"},
+            {"provider": "openai", "model": "gpt-test"},
+        ],
+    )
+
+    assert warnings == [
+        {
+            "provider": "anthropic",
+            "model": "claude-test",
+            "message": (
+                "the json preset cannot request Anthropic JSON mode; compare its "
+                "results cautiously with providers using native JSON mode"
+            ),
+        }
+    ]
 
 
 def test_migration_check_uses_the_fast_response_contract_once_per_model():

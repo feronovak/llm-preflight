@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## 2.5.0 - 2026-08-10
+
+### Added
+
+- Add `json_set` validation for unordered JSON arrays with duplicate rejection.
+- Add `first_fenced_block` and `first_json_value` consumer policies for
+  applications that intentionally select the first matching JSON payload.
+
+### Changed
+
+- Reject JSON Schema configurations with a missing or unsupported `type`, and
+  ensure JSON booleans do not satisfy number or integer constraints.
+- Warn when an Anthropic model is run with the `json` or `structured` preset:
+  Anthropic does not receive an equivalent native JSON-mode request, so results
+  are not directly comparable to providers that do.
+
 ## 2.4.3 - 2026-08-10
 
 ### Fixed

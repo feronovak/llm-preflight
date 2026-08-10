@@ -17,6 +17,7 @@ guessing its meaning.
 | `total_input_tokens`, `total_output_tokens`, `total_estimated_cost_usd` | Totals including warmups. Total cost is `null` whenever any selected model has unknown pricing. |
 | `priced_cost_usd`, `cost_confidence`, `unpriced_models` | Additive cost detail: the partial sum of priced requests, whether coverage is `complete`, `partial`, or `unknown`, and the resolved models excluded from a partial or unknown total. |
 | `pricing_warnings` | Pricing freshness or availability warnings. |
+| `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
 | `pricing_ledger`, `pricing_fingerprint` | Redacted resolved per-model prices/provenance used by this run and their stable SHA-256 identity. These are additive fields in schema version 1. |
 | `source_config` | Redacted input configuration, retained for replay and audit. |
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |

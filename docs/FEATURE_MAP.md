@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-10 · **As of:** v2.4.3
+**Last reviewed:** 2026-08-10 · **As of:** v2.5.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -20,7 +20,8 @@ module names.
 | `--interactive` with `--approve-to` — review a saved run, promote passing models | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
 | Pricing and cost reporting per run | live | `pricing.py`, `metrics.py` |
-| Named profiles and presets for repeatable runs | live | `profiles.py`, `presets.py` |
+| Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |
+| JSON-preset comparability warnings for Anthropic results | live | `presets.py`, `cli.py`, `runner.py` |
 | Secret redaction in output | live | `redaction.py`, `security.py` |
 | `--json` output contract, consumed by CI and the MCP server | live | `cli.py`, `docs/reference/results.md` |
 

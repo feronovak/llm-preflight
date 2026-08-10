@@ -173,9 +173,21 @@ validator accepts it:
 }
 ```
 
-Supported consumers are `raw_json`, `fenced_ok`, and `prose_tolerant` (exactly
-one JSON value embedded in prose). This is a declaration, not permission for
-LLM Preflight to execute application code.
+Supported consumers are `raw_json`, `fenced_ok`, `prose_tolerant` (exactly one
+JSON value embedded in prose), `first_fenced_block`, and `first_json_value`.
+The latter two intentionally select the first complete fenced block or JSON
+value respectively, so use them only if the deployed consumer behaves the same
+way. This is a declaration, not permission for LLM Preflight to execute
+application code.
+
+When an object contains an unordered list whose values must be unique, use
+`json_set` instead of comparing array order:
+
+```json
+"validation": {
+  "json_set": {"key": "exclude", "expected": [2, 3, 4]}
+}
+```
 
 ## Golden answers
 

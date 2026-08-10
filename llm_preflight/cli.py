@@ -41,6 +41,7 @@ from .features import (
     matrix_report,
     replay_config,
 )
+from .presets import preset_warnings
 from .pricing import pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
@@ -253,6 +254,7 @@ def _dry_run_plan(
         "estimated_cost_usd": budget["estimated_cost_usd"],
         "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
         "pricing_warnings": pricing_freshness_report(models)["warnings"],
+        "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
             config.get("request", {"temperature": 0, "max_output_tokens": 256})
@@ -308,6 +310,12 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
         )
         if warning_count > 10:
             lines.append(f"- ... and {warning_count - 10} more (use --json for all)")
+    if plan["configuration_warnings"]:
+        lines.append("Configuration warnings:")
+        lines.extend(
+            f"- {warning['provider']}/{warning['model']}: {warning['message']}"
+            for warning in plan["configuration_warnings"]
+        )
     return "\n".join(lines) + "\n"
 
 

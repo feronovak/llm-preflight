@@ -34,7 +34,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-10 · **As of:** v2.4.3" in feature_map
+    assert "**Last reviewed:** 2026-08-10 · **As of:** v2.5.0" in feature_map
 
 
 def test_local_markdown_links_resolve_after_docs_reorganization():

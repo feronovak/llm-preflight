@@ -1298,7 +1298,9 @@ def test_validation_failure_summary_hints_use_real_pipeline_samples(
             "warmups": 0,
             "repetitions": 1,
             "save_responses": "failures",
-            "validation": {"json_schema": {"required": ["questions"]}},
+            "validation": {
+                "json_schema": {"type": "object", "required": ["questions"]}
+            },
         }
     )
 

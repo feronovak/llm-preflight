@@ -1,6 +1,7 @@
 import pytest
 
 from llm_preflight.profiles import evaluate_response, select_profiles
+from llm_preflight.runner import validate_config_validations
 
 
 def test_all_selects_every_supported_profile_except_coding():
@@ -251,6 +252,70 @@ def test_prose_tolerant_parser_rejects_two_separate_json_values():
         "valid": False,
         "error": "invalid JSON (expected exactly one JSON value in prose)",
     }
+
+
+def test_first_match_json_policies_model_first_fence_and_value():
+    fenced = '```json\n{"a": 1}\n```\n```json\n{"a": 2}\n```'
+    prose = 'First: {"a": 1}; second: {"a": 2}'
+
+    assert (
+        evaluate_response(
+            fenced,
+            {
+                "type": "json_subset",
+                "expected": {"a": 1},
+                "parsing_policy": "first_fenced_block",
+            },
+        )["valid"]
+        is True
+    )
+    assert (
+        evaluate_response(
+            prose,
+            {
+                "type": "json_subset",
+                "expected": {"a": 1},
+                "parsing_policy": "first_json_value",
+            },
+        )["valid"]
+        is True
+    )
+
+
+def test_json_set_requires_the_same_unique_unordered_values():
+    evaluator = {"type": "json_set", "key": "exclude", "expected": [2, 3, 4]}
+
+    assert evaluate_response('{"exclude":[4,2,3]}', evaluator)["valid"] is True
+    assert evaluate_response('{"exclude":[2,2,2]}', evaluator)["valid"] is False
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"required": ["a"]},
+        {"type": "Object"},
+        {"type": "str"},
+    ],
+)
+def test_json_schema_requires_an_explicit_supported_type(schema):
+    with pytest.raises(ValueError, match="type"):
+        validate_config_validations(
+            {
+                "prompt": "ok",
+                "models": [{"provider": "mock", "model": "m"}],
+                "validation": {"json_schema": schema},
+            }
+        )
+
+
+def test_json_schema_rejects_booleans_as_integers_and_numbers():
+    for expected_type in ("integer", "number"):
+        assert (
+            evaluate_response(
+                "true", {"type": "json_schema", "schema": {"type": expected_type}}
+            )["valid"]
+            is False
+        )
 
 
 @pytest.mark.parametrize(

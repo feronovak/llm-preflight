@@ -19,7 +19,7 @@ import json
 import re
 from pathlib import Path
 
-from . import findings as F
+from . import defaults, findings as F
 
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
 _M = "|".join(METHODS)
@@ -29,13 +29,11 @@ DOC_ROW = re.compile(
     rf"^\s*\|\s*\**((?:{_M})(?:\s*[·/,]\s*(?:{_M}))*)\**\s*\|\s*\**`?([^`|*]+?)`?\**\s*\|",
     re.M)
 
-# Any App Router `route.ts` is an endpoint — webhooks and callbacks commonly
-# live outside `app/api/`, and missing them undercounts coverage while turning
-# a documented route into a phantom.
-NEXT_ROUTE = re.compile(r"^(?:src/)?app/(?:(?P<path>.+)/)?route\.[tj]sx?$")
+# Shared with detection, which must agree on what a route file is.
+NEXT_ROUTE = defaults.NEXT_ROUTE
+NEXT_PAGES_API = defaults.NEXT_PAGES_API
 # Next.js route groups are organisational and never appear in a URL.
 ROUTE_GROUP = re.compile(r"/?\([^)]*\)")
-NEXT_PAGES_API = re.compile(r"^(?:src/)?pages/(?P<path>api/.+)\.[tj]sx?$")
 EXPORTED = r"export\s+(?:async\s+)?(?:function|const)\s+{m}\b"
 # `export const {{ GET, POST }} = handlers` (Auth.js v5) and `export {{ GET }} from`
 EXPORT_BRACE = re.compile(r"export\s+(?:const\s+)?\{([^}]*)\}")

@@ -14,6 +14,7 @@ Anything else becomes a parse error reported as a finding. The parser never
 raises: a malformed contract must degrade into a finding, not a traceback.
 """
 
+import difflib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +33,17 @@ BOOLS = {"yes": True, "no": False, "true": True, "false": False}
 # Keys that mean "I am overriding what detection found" and therefore owe a
 # reason. A silent override is how a validator gets quietly disarmed.
 OVERRIDE_KEYS = ("profile", "http-api", "channels")
+
+# The grammar is closed: if a check reads it, it is a key, and nothing else is
+# admissible. An open grammar cannot tell a future extension from a typo, and
+# the typo is far more common — `chanels:` parsed clean, the typed accessor
+# returned None, and the override the author believed in never took effect.
+KNOWN_KEYS = (
+    "adopted", "profile", "http-api", "channels", "direction", "prds",
+    "critical-paths", "api-coverage", "scaffold", "local-only",
+    "track-anyway", "ai-attribution", "agent-contract", "next-steps",
+    "release-flow",
+)
 
 
 @dataclass
@@ -157,6 +169,12 @@ def parse_contract(text, path=None):
         m = KEY.match(line)
         if m:
             last_key = m.group("key")
+            if last_key not in KNOWN_KEYS:
+                near = difflib.get_close_matches(last_key, KNOWN_KEYS, n=1)
+                c.errors.append(
+                    f"line {lineno}: unknown key `{last_key}`"
+                    + (f" — did you mean `{near[0]}`?" if near else
+                       f" (known keys: {', '.join(KNOWN_KEYS)})"))
             value = m.group("value").strip()
             c.raw[last_key] = _value(value) if value else []
             continue

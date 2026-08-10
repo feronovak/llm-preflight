@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from . import VERSION
+from .gitio import repo_root
 
 TARGET = "docs/api/routes.json"
 
@@ -72,7 +73,9 @@ def main(args):
         print("The manifest cannot be derived statically: a Flask route's path "
               "is composed at blueprint registration.", file=sys.stderr)
         return 2
-    repo = Path(args.repo)
+    # The manifest belongs at the repository root, where the coverage check
+    # reads it — not wherever the caller happened to be standing.
+    repo = repo_root(Path(args.repo))
     try:
         app = load_app(args.app, repo)
         routes = extract(app)

@@ -13,12 +13,18 @@ from typing import Any
 from . import __version__
 from .catalog import resolve_models
 from .env import load_env_file
-from .features import compare_results, estimate_budget
+from .features import (
+    apply_model_aliases,
+    apply_provider_presets,
+    compare_results,
+    estimate_budget,
+)
 from .pricing import pricing_freshness_report
 from .redaction import redact_secrets
 from .runner import load_config, run_benchmark, validate_config_validations
 
 PROTOCOL_VERSION = "2026-07-28"
+STANDARD_PROTOCOL_VERSION = "2025-06-18"
 
 
 class ProtocolError(ValueError):
@@ -96,7 +102,7 @@ def _temporary_env(path: Path):
 
 
 def _config(path: Path) -> dict[str, Any]:
-    config = load_config(path)
+    config = apply_provider_presets(apply_model_aliases(load_config(path)))
     validate_config_validations(config)
     return config
 
@@ -108,14 +114,18 @@ def _readonly_config(path: Path) -> dict[str, Any]:
     return config
 
 
-def _tool_result(value: dict[str, Any], *, error: bool = False) -> dict[str, Any]:
+def _tool_result(
+    value: dict[str, Any], *, error: bool = False, standard: bool = False
+) -> dict[str, Any]:
     safe = redact_secrets(value)
-    return {
-        "resultType": "complete",
+    result: dict[str, Any] = {
         "content": [{"type": "text", "text": json.dumps(safe, sort_keys=True)}],
         "structuredContent": safe,
         "isError": error,
     }
+    if not standard:
+        result["resultType"] = "complete"
+    return result
 
 
 def _tools() -> list[dict[str, Any]]:
@@ -169,7 +179,12 @@ def _tools() -> list[dict[str, Any]]:
 
 
 def _call(
-    name: str, arguments: dict[str, Any], workspace: Path, metadata: dict[str, Any]
+    name: str,
+    arguments: dict[str, Any],
+    workspace: Path,
+    metadata: dict[str, Any],
+    *,
+    standard: bool,
 ) -> dict[str, Any]:
     if name == "validate_config":
         config = _readonly_config(_path(arguments["config"], workspace))
@@ -178,7 +193,8 @@ def _call(
                 "ok": True,
                 "name": config.get("name"),
                 "models": len(config.get("models", [])),
-            }
+            },
+            standard=standard,
         )
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
@@ -190,24 +206,31 @@ def _call(
                 "models": models,
                 **budget,
                 "pricing_warnings": pricing_freshness_report(models)["warnings"],
-            }
+            },
+            standard=standard,
         )
     if name == "diff_baseline":
         baseline = json.loads(_path(arguments["baseline"], workspace).read_text())
         current = json.loads(_path(arguments["current"], workspace).read_text())
-        return _tool_result(compare_results(baseline, current))
+        return _tool_result(compare_results(baseline, current), standard=standard)
     if name == "run_preflight":
         config_path = _path(arguments["config"], workspace)
-        env_path = (
-            _path(arguments["env_file"], workspace)
-            if arguments.get("env_file")
-            else config_path.parent / ".env.production"
-        )
         config = _config(config_path)
         live = bool(config.get("discovery")) or any(
             model.get("provider") != "mock" for model in config.get("models", [])
         )
         if live and arguments.get("confirm_paid_run") is not True:
+            if standard:
+                return _tool_result(
+                    {
+                        "error": (
+                            "live preflight requires explicit user approval; retry "
+                            "with confirm_paid_run set to true after approval"
+                        )
+                    },
+                    error=True,
+                    standard=True,
+                )
             capabilities = metadata.get(
                 "io.modelcontextprotocol/clientCapabilities", {}
             )
@@ -233,8 +256,15 @@ def _call(
                 },
                 "requestState": json.dumps({"config": arguments["config"]}),
             }
-        with _temporary_env(env_path):
-            return _tool_result(run_benchmark(config))
+        if live:
+            env_path = (
+                _path(arguments["env_file"], workspace)
+                if arguments.get("env_file")
+                else config_path.parent / ".env.production"
+            )
+            with _temporary_env(env_path):
+                return _tool_result(run_benchmark(config), standard=standard)
+        return _tool_result(run_benchmark(config), standard=standard)
     raise ValueError(f"unknown tool: {name}")
 
 
@@ -247,31 +277,48 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
         params = message.get("params", {})
         if not isinstance(params, dict):
             raise TypeError("params must be an object")
-        metadata = _meta(params)
-        if method == "server/discover":
-            result: dict[str, Any] = {
+        era_metadata = params.get("_meta")
+        standard = not (
+            isinstance(era_metadata, dict)
+            and "io.modelcontextprotocol/protocolVersion" in era_metadata
+        )
+        metadata = {} if standard or method == "initialize" else _meta(params)
+        result: dict[str, Any]
+        if method == "initialize":
+            result = {
+                "protocolVersion": STANDARD_PROTOCOL_VERSION,
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "llm-preflight", "version": __version__},
+                "instructions": (
+                    "Use validate_config and dry_run_plan before a live run. "
+                    "Only call run_preflight for a paid config when the user "
+                    "explicitly authorizes it and confirm_paid_run is true."
+                ),
+            }
+        elif method == "ping":
+            result = {}
+        elif method == "server/discover":
+            result = {
                 "resultType": "complete",
                 "supportedVersions": [PROTOCOL_VERSION],
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
             }
         elif method == "tools/list":
-            result = {"resultType": "complete", "tools": _tools()}
+            result = {"tools": _tools()}
+            if not standard:
+                result["resultType"] = "complete"
         elif method == "tools/call":
             name = str(params.get("name", ""))
             arguments = _arguments(name, params.get("arguments", {}))
             try:
-                result = _call(name, arguments, workspace, metadata)
+                result = _call(name, arguments, workspace, metadata, standard=standard)
             except ProtocolError:
                 raise
-            except (
-                OSError,
-                TypeError,
-                ValueError,
-                json.JSONDecodeError,
-                KeyError,
-            ) as exc:
-                result = _tool_result({"error": str(exc)}, error=True)
+            except Exception as exc:  # noqa: BLE001 - MCP tools must return errors
+                result = _tool_result(
+                    {"error": str(exc)}, error=True, standard=standard
+                )
         else:
             return {
                 "jsonrpc": "2.0",
@@ -284,7 +331,7 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
         if exc.data is not None:
             error["data"] = exc.data
         return {"jsonrpc": "2.0", "id": request_id, "error": error}
-    except (OSError, TypeError, ValueError, json.JSONDecodeError, KeyError) as exc:
+    except Exception as exc:  # noqa: BLE001 - a request must not kill stdio
         return {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -310,7 +357,7 @@ def main() -> None:
                     json.dumps(redact_secrets(response), separators=(",", ":")),
                     flush=True,
                 )
-        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        except Exception as exc:  # noqa: BLE001 - keep serving later requests
             print(
                 json.dumps(
                     {

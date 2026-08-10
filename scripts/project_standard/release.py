@@ -34,12 +34,19 @@ NOT_SHIPPED = (
 )
 
 
-def candidates(repo):
-    """Every manifest that states a version, with its value."""
+def candidates(repo, tracked):
+    """Every tracked manifest that states a version, with its value.
+
+    Tracked, not the filesystem: an untracked manifest that supplied the
+    version would arm the release gate against a number no clone can see, and
+    could manufacture a "sources disagree" finding out of a file nobody
+    committed.
+    """
     repo = Path(repo)
+    tracked = set(tracked)
     out = []
     pkg = repo / "package.json"
-    if pkg.is_file():
+    if "package.json" in tracked and pkg.is_file():
         try:
             v = json.loads(pkg.read_text(errors="ignore")).get("version")
             if v:
@@ -47,22 +54,22 @@ def candidates(repo):
         except ValueError:
             pass
     pyp = repo / "pyproject.toml"
-    if pyp.is_file():
+    if "pyproject.toml" in tracked and pyp.is_file():
         m = re.search(r'^version\s*=\s*"([^"]+)"',
                       pyp.read_text(errors="ignore"), re.M)
         if m:
             out.append(("pyproject.toml", m.group(1)))
     ver = repo / "VERSION"
-    if ver.is_file():
+    if "VERSION" in tracked and ver.is_file():
         v = ver.read_text(errors="ignore").strip()
         if v:
             out.append(("VERSION", v))
     return out
 
 
-def version_source(repo, tags):
+def version_source(repo, tags, tracked):
     """Pick the source the tags corroborate; tie-break to the backend."""
-    cands = candidates(repo)
+    cands = candidates(repo, tracked)
     if not cands:
         return (None, None)
     if len(cands) == 1:
@@ -97,8 +104,8 @@ def check(ctx):
         return out
 
     tags = ctx.git.tags()
-    cands = candidates(ctx.repo)
-    source, version = version_source(ctx.repo, tags)
+    cands = candidates(ctx.repo, ctx.tracked)
+    source, version = version_source(ctx.repo, tags, ctx.tracked)
 
     if len(cands) > 1:
         chosen = [c for c in cands if c[0] == source]
@@ -174,7 +181,7 @@ def _regressions(ctx, tags):
             else:
                 out.append(F.warn("15", msg + " (before the adoption baseline)"))
 
-    current = version_source(ctx.repo, tags)[1]
+    current = version_source(ctx.repo, tags, ctx.tracked)[1]
     if current:
         cur_nums = tuple(int(x) for x in re.findall(r"\d+", current)[:3] or [0])
         higher = sorted({t for t in tags

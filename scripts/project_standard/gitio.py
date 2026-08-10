@@ -33,6 +33,18 @@ class Git:
     def is_repo(self) -> bool:
         return self._run("rev-parse", "--git-dir") is not None
 
+    def toplevel(self):
+        """The repository root, or None when this is not a repository.
+
+        `git -C <dir> ls-files` scopes to <dir> and yields paths relative to
+        it, so a checker handed a subdirectory sees a truncated, wrongly-rooted
+        file list and reports every root-level document as missing. Every entry
+        point resolves the root first; a validator whose answer depends on the
+        caller's shell is not a validator.
+        """
+        out = self._run("rev-parse", "--show-toplevel")
+        return Path(out) if out else None
+
     def has_commits(self) -> bool:
         return self._run("rev-parse", "HEAD") is not None
 
@@ -61,6 +73,16 @@ class Git:
         if not older or not newer or older == newer:
             return False
         return self._run("merge-base", "--is-ancestor", older, newer) is not None
+
+    def commits_touching(self, path, limit=200):
+        """Commits that changed `path`, newest first, across renames."""
+        out = self._run("log", f"-{limit}", "--follow", "--format=%H", "--",
+                        str(path))
+        return out.splitlines() if out else []
+
+    def file_at(self, ref, path):
+        """The contents of `path` as of `ref`, or None when absent there."""
+        return self._run("show", f"{ref}:{path}")
 
     def file_committed_at(self, path) -> int:
         out = self._run("log", "-1", "--format=%ct", "--", str(path))
@@ -145,6 +167,15 @@ class Git:
         if local_only:
             args = ["config", "--local", "--get", key]
         return self._run(*args)
+
+
+def repo_root(path):
+    """Resolve `path` to the git root containing it.
+
+    Returns `path` unchanged when it is not inside a repository, so the
+    not-a-repository finding still names what the caller actually asked for.
+    """
+    return Git(path).toplevel() or Path(path)
 
 
 def parse_tag(tag):

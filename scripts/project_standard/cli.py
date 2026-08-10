@@ -13,6 +13,7 @@ from pathlib import Path
 from . import VERSION
 from . import defaults, docmap, routes as routes_mod, runner
 from .findings import ERROR, SKIPPED, WARN
+from .gitio import repo_root
 
 
 def build_parser():
@@ -50,6 +51,11 @@ def build_parser():
     r = sub.add_parser("routes", help="write docs/api/routes.json from the app")
     r.add_argument("--repo", default=".")
     r.add_argument("--app", help="import path, e.g. app:create_app")
+
+    v = sub.add_parser("vendor",
+                       help="copy the checker into a repo as "
+                            "scripts/project_standard so CI can run it")
+    v.add_argument("--repo", default=".")
     return p
 
 
@@ -65,9 +71,11 @@ def resolve_repos(args):
             path = Path(name)
             if not path.exists() and (fleet / name).exists():
                 path = fleet / name
-            out.append(path)
+            out.append(repo_root(path))
         return out
-    return [Path.cwd()]
+    # An omitted `--repo` means "the repo I am standing in", not "this exact
+    # directory" — the caller's shell must not change the verdict.
+    return [repo_root(Path.cwd())]
 
 
 def main(argv=None):
@@ -79,6 +87,8 @@ def main(argv=None):
         return routes_mod.main(args)
     if args.command == "install-hooks":
         return _install_hooks(args)
+    if args.command == "vendor":
+        return _vendor(args)
 
     repos = resolve_repos(args)
     if not repos:
@@ -135,15 +145,16 @@ def _install_hooks(args):
         print(f"hook sources not found at {source}", file=sys.stderr)
         return 2
 
+    repo = repo_root(Path(args.repo)).resolve()
     target = Path.home() / ".config" / "git" / "project-standard-hooks" \
-        if args.globally else Path(args.repo).resolve() / ".githooks"
+        if args.globally else repo / ".githooks"
     target.mkdir(parents=True, exist_ok=True)
     for name in ("pre-commit", "commit-msg"):
         dest = target / name
         shutil.copy2(source / name, dest)
         dest.chmod(0o755)
 
-    scope = ["--global"] if args.globally else ["-C", str(Path(args.repo))]
+    scope = ["--global"] if args.globally else ["-C", str(repo)]
     cmd = ["git", *scope, "config", "core.hooksPath", str(target)]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -157,14 +168,50 @@ def _install_hooks(args):
     return 0
 
 
+def _vendor(args):
+    """Copy the running package into a repo so CI can import it.
+
+    The copy step used to be prose in the README — a `cp -r` a human runs once
+    and never runs again. That is how one repo ended up running nine stale
+    modules in CI. A command makes re-vendoring cheap enough to actually do.
+    """
+    import shutil
+
+    source = Path(__file__).resolve().parent
+    repo = repo_root(Path(args.repo)).resolve()
+    target = repo / "scripts" / "project_standard"
+
+    if target.resolve() == source:
+        print("refusing to vendor a package into itself", file=sys.stderr)
+        return 2
+
+    # Replace wholesale rather than merging: a module deleted upstream must
+    # not survive in the copy, which is exactly how a stale copy keeps
+    # answering questions the current one no longer asks.
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    for path in sorted(source.glob("*.py")):
+        shutil.copy2(path, target / path.name)
+        copied += 1
+
+    print(f"vendored {copied} module(s) at version {VERSION} into {target}")
+    print("commit this directory, and run `check` again to confirm it agrees "
+          "with canonical")
+    return 0
+
+
 def _generate(args):
-    repo = Path(args.repo)
-    ctx = runner.build_ctx(repo)
+    ctx = runner.build_ctx(Path(args.repo))
     text = docmap.render(ctx)
     if args.stdout:
         print(text)
         return 0
-    target = repo / docmap.HEADER
+    # `ctx.repo`, not `args.repo` — the index belongs at the repository root
+    # even when `generate` was run from a subdirectory.
+    target = ctx.repo / docmap.HEADER
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text)
     print(f"wrote {target}")

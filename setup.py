@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="llm-preflight",
-    version="2.4.2",
+    version="2.4.3",
     description="Local, cross-provider preflight checks for an LLM model switch",
     packages=find_packages(include=["llm_preflight", "llm_preflight.*"]),
     python_requires=">=3.10",

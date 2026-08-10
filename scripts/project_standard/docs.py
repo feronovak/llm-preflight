@@ -203,7 +203,13 @@ def _links(ctx, tracked, required):
                                .relative_to(root))
             except (ValueError, OSError):
                 resolved = str(Path(*(base / target).parts)).replace("\\", "/")
-            exists = resolved in tracked_set or (root / resolved).exists()
+            # Tracked, not the filesystem: a link to an untracked file
+            # resolves on the author's machine and 404s for everyone who
+            # clones the same commit. Git tracks no directories, so a link to
+            # one is satisfied by anything tracked beneath it.
+            prefix = resolved.rstrip("/") + "/"
+            exists = (resolved in tracked_set
+                      or any(t.startswith(prefix) for t in tracked_set))
             if exists:
                 continue
             line = text[:m.start()].count("\n") + 1

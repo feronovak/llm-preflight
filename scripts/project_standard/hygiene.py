@@ -53,15 +53,22 @@ def opted_in(ctx):
     rule with it.
     """
     repo = Path(ctx.repo)
+    tracked = set(ctx.tracked)
     # Both spellings: the importable package directory the README tells people
     # to vendor (underscore) and the hyphenated form. A repo that adopted via
     # the documented path must not silently miss enforcement.
+    #
+    # Tracked, not the filesystem — opting in is a property of the commit, so
+    # that CI and a workstation reading the same commit agree about whether
+    # checks 7, 9 and 11 are errors or warns.
     for name in ("project_standard", "project-standard"):
-        if (repo / "scripts" / name).is_dir():
+        prefix = f"scripts/{name}/"
+        if any(t.startswith(prefix) for t in tracked):
             return True
-    gi = repo / ".gitignore"
-    if gi.is_file() and MARKER_LINE in gi.read_text(errors="ignore"):
-        return True
+    if ".gitignore" in tracked:
+        gi = repo / ".gitignore"
+        if gi.is_file() and MARKER_LINE in gi.read_text(errors="ignore"):
+            return True
     return False
 
 
@@ -91,8 +98,10 @@ def _secrets(ctx):
     repo = Path(ctx.repo)
     tracked = set(ctx.tracked)
 
+    # Tracked only. An untracked `.gitleaks.toml` on one developer's disk
+    # would silence this warning for everyone reading the same commit.
     configured = next((tool for name, tool in defaults.SECRET_SCANNERS.items()
-                       if name in tracked or (repo / name).is_file()), None)
+                       if name in tracked), None)
     if not configured:
         for rel in tracked:
             if rel.startswith(".github/") or rel.endswith((".yaml", ".yml")):
@@ -188,7 +197,9 @@ def _gitignore(ctx):
     if not opted_in(ctx):
         return out
     gi = Path(ctx.repo) / ".gitignore"
-    text = gi.read_text(errors="ignore") if gi.is_file() else ""
+    # An untracked .gitignore protects nobody but its author.
+    text = (gi.read_text(errors="ignore")
+            if ".gitignore" in set(ctx.tracked) and gi.is_file() else "")
     local_only = defaults.local_only_paths(ctx.contract)
     missing = [p for p in local_only if p.rstrip("/") not in text]
     if missing:

@@ -9,10 +9,11 @@ silently passed. A check that did not run must never read as one that did.
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import api, artifacts, contract as contract_mod, detect, docmap, docs
+from . import api, artifacts, baselines, contract as contract_mod, detect
+from . import docmap, docs
 from . import findings as F
-from . import hygiene, release
-from .gitio import Git
+from . import hygiene, release, vendored
+from .gitio import Git, repo_root
 
 DEV, CI = "dev", "ci"
 
@@ -22,7 +23,7 @@ HOOK_CHECKS = ("11", "11b")
 # Checks that genuinely need history or tags. `5b` (version sources disagree)
 # reads only files and must stay live on a shallow clone.
 HISTORY_CHECKS = ("5", "8a", "8b", "8c", "8d", "8e", "10c", "13", "14", "15",
-                  "29", "38")
+                  "29", "38", "42")
 
 
 @dataclass
@@ -39,13 +40,16 @@ class Ctx:
 
 
 def build_ctx(repo, profile=DEV):
-    repo = Path(repo)
+    # Anchor on the repository root before reading anything. Called with a
+    # subdirectory — which is what an omitted `--repo` produces — every path
+    # below would be resolved against the wrong base.
+    repo = repo_root(repo)
     git = Git(repo)
     tracked = git.ls_files()
     c = contract_mod.load(repo, tracked)
     detected = detect.detect(repo, tracked)
     resolved = detect.resolve(detected, c)
-    version = release.version_source(repo, git.tags())[1]
+    version = release.version_source(repo, git.tags(), tracked)[1]
     return Ctx(repo=repo, git=git, tracked=tracked, contract=c,
                resolved=resolved, version=version, profile=profile)
 
@@ -63,9 +67,10 @@ def _workspaces(ctx):
     import re
 
     found = []
+    tracked = set(ctx.tracked)
 
     pkg = ctx.repo / "package.json"
-    if pkg.is_file():
+    if "package.json" in tracked and pkg.is_file():
         try:
             data = json.loads(pkg.read_text(errors="ignore"))
             ws = data.get("workspaces")
@@ -77,7 +82,7 @@ def _workspaces(ctx):
             pass
 
     pnpm = ctx.repo / "pnpm-workspace.yaml"
-    if pnpm.is_file():
+    if "pnpm-workspace.yaml" in tracked and pnpm.is_file():
         # Only the `packages:` block — a pnpm workspace file also carries
         # unrelated list keys, and counting those invents workspaces.
         block = re.search(r"^packages:\s*$(.*?)(?=^\S|\Z)",
@@ -87,7 +92,7 @@ def _workspaces(ctx):
                                 block.group(1), re.M)
 
     cargo = ctx.repo / "Cargo.toml"
-    if cargo.is_file():
+    if "Cargo.toml" in tracked and cargo.is_file():
         text = cargo.read_text(errors="ignore")
         section = re.search(r"^\[workspace\]\s*$(.*?)(?=^\[|\Z)",
                             text, re.M | re.S)
@@ -98,7 +103,7 @@ def _workspaces(ctx):
                       if p.strip()]
 
     gowork = ctx.repo / "go.work"
-    if gowork.is_file():
+    if "go.work" in tracked and gowork.is_file():
         found += re.findall(r"^\s*\./(\S+)", gowork.read_text(errors="ignore"),
                             re.M)
 
@@ -123,6 +128,8 @@ MODULES = (
     ("release", release.check),
     ("hygiene", hygiene.check),
     ("api", api.check),
+    ("baselines", baselines.check),
+    ("vendored", vendored.check),
     ("workspaces", workspace_check),
 )
 

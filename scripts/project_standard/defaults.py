@@ -12,7 +12,19 @@ Three levels:
 """
 
 import os
+import re
 from pathlib import Path
+
+# -- route shapes (UNIVERSAL) ----------------------------------------------
+
+# Detection and enumeration must agree on what a route file is, so the pattern
+# lives here rather than in either checker. Two copies drifted: detection
+# required a path segment, so a root-level `app/route.ts` never set http-api
+# and the coverage check silently never ran for a repo whose whole surface was
+# one webhook. Any App Router `route.ts` is an endpoint — webhooks and
+# callbacks commonly live outside `app/api/`.
+NEXT_ROUTE = re.compile(r"^(?:src/)?app/(?:(?P<path>.+)/)?route\.[tj]sx?$")
+NEXT_PAGES_API = re.compile(r"^(?:src/)?pages/(?P<path>api/.+)\.[tj]sx?$")
 
 # -- profile detection (UNIVERSAL) -----------------------------------------
 

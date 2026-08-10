@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here.
 
+## 2.4.3 - 2026-08-10
+
+### Fixed
+
+- Make the local MCP server interoperable with standard `initialize` clients,
+  allowing Codex, Claude Code, and Cursor to discover and use the preflight
+  tools.
+- Resolve model aliases and provider presets for MCP configurations just as the
+  CLI does, preventing valid preset configurations from terminating the MCP
+  session.
+- Support MCP `ping` requests.
+- Do not load `.env.production` for mock or unconfirmed runs; credentials are
+  loaded only for an explicitly confirmed live run.
+- Return a standard-client `isError` result that names `confirm_paid_run` as
+  the remedy when a live run lacks explicit confirmation.
+
+### Changed
+
+- Document copy-paste MCP setup for Codex, Claude Code, and Cursor, including
+  the explicit approval boundary for paid preflight runs.
+
 ## 2.4.2 - 2026-08-02
 
 ### Fixed

@@ -20,8 +20,68 @@ that contains the benchmark configuration:
 }
 ```
 
-The server accepts only workspace-relative paths. It supports MCP protocol
-version `2026-07-28`.
+The server accepts only workspace-relative paths. It supports the standard MCP
+initialization flow used by current coding agents (protocol version
+`2025-06-18`) as well as its existing `2026-07-28` discovery flow.
+
+## Connect common coding agents
+
+Install the package in an environment whose `llm-preflight-mcp` command the
+agent can run, then choose the matching local MCP setup below. Keep the
+workspace path absolute. The server reads only paths below it.
+
+### Codex
+
+From the repository you want to validate:
+
+```bash
+codex mcp add llm-preflight -- llm-preflight-mcp --workspace "$PWD"
+codex mcp list
+```
+
+This works in Codex CLI, the IDE extension, and the ChatGPT desktop app when
+they share Codex configuration. To make it project-scoped instead, add this to
+`.codex/config.toml` in a trusted repository:
+
+```toml
+[mcp_servers.llm-preflight]
+command = "llm-preflight-mcp"
+args = ["--workspace", "/absolute/path/to/repository"]
+default_tools_approval_mode = "prompt"
+```
+
+### Claude Code
+
+From the repository you want to validate, add a project-scoped server:
+
+```bash
+claude mcp add llm-preflight --scope project -- \
+  llm-preflight-mcp --workspace "$PWD"
+claude mcp list
+```
+
+Claude Code records project-scoped servers in `.mcp.json`; review the resulting
+configuration before committing it. Use `--scope user` instead when the same
+server should be available across projects.
+
+### Cursor
+
+Create `.cursor/mcp.json` in the repository (or `~/.cursor/mcp.json` for a
+personal global installation):
+
+```json
+{
+  "mcpServers": {
+    "llm-preflight": {
+      "command": "llm-preflight-mcp",
+      "args": ["--workspace", "/absolute/path/to/repository"]
+    }
+  }
+}
+```
+
+Restart Cursor, enable the server in the MCP tools list, and ask the agent to
+use `validate_config` or `dry_run_plan` by name. Leave tool approval enabled.
 
 ## Available tools
 
@@ -33,10 +93,13 @@ version `2026-07-28`.
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 
 `run_preflight` can run a mock benchmark without credentials. Before a live
-run, the client must support paid-run confirmation and the user must approve
-it. Only after that confirmation may the server read the config-adjacent
-`.env.production`, an explicit workspace-relative environment file, or keys
-already supplied to the MCP client process.
+run, the server requires `confirm_paid_run: true`. For standard clients, this
+is an agent-supplied boolean, not proof of user approval. Keep client-side tool
+approval enabled and require an explicit user instruction in the agent's
+operating rules. Only a confirmed live run may read the
+config-adjacent `.env.production`, an explicit workspace-relative environment
+file, or keys already supplied to the MCP client process. Mock and
+unconfirmed runs do not load those files.
 
 ## Safe agent workflow
 

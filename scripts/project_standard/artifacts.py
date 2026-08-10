@@ -155,8 +155,10 @@ def _direction_declared(ctx):
         return False
     if str(declared).strip() == "inherit":
         return True
-    target = Path(ctx.repo) / str(declared)
-    return target.is_file() or str(declared) in set(ctx.tracked)
+    # Tracked, not the filesystem. `LOCAL_ALLOWED` is the sanctioned way to
+    # declare a slot satisfied by an untracked file, and direction is
+    # deliberately not in it.
+    return str(declared) in set(ctx.tracked)
 
 
 def _contract_sections(ctx):

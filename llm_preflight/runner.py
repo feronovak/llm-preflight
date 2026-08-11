@@ -17,7 +17,7 @@ from .catalog import resolve_models
 from .client import create_client
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
-from .pricing import pricing_freshness_report, resolve_pricing
+from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import (
     PROFILE_ALIASES,
     evaluate_consumer_response,
@@ -840,6 +840,13 @@ def run_benchmark(
     models = pricing_resolution["models"]
     if not models:
         raise ValueError("model discovery returned no models")
+    if config.get("require_current_pricing"):
+        coverage = pricing_coverage_report(models, require_current_pricing=True)
+        if not coverage["enforcement_ok"]:
+            raise ValueError(
+                "pricing coverage is incomplete; run --pricing-check and resolve "
+                "unknown, undated, or stale model prices before a paid benchmark"
+            )
 
     for model_index, model in enumerate(models, 1):
         request_total = (
@@ -1017,7 +1024,13 @@ def run_benchmark(
         "models": models_result,
         "pricing_ledger": pricing_resolution["ledger"],
         "pricing_fingerprint": pricing_resolution["fingerprint"],
-        "pricing_warnings": pricing_freshness_report(models)["warnings"],
+        "pricing_warnings": pricing_freshness_report(
+            models,
+            enforce_override_freshness=bool(config.get("require_current_pricing")),
+        )["warnings"],
+        "pricing_coverage": pricing_coverage_report(
+            models, require_current_pricing=bool(config.get("require_current_pricing"))
+        ),
         "configuration_warnings": preset_warnings(config, models),
         "source_config": redact_secrets(
             {
@@ -1359,6 +1372,29 @@ def report(result: dict[str, Any]) -> str:
             lines.append(
                 f"- {warning['provider']}/{warning['model']}: {warning['message']}"
             )
+    coverage = result.get("pricing_coverage", {})
+    summary = coverage.get("summary", {})
+    if any(summary.get(status, 0) for status in ("undated", "unknown", "stale")):
+        lines.extend(
+            [
+                "",
+                "## Pricing coverage",
+                "",
+                (
+                    f"{summary.get('priced', 0)}/{summary.get('billable', 0)} "
+                    "billable selected models have dated current pricing."
+                ),
+            ]
+        )
+        for entry in coverage.get("models", []):
+            if entry.get("status") == "priced":
+                continue
+            lines.append(
+                f"- {entry['provider']}/{entry['model']} "
+                f"({entry['status']}): {entry['remediation']}"
+            )
+        if summary.get("exempt", 0):
+            lines.append(f"{summary['exempt']} mock fixture(s) are pricing-exempt.")
     diagnostics = _contract_diagnostics(result)
     if diagnostics:
         lines.extend(["", "## Contract diagnostics", ""])

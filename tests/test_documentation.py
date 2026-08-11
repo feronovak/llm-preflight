@@ -34,7 +34,13 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-10 · **As of:** v2.5.0" in feature_map
+    assert "**Last reviewed:** 2026-08-11 · **As of:** v2.6.0" in feature_map
+    assert "current-price coverage gate" in feature_map
+    assert "GPT-5.6 Luna" in changelog
+    assert "GPT-5.6 Terra" in changelog
+    pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
+    assert "## Snapshot verification" in pricing_guide
+    assert "source_url" in pricing_guide
 
 
 def test_local_markdown_links_resolve_after_docs_reorganization():

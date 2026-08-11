@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here.
 
+## 2.6.0 - 2026-08-11
+
+### Added
+
+- Add full selected-model pricing coverage with `priced`, `undated`, `stale`,
+  and `unknown` states, stable machine-readable reason codes, and remediation.
+- Record a primary source URL alongside each bundled direct-provider price
+  snapshot entry.
+
+### Changed
+
+- Apply pricing freshness consistently to live-catalog and OpenRouter-routed
+  prices, and to user overrides when `require_current_pricing` is enabled.
+- Refresh the reviewed price snapshot, including correcting GPT-5.6 Luna from
+  $1.00/$6.00 to $0.20/$1.20 and GPT-5.6 Terra from $2.50/$15.00 to
+  $2.00/$12.00 per million input/output tokens.
+- Exclude mock fixtures from billable-price summary counts.
+
+### Fixed
+
+- Keep duplicate configured model rows independent in `pricing-refresh`.
+- Exempt deterministic `mock` fixtures from the paid-pricing gate while
+  retaining them in coverage evidence.
+- Refresh previously written direct-provider snapshot metadata when an upgraded
+  package supplies a newer official snapshot.
+
 ## 2.5.0 - 2026-08-10
 
 ### Added

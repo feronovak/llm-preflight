@@ -92,5 +92,7 @@ adopted: 6e43dbdffdaeed0e7c0bd573a8e5ce13a48a1ce2
 next-steps: local     # internal prioritisation; not published
 release-flow: local   # release runbook; not published
 prds: local           # PRD-*.md, gitignored
-critical-paths:       # nothing here fabricates a result a user acts on
+critical-paths:       # a wrong verdict here ships a cost or trust figure users act on
+  - llm_preflight/pricing.py
+  - llm_preflight/features.py
 ```

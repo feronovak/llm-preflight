@@ -5,6 +5,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from typing import Any
 
 from .client import PROVIDER_DEFAULTS
@@ -257,6 +258,7 @@ def _openrouter(source: dict[str, Any]) -> list[dict[str, Any]]:
             model["pricing_metadata"] = {
                 "source": "openrouter routed",
                 "confidence": "authoritative",
+                "as_of": datetime.now(timezone.utc).date().isoformat(),
             }
         result.append(model)
     return result

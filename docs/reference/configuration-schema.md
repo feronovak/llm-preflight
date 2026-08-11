@@ -26,6 +26,7 @@ one top-level `prompt` or one or more named `prompts`.
 | `fail_fast` | `false` | Legacy boolean equivalent to `stop_on: any-fail`. |
 | `max_requests` | — | Reject a run whose retry-expanded request maximum exceeds this. |
 | `max_estimated_cost_usd` | — | Reject a run whose retry-expanded cost exceeds this. |
+| `require_current_pricing` | `false` | Reject a paid run when any selected direct model or OpenRouter route has unknown, undated, or stale pricing. Mock fixtures are exempt. Use `--pricing-check` for remediation before running. |
 | `aliases` | `{}` | Named model definitions. |
 | `environments` | `{}` | Named shallow config overlays selected with `--env`. |
 | `approvals` | `[]` | Local `models approve` audit entries; ignored by benchmark runs. |
@@ -53,8 +54,13 @@ A model requires `model`; `provider` defaults to `openai_compatible`. Useful
 optional model fields are `name`, `base_url`, `api_key_env`, `api_version`,
 `headers`, `input_cost_per_million`, `output_cost_per_million`,
 `cached_input_cost_per_million`, `pricing_tiers`, `max_tokens_parameter`, and
-`supports_temperature`. `pricing_tiers` is an ordered per-request price list;
+`supports_temperature`. When setting explicit prices, also set
+`pricing_metadata` with at least `source` and ISO-8601 `as_of`; otherwise
+`--pricing-check` reports the price as undated. `pricing_tiers` is an ordered per-request price list;
 each tier may set `up_to_input_tokens` before the next tier applies.
+`official snapshot` is reserved tool-owned provenance: use another source label
+for a user-supplied price, because a matching bundled snapshot is refreshed on
+package upgrade.
 `capabilities` is advanced provider metadata; catalogue refresh and probes
 maintain it automatically, so most users should not set it manually. Mock
 models also accept `response`, `latency_seconds`, and `ttft_seconds` for

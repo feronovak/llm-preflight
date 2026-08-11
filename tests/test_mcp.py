@@ -153,6 +153,15 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
         "diff_baseline",
     ]
     assert plan["result"]["isError"] is False
+    assert plan["result"]["structuredContent"]["pricing_coverage"]["summary"] == {
+        "selected": 1,
+        "billable": 0,
+        "exempt": 1,
+        "priced": 0,
+        "undated": 0,
+        "stale": 0,
+        "unknown": 0,
+    }
 
 
 def test_live_run_requires_paid_confirmation(tmp_path):
@@ -271,6 +280,32 @@ def test_mock_run_never_loads_the_env_file(monkeypatch, tmp_path):
 
     assert response["result"]["isError"] is False
     assert "TEST_MCP_SECRET" not in __import__("os").environ
+
+
+def test_mcp_returns_a_tool_error_for_current_pricing_gate_failures(tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        '{"prompt":"ok","require_current_pricing":true,'
+        '"models":[{"provider":"openai_compatible","model":"unpriced"}]}'
+    )
+
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "run_preflight",
+                "arguments": {
+                    "config": "benchmark.json",
+                    "confirm_paid_run": True,
+                },
+            },
+        },
+        tmp_path,
+    )
+
+    assert response["result"]["isError"] is True
+    assert "pricing coverage is incomplete" in response["result"]["content"][0]["text"]
 
 
 def test_tool_schema_rejects_unknown_arguments(tmp_path):

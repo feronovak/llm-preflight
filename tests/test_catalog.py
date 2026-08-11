@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 
 from llm_preflight.catalog import (
@@ -167,6 +169,10 @@ def test_openrouter_normalization_and_limit(monkeypatch):
     assert models[0]["input_cost_per_million"] == 1
     assert models[0]["output_cost_per_million"] == 2
     assert models[0]["pricing_metadata"]["source"] == "openrouter routed"
+    assert (
+        datetime.fromisoformat(models[0]["pricing_metadata"]["as_of"]).date()
+        <= datetime.now(timezone.utc).date()
+    )
 
 
 def test_gemini_filters_non_generation_models(monkeypatch):

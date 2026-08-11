@@ -42,7 +42,7 @@ from .features import (
     replay_config,
 )
 from .presets import preset_warnings
-from .pricing import pricing_freshness_report, resolve_pricing
+from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
 from .runner import (
@@ -253,7 +253,13 @@ def _dry_run_plan(
         "retry_max_attempts": budget["retry_max_attempts"],
         "estimated_cost_usd": budget["estimated_cost_usd"],
         "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
-        "pricing_warnings": pricing_freshness_report(models)["warnings"],
+        "pricing_warnings": pricing_freshness_report(
+            models,
+            enforce_override_freshness=bool(config.get("require_current_pricing")),
+        )["warnings"],
+        "pricing_coverage": pricing_coverage_report(
+            models, require_current_pricing=bool(config.get("require_current_pricing"))
+        ),
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -299,11 +305,10 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
         f"Stop on: {plan['stop_on']}",
         f"Saved responses: {plan['save_responses']}",
     ]
-    if plan["pricing_warnings"]:
+    coverage = plan.get("pricing_coverage", {})
+    if plan["pricing_warnings"] and not coverage:
         warning_count = len(plan["pricing_warnings"])
-        lines.append(
-            f"Pricing warnings: {warning_count} models have unknown or stale pricing."
-        )
+        lines.append(f"Pricing warnings: {warning_count} models need pricing review.")
         lines.extend(
             f"- {warning['model']}: {warning['message']}"
             for warning in plan["pricing_warnings"][:10]
@@ -315,6 +320,21 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
         lines.extend(
             f"- {warning['provider']}/{warning['model']}: {warning['message']}"
             for warning in plan["configuration_warnings"]
+        )
+    summary = coverage.get("summary", {})
+    if any(summary.get(status, 0) for status in ("undated", "unknown", "stale")):
+        lines.append(
+            "Pricing coverage: "
+            f"{summary.get('priced', 0)}/{summary.get('billable', 0)} billable "
+            "selected models have dated current pricing."
+        )
+        if summary.get("exempt", 0):
+            lines.append(f"{summary['exempt']} mock fixture(s) are pricing-exempt.")
+        lines.extend(
+            f"- {entry['provider']}/{entry['model']} ({entry['status']}): "
+            f"{entry['remediation']}"
+            for entry in coverage.get("models", [])
+            if entry.get("status") != "priced"
         )
     return "\n".join(lines) + "\n"
 
@@ -535,8 +555,15 @@ def _pricing_refresh_main(argv: list[str]) -> None:
         "offline": args.offline,
         "pricing_fingerprint": resolution["fingerprint"],
         "pricing_warnings": pricing_freshness_report(
-            models, max_age_days=args.max_age_days
+            models,
+            max_age_days=args.max_age_days,
+            enforce_override_freshness=bool(config.get("require_current_pricing")),
         )["warnings"],
+        "pricing_coverage": pricing_coverage_report(
+            models,
+            max_age_days=args.max_age_days,
+            require_current_pricing=bool(config.get("require_current_pricing")),
+        ),
     }
     if args.write:
         updated = dict(config)
@@ -2008,9 +2035,12 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.pricing_check:
-            report_data = pricing_freshness_report(resolve_models(config))
+            report_data = pricing_coverage_report(
+                resolve_models(config),
+                require_current_pricing=bool(config.get("require_current_pricing")),
+            )
             print(json.dumps(report_data, indent=2))
-            if not report_data["ok"]:
+            if not report_data["enforcement_ok"]:
                 raise SystemExit(1)
             return
         if args.changed_since:

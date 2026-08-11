@@ -633,7 +633,17 @@ def test_pricing_refresh_requires_write_before_mutating(monkeypatch, tmp_path, c
         json.loads(config.read_text())["models"][0].get("input_cost_per_million")
         is None
     )
-    assert json.loads(capsys.readouterr().out)["written"] is False
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["written"] is False
+    assert preview["pricing_coverage"]["summary"] == {
+        "selected": 1,
+        "billable": 1,
+        "exempt": 0,
+        "priced": 1,
+        "undated": 0,
+        "stale": 0,
+        "unknown": 0,
+    }
     monkeypatch.setattr(
         sys, "argv", ["llm-preflight", "pricing-refresh", str(config), "--write"]
     )
@@ -662,6 +672,29 @@ def test_pricing_refresh_mock_and_offline_never_discover_models(
     cli.main()
 
     assert json.loads(capsys.readouterr().out)["changes"] == []
+
+
+def test_pricing_refresh_reports_duplicate_model_rows_without_cross_contamination(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"ok","models":['
+        '{"provider":"openai_compatible","model":"same-id",'
+        '"input_cost_per_million":1,"output_cost_per_million":2,'
+        '"pricing_metadata":{"source":"user override","as_of":"2026-08-01"}},'
+        '{"provider":"openai_compatible","model":"same-id"}]}'
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "pricing-refresh", str(config), "--offline", "--json"],
+    )
+
+    cli.main()
+
+    coverage = json.loads(capsys.readouterr().out)["pricing_coverage"]
+    assert [entry["status"] for entry in coverage["models"]] == ["priced", "unknown"]
 
 
 def test_init_mock_rejects_env_example_without_mutating_files(
@@ -1854,7 +1887,8 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     config = tmp_path / "benchmark.json"
     config.write_text(
         '{"prompt":"hello","models":[{"provider":"openai","model":"fake",'
-        '"input_cost_per_million":1,"output_cost_per_million":2}],'
+        '"input_cost_per_million":1,"output_cost_per_million":2,'
+        '"pricing_metadata":{"source":"user override","as_of":"2026-08-11"}}],'
         '"presets":["low-latency"],"warmups":0}'
     )
 
@@ -1889,6 +1923,7 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     assert output["stop_on"] == "none"
     assert output["pricing_warnings"] == []
     assert output["configuration_warnings"] == []
+    assert output["pricing_coverage"]["summary"]["priced"] == 1
 
 
 def test_main_dry_run_prints_human_readable_plan_by_default(
@@ -1938,8 +1973,97 @@ def test_dry_run_summarizes_large_model_and_pricing_lists():
 
     assert "Models: 12 selected (openai: 12)" in output
     assert "gpt-11" not in output
-    assert "Pricing warnings: 12 models have unknown or stale pricing." in output
+    assert "Pricing warnings: 12 models need pricing review." in output
     assert "... and 2 more" in output
+
+
+def test_dry_run_prints_pricing_coverage_remediation():
+    plan = {
+        "benchmark": "pricing",
+        "models": [{"provider": "gemini", "model": "new-model"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": None,
+        "maximum_estimated_cost_usd": None,
+        "pricing_warnings": [],
+        "configuration_warnings": [],
+        "pricing_coverage": {
+            "summary": {
+                "selected": 1,
+                "billable": 1,
+                "exempt": 0,
+                "priced": 0,
+                "stale": 0,
+                "unknown": 1,
+            },
+            "models": [
+                {
+                    "provider": "gemini",
+                    "model": "new-model",
+                    "status": "unknown",
+                    "remediation": "add a reviewed direct-provider price override or update the official snapshot",
+                }
+            ],
+        },
+        "save_responses": False,
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert (
+        "Pricing coverage: 0/1 billable selected models have dated current pricing."
+        in output
+    )
+    assert (
+        "gemini/new-model (unknown): add a reviewed direct-provider price override"
+        in output
+    )
+
+
+def test_dry_run_uses_coverage_instead_of_repeating_pricing_warnings():
+    plan = {
+        "benchmark": "pricing",
+        "models": [{"provider": "openai", "model": "old-model"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": None,
+        "maximum_estimated_cost_usd": None,
+        "pricing_warnings": [
+            {"model": "old-model", "message": "official pricing snapshot is stale"}
+        ],
+        "configuration_warnings": [],
+        "pricing_coverage": {
+            "summary": {
+                "selected": 1,
+                "billable": 1,
+                "exempt": 0,
+                "priced": 0,
+                "undated": 0,
+                "stale": 1,
+                "unknown": 0,
+            },
+            "models": [
+                {
+                    "provider": "openai",
+                    "model": "old-model",
+                    "status": "stale",
+                    "remediation": "upgrade llm-preflight",
+                }
+            ],
+        },
+        "save_responses": False,
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert "Pricing warnings:" not in output
+    assert output.count("(stale)") == 1
 
 
 def test_main_dry_run_includes_pricing_warnings(monkeypatch, tmp_path, capsys):
@@ -1999,6 +2123,48 @@ def test_main_pricing_check_exits_nonzero_for_unknown_pricing(
     output = json.loads(capsys.readouterr().out)
     assert output["ok"] is False
     assert output["warnings"][0]["message"] == "pricing is unknown"
+    assert output["summary"] == {
+        "selected": 1,
+        "billable": 1,
+        "exempt": 0,
+        "priced": 0,
+        "undated": 0,
+        "stale": 0,
+        "unknown": 1,
+    }
+    assert output["models"][0]["remediation"] == (
+        "add a reviewed direct-provider price override or update the official snapshot"
+    )
+
+
+def test_main_pricing_check_allows_undated_override_unless_current_pricing_is_required(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","models":[{"provider":"openai_compatible",'
+        '"model":"local","input_cost_per_million":1,"output_cost_per_million":2,'
+        '"pricing_metadata":{"source":"user override"}}]}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--pricing-check"])
+
+    cli.main()
+
+    assert json.loads(capsys.readouterr().out)["ok"] is True
+    config.write_text(
+        '{"prompt":"hello","require_current_pricing":true,"models":['
+        '{"provider":"openai_compatible","model":"local",'
+        '"input_cost_per_million":1,"output_cost_per_million":2,'
+        '"pricing_metadata":{"source":"user override"}}]}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--pricing-check"])
+
+    with pytest.raises(SystemExit, match="1"):
+        cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["models"][0]["status"] == "undated"
+    assert output["enforcement_ok"] is False
 
 
 def test_main_dry_run_redacts_secrets(monkeypatch, tmp_path, capsys):

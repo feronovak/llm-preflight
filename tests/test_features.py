@@ -96,6 +96,7 @@ def test_doctor_report_flags_missing_keys_and_model_count(monkeypatch):
     assert report["ok"] is False
     assert report["models"] == 1
     assert "OPENAI_API_KEY" in report["checks"][0]["message"]
+    assert report["pricing_coverage"]["summary"]["unknown"] == 1
 
 
 def test_compare_results_reports_metric_deltas_and_regressions():
@@ -259,6 +260,17 @@ def test_budget_check_rejects_cost_cap_when_pricing_is_unknown():
 
     with pytest.raises(ValueError, match="pricing is unknown"):
         check_budget(config)
+
+
+def test_budget_check_can_require_current_pricing_for_every_selected_model():
+    with pytest.raises(ValueError, match="pricing coverage is incomplete"):
+        check_budget(
+            {
+                "prompt": "hi",
+                "models": [{"provider": "openai_compatible", "model": "unpriced"}],
+                "require_current_pricing": True,
+            }
+        )
 
 
 def test_budget_check_counts_mixed_builtin_and_custom_tests():

@@ -16,9 +16,9 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--smoke` | off | Set one repetition, no warmups, and concurrency one. It still makes paid requests; use `--dry-run` first. |
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
-| `--doctor` | off | Validate configuration, keys, and model resolution; no generation. |
-| `--pricing-check` | off | Report unknown or stale prices; no generation. |
-| `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices; no generation. |
+| `--doctor` | off | Validate configuration, keys, model resolution, and selected-model pricing coverage; no generation. |
+| `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
+| `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |
 | `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. |
 | `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. |
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |

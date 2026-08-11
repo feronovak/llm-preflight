@@ -45,6 +45,50 @@ def test_result_with_a_model_that_produced_no_samples_fails_closed():
     assert result_failed({"models": [{"summary": {"requests": 0}, "samples": []}]})
 
 
+def test_run_benchmark_requires_current_pricing_before_making_requests():
+    with pytest.raises(ValueError, match="pricing coverage is incomplete"):
+        run_benchmark(
+            {
+                "prompt": "Reply with ok.",
+                "models": [{"provider": "openai_compatible", "model": "local"}],
+                "require_current_pricing": True,
+            }
+        )
+
+
+def test_run_benchmark_allows_mock_models_when_current_pricing_is_required():
+    result = run_benchmark(
+        {
+            "prompt": "Reply with ok.",
+            "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+            "require_current_pricing": True,
+            "warmups": 0,
+            "repetitions": 1,
+        }
+    )
+
+    assert result["pricing_coverage"]["models"][0]["pricing_exempt"] is True
+
+
+def test_current_pricing_gate_names_undated_prices_in_its_remedy():
+    with pytest.raises(ValueError, match="unknown, undated, or stale"):
+        run_benchmark(
+            {
+                "prompt": "Reply with ok.",
+                "models": [
+                    {
+                        "provider": "openai_compatible",
+                        "model": "local",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 2,
+                        "pricing_metadata": {"source": "user override"},
+                    }
+                ],
+                "require_current_pricing": True,
+            }
+        )
+
+
 def test_benchmark_records_the_source_config_path_without_putting_it_in_config():
     result = run_benchmark(
         {
@@ -61,6 +105,8 @@ def test_benchmark_records_the_source_config_path_without_putting_it_in_config()
     assert "_source_config_path" not in result["source_config"]
     assert result["pricing_ledger"][0]["source"] == "unknown"
     assert len(result["pricing_fingerprint"]) == 64
+    assert result["pricing_coverage"]["summary"]["exempt"] == 1
+    assert result["pricing_coverage"]["models"][0]["pricing_exempt"] is True
 
 
 def test_budget_and_result_share_the_tiered_cached_pricing_ledger(monkeypatch):
@@ -1531,6 +1577,19 @@ def test_report_includes_pricing_warnings():
                 "message": "pricing is unknown",
             }
         ],
+        "pricing_coverage": {
+            "summary": {"selected": 1, "priced": 0, "stale": 0, "unknown": 1},
+            "models": [
+                {
+                    "provider": "openai_compatible",
+                    "model": "local",
+                    "status": "unknown",
+                    "source": "unknown",
+                    "as_of": None,
+                    "remediation": "add a reviewed direct-provider price override or update the official snapshot",
+                }
+            ],
+        },
         "models": [
             {
                 "name": "local",
@@ -1552,6 +1611,8 @@ def test_report_includes_pricing_warnings():
 
     assert "## Pricing warnings" in rendered
     assert "openai_compatible/local: pricing is unknown" in rendered
+    assert "## Pricing coverage" in rendered
+    assert "add a reviewed direct-provider price override" in rendered
 
 
 def test_zero_reliability_model_cannot_rank_as_cheapest():

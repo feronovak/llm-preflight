@@ -9,7 +9,11 @@ from typing import Any, cast
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
 from .presets import SUPPORTED_PRESETS, expand_presets
-from .pricing import estimate_sample_cost, pricing_freshness_report, resolve_pricing
+from .pricing import (
+    estimate_sample_cost,
+    pricing_coverage_report,
+    resolve_pricing,
+)
 from .runner import select_test_profiles
 
 
@@ -219,7 +223,15 @@ def estimate_budget(
 
 
 def check_budget(config: dict[str, Any]) -> dict[str, Any]:
-    budget = estimate_budget(config)
+    models = resolve_models(config)
+    budget = estimate_budget(config, models)
+    if config.get("require_current_pricing"):
+        coverage = pricing_coverage_report(models, require_current_pricing=True)
+        if not coverage["enforcement_ok"]:
+            raise ValueError(
+                "pricing coverage is incomplete; run --pricing-check and resolve "
+                "unknown, undated, or stale model prices before a paid benchmark"
+            )
     max_requests = config.get("max_requests")
     if max_requests is not None and budget["possible_requests"] > int(max_requests):
         raise ValueError(
@@ -249,6 +261,9 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
             "models": 0,
             "checks": [{"ok": False, "message": str(exc)}],
         }
+    pricing_coverage = pricing_coverage_report(
+        models, require_current_pricing=bool(config.get("require_current_pricing"))
+    )
     for model in models:
         provider = model.get("provider", "openai_compatible")
         resolved = {**PROVIDER_DEFAULTS.get(provider, {}), **model}
@@ -277,7 +292,7 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
                     "message": "configuration looks runnable",
                 }
             )
-    for warning in pricing_freshness_report(models)["warnings"]:
+    for warning in pricing_coverage["warnings"]:
         checks.append(
             {
                 "ok": True,
@@ -290,6 +305,7 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
         "ok": all(check["ok"] for check in checks),
         "models": len(models),
         "checks": checks,
+        "pricing_coverage": pricing_coverage,
     }
 
 

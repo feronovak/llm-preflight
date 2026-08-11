@@ -62,8 +62,48 @@ Preview also uses its published per-request 200k-input tier, including thinking
 tokens in output usage. Estimates still exclude taxes, cache-storage fees, tool
 fees, and account-specific discounts not reported in usage.
 
-Run `--dry-run` or `--pricing-check` after pricing edits. Treat unknown or
-stale prices as a reason not to compare cost rankings.
+An explicit override is reviewed evidence, not a timeless number. Include a
+source and date so the coverage gate can assess it:
+
+```json
+{
+  "provider": "openai",
+  "model": "candidate-model",
+  "input_cost_per_million": 2.5,
+  "output_cost_per_million": 15,
+  "pricing_metadata": {
+    "source": "official provider pricing",
+    "as_of": "2026-08-11"
+  }
+}
+```
+
+Run `--dry-run` or `--pricing-check` after pricing edits. The coverage report
+lists every selected direct model and OpenRouter route as `priced`, `undated`,
+`stale`, or `unknown`, together with its source and remediation. An invalid
+date is `undated` and names the date correction required. Mock fixtures remain
+in the report as pricing-exempt because they cannot create paid provider usage.
+Treat unknown or stale prices as a reason not to compare cost rankings.
+`--pricing-check` exits nonzero for those two states; it also exits nonzero for
+an undated price when `"require_current_pricing": true` is set.
+
+That setting prevents a paid run until every billable selected route has a
+current dated price. It also applies the freshness window to dated user
+overrides, so a one-time override cannot satisfy the gate indefinitely. For a
+stale direct-provider snapshot, upgrade `llm-preflight` once its official
+snapshot has been refreshed, or supply reviewed override evidence; a refresh
+write does not permanently freeze an older bundled snapshot.
+
+## Snapshot verification
+
+The bundled direct-provider snapshot is release-reviewed evidence. Each model
+entry records its provider's primary `source_url` and an `as_of` review date in
+the resolved `pricing_metadata`. When refreshing it, verify every retained
+model's standard synchronous input and output rates against that URL, update
+the value, `as_of`, and source URL together, then run the snapshot coverage
+test and `--pricing-check` before release. Do not re-date an entry whose rate
+or availability cannot be verified from its recorded primary source; remove it
+from the snapshot so the normal unknown-price remediation is shown instead.
 
 ## Sensitive data
 

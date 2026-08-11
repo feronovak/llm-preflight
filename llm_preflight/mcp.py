@@ -19,7 +19,7 @@ from .features import (
     compare_results,
     estimate_budget,
 )
-from .pricing import pricing_freshness_report
+from .pricing import pricing_coverage_report, pricing_freshness_report
 from .redaction import redact_secrets
 from .runner import load_config, run_benchmark, validate_config_validations
 
@@ -205,7 +205,16 @@ def _call(
                 "ok": True,
                 "models": models,
                 **budget,
-                "pricing_warnings": pricing_freshness_report(models)["warnings"],
+                "pricing_warnings": pricing_freshness_report(
+                    models,
+                    enforce_override_freshness=bool(
+                        config.get("require_current_pricing")
+                    ),
+                )["warnings"],
+                "pricing_coverage": pricing_coverage_report(
+                    models,
+                    require_current_pricing=bool(config.get("require_current_pricing")),
+                ),
             },
             standard=standard,
         )

@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.6.0"
-    assert 'version = "2.6.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.0"
+    assert 'version = "2.7.0"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -206,6 +206,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "--pricing-check",
         "--smoke --dry-run --json",
         "--no-save",
+        'test "$status" -eq 3',
     ):
         assert required in workflow
     assert "pull_request_target" not in workflow

@@ -71,8 +71,8 @@ A mock-only configuration intentionally exits 3: it proves local configuration
 and report handling, not a live-provider decision. Use it for a no-key example
 or test fixture, not as a passing production gate. A 2.7.0 GitHub workflow
 should explicitly expect that exit code when its purpose is to verify the mock
-fixture; the currently pinned released starter remains on 2.6.0 until 2.7.0 is
-published.
+fixture. Pin the starter workflow to the 2.7.0 release when adopting this
+behavior.
 
 For that 2.7.0 mock-evidence job, preserve the JSON artifact while accepting
 only the expected inconclusive status:

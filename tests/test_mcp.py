@@ -280,6 +280,14 @@ def test_mock_run_never_loads_the_env_file(monkeypatch, tmp_path):
 
     assert response["result"]["isError"] is False
     assert "TEST_MCP_SECRET" not in __import__("os").environ
+    assert response["result"]["structuredContent"]["decision"] == {
+        "schema_version": 1,
+        "state": "inconclusive",
+        "reason_code": "degraded_evidence",
+        "reason": "Evidence is degraded; resolve blocking warnings before using this result.",
+        "safe_next_command": f"llm-preflight {tmp_path / 'benchmark.json'} --doctor --json",
+        "blocking_warnings": ["Mock-only runs do not provide live-provider evidence."],
+    }
 
 
 def test_mcp_returns_a_tool_error_for_current_pricing_gate_failures(tmp_path):

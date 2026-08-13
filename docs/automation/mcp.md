@@ -101,6 +101,12 @@ config-adjacent `.env.production`, an explicit workspace-relative environment
 file, or keys already supplied to the MCP client process. Mock and
 unconfirmed runs do not load those files.
 
+For a completed run, `run_preflight` returns the same `decision` object as the
+saved JSON artifact. Agents must consume that structured object instead of
+parsing terminal text. A `decision.state` of `inconclusive` requires reporting
+each `blocking_warnings` entry verbatim before proposing paid work or approval.
+See [Agent decision contract](../reference/decision.md).
+
 ## Safe agent workflow
 
 1. Ask the agent to run `validate_config` after an LLM-related change.

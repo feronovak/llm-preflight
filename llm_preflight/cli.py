@@ -70,6 +70,75 @@ OPENROUTER_API_KEY=""
 XAI_API_KEY=""
 """
 
+INSTRUCTION_BLOCK_START = "<!-- llm-preflight:agent-instructions:v1:start -->"
+INSTRUCTION_BLOCK_END = "<!-- llm-preflight:agent-instructions:v1:end -->"
+_INSTRUCTION_BLOCK = """<!-- llm-preflight:agent-instructions:v1:start -->
+## LLM preflight operating rules
+
+Before changing a model ID, provider call, prompt, parser, or tool definition:
+
+1. Read the benchmark configuration and preserve the deployed contract unless a
+   contract change is explicitly approved.
+2. Run `--doctor` and `--dry-run` before any live benchmark.
+3. Treat a validator failure as evidence, not a reason to weaken the validator.
+   Inspect a saved response or make an explicitly approved contract change.
+4. Do not infer a provider for an unknown model ID; use `provider:model`.
+5. Do not approve a model, raise a spend limit, or start paid work without
+   explicit user approval.
+6. Surface every `blocking_warnings` entry verbatim, then run
+   `llm-preflight CONFIG --doctor --json` before paid work or approval.
+
+This block is managed by `llm-preflight init --agent-instructions PATH`.
+<!-- llm-preflight:agent-instructions:v1:end -->"""
+
+
+def _render_instruction_block(current: str) -> str:
+    starts = current.count(INSTRUCTION_BLOCK_START)
+    ends = current.count(INSTRUCTION_BLOCK_END)
+    if starts == 0 and ends == 0:
+        separator = "" if not current or current.endswith("\n") else "\n"
+        return f"{current}{separator}{_INSTRUCTION_BLOCK}\n"
+    if starts != 1 or ends != 1:
+        raise ValueError("instruction file has incomplete or duplicate managed markers")
+    start = current.index(INSTRUCTION_BLOCK_START)
+    end = current.index(INSTRUCTION_BLOCK_END)
+    if end < start:
+        raise ValueError("instruction file has managed markers in the wrong order")
+    end += len(INSTRUCTION_BLOCK_END)
+    return f"{current[:start]}{_INSTRUCTION_BLOCK}{current[end:]}"
+
+
+def _prepare_instruction_block(path: Path) -> tuple[str, str]:
+    if path.exists() and path.is_dir():
+        raise ValueError(
+            "agent instruction destination must be a file, not a directory"
+        )
+    if path.is_symlink():
+        raise ValueError(
+            "agent instruction destination is a symbolic link; refusing to replace it"
+        )
+    current = path.read_text(encoding="utf-8") if path.exists() else ""
+    return current, _render_instruction_block(current)
+
+
+def _write_instruction_block(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", dir=path.parent, text=True
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), mode)
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
 
 def catalog_output(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return catalog entries safe for terminal/CI output."""
@@ -468,8 +537,32 @@ def _init_main(argv: list[str]) -> None:
     parser.add_argument("--model")
     parser.add_argument("--api-key-env")
     parser.add_argument("--write-env-example", action="store_true")
+    parser.add_argument(
+        "--agent-instructions",
+        type=Path,
+        help="opt in to a managed preflight block in this instruction file",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="check the managed instruction block for drift without writing files",
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args(argv)
+    if args.check:
+        if args.agent_instructions is None:
+            parser.error("--check requires --agent-instructions PATH")
+        current, expected = _prepare_instruction_block(args.agent_instructions)
+        if current != expected:
+            print("Managed agent instruction block has drifted.", file=sys.stderr)
+            raise SystemExit(1)
+        print("Managed agent instruction block is current.")
+        return
+    if (
+        args.agent_instructions is not None
+        and args.agent_instructions.resolve() == args.path.resolve()
+    ):
+        parser.error("--agent-instructions must differ from the benchmark config path")
     if args.path.exists() and args.path.is_dir():
         parser.error("destination must be a file, not a directory")
     if args.template == "mock":
@@ -498,9 +591,14 @@ def _init_main(argv: list[str]) -> None:
     env_example = args.path.parent / ".env.example"
     if args.write_env_example and env_example.exists():
         parser.error(f"{env_example} already exists; refusing to overwrite it")
+    instruction_content: str | None = None
+    if args.agent_instructions is not None:
+        _, instruction_content = _prepare_instruction_block(args.agent_instructions)
     _write_starter_config(args.path, config, force=args.force)
     if args.write_env_example:
         _write_env_example(env_example, args.api_key_env)
+    if instruction_content is not None:
+        _write_instruction_block(args.agent_instructions, instruction_content)
     command = _display_command()
     print(f"Created {args.path}")
     if live:
@@ -587,6 +685,15 @@ def _display_command() -> str:
     if Path(sys.argv[0]).name in {"cli.py", "__main__.py"}:
         return "python3 -m llm_preflight"
     return "llm-preflight"
+
+
+def _result_exit_code(result: dict[str, object]) -> int:
+    decision = result.get("decision")
+    if isinstance(decision, dict) and isinstance(decision.get("state"), str):
+        if decision["state"] == "inconclusive":
+            return 3
+        return 1 if decision["state"] == "fail" else 0
+    return 1 if result_failed(result) else 0
 
 
 def _format_catalog_watch(payload: dict[str, Any]) -> str:
@@ -1079,7 +1186,7 @@ def _watch_new_main(argv: list[str]) -> None:
     if path is not None:
         print(f"Saved raw result to {path}", file=sys.stderr)
     save_snapshot(snapshot_path, models)
-    if args.interactive and path is not None:
+    if args.interactive and path is not None and _result_exit_code(result) == 0:
         candidate_keys = {
             (model.get("provider", "openai_compatible"), model["model"])
             for model in candidates
@@ -1087,7 +1194,8 @@ def _watch_new_main(argv: list[str]) -> None:
         passing = [
             model
             for model in result["models"]
-            if (model.get("provider", "openai_compatible"), model["model"])
+            if _result_exit_code(result) == 0
+            and (model.get("provider", "openai_compatible"), model["model"])
             in candidate_keys
             and not model_failed(model)
         ]
@@ -1113,8 +1221,8 @@ def _watch_new_main(argv: list[str]) -> None:
                             str(args.against),
                         ]
                     )
-    if result_failed(result):
-        raise SystemExit(1)
+    if exit_code := _result_exit_code(result):
+        raise SystemExit(exit_code)
 
 
 def _approve_model_main(argv: list[str]) -> None:
@@ -1130,6 +1238,9 @@ def _approve_model_main(argv: list[str]) -> None:
     if not separator or not provider or not model_id:
         parser.error("model must use provider:model")
     result = load_json(args.result_path)
+    if _result_exit_code(result) != 0:
+        state = result.get("decision", {}).get("state", "failing")
+        parser.error(f"refusing to approve a result with decision state {state}")
     match = next(
         (
             item
@@ -1433,6 +1544,8 @@ def interactive_promote_models(
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
 ) -> None:
+    if _result_exit_code(result) != 0:
+        return
     approved = load_json(approved_path) if approved_path.exists() else {"models": []}
     approved_keys = {
         (item.get("provider", "openai_compatible"), item["model"])
@@ -1441,7 +1554,8 @@ def interactive_promote_models(
     passing = [
         model
         for model in result.get("models", [])
-        if not model_failed(model)
+        if _result_exit_code(result) == 0
+        and not model_failed(model)
         and (model.get("provider", "openai_compatible"), model["model"])
         not in approved_keys
     ]
@@ -2120,10 +2234,10 @@ def main() -> None:
         print(f"Saved raw result to {path}", file=sys.stderr)
     if ci_failed:
         raise SystemExit(1)
+    if exit_code := _result_exit_code(result):
+        raise SystemExit(exit_code)
     if args.approve_to and path is not None:
         interactive_promote_models(result, path, args.approve_to)
-    if result_failed(result):
-        raise SystemExit(1)
 
 
 if __name__ == "__main__":

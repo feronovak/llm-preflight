@@ -15,6 +15,7 @@ from typing import Any
 
 from .catalog import resolve_models
 from .client import create_client
+from .decision import build_decision
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
@@ -1056,6 +1057,7 @@ def run_benchmark(
     }
     if config.get("_source_config_path"):
         result["source_config_path"] = config["_source_config_path"]
+    result["decision"] = build_decision(result)
     return redact_secrets(result)
 
 

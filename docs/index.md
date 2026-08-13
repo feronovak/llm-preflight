@@ -38,7 +38,11 @@ Results stay local unless you decide to attach or publish them.
 
 ## Reference and help
 
+- [Product map](FEATURE_MAP.md) — the source-verified capabilities in this
+  release.
+- [Changelog](../CHANGELOG.md) — shipped changes by version.
 - [CLI reference](reference/cli.md)
+- [Agent decision contract](reference/decision.md)
 - [Configuration](reference/configuration.md) and
   [configuration schema](reference/configuration-schema.md)
 - [Result JSON schema](reference/results.md)

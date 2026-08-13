@@ -97,8 +97,10 @@ result. A model with `n/a` cost has unknown pricing; it is not free.
 
 ### A first report, explained
 
-The mock demo produces the same kind of evidence as a paid run. Its Markdown
-report has a results table, a quality gate, and a decision section:
+The mock demo produces the same local contract evidence as a paid run, but it
+does not provide live-provider evidence. Its decision is therefore
+`inconclusive` and the command exits 3 even when every mock response validates.
+Its Markdown report has a results table and quality gate:
 
 ```text
 Model  | Valid | Latency p95 | Cost
@@ -108,7 +110,7 @@ QUALITY GATE
 local  PASS  -
 
 DECISION
-Recommended: local — passed every selected test and led the qualified value ranking.
+Inconclusive: mock-only runs do not provide live-provider evidence.
 ```
 
 `API OK` means the provider returned a response. `TEST OK` means that response

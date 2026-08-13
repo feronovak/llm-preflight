@@ -225,6 +225,7 @@ def _call(
     if name == "run_preflight":
         config_path = _path(arguments["config"], workspace)
         config = _config(config_path)
+        config["_source_config_path"] = str(config_path)
         live = bool(config.get("discovery")) or any(
             model.get("provider") != "mock" for model in config.get("models", [])
         )

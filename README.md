@@ -53,21 +53,27 @@ python3 -m llm_preflight benchmark.json --no-save
 
 `init` never overwrites an existing config. It creates a mock benchmark so
 you can see the report and exit behavior before making a paid request.
+Its result is intentionally `inconclusive` (exit code `3`): a local mock
+validates configuration and output handling, but cannot approve a live model.
 
-## What is new in 2.2–2.4
+## What is new in 2.5–2.6
 
-- **Validate the deployed contract.** Declare the JSON consumer your feature
-  really uses and add deterministic golden answers when structure alone is not
-  enough.
-- **Start and automate safely.** Create a no-key mock or explicit provider
-  starter with `init`, then use the fork-safe GitHub Actions example for
-  redacted evidence and baseline checks.
-- **Trust the cost evidence.** Refresh OpenRouter prices deliberately, see
-  pricing confidence, and replay saved results against their recorded price
-  ledger.
-- **Give coding agents bounded access.** The local MCP server can validate a
-  config, produce a dry-run plan, run an explicitly confirmed preflight, and
-  compare a baseline.
+- **Match the deployed JSON consumer.** Use `json_set`, `first_fenced_block`,
+  or `first_json_value` only when those are the parsing rules your application
+  actually uses.
+- **Require current pricing before paid work.** `--pricing-check` reports
+  every selected billable route as priced, undated, stale, or unknown, with a
+  source and remediation. Set `require_current_pricing` to block paid runs
+  until that coverage is current.
+
+## Next release
+
+The in-development 2.7.0 source adds a schema-versioned agent decision object:
+`pass`, `fail`, or `inconclusive`, with exact blocking warnings and a safe next
+command. It appears in saved JSON and MCP results so automation need not parse
+terminal output. See the [agent decision contract](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/decision.md).
+Mock-only runs intentionally produce `inconclusive`, while API and contract
+failures have separate remediation commands.
 
 ## Use it when
 

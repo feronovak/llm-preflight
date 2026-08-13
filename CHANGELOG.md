@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Add an additive, independently versioned agent decision object with pass,
+  fail, and inconclusive states; verbatim blocking warnings; and a safe next
+  command in result JSON and MCP preflight responses.
+- Add opt-in marker-delimited agent instruction blocks from `init`, including a
+  non-mutating drift check.
+
+### Changed
+
+- Make mock-only results inconclusive, prevent model approval unless the whole
+  result decision passes, and use exit code 3 for inconclusive evidence.
+- Distinguish API failures from contract failures in agent decisions and point
+  their safe next commands at setup diagnostics or a no-request plan review.
+
+### Breaking
+
+- A mock-only benchmark no longer exits successfully, and automation must
+  distinguish exit code 3 (inconclusive) from exit code 1 (failed).
+
 ## 2.6.0 - 2026-08-11
 
 ### Added

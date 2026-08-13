@@ -18,6 +18,46 @@ It does not judge semantic quality or authorize a production rollout.
 5. Do not approve a model, raise a spend limit, or start a paid run without an
    explicit instruction. Unknown pricing is not zero cost.
 
+## Optional repository instruction block
+
+To add these rules to a repository without replacing its own instructions, opt
+in explicitly when initializing a benchmark:
+
+```bash
+llm-preflight init benchmark.json --agent-instructions AGENTS.md
+```
+
+The command manages only its marker-delimited block. It never enables this by
+default, preserves user content outside the markers, and refuses a symbolic-link
+target. Check committed instructions in CI without changing files:
+
+```bash
+llm-preflight init --agent-instructions AGENTS.md --check
+```
+
+The managed `v1` content is intentionally kept in sync with the CLI:
+
+```markdown
+<!-- llm-preflight:agent-instructions:v1:start -->
+## LLM preflight operating rules
+
+Before changing a model ID, provider call, prompt, parser, or tool definition:
+
+1. Read the benchmark configuration and preserve the deployed contract unless a
+   contract change is explicitly approved.
+2. Run `--doctor` and `--dry-run` before any live benchmark.
+3. Treat a validator failure as evidence, not a reason to weaken the validator.
+   Inspect a saved response or make an explicitly approved contract change.
+4. Do not infer a provider for an unknown model ID; use `provider:model`.
+5. Do not approve a model, raise a spend limit, or start paid work without
+   explicit user approval.
+6. Surface every `blocking_warnings` entry verbatim, then run
+   `llm-preflight CONFIG --doctor --json` before paid work or approval.
+
+This block is managed by `llm-preflight init --agent-instructions PATH`.
+<!-- llm-preflight:agent-instructions:v1:end -->
+```
+
 ## Safe command sequence
 
 Start with the recommended `agent-smoke` suite: strict JSON extraction,
@@ -94,6 +134,15 @@ Key distinctions:
 - Cost is an estimate from known pricing and reported usage. Cached input,
   reasoning output where the provider reports it, and configured pricing tiers
   are included. Unknown pricing remains unknown.
+
+Read `decision` before acting. `pass` is complete passing evidence; `fail` is
+evidence of a request or contract failure and takes precedence over degraded
+evidence; `inconclusive` means no hard failure was observed but the evidence is
+degraded by unknown/stale pricing, incomplete cost evidence, or a mock-only
+run. Cost confidence is blocking only for runs with billable routes; retries
+remain informational. Surface every `blocking_warnings` entry
+verbatim, then run `llm-preflight CONFIG --doctor --json` before paid work or
+approval. See [Agent decision contract](../reference/decision.md).
 
 Exit codes are `0` for a passing requested operation, `1` for benchmark or CI
 failure, `2` for invalid input or operational setup error, and `130` for a

@@ -25,6 +25,7 @@ results/
 # Private maintainer and agent material
 LAUNCH.md
 RELEASING.md
+ROADMAP.md
 docs/NEXT_STEPS.md
 PRD-*.md
 security_best_practices_report.md

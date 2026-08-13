@@ -56,7 +56,6 @@ def test_audit_source_is_a_no_config_no_spend_json_command(
     )
 
     cli.main()
-
     output = json.loads(capsys.readouterr().out)
     assert output["network_accessed"] is False
     assert output["references"][0]["path"] == "app.py"
@@ -506,6 +505,218 @@ def test_main_init_refuses_to_overwrite_a_config(monkeypatch, tmp_path, capsys):
     assert exc_info.value.code == 2
     assert config_path.read_text() == '{"prompt":"keep this"}\n'
     assert "already exists" in capsys.readouterr().err
+
+
+def test_init_manages_an_opt_in_agent_instruction_block(monkeypatch, tmp_path):
+    config_path = tmp_path / "benchmark.json"
+    instructions = tmp_path / "AGENTS.md"
+    instructions.write_text("# Project instructions\n\nKeep this user text.\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--agent-instructions",
+            str(instructions),
+        ],
+    )
+
+    cli.main()
+
+    first = instructions.read_text()
+    assert first.startswith("# Project instructions\n\nKeep this user text.\n")
+    assert cli.INSTRUCTION_BLOCK_START in first
+    assert cli.INSTRUCTION_BLOCK_END in first
+    assert "Treat a validator failure as evidence" in first
+    assert "use `provider:model`" in first
+    assert "Surface every `blocking_warnings` entry verbatim" in first
+    assert (
+        cli._INSTRUCTION_BLOCK in Path("docs/automation/coding-agents.md").read_text()
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--force",
+            "--agent-instructions",
+            str(instructions),
+        ],
+    )
+    cli.main()
+    assert instructions.read_bytes() == first.encode()
+
+
+def test_init_instruction_check_detects_drift_without_mutating_files(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "benchmark.json"
+    instructions = tmp_path / "AGENTS.md"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--agent-instructions",
+            str(instructions),
+        ],
+    )
+    cli.main()
+    config_before = config_path.read_bytes()
+    instructions.write_text(
+        instructions.read_text().replace("Run `--doctor`", "Do not run `--doctor`")
+    )
+    drifted = instructions.read_bytes()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            "--agent-instructions",
+            str(instructions),
+            "--check",
+        ],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 1
+    assert instructions.read_bytes() == drifted
+    assert config_path.read_bytes() == config_before
+    assert "drifted" in capsys.readouterr().err
+
+
+def test_init_rewrites_only_its_managed_instruction_markers(monkeypatch, tmp_path):
+    config_path = tmp_path / "benchmark.json"
+    instructions = tmp_path / "AGENTS.md"
+    before = "# User heading\n\n"
+    after = "\n\n## User notes\nDo not change this.\n"
+    instructions.write_text(
+        before
+        + cli.INSTRUCTION_BLOCK_START
+        + "\nold managed content\n"
+        + cli.INSTRUCTION_BLOCK_END
+        + after
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--agent-instructions",
+            str(instructions),
+        ],
+    )
+
+    cli.main()
+
+    updated = instructions.read_text()
+    assert updated.startswith(before)
+    assert updated.endswith(after)
+    assert "old managed content" not in updated
+    assert updated.count(cli.INSTRUCTION_BLOCK_START) == 1
+    assert updated.count(cli.INSTRUCTION_BLOCK_END) == 1
+
+
+def test_init_refuses_to_use_the_config_file_as_an_instruction_target(
+    monkeypatch, tmp_path, capsys
+):
+    config_path = tmp_path / "benchmark.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--agent-instructions",
+            str(config_path),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert not config_path.exists()
+    assert "must differ" in capsys.readouterr().err
+
+
+def test_mock_only_shell_run_is_inconclusive_with_distinct_exit_code(tmp_path):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"ok","validation":{"exact":"ok"},'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "llm_preflight",
+            str(config),
+            "--json",
+            "--no-save",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 3
+    assert json.loads(completed.stdout)["decision"]["state"] == "inconclusive"
+
+
+def test_models_approve_refuses_an_inconclusive_result(monkeypatch, tmp_path, capsys):
+    result_path = tmp_path / "result.json"
+    approved = tmp_path / "approved.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "decision": {"state": "inconclusive"},
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "local",
+                        "summary": {"requests": 1, "failed": 0},
+                        "samples": [{"valid_output": True}],
+                    }
+                ],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "models",
+            "approve",
+            "mock:local",
+            "--from",
+            str(result_path),
+            "--approved",
+            str(approved),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert not approved.exists()
+    assert "inconclusive" in capsys.readouterr().err
 
 
 def test_init_provider_template_is_safe_and_writes_no_secret(monkeypatch, tmp_path):
@@ -1901,7 +2112,6 @@ def test_main_dry_run_prints_resolved_plan_without_running(
     )
 
     cli.main()
-
     output = json.loads(capsys.readouterr().out)
     assert output["models"][0]["provider"] == "openai"
     assert output["models"][0]["model"] == "fake"
@@ -2363,8 +2573,10 @@ def test_main_json_with_baseline_emits_one_parseable_document(
         ],
     )
 
-    cli.main()
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
 
+    assert exc_info.value.code == 3
     output = json.loads(capsys.readouterr().out)
     assert output["baseline_diff"]["ok"] is True
 
@@ -2563,7 +2775,8 @@ def test_cli_process_exit_codes_stop_modes_and_budget_enforcement(tmp_path):
             "warmups": 0,
         }
     )
-    assert success.returncode == 0
+    assert success.returncode == 3
+    assert json.loads(success.stdout)["decision"]["state"] == "inconclusive"
 
     validation_failure = run(
         {

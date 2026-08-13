@@ -189,6 +189,8 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert mock["models"][0]["response"] == "ok"
     assert run_benchmark(mock)["models"][0]["summary"]["failed"] == 0
 
+    pyproject = Path("pyproject.toml").read_text()
+    version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE).group(1)
     workflow = Path("examples/github-actions/preflight.yml").read_text()
     for required in (
         "pull_request:",
@@ -199,7 +201,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "actions/upload-artifact@",
         "if: always()",
         "retention-days:",
-        "llm-preflight==2.3.0",
+        f"llm-preflight=={version}",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",
@@ -212,8 +214,13 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
 
     getting_started = Path("docs/getting-started/safe-demo.md").read_text()
     ci = Path("docs/automation/ci.md").read_text()
+    readme = Path("README.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
+    assert "## What is new in 2.5–2.6" in readme
+    assert "**Match the deployed JSON consumer.**" in readme
+    assert "**Require current pricing before paid work.**" in readme
+    assert "**Give coding agents bounded access.**" not in readme
 
 
 def test_pypi_trusted_publisher_isolated_to_release_workflow():

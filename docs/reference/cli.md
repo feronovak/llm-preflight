@@ -24,7 +24,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
 | `--init [PATH]` | `benchmark.json` | Create a no-key mock config without overwriting a file. |
-| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, and API-key environment-variable name. |
+| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, and API-key environment-variable name. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
 | `--models LIST` | — | Comma-separated `provider:model` list for `--quick`. An unprefixed ID is accepted only for recognizable OpenAI IDs. |
 | `--diff BASELINE CURRENT` | — | Compare two saved JSON result files; no benchmark run. |
 | `--replay PATH` | — | Re-run the saved source configuration in a result artifact. |
@@ -68,6 +68,15 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 
 Omit `--stop-on` to run every selected model. The interactive menu calls that
 choice `never`; it is not a command-line value.
+
+## Exit codes and agent decisions
+
+For a completed benchmark, exit code `0` means `decision.state` is `pass`;
+`1` means `fail`; and `3` means `inconclusive`. Read the result's
+`blocking_warnings` verbatim before proposing paid work or approval. Exit code
+`2` remains invalid input or operational setup failure, and `130` remains a
+cancelled operation. The decision is present in JSON artifacts and MCP
+`run_preflight` results; see [Agent decision contract](decision.md).
 
 ## Built-in test packs
 

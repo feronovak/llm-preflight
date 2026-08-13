@@ -3,9 +3,10 @@
 ## JSON output and exit status
 
 `--json` writes a machine-readable result to stdout. Result saving notices go to
-stderr, so redirecting stdout is safe. A benchmark exits 0 only when every
-selected model completes and passes validation; an API error or failed test
-exits 1. Cancellation exits 130.
+stderr, so redirecting stdout is safe. A benchmark exits 0 only for a `pass`
+decision, 1 for `fail`, and 3 for `inconclusive` evidence. Cancellation exits
+130. Treat the result's `blocking_warnings` as the authoritative explanation;
+do not parse terminal output.
 
 ```bash
 llm-preflight benchmark.json --json --no-save > current.json
@@ -64,6 +65,26 @@ llm-preflight benchmark.json --doctor --json
 llm-preflight benchmark.json --pricing-check
 llm-preflight benchmark.json --smoke --dry-run --json
 llm-preflight benchmark.json --smoke --json --no-save > current.json
+```
+
+A mock-only configuration intentionally exits 3: it proves local configuration
+and report handling, not a live-provider decision. Use it for a no-key example
+or test fixture, not as a passing production gate. A 2.7.0 GitHub workflow
+should explicitly expect that exit code when its purpose is to verify the mock
+fixture; the currently pinned released starter remains on 2.6.0 until 2.7.0 is
+published.
+
+For that 2.7.0 mock-evidence job, preserve the JSON artifact while accepting
+only the expected inconclusive status:
+
+```yaml
+- name: Run the no-key mock evidence job
+  run: |
+    set +e
+    llm-preflight examples/starter/mock-benchmark.json --smoke --json --no-save > results/current.json
+    status=$?
+    set -e
+    test "$status" -eq 3
 ```
 
 Set `max_requests` and `max_estimated_cost_usd` in the config to prevent

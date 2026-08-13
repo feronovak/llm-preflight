@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import pytest
 
+from llm_preflight.decision import build_decision
 from llm_preflight.features import estimate_budget
 from llm_preflight.runner import (
     _failed_tests,
@@ -45,6 +46,117 @@ def test_result_with_a_model_that_produced_no_samples_fails_closed():
     assert result_failed({"models": [{"summary": {"requests": 0}, "samples": []}]})
 
 
+def test_decision_contract_uses_pass_fail_and_inconclusive_states():
+    complete = {
+        "models": [
+            {
+                "name": "candidate",
+                "summary": {"requests": 1, "failed": 0, "valid_output_rate": 1},
+                "samples": [{"valid_output": True}],
+            }
+        ],
+        "cost_confidence": "complete",
+        "pricing_coverage": {"models": []},
+        "source_config_path": "/workspace/benchmark.json",
+    }
+    failed = {
+        **complete,
+        "models": [
+            {
+                "name": "candidate",
+                "summary": {"requests": 1, "failed": 1, "valid_output_rate": 0},
+                "samples": [{"valid_output": False}],
+            }
+        ],
+    }
+    degraded = {
+        **complete,
+        "cost_confidence": "partial",
+        "pricing_coverage": {
+            "models": [
+                {
+                    "provider": "openai_compatible",
+                    "model": "unpriced",
+                    "status": "unknown",
+                }
+            ]
+        },
+        "models": [
+            {
+                **complete["models"][0],
+                "summary": {
+                    "requests": 1,
+                    "failed": 0,
+                    "valid_output_rate": 1,
+                },
+            }
+        ],
+    }
+
+    assert build_decision(complete) == {
+        "schema_version": 1,
+        "state": "pass",
+        "reason_code": "benchmark_passed",
+        "reason": "All requested models passed with complete, uninterrupted evidence.",
+        "safe_next_command": "llm-preflight /workspace/benchmark.json --doctor --json",
+        "blocking_warnings": [],
+    }
+    failed_with_degraded_evidence = {**degraded, "models": failed["models"]}
+    assert build_decision(failed_with_degraded_evidence)["state"] == "fail"
+    assert build_decision(failed_with_degraded_evidence)["blocking_warnings"] == [
+        "Pricing is unknown for openai_compatible:unpriced; resolve its pricing before using this result.",
+        "Cost confidence is partial; complete cost evidence is required.",
+    ]
+    api_failure = build_decision(failed)
+    assert api_failure["reason_code"] == "api_failure"
+    assert api_failure["safe_next_command"] == (
+        "llm-preflight /workspace/benchmark.json --doctor --json"
+    )
+    contract_failure = build_decision(
+        {
+            **complete,
+            "models": [
+                {
+                    "name": "candidate",
+                    "summary": {"requests": 1, "failed": 0, "valid_output_rate": 0},
+                    "samples": [{"valid_output": False}],
+                }
+            ],
+        }
+    )
+    assert contract_failure["reason_code"] == "contract_failure"
+    assert contract_failure["safe_next_command"] == (
+        "llm-preflight /workspace/benchmark.json --dry-run --json"
+    )
+    assert build_decision(degraded) == {
+        "schema_version": 1,
+        "state": "inconclusive",
+        "reason_code": "degraded_evidence",
+        "reason": "Evidence is degraded; resolve blocking warnings before using this result.",
+        "safe_next_command": "llm-preflight /workspace/benchmark.json --doctor --json",
+        "blocking_warnings": [
+            "Pricing is unknown for openai_compatible:unpriced; resolve its pricing before using this result.",
+            "Cost confidence is partial; complete cost evidence is required.",
+        ],
+    }
+    unsafe_identifier = {
+        **degraded,
+        "pricing_coverage": {
+            "models": [
+                {
+                    "provider": "provider\nname",
+                    "model": "m" * 200,
+                    "status": "stale",
+                }
+            ]
+        },
+    }
+    warning = build_decision(unsafe_identifier)["blocking_warnings"][0]
+    assert "\n" not in warning
+    assert "provider?name" in warning
+    assert "m" * 121 not in warning
+
+
 def test_run_benchmark_requires_current_pricing_before_making_requests():
     with pytest.raises(ValueError, match="pricing coverage is incomplete"):
         run_benchmark(
@@ -68,6 +180,11 @@ def test_run_benchmark_allows_mock_models_when_current_pricing_is_required():
     )
 
     assert result["pricing_coverage"]["models"][0]["pricing_exempt"] is True
+    assert result["decision"]["state"] == "inconclusive"
+    assert result["decision"]["schema_version"] == 1
+    assert result["decision"]["blocking_warnings"] == [
+        "Mock-only runs do not provide live-provider evidence."
+    ]
 
 
 def test_current_pricing_gate_names_undated_prices_in_its_remedy():

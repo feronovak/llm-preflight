@@ -71,4 +71,10 @@ jobs:
             fi
             sleep 15
           done
-      - run: .testpypi-venv/bin/llm-preflight --quick "Reply with ok." --models mock:local --no-save
+      - name: Verify the installed mock CLI reports intentional inconclusive evidence
+        run: |
+          set +e
+          .testpypi-venv/bin/llm-preflight --quick "Reply with ok." --models mock:local --no-save
+          status=$?
+          set -e
+          test "${status}" -eq 3

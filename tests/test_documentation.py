@@ -35,7 +35,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
     assert (
-        "**Last reviewed:** 2026-08-13 · **As of:** v2.7.0 (unreleased)" in feature_map
+        "**Last reviewed:** 2026-08-13 · **As of:** v2.7.1 (unreleased)" in feature_map
     )
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map

@@ -68,7 +68,7 @@ validates configuration and output handling, but cannot approve a live model.
 
 ## Next release
 
-The in-development 2.7.0 source adds a schema-versioned agent decision object:
+The in-development 2.7.1 source adds a schema-versioned agent decision object:
 `pass`, `fail`, or `inconclusive`, with exact blocking warnings and a safe next
 command. It appears in saved JSON and MCP results so automation need not parse
 terminal output. See the [agent decision contract](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/decision.md).

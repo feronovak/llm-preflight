@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 2.7.0 - 2026-08-13
+## 2.7.1 - 2026-08-13
 
 ### Added
 
@@ -23,6 +23,11 @@ All notable changes to this project are documented here.
 
 - A mock-only benchmark no longer exits successfully, and automation must
   distinguish exit code 3 (inconclusive) from exit code 1 (failed).
+
+### Fixed
+
+- Make the TestPyPI fresh-install smoke check accept the intentional exit code
+  3 from its mock-only benchmark.
 
 ## 2.6.0 - 2026-08-11
 

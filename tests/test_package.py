@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.7.0"
-    assert 'version = "2.7.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.1"
+    assert 'version = "2.7.1"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -39,6 +39,7 @@ def test_build_backend_is_pinned_for_reproducible_release_artifacts():
 def test_ci_and_release_workflows_install_committed_tool_locks():
     ci_workflow = Path(".github/workflows/tests.yml").read_text()
     release_workflow = Path(".github/workflows/release.yml").read_text()
+    testpypi_workflow = Path(".github/workflows/testpypi.yml").read_text()
 
     assert "python -m pip install --requirement requirements/ci.lock" in ci_workflow
     assert "python -m pip install --no-deps -e ." in ci_workflow
@@ -46,6 +47,7 @@ def test_ci_and_release_workflows_install_committed_tool_locks():
         "python -m pip install --requirement requirements/release.lock"
         in release_workflow
     )
+    assert 'test "${status}" -eq 3' in testpypi_workflow
 
 
 def test_setup_py_has_only_the_single_console_entry_point():

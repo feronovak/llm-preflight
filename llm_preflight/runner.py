@@ -1252,12 +1252,22 @@ def _failed_tests(model: dict[str, Any]) -> str:
         return ", ".join(failed_profiles)
     failure_reasons = model.get("summary", {}).get("failure_reasons", {})
     if failure_reasons:
-        return ", ".join(failure_reasons)
+        reasons = ", ".join(_failure_reason_label(reason) for reason in failure_reasons)
+        return reasons if len(reasons) <= 120 else f"{reasons[:117]}..."
     if model.get("summary", {}).get("failed", 0):
         return "request failed"
     if model_has_test_failure(model):
         return "config prompt"
     return "-"
+
+
+def _failure_reason_label(reason: str) -> str:
+    """Keep terminal dashboards readable without echoing provider error bodies."""
+    match = re.search(r"\bHTTP\s+(\d{3})\b", reason)
+    if match:
+        return f"HTTP {match.group(1)} request failed"
+    compact = " ".join(reason.split())
+    return compact if len(compact) <= 80 else f"{compact[:77]}..."
 
 
 def _model_passed(model: dict[str, Any]) -> bool:

@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.7.1"
-    assert 'version = "2.7.1"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.2"
+    assert 'version = "2.7.2"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -191,8 +191,6 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert mock["models"][0]["response"] == "ok"
     assert run_benchmark(mock)["models"][0]["summary"]["failed"] == 0
 
-    pyproject = Path("pyproject.toml").read_text()
-    version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE).group(1)
     workflow = Path("examples/github-actions/preflight.yml").read_text()
     for required in (
         "pull_request:",
@@ -203,7 +201,9 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "actions/upload-artifact@",
         "if: always()",
         "retention-days:",
-        f"llm-preflight=={version}",
+        # The starter must install the latest published package, not an
+        # unreleased source version under development.
+        "llm-preflight==2.7.1",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",

@@ -1900,6 +1900,39 @@ def test_console_report_includes_pass_fail_dashboard():
     assert "rate limited" in rendered
 
 
+def test_console_report_compacts_http_failure_details_in_quality_gate():
+    result = {
+        "benchmark": "smoke",
+        "run_id": "run-1",
+        "timestamp": "2026-08-14T00:00:00+00:00",
+        "prompt_sha256": "abc123",
+        "models": [
+            {
+                "name": "failing",
+                "summary": {
+                    "requests": 1,
+                    "successful": 0,
+                    "failed": 1,
+                    "success_rate": 0,
+                    "latency_seconds": {"mean": None, "p50": None, "p95": None},
+                    "ttft_seconds": {"p50": None},
+                    "output_tokens_per_second": {"p50": None},
+                    "estimated_cost_usd": None,
+                    "failure_reasons": {
+                        'HTTP 400: {"request_id":"req_123", "error": "temperature is deprecated for this model"}': 1
+                    },
+                },
+            }
+        ],
+    }
+
+    rendered = console_report(result)
+
+    assert "HTTP 400 request failed" in rendered
+    assert "req_123" not in rendered
+    assert "temperature is deprecated" not in rendered
+
+
 def test_save_result_also_writes_markdown_report(tmp_path):
     result = {
         "benchmark": "saved",

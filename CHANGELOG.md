@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Treat a model with complete per-request pricing tiers as priced for coverage
+  and decision purposes, matching the estimator's tier selection.
+- Omit the unsupported `temperature` parameter for `claude-opus-5` by default.
+- Compact HTTP failures in the terminal quality gate so provider error bodies
+  and request IDs do not expand report tables.
+- Replace the retired `gemini-3.5-flash` in the cross-provider example and
+  ignore generated `.llm-preflight/` workspace data.
+
 ## 2.7.1 - 2026-08-13
 
 ### Added

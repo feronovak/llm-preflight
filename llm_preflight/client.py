@@ -63,6 +63,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             "claude-sonnet-5",
             "claude-fable-5",
             "claude-opus-4-8",
+            "claude-opus-5",
         }
     return True
 

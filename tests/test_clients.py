@@ -192,7 +192,12 @@ def test_anthropic_request_and_events():
 
 
 def test_current_anthropic_models_omit_unsupported_temperature():
-    for model in ("claude-sonnet-5", "claude-fable-5", "claude-opus-4-8"):
+    for model in (
+        "claude-sonnet-5",
+        "claude-fable-5",
+        "claude-opus-4-8",
+        "claude-opus-5",
+    ):
         client = create_client({"provider": "anthropic", "model": model}, 10)
         assert "temperature" not in client.body(
             "hello", {"temperature": 0, "max_output_tokens": 16}

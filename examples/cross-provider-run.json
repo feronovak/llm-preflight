@@ -42,9 +42,9 @@
       "model": "claude-opus-4-8"
     },
     {
-      "name": "gemini-3.5-flash",
+      "name": "gemini-3.7-flash",
       "provider": "gemini",
-      "model": "gemini-3.5-flash"
+      "model": "gemini-3.7-flash"
     },
     {
       "name": "minimax-m3",

@@ -212,10 +212,7 @@ def _classify_pricing(
         entry["source"] = "mock fixture"
         entry["pricing_exempt"] = True
         return {"entry": entry, "warning": None}
-    if (
-        model.get("input_cost_per_million") is None
-        or model.get("output_cost_per_million") is None
-    ):
+    if not _has_usable_pricing(model):
         return _pricing_problem(
             entry,
             "unknown",
@@ -274,6 +271,22 @@ def _classify_pricing(
             remediation,
         )
     return {"entry": entry, "warning": None}
+
+
+def _has_usable_pricing(model: dict[str, Any]) -> bool:
+    """Return whether direct prices or at least one complete tier can price a call."""
+    if (
+        model.get("input_cost_per_million") is not None
+        and model.get("output_cost_per_million") is not None
+    ):
+        return True
+    tiers = model.get("pricing_tiers")
+    return isinstance(tiers, list) and any(
+        isinstance(tier, dict)
+        and tier.get("input_cost_per_million") is not None
+        and tier.get("output_cost_per_million") is not None
+        for tier in tiers
+    )
 
 
 def _pricing_problem(

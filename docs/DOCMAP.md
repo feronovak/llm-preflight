@@ -16,7 +16,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
 | [`README.md`](../README.md) | LLM Preflight | unstamped | — | — |
 | [`SECURITY.md`](../SECURITY.md) | Security policy | unstamped | — | — |
-| [`docs/FEATURE_MAP.md`](FEATURE_MAP.md) | Product map | stamped | 2026-08-13 | v2.7.1 |
+| [`docs/FEATURE_MAP.md`](FEATURE_MAP.md) | Product map | stamped | 2026-08-14 | v2.7.2 |
 | [`docs/PROJECT_MAP.md`](PROJECT_MAP.md) | Code map | unstamped | — | — |
 | [`docs/README.md`](README.md) | LLM Preflight documentation | unstamped | — | — |
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |

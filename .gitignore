@@ -20,6 +20,7 @@ benchmarks/
 
 # Generated benchmark data and local diagnostics
 results/
+.llm-preflight/
 *.log
 
 # Private maintainer and agent material

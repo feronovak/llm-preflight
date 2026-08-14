@@ -220,10 +220,10 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     readme = Path("README.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
-    assert "## What is new in 2.5–2.6" in readme
-    assert "**Match the deployed JSON consumer.**" in readme
-    assert "**Require current pricing before paid work.**" in readme
-    assert "**Give coding agents bounded access.**" not in readme
+    assert "## What is new in 2.7.1" in readme
+    assert "**Make automation consume a decision, not terminal text.**" in readme
+    assert "**Add repository guidance only when you opt in.**" in readme
+    assert "## Next release" not in readme
 
 
 def test_pypi_trusted_publisher_isolated_to_release_workflow():

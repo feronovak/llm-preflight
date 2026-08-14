@@ -56,24 +56,19 @@ you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
 
-## What is new in 2.5–2.6
+## What is new in 2.7.1
 
-- **Match the deployed JSON consumer.** Use `json_set`, `first_fenced_block`,
-  or `first_json_value` only when those are the parsing rules your application
-  actually uses.
-- **Require current pricing before paid work.** `--pricing-check` reports
-  every selected billable route as priced, undated, stale, or unknown, with a
-  source and remediation. Set `require_current_pricing` to block paid runs
-  until that coverage is current.
-
-## Next release
-
-The in-development 2.7.1 source adds a schema-versioned agent decision object:
-`pass`, `fail`, or `inconclusive`, with exact blocking warnings and a safe next
-command. It appears in saved JSON and MCP results so automation need not parse
-terminal output. See the [agent decision contract](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/decision.md).
-Mock-only runs intentionally produce `inconclusive`, while API and contract
-failures have separate remediation commands.
+- **Make automation consume a decision, not terminal text.** Every completed
+  result now carries a schema-versioned decision object: `pass`, `fail`, or
+  `inconclusive`, with exact blocking warnings and a safe next command. It is
+  available in saved JSON and MCP results. See the [agent decision contract](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/decision.md).
+  Mock-only runs intentionally produce `inconclusive`; API and contract
+  failures have separate remediation commands.
+- **Add repository guidance only when you opt in.** `llm-preflight init
+  --agent-instructions AGENTS.md` writes a versioned, marker-delimited block
+  without touching surrounding instructions. Use `--check` in CI to detect
+  drift. The [coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
+  explains the operating rules and safe workflow.
 
 ## Use it when
 

@@ -35,7 +35,7 @@ It has three stages:
 This capture is a real paid run: two flagship models compared on two custom
 chat prompts, selected interactively. The plan screen shows the request and
 cost ceiling before confirmation, every request line reports its own cost,
-and the whole run cost $0.0052. The config is
+and the whole run cost $0.005404. The config is
 [examples/flagship-comparison.json](../../examples/flagship-comparison.json) —
 swap in your own model IDs and prompts to reproduce it.
 

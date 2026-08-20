@@ -90,31 +90,32 @@ evaluation, and it stays out of scope on purpose.
 
 ## What a live run reports
 
-Real output from a cross-provider run (2026-07-16, one short support prompt,
-three repetitions per model, total spend under $0.05):
+Real output from a cross-provider run (2026-08-14, one short support prompt,
+three repetitions per model, total spend $0.051867):
 
 | Model | Success | Latency p50 | Latency p95 | TTFT p50 | Tokens/s p50 | Cost |
 |---|---:|---:|---:|---:|---:|---:|
-| gpt-5.6-luna | 100% | 1.379s | 1.579s | 0.726s | 139.0 | $0.001686 |
-| gpt-5.4-mini | 100% | 1.779s | 3.628s | 1.061s | 126.6 | $0.001143 |
-| claude-fable-5 | 100% | 6.497s | 7.573s | 2.908s | 56.5 | $0.033610 |
-| claude-opus-4-8 | 100% | 3.859s | 4.267s | 1.350s | 54.3 | $0.010205 |
-| gemini-3.5-flash | 100% | 2.924s | 2.955s | 2.895s | n/a | $0.001084 |
-| minimax-m3 | 100% | 3.356s | 3.631s | 1.719s | 90.4 | n/a |
+| gpt-5.6-luna | 100% | 1.525s | 1.654s | 0.977s | 150.9 | $0.000350 |
+| claude-opus-5 | 100% | 6.052s | 6.991s | 2.088s | 67.0 | $0.022805 |
+| claude-sonnet-5 | 100% | 4.068s | 4.277s | 1.928s | 90.2 | $0.006092 |
+| gemini-3.7-flash | 100% | 2.244s | 3.060s | 2.119s | 3273.0 | $0.005689 |
+| grok-4.6 | 100% | 9.734s | 9.955s | 7.889s | 53.5 | $0.003096 |
+| deepseek/deepseek-v4-pro-0813 | 100% | 6.883s | 10.460s | 5.003s | 116.5 | $0.000891 |
 
 Tokens/s reads `n/a` when a provider delivers the response as a terminal
 burst instead of an incremental stream — the observable window measures
 transport, not generation, so no rate is reported. Cost reads `n/a` when
 pricing for the model is unknown.
 
-The report ends with a decision block:
+The report ends with an executive summary:
 
 ```
-- Fastest: gpt-5.6-luna — 1.423s mean latency.
-- Cheapest: gemini-3.5-flash — $0.001084 total.
-- Best value: gpt-5.6-luna — 88% composite score.
+- Fastest: gpt-5.6-luna — 1.560s mean latency.
+- Cheapest: gpt-5.6-luna — $0.000350 total.
+- Best value: gpt-5.6-luna — 100% composite score.
 - Recommended: gpt-5.6-luna — passed every selected test and led the
   qualified value ranking.
+- Total spent: $0.051867 including warmups.
 ```
 
 Numbers like these are evidence for one environment at one time, not a
@@ -124,7 +125,7 @@ from the host that will serve production traffic.
 The same comparison can be driven interactively — pick models and tests at
 the terminal, read the cost ceiling before anything is sent, watch each
 request report its own cost, and end on the decision. This capture is a real
-two-model paid run that cost half a cent
+two-model paid run that cost $0.005404
 ([config](https://github.com/feronovak/llm-preflight/blob/main/examples/flagship-comparison.json),
 [details](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md)):
 

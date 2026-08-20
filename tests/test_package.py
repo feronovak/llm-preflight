@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.7.2"
-    assert 'version = "2.7.2"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.3"
+    assert 'version = "2.7.3"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## 2.7.3 - 2026-08-20
+
+### Fixed
+
+- Require complete pricing across every configured tier before allowing a
+  current-pricing gate to authorize a paid benchmark.
+- Make unknown decision states fail closed and document exit code 3 for
+  inconclusive evidence in the coding-agent guide.
+
 ## 2.7.2 - 2026-08-20
 
 ### Fixed

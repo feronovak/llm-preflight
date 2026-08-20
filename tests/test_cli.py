@@ -678,6 +678,10 @@ def test_mock_only_shell_run_is_inconclusive_with_distinct_exit_code(tmp_path):
     assert json.loads(completed.stdout)["decision"]["state"] == "inconclusive"
 
 
+def test_result_exit_code_fails_closed_for_an_unknown_decision_state():
+    assert cli._result_exit_code({"decision": {"state": "unexpected"}}) == 1
+
+
 def test_models_approve_refuses_an_inconclusive_result(monkeypatch, tmp_path, capsys):
     result_path = tmp_path / "result.json"
     approved = tmp_path / "approved.json"

@@ -692,7 +692,7 @@ def _result_exit_code(result: dict[str, object]) -> int:
     if isinstance(decision, dict) and isinstance(decision.get("state"), str):
         if decision["state"] == "inconclusive":
             return 3
-        return 1 if decision["state"] == "fail" else 0
+        return 0 if decision["state"] == "pass" else 1
     return 1 if result_failed(result) else 0
 
 

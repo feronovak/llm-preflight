@@ -274,18 +274,22 @@ def _classify_pricing(
 
 
 def _has_usable_pricing(model: dict[str, Any]) -> bool:
-    """Return whether direct prices or at least one complete tier can price a call."""
+    """Return whether direct prices or every configured tier can price a call."""
     if (
         model.get("input_cost_per_million") is not None
         and model.get("output_cost_per_million") is not None
     ):
         return True
     tiers = model.get("pricing_tiers")
-    return isinstance(tiers, list) and any(
-        isinstance(tier, dict)
-        and tier.get("input_cost_per_million") is not None
-        and tier.get("output_cost_per_million") is not None
-        for tier in tiers
+    return (
+        isinstance(tiers, list)
+        and bool(tiers)
+        and all(
+            isinstance(tier, dict)
+            and tier.get("input_cost_per_million") is not None
+            and tier.get("output_cost_per_million") is not None
+            for tier in tiers
+        )
     )
 
 

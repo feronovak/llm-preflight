@@ -146,7 +146,7 @@ approval. See [Agent decision contract](../reference/decision.md).
 
 Exit codes are `0` for a passing requested operation, `1` for benchmark or CI
 failure, `2` for invalid input or operational setup error, and `130` for a
-cancelled run.
+cancelled run. Use exit code `3` for inconclusive evidence.
 
 ## Automation pattern
 

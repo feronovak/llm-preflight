@@ -113,7 +113,11 @@ def test_tier_only_pricing_counts_as_covered():
                         "up_to_input_tokens": 200_000,
                         "input_cost_per_million": 2.0,
                         "output_cost_per_million": 12.0,
-                    }
+                    },
+                    {
+                        "input_cost_per_million": 4.0,
+                        "output_cost_per_million": 18.0,
+                    },
                 ],
                 "pricing_metadata": {
                     "source": "official snapshot",
@@ -126,6 +130,34 @@ def test_tier_only_pricing_counts_as_covered():
 
     assert report["ok"] is True
     assert report["models"][0]["status"] == "priced"
+
+
+def test_incomplete_pricing_tier_does_not_count_as_covered():
+    report = pricing_coverage_report(
+        [
+            {
+                "provider": "gemini",
+                "model": "mixed-tiers",
+                "pricing_tiers": [
+                    {
+                        "up_to_input_tokens": 200_000,
+                        "input_cost_per_million": 2.0,
+                        "output_cost_per_million": 12.0,
+                    },
+                    {"output_cost_per_million": 18.0},
+                ],
+                "pricing_metadata": {
+                    "source": "official snapshot",
+                    "as_of": "2026-08-14",
+                },
+            }
+        ],
+        today=date(2026, 8, 14),
+        require_current_pricing=True,
+    )
+
+    assert report["models"][0]["status"] == "unknown"
+    assert report["enforcement_ok"] is False
 
 
 def test_gemini_3_1_flash_lite_official_snapshot_pricing():

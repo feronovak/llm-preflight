@@ -1,5 +1,7 @@
 # LLM and coding-agent guide
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
 It does not judge semantic quality or authorize a production rollout.
@@ -9,8 +11,8 @@ It does not judge semantic quality or authorize a production rollout.
 1. Read the benchmark configuration before changing it. Preserve the deployed
    prompt, request settings, and validators unless the user explicitly asks to
    change the contract.
-2. Run `--doctor` and `--dry-run` before a live benchmark. They make no
-   generation requests.
+2. Run `--doctor`, `--pricing-check`, and `--dry-run` before a live benchmark.
+   They make no generation requests.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or add an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID. Use explicit
@@ -45,7 +47,7 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 
 1. Read the benchmark configuration and preserve the deployed contract unless a
    contract change is explicitly approved.
-2. Run `--doctor` and `--dry-run` before any live benchmark.
+2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.
@@ -67,6 +69,9 @@ boundary. It is production-shaped and excludes load testing.
 ```bash
 # Validate configuration, available credentials, and model resolution.
 llm-preflight benchmark.json --doctor --json
+
+# Enforce complete current pricing before approving paid work.
+llm-preflight benchmark.json --pricing-check
 
 # Inspect exact models, tests, retry-expanded request count, and estimated cost.
 llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json

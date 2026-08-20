@@ -95,4 +95,5 @@ prds: local           # PRD-*.md, gitignored
 critical-paths:       # a wrong verdict here ships a cost or trust figure users act on
   - llm_preflight/pricing.py
   - llm_preflight/features.py
+  - llm_preflight/decision.py # a wrong pass/inconclusive verdict ships a trust or cost decision users act on
 ```

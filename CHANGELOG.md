@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 2.7.4 - 2026-08-20
+
+### Fixed
+
+- Separate the human terminal decision state and blocking warnings from the
+  executive ranking, so automation is directed to JSON or MCP evidence.
+
+### Changed
+
+- Clarify paid-run pricing enforcement, agent no-spend sequences, test-pack
+  coverage, and the current GitHub Actions starter version in public docs.
+- Derive legacy installer metadata from the package version and ship the PEP
+  561 `py.typed` marker for typed consumers.
+
 ## 2.7.3 - 2026-08-20
 
 ### Fixed

@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.3
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -25,6 +25,7 @@ module names.
 | Secret redaction in output | live | `redaction.py`, `security.py` |
 | `--json` output contract, consumed by CI and the MCP server | live | `cli.py`, `docs/reference/results.md` |
 | Schema-versioned agent decision contract — pass, fail, or inconclusive with remediation and blocking warnings | live | `decision.py`, `runner.py`, `mcp.py` |
+| Terminal report — separate machine decision state and warnings from the executive ranking | live | `runner.py`, `docs/reference/decision.md` |
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 
 Nothing listed here is gated, partial or deprecated. Work proposed but not

@@ -29,6 +29,9 @@ The primary users are engineers and coding agents changing an AI feature:
 - structured-output schemas and response parsers; or
 - an approved model's cost or latency envelope.
 
+Tool definitions are a change trigger because they can alter an application's
+LLM behavior; LLM Preflight is not a built-in tool-schema validator.
+
 The narrow job is to answer: **does this concrete integration still work from
 our environment, at an understood cost, before we ship it?**
 

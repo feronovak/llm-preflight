@@ -1,5 +1,7 @@
 # LLM Preflight documentation
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
 from your environment, and the paid-work plan before production.

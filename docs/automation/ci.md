@@ -1,5 +1,7 @@
 # CI and JSON output
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 ## JSON output and exit status
 
 `--json` writes a machine-readable result to stdout. Result saving notices go to
@@ -122,3 +124,11 @@ configuration, `max_requests`, and `max_estimated_cost_usd`; never run that job
 against fork-controlled code. The example cancels superseded runs for the same
 pull request. Do not copy that concurrency setting into a paid job unless the
 provider requests are independently idempotent and cancellation-safe.
+
+## Release documentation checklist
+
+For every release, update the package version, the README's current
+what's-new section, `examples/github-actions/preflight.yml`, and the matching
+version expectations in `tests/test_package.py` together. Then run the package
+and documentation checks before tagging, so public installation instructions
+and release examples cannot drift from the published artifact.

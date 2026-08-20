@@ -1833,7 +1833,7 @@ def test_console_report_uses_aligned_terminal_table_and_optional_color():
     assert "┌" in plain and "│ Model" in plain
     assert "| Model |" not in plain
     assert "\x1b[" not in plain
-    assert "Executive summary" in plain
+    assert "=== EXECUTIVE SUMMARY ===" in plain
     assert "\x1b[" in console_report(result, color=True)
 
 
@@ -1844,6 +1844,10 @@ def test_console_report_visually_separates_results_quality_and_decision():
         "timestamp": "2026-01-01T00:00:00Z",
         "prompt_sha256": "1234567890abcdef",
         "models": [],
+        "decision": {
+            "state": "inconclusive",
+            "blocking_warnings": ["Pricing is unknown for provider:model."],
+        },
     }
 
     rendered = console_report(result, color=True)
@@ -1851,6 +1855,12 @@ def test_console_report_visually_separates_results_quality_and_decision():
     assert "=== RESULTS ===" in rendered
     assert "=== QUALITY GATE ===" in rendered
     assert "=== DECISION ===" in rendered
+    assert "Decision: inconclusive (exit 3)" in rendered
+    assert "Pricing is unknown for provider:model." in rendered
+    assert "=== EXECUTIVE SUMMARY ===" in rendered
+    assert rendered.index("=== DECISION ===") < rendered.index(
+        "=== EXECUTIVE SUMMARY ==="
+    )
 
 
 def test_console_report_includes_pass_fail_dashboard():

@@ -79,7 +79,7 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 
 1. Read the benchmark configuration and preserve the deployed contract unless a
    contract change is explicitly approved.
-2. Run `--doctor` and `--dry-run` before any live benchmark.
+2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.

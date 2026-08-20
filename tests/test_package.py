@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.7.3"
-    assert 'version = "2.7.3"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.4"
+    assert 'version = "2.7.4"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -54,11 +54,24 @@ def test_setup_py_has_only_the_single_console_entry_point():
     setup = Path("setup.py").read_text()
 
     assert 'name="llm-preflight"' in setup
-    assert 'version="2.4.3"' in setup
+    assert "from pathlib import Path" in setup
+    assert "PACKAGE_VERSION" in setup
+    assert "version=PACKAGE_VERSION" in setup
+    assert "from llm_preflight import" not in setup
+    assert "2.4.3" not in setup
     assert '"llm-preflight=llm_preflight.__main__:main"' in setup
     assert '"llm-preflight-mcp=llm_preflight.mcp:main"' in setup
     assert "llm-bench" not in setup
     assert "llm_bench" not in setup
+
+
+def test_package_declares_the_pep_561_type_marker():
+    pyproject = Path("pyproject.toml").read_text()
+
+    assert Path("llm_preflight/py.typed").is_file()
+    assert Path("llm_preflight/py.typed").read_bytes() == b""
+    assert "[tool.setuptools.package-data]" in pyproject
+    assert 'llm_preflight = ["py.typed"]' in pyproject
 
 
 def test_example_does_not_present_unknown_model_pricing_as_free():

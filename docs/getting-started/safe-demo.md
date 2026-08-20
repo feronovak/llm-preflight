@@ -1,5 +1,7 @@
 # Getting started
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 LLM Preflight answers a practical question before you change production:
 
 > Can this candidate model replace our current model without breaking the
@@ -100,7 +102,32 @@ result. A model with `n/a` cost has unknown pricing; it is not free.
 The mock demo produces the same local contract evidence as a paid run, but it
 does not provide live-provider evidence. Its decision is therefore
 `inconclusive` and the command exits 3 even when every mock response validates.
-Its Markdown report has a results table and quality gate:
+The terminal report is for people; automation must read the JSON output or a
+saved JSON artifact. For a no-save JSON run, check the process status and then
+read the decision object:
+
+```bash
+set +e
+llm-preflight benchmark.json --json --no-save > mock-result.json
+status=$?
+set -e
+test "$status" -eq 3
+```
+
+```json
+{
+  "decision": {
+    "state": "inconclusive",
+    "blocking_warnings": [
+      "Mock-only runs do not provide live-provider evidence."
+    ]
+  }
+}
+```
+
+Without `--no-save`, the result file under `results/` contains the same
+decision object. Its terminal report has a results table, quality gate, explicit
+decision, and separate executive summary:
 
 ```text
 Model  | Valid | Latency p95 | Cost
@@ -109,8 +136,13 @@ local  | 100%  | 0.010s      | $0.000000
 QUALITY GATE
 local  PASS  -
 
-DECISION
-Inconclusive: mock-only runs do not provide live-provider evidence.
+=== DECISION ===
+Decision: inconclusive (exit 3)
+Blocking warnings:
+- Mock-only runs do not provide live-provider evidence.
+
+=== EXECUTIVE SUMMARY ===
+Recommended: unavailable; no priced model passed every selected test.
 ```
 
 `API OK` means the provider returned a response. `TEST OK` means that response

@@ -1,5 +1,7 @@
 # LLM Preflight
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
 Know whether an AI-generated LLM integration is safe before it reaches
@@ -40,6 +42,7 @@ for the intended workflow and boundaries.
 Create and run a deterministic local benchmark—no API key or network request:
 
 ```bash
+python3 -m pip install llm-preflight
 llm-preflight init
 llm-preflight benchmark.json --no-save
 ```
@@ -63,6 +66,8 @@ validates configuration and output handling, but cannot approve a live model.
   tier cannot authorize a paid benchmark.
 - **Fail closed in automation.** Only a `pass` decision exits successfully;
   unknown decision states fail, and `inconclusive` consistently exits `3`.
+
+### Since 2.7.1
 
 - **Make automation consume a decision, not terminal text.** Every completed
   result now carries a schema-versioned decision object: `pass`, `fail`, or
@@ -271,9 +276,10 @@ regression should fail the pipeline.
 
 ```bash
 # Inspect configuration, credentials, and model selection without generation.
+# --doctor provides pricing advisory; use --pricing-check as the fail-closed coverage gate.
 llm-preflight benchmark.json --doctor
-llm-preflight benchmark.json --dry-run
 llm-preflight benchmark.json --pricing-check
+llm-preflight benchmark.json --dry-run
 
 # Run a reduced live benchmark.
 llm-preflight benchmark.json --smoke
@@ -307,8 +313,6 @@ Several good tools live near this space. Use them when their job is your job:
 - **promptfoo, deepeval** — full evaluation suites: scored quality metrics,
   red-teaming, large ongoing test matrices in CI. Use them to grade prompt and
   model quality over time.
-- **llmci** — CI merge gates and prompt migration; it rewrites prompts for a
-  new model. Use it when the prompt should adapt to the model.
 - **Braintrust, LangSmith** — hosted platforms: tracing, dashboards, team
   collaboration, production observability.
 - **`llm` (Simon Willison)** — a general multi-provider CLI for running

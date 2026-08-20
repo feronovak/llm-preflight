@@ -1521,6 +1521,25 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         text = f"=== {title} ==="
         return f"\x1b[1;36m{text}\x1b[0m" if color else text
 
+    decision = result.get("decision")
+    if not isinstance(decision, dict):
+        decision = build_decision(result)
+    state = decision.get("state", "unknown")
+    if state == "pass":
+        exit_code = 0
+    elif state == "inconclusive":
+        exit_code = 3
+    else:
+        exit_code = 1
+    warnings = decision.get("blocking_warnings", [])
+    decision_lines = [f"Decision: {state} (exit {exit_code})"]
+    if warnings:
+        decision_lines.extend(
+            ["Blocking warnings:", *[f"- {warning}" for warning in warnings]]
+        )
+    else:
+        decision_lines.append("Blocking warnings: none.")
+
     lines = [
         f"\x1b[1m{result['benchmark']}\x1b[0m" if color else result["benchmark"],
         f"Run {result['run_id']}  •  {result['timestamp']}",
@@ -1543,7 +1562,9 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         ),
         "",
         section("DECISION"),
-        "Executive summary",
+        *decision_lines,
+        "",
+        section("EXECUTIVE SUMMARY"),
     ]
     diagnostics = _contract_diagnostics(result)
     if diagnostics:

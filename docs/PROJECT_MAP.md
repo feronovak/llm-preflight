@@ -9,7 +9,7 @@ Where code lives, and what each area is responsible for.
 | `docs/` | published documentation — guides, reference, operations, automation |
 | `examples/` | runnable configuration samples referenced by the guides |
 | `requirements/` | pinned dependency sets for development and CI |
-| `.github/` | CI workflows and issue templates |
+| `.github/` | CI workflows |
 
 Entry points, declared in `pyproject.toml`:
 

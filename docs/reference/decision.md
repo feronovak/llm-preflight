@@ -1,8 +1,11 @@
 # Agent decision contract
 
+**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+
 Every completed benchmark result includes an additive `decision` object. It is
 the machine-readable boundary for agents: consume it from the JSON artifact or
 the MCP `run_preflight` result, rather than parsing terminal output.
+The terminal summary is not the decision object; agents must read JSON or MCP.
 
 ## Versioning
 

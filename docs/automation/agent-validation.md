@@ -29,6 +29,7 @@ llm-preflight --audit-source . --json
 # No generation request: validate config, credentials, selected models, tests,
 # retry-expanded request count, and estimated cost.
 llm-preflight benchmark.json --doctor --json
+llm-preflight benchmark.json --pricing-check
 llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json
 
 # Paid request: run only after explicit authorization of the plan above.
@@ -45,7 +46,7 @@ ranking.
 An agent may:
 
 - run `--audit-source` automatically to report literal model references;
-- run `--doctor` and `--dry-run` automatically;
+- run `--doctor`, `--pricing-check`, and `--dry-run` automatically;
 - report missing credentials, unknown pricing, invalid configuration, and
   failed validation with the command output; and
 - prepare a proposed benchmark or CI change for review.

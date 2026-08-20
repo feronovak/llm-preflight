@@ -3,10 +3,11 @@
 ## Built-in tests and validation
 
 Built-in packs are `quick-migration-check`, `exact-routing-check`,
-`structured-output-check`, `numeric-instruction-check`, and
-`concurrency-health-check`. The concurrency pack intentionally expands work at
-concurrency 1, 5, and 10; keep it separate from normal interactive-latency
-comparisons.
+`structured-output-check`, `numeric-instruction-check`,
+`concurrency-health-check`, `strict-json-extraction`, `support-classification`,
+`code-patch-summary`, `source-grounded-quiz`, and `refusal-boundary-check`.
+The concurrency pack intentionally expands work at concurrency 1, 5, and 10;
+keep it separate from normal interactive-latency comparisons.
 
 Use `--migration-check` for the smallest real response check. It runs the three
 `quick-migration-check` cases once per selected model, with no warmups and

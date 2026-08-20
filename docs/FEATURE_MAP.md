@@ -11,9 +11,9 @@ module names.
 | Feature | State | Verified against |
 |---|---|---|
 | Cross-provider preflight run against a set of models before a switch | live | `runner.py`, `client.py` |
-| CLI, as `llm-preflight` and `python -m llm_preflight` | live | `cli.py` (55 unique long flags), `__main__.py` |
+| CLI, as `llm-preflight` and `python -m llm_preflight` | live | `cli.py`, `__main__.py`; see `--help` for installed flags |
 | Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, safe live-run gate | live | `mcp.py` |
-| `--doctor` — validate config, keys and model resolution without a run | live | `cli.py` |
+| `--doctor` — validate config, keys, model resolution, and report pricing coverage without a run | live | `cli.py` |
 | `--audit-source` — audit literal model IDs in a repository, no provider requests | live | `source_audit.py`, `cli.py` |
 | `--baseline` / `--ci` — compare against a previous result, fail when thresholds regress | live | `cli.py` |
 | `--changed-since` — run only models absent from a catalog snapshot | live | `catalog.py`, `catalog_watch.py` |

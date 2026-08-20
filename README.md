@@ -56,7 +56,13 @@ you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
 
-## What is new in 2.7.1
+## What is new in 2.7.3
+
+- **Keep paid-run pricing gates complete.** A current-pricing gate now requires
+  complete pricing across every configured tier, so an incomplete long-context
+  tier cannot authorize a paid benchmark.
+- **Fail closed in automation.** Only a `pass` decision exits successfully;
+  unknown decision states fail, and `inconclusive` consistently exits `3`.
 
 - **Make automation consume a decision, not terminal text.** Every completed
   result now carries a schema-versioned decision object: `pass`, `fail`, or

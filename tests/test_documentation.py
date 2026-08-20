@@ -51,6 +51,42 @@ def test_coding_agents_documents_the_inconclusive_exit_code():
     assert "`3` for inconclusive evidence" in coding_agents
 
 
+def test_docs_match_the_2_7_3_release_and_current_workflow_pin():
+    readme = (ROOT / "README.md").read_text()
+    ci = (ROOT / "docs/automation/ci.md").read_text()
+    workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
+    docmap = (ROOT / "docs/DOCMAP.md").read_text()
+
+    assert "## What is new in 2.7.3" in readme
+    assert "complete pricing across every configured tier" in readme
+    assert "llm-preflight==2.7.3" in workflow
+    assert "Pin the starter workflow to the current release" in ci
+    assert "| stamped | 2026-08-20 | v2.7.3 |" in docmap
+
+
+def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
+    cli_reference = (ROOT / "docs/reference/cli.md").read_text()
+    pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
+
+    for profile in (
+        "quick-migration-check",
+        "exact-routing-check",
+        "structured-output-check",
+        "numeric-instruction-check",
+        "concurrency-health-check",
+        "strict-json-extraction",
+        "support-classification",
+        "code-patch-summary",
+        "source-grounded-quiz",
+        "refusal-boundary-check",
+    ):
+        assert profile in cli_reference
+        assert profile in pricing_guide
+    assert "`--help`" in cli_reference
+    assert "`--version`" in cli_reference
+    assert "does not by itself block a benchmark" in cli_reference
+
+
 def test_local_markdown_links_resolve_after_docs_reorganization():
     for page in (ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))):
         for target in re.findall(r"\]\(([^)]+)\)", page.read_text()):

@@ -203,7 +203,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.7.1",
+        "llm-preflight==2.7.3",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",
@@ -220,7 +220,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     readme = Path("README.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
-    assert "## What is new in 2.7.1" in readme
+    assert "## What is new in 2.7.3" in readme
     assert "**Make automation consume a decision, not terminal text.**" in readme
     assert "**Add repository guidance only when you opt in.**" in readme
     assert "## Next release" not in readme

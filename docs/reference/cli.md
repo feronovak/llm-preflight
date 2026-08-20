@@ -5,7 +5,8 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 `--quick`, `--diff`, or `--replay` is used.
 
 `llm-preflight` is the primary command. From a source checkout, use
-`python3 -m llm_preflight`.
+`python3 -m llm_preflight`. Use `--help` for the installed command surface and
+`--version` to print the installed release.
 
 | Option | Default | Purpose |
 |---|---:|---|
@@ -16,7 +17,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--smoke` | off | Set one repetition, no warmups, and concurrency one. It still makes paid requests; use `--dry-run` first. |
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
-| `--doctor` | off | Validate configuration, keys, model resolution, and selected-model pricing coverage; no generation. |
+| `--doctor` | off | Validate configuration, keys, and model resolution, and report selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
 | `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
 | `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |
 | `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. |
@@ -90,9 +91,17 @@ they support, not as broad claims about model intelligence.
 | `structured-output-check` | JSON shape, required fields, and extracted values. |
 | `numeric-instruction-check` | Numeric task correctness and concise instruction following. |
 | `concurrency-health-check` | Basic reliability and latency at increasing concurrency. |
+| `strict-json-extraction` | Raw JSON extraction with required fields and primitive types. |
+| `support-classification` | Short, controlled-label customer support routing. |
+| `code-patch-summary` | Concise, structured summaries of a small code change. |
+| `source-grounded-quiz` | A small quiz derived only from supplied source material. |
+| `refusal-boundary-check` | Privacy-sensitive requests receive a concise, safe boundary. |
 
-`chat-fast`, `classification`, `structured-extraction`, `reasoning`, and `load`
-remain accepted as compatibility aliases for existing configurations.
+`agent-smoke` combines the five agent-focused packs: `strict-json-extraction`,
+`support-classification`, `code-patch-summary`, `source-grounded-quiz`, and
+`refusal-boundary-check`. `chat-fast`, `classification`,
+`structured-extraction`, `reasoning`, and `load` remain accepted as
+compatibility aliases for existing configurations.
 
 ## Model lifecycle commands
 

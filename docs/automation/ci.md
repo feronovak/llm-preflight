@@ -69,13 +69,11 @@ llm-preflight benchmark.json --smoke --json --no-save > current.json
 
 A mock-only configuration intentionally exits 3: it proves local configuration
 and report handling, not a live-provider decision. Use it for a no-key example
-or test fixture, not as a passing production gate. A 2.7.1 GitHub workflow
-should explicitly expect that exit code when its purpose is to verify the mock
-fixture. Pin the starter workflow to the 2.7.1 release when adopting this
-behavior.
+or test fixture, not as a passing production gate. A GitHub workflow that
+verifies the mock fixture should explicitly expect that exit code. Pin the starter workflow to the current release when adopting this behavior; the tracked example currently pins 2.7.3.
 
-For that 2.7.1 mock-evidence job, preserve the JSON artifact while accepting
-only the expected inconclusive status:
+For a mock-evidence job, preserve the JSON artifact while accepting only the
+expected inconclusive status:
 
 ```yaml
 - name: Run the no-key mock evidence job

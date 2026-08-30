@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented here.
 
+## 2.7.5 - 2026-08-31
+
+### Fixed
+
+- Replace stale standard GPT-5.6 Luna, Terra, and Sol input/output rates from
+  their primary source.
+- Represent GPT-5.6 cached-input and long-context pricing, plus Grok 4.3
+  cached-input and long-context pricing, in the shared pricing ledger.
+- Remove the retired, unpriced `openrouter:minimax/minimax-m3` route and
+  unpriced Gemini model from the tracked cross-provider examples.
+
+### Changed
+
+- Add a tracked frontier-candidate plan for current OpenAI, Anthropic, Gemini,
+  and xAI models, including Grok 4.5 and Grok 4.6; keep it separate from the
+  approved release smoke until compatibility evidence is retained.
+- Assert every bundled pricing entry's reviewed rate, provider model ID,
+  source URL, and review date in deterministic tests. The release review still
+  verifies official provider documentation; the unit suite never fetches it.
+- Add a tracked, fully priced approved smoke cohort and require its review
+  before an owner-authorized paid release smoke.
+- Align the README, package description, north star, product decisions, and
+  pricing guide around the local contract-preflight scope.
+
 ## 2.7.4 - 2026-08-20
 
 ### Fixed

@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -13,6 +13,8 @@ Results stay local unless you decide to attach or publish them.
 
 - [Safe demo](getting-started/safe-demo.md) — run the no-key mock benchmark,
   then create a conservative provider starter.
+- [A new model appeared](guides/model-catalog.md) — refresh provider metadata,
+  then deliberately probe, benchmark, and approve a small candidate set.
 - [Model change](guides/model-change.md) — compare an approved model and a
   candidate before changing production.
 - [Output contracts](guides/output-contracts.md) — validate JSON, routing,
@@ -49,4 +51,8 @@ Results stay local unless you decide to attach or publish them.
   [configuration schema](reference/configuration-schema.md)
 - [Result JSON schema](reference/results.md)
 - [Troubleshooting](operations/troubleshooting.md)
-- [Product positioning](product/positioning.md)
+- [North star](NORTH_STAR.md) — mission, niche, boundaries, and product
+  promise.
+- [Product positioning](product/positioning.md) — stable pointer for older
+  links.
+- [Product decisions](DECISIONS.md)

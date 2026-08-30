@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 LLM Preflight includes a local stdio MCP server so a coding agent can collect
 the same preflight evidence without parsing shell output or gaining arbitrary

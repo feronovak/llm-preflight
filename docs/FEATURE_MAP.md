@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -19,7 +19,7 @@ module names.
 | `--changed-since` — run only models absent from a catalog snapshot | live | `catalog.py`, `catalog_watch.py` |
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
-| Pricing and cost reporting plus current-price coverage gate | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
+| Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |
 | JSON-preset comparability warnings for Anthropic results | live | `presets.py`, `cli.py`, `runner.py` |
 | Secret redaction in output | live | `redaction.py`, `security.py` |

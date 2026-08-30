@@ -5,6 +5,7 @@
   "warmups": 1,
   "concurrency": 1,
   "timeout_seconds": 120,
+  "require_current_pricing": true,
   "save_responses": false,
   "request": {
     "system_prompt": "Be concise and factual.",
@@ -44,12 +45,7 @@
     {
       "name": "gemini-3.7-flash",
       "provider": "gemini",
-      "model": "gemini-3.7-flash"
-    },
-    {
-      "name": "minimax-m3",
-      "provider": "openrouter",
-      "model": "minimax/minimax-m3"
+      "model": "gemini-3.5-flash"
     }
   ]
 }

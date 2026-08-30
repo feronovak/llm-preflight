@@ -34,7 +34,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-20 · **As of:** v2.7.4" in feature_map
+    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
@@ -43,6 +43,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     assert "## Snapshot verification" in pricing_guide
     assert "source_url" in pricing_guide
+    assert "## Release price review" in pricing_guide
 
 
 def test_coding_agents_documents_the_inconclusive_exit_code():
@@ -51,17 +52,19 @@ def test_coding_agents_documents_the_inconclusive_exit_code():
     assert "`3` for inconclusive evidence" in coding_agents
 
 
-def test_docs_match_the_2_7_3_release_and_current_workflow_pin():
+def test_docs_match_the_2_7_5_release_and_current_workflow_pin():
     readme = (ROOT / "README.md").read_text()
     ci = (ROOT / "docs/automation/ci.md").read_text()
     workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
-    assert "## What is new in 2.7.3" in readme
+    assert "## What is new in 2.7.5" in readme
+    assert "Refresh reviewed direct-provider pricing" in readme
+    assert "examples/frontier-candidates.json" in readme
     assert "complete pricing across every configured tier" in readme
     assert "llm-preflight==2.7.3" in workflow
     assert "Pin the starter workflow to the current release" in ci
-    assert "| stamped | 2026-08-20 | v2.7.4 |" in docmap
+    assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
 
 
 def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
@@ -108,27 +111,59 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     required_stamps = (
-        ROOT / "README.md",
         ROOT / "docs/getting-started/safe-demo.md",
         ROOT / "docs/reference/decision.md",
         ROOT / "docs/automation/coding-agents.md",
         ROOT / "docs/automation/mcp.md",
-        ROOT / "docs/index.md",
         ROOT / "docs/automation/ci.md",
     )
     for page in required_stamps:
-        assert "**Last reviewed:** 2026-08-20 · **As of:** v2.7.4" in page.read_text()
+        assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
+
+    for page in (
+        ROOT / "README.md",
+        ROOT / "docs/index.md",
+        ROOT / "docs/guides/pricing-and-safety.md",
+    ):
+        assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     ci = (ROOT / "docs/automation/ci.md").read_text()
-    positioning = (ROOT / "docs/product/positioning.md").read_text()
+    north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
 
     assert '"state": "inconclusive"' in safe_demo
     assert "saved JSON artifact" in safe_demo
     assert "## Release documentation checklist" in ci
     assert "examples/github-actions/preflight.yml" in ci
     assert "tests/test_package.py" in ci
-    assert "not a built-in tool-schema validator" in positioning
+    assert "not a built-in tool-schema validator" in north_star
+
+
+def test_positioning_and_decisions_are_public_and_current():
+    readme = (ROOT / "README.md").read_text()
+    positioning = (ROOT / "docs/product/positioning.md").read_text()
+    north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
+    decisions = (ROOT / "docs/DECISIONS.md").read_text()
+    metadata = (ROOT / "pyproject.toml").read_text()
+
+    assert "## A new model appeared" in readme
+    assert "local contract preflight for LLM integration\nchanges" in readme
+    assert "[North star](../NORTH_STAR.md)" in positioning
+    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in north_star
+    assert "## Mission" in north_star
+    assert "## Niche" in north_star
+    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in decisions
+    for decision in (
+        "Local-first execution",
+        "Standard-library runtime",
+        "Three-state decisions",
+        "Human approval for spend and promotion",
+    ):
+        assert decision in decisions
+    assert (
+        'description = "Local, cross-provider preflight checks for LLM integration changes"'
+        in metadata
+    )
 
 
 def test_project_map_does_not_claim_missing_issue_templates():

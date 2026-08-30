@@ -8,25 +8,31 @@ from typing import Any
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
 # do not consistently return prices, so these public rates fill that gap.
 # OpenRouter prices remain dynamic and take precedence when its catalog returns
-# them. Gemini 3.1 Pro uses the <=200k-input tier.
+# them. Gemini 3.1 Pro uses the <=200k-input tier. Gemini 3.7 Flash uses its
+# introductory rate through 2026-12-31; review its $1.50/$7.50 standard rate
+# before the next 2027 release. Every entry below was reviewed against its
+# primary official source on 2026-08-30.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
-    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-11"),
-    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-11"),
-    ("openai", "gpt-5.6-sol"): (5.0, 30.0, "2026-08-11"),
-    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-08-11"),
-    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-08-11"),
-    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-08-11"),
-    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-11"),
-    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-11"),
-    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-11"),
-    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-11"),
-    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-11"),
-    ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-11"),
-    # Introductory Sonnet 5 rate through 2026-08-31.
-    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-11"),
-    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-11"),
-    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-11"),
-    ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-11"),
+    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-30"),
+    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-30"),
+    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-08-30"),
+    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-08-30"),
+    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-08-30"),
+    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-08-30"),
+    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
+    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
+    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
+    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
+    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
+    ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
+    ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
+    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
+    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
+    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
+    ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
+    ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
+    ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
+    ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
 }
 
 PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
@@ -34,14 +40,65 @@ PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
         "openai": "https://developers.openai.com/api/docs/pricing",
         "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
         "gemini": "https://ai.google.dev/gemini-api/docs/pricing",
-        "xai": "https://docs.x.ai/developers/models/grok-4.3",
+        "xai": "https://docs.x.ai/developers/pricing",
     }[key[0]]
     for key in PUBLIC_PRICING
 }
 
 PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
+    ("openai", "gpt-5.6-luna"): {
+        "cached_input_cost_per_million": 0.02,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 0.2,
+                "output_cost_per_million": 1.2,
+                "cached_input_cost_per_million": 0.02,
+            },
+            {
+                "input_cost_per_million": 0.4,
+                "output_cost_per_million": 1.8,
+                "cached_input_cost_per_million": 0.04,
+            },
+        ],
+    },
+    ("openai", "gpt-5.6-terra"): {
+        "cached_input_cost_per_million": 0.2,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 2.0,
+                "output_cost_per_million": 12.0,
+                "cached_input_cost_per_million": 0.2,
+            },
+            {
+                "input_cost_per_million": 4.0,
+                "output_cost_per_million": 18.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("openai", "gpt-5.6-sol"): {
+        "cached_input_cost_per_million": 0.4,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 4.0,
+                "output_cost_per_million": 20.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+            {
+                "input_cost_per_million": 8.0,
+                "output_cost_per_million": 30.0,
+                "cached_input_cost_per_million": 0.8,
+            },
+        ],
+    },
     ("gemini", "gemini-3.1-flash-lite"): {
         "cached_input_cost_per_million": 0.025,
+    },
+    ("gemini", "gemini-3.7-flash"): {
+        "cached_input_cost_per_million": 0.075,
     },
     ("gemini", "gemini-3.1-pro-preview"): {
         "cached_input_cost_per_million": 0.2,
@@ -56,6 +113,54 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
                 "input_cost_per_million": 4.0,
                 "output_cost_per_million": 18.0,
                 "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("xai", "grok-4.3"): {
+        "cached_input_cost_per_million": 0.2,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 200_000,
+                "input_cost_per_million": 1.25,
+                "output_cost_per_million": 2.5,
+                "cached_input_cost_per_million": 0.2,
+            },
+            {
+                "input_cost_per_million": 2.5,
+                "output_cost_per_million": 5.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("xai", "grok-4.5"): {
+        "cached_input_cost_per_million": 0.3,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 200_000,
+                "input_cost_per_million": 2.0,
+                "output_cost_per_million": 6.0,
+                "cached_input_cost_per_million": 0.3,
+            },
+            {
+                "input_cost_per_million": 4.0,
+                "output_cost_per_million": 12.0,
+                "cached_input_cost_per_million": 0.6,
+            },
+        ],
+    },
+    ("xai", "grok-4.6"): {
+        "cached_input_cost_per_million": 0.5,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 200_000,
+                "input_cost_per_million": 2.0,
+                "output_cost_per_million": 6.0,
+                "cached_input_cost_per_million": 0.5,
+            },
+            {
+                "input_cost_per_million": 4.0,
+                "output_cost_per_million": 12.0,
+                "cached_input_cost_per_million": 1.0,
             },
         ],
     },

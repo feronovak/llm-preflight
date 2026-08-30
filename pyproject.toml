@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-preflight"
-version = "2.7.4"
-description = "Local, cross-provider preflight checks for an LLM model switch"
+version = "2.7.5"
+description = "Local, cross-provider preflight checks for LLM integration changes"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["llm", "preflight", "model-switch", "validation", "openai", "anthropic", "gemini"]
+keywords = ["llm", "preflight", "integration-testing", "model-switch", "validation", "openai", "anthropic", "gemini"]
 dependencies = []
 
 [tool.setuptools.package-data]

@@ -1,0 +1,23 @@
+{
+  "name": "approved-cross-provider-smoke",
+  "prompt": "Reply with ok.",
+  "repetitions": 1,
+  "warmups": 0,
+  "concurrency": 1,
+  "max_requests": 100,
+  "max_estimated_cost_usd": 0.035922,
+  "require_current_pricing": true,
+  "request": {
+    "temperature": 0,
+    "max_output_tokens": 128
+  },
+  "models": [
+    {"provider": "openai", "model": "gpt-5.6-luna"},
+    {"provider": "openai", "model": "gpt-5.6-sol"},
+    {"provider": "openai", "model": "gpt-5.5"},
+    {"provider": "openai", "model": "gpt-5.4-mini"},
+    {"provider": "anthropic", "model": "claude-fable-5"},
+    {"provider": "anthropic", "model": "claude-opus-4-8"},
+    {"provider": "gemini", "model": "gemini-3.5-flash"}
+  ]
+}

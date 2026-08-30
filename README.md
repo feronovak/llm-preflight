@@ -1,14 +1,14 @@
 # LLM Preflight
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
 Know whether an AI-generated LLM integration is safe before it reaches
-production. LLM Preflight is the local validation gate for model, prompt,
-structured-output, and provider-call changes. It runs a small cross-provider
-preflight and compares validated output, response speed, tokens, and estimated
-cost.
+production. LLM Preflight is a local contract preflight for LLM integration
+changes: model, prompt, structured-output, and provider-call changes. It runs
+a small cross-provider preflight and compares validated output, response
+speed, tokens, and estimated cost.
 
 It is a local preflight tool—not a hosted evaluation platform, tracing system,
 RAG framework, or public leaderboard. Its results are evidence for your
@@ -22,14 +22,14 @@ account, network, prompts, and validation rules.
 changes as routinely as it runs tests, while people retain control of spend and
 production approval.
 
-**Positioning:** LLM Preflight is the fast, local, cross-provider validation
-gate for AI-powered application changes. It is not a general evaluation,
+**Positioning:** LLM Preflight is the fast, local, cross-provider contract
+preflight for AI-powered application changes. It is not a general evaluation,
 observability, or autonomous-deployment platform.
 
 It is built for engineers and coding agents working on AI features: teams that
 need to check a real application contract against live model APIs before a
 model ID, prompt, parser, tool definition, or provider option ships. Read the
-[product positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product/positioning.md)
+[north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
 and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
 for the intended workflow and boundaries.
 
@@ -59,7 +59,41 @@ you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
 
-## What is new in 2.7.3
+## A new model appeared
+
+This is the workflow that keeps a small, trusted model set current. Refresh
+reads provider metadata only; it does not send your benchmark prompt. Then
+probe and benchmark only the text candidates you decide to consider.
+
+```bash
+llm-preflight catalog refresh benchmarks/watch.json
+llm-preflight catalog prepare benchmarks/watch.json \
+  --against benchmarks/approved.json --output benchmarks/candidates.json
+llm-preflight benchmarks/candidates.json --migration-check --dry-run
+```
+
+Review pricing and the bounded request plan before authorizing a paid smoke or
+contract run. Only explicitly approved passing models belong in your ongoing
+test set. The [model catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md)
+has the complete discovery, probe, benchmark, and approval workflow.
+
+## What is new in 2.7.5
+
+- **Refresh reviewed direct-provider pricing.** Corrected GPT-5.6 standard
+  rates, refreshed all bundled official pricing evidence, and removed a
+  retired, unpriced OpenRouter route from the approved smoke cohort.
+- **Compare current frontier candidates separately.** Start from
+  [`examples/frontier-candidates.json`](examples/frontier-candidates.json) to
+  price-check current OpenAI, Anthropic, Gemini, and xAI candidates—including
+  Grok 4.5 and 4.6—before retaining compatibility evidence or approving one.
+
+### Delivered in 2.7.4
+
+- **Separate human terminal decision state and blocking warnings from the
+  executive ranking.** JSON and MCP remain the machine-readable decision
+  surfaces.
+
+### Delivered in 2.7.3
 
 - **Keep paid-run pricing gates complete.** A current-pricing gate now requires
   complete pricing across every configured tier, so an incomplete long-context
@@ -319,9 +353,9 @@ Several good tools live near this space. Use them when their job is your job:
   prompts, not a comparison harness.
 
 LLM Preflight does one narrower job: the local go/no-go check in the moment
-before a model switch. Your prompt, candidate models, structural validation,
-latency, and cost — one command, one report, no hosted service, no telemetry,
-and no vendor between you and the verdict.
+before an LLM integration change. Your prompt, candidate models, structural
+validation, latency, and cost — one command, one report, no hosted service, no
+telemetry, and no vendor between you and the verdict.
 
 ## Documentation
 
@@ -339,7 +373,8 @@ Start at the [documentation homepage](https://github.com/feronovak/llm-preflight
   [configuration](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/configuration.md),
   [result JSON](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/results.md), and
   [troubleshooting](https://github.com/feronovak/llm-preflight/blob/main/docs/operations/troubleshooting.md).
-- **Understand the product:** [positioning](https://github.com/feronovak/llm-preflight/blob/main/docs/product/positioning.md) and
+- **Understand the product:** [north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md),
+  [product decisions](https://github.com/feronovak/llm-preflight/blob/main/docs/DECISIONS.md), and
   [AI implementation testing](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md).
 - [Contributing](https://github.com/feronovak/llm-preflight/blob/main/CONTRIBUTING.md) — development setup and the TDD workflow.
 - [Security](https://github.com/feronovak/llm-preflight/blob/main/SECURITY.md) — reporting vulnerabilities.

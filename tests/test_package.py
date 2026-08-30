@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.7.4"
-    assert 'version = "2.7.4"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.7.5"
+    assert 'version = "2.7.5"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -79,6 +79,32 @@ def test_example_does_not_present_unknown_model_pricing_as_free():
 
     assert '"input_cost_per_million": 0' not in example
     assert '"output_cost_per_million": 0' not in example
+
+
+def test_cross_provider_example_is_a_currently_priced_smoke_plan():
+    from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
+
+    example = json.loads(Path("examples/cross-provider-run.json").read_text())
+    report = pricing_coverage_report(
+        resolve_pricing(example["models"])["models"],
+        require_current_pricing=True,
+    )
+
+    assert example["require_current_pricing"] is True
+    assert report["enforcement_ok"] is True
+
+
+def test_frontier_candidates_include_current_grok_4_5_and_are_priced():
+    from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
+
+    candidates = json.loads(Path("examples/frontier-candidates.json").read_text())
+    report = pricing_coverage_report(
+        resolve_pricing(candidates["models"])["models"],
+        require_current_pricing=True,
+    )
+
+    assert {model["model"] for model in candidates["models"]} >= {"grok-4.5"}
+    assert report["enforcement_ok"] is True
 
 
 def test_custom_contract_examples_are_parseable_and_documented():
@@ -233,7 +259,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     readme = Path("README.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
-    assert "## What is new in 2.7.3" in readme
+    assert "## What is new in 2.7.5" in readme
     assert "**Make automation consume a decision, not terminal text.**" in readme
     assert "**Add repository guidance only when you opt in.**" in readme
     assert "## Next release" not in readme

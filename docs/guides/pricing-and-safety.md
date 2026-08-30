@@ -1,5 +1,7 @@
 # Tests, pricing, and safety
 
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+
 ## Built-in tests and validation
 
 Built-in packs are `quick-migration-check`, `exact-routing-check`,
@@ -74,7 +76,7 @@ source and date so the coverage gate can assess it:
   "output_cost_per_million": 15,
   "pricing_metadata": {
     "source": "official provider pricing",
-    "as_of": "2026-08-11"
+    "as_of": "2026-08-30"
   }
 }
 ```
@@ -105,6 +107,18 @@ the value, `as_of`, and source URL together, then run the snapshot coverage
 test and `--pricing-check` before release. Do not re-date an entry whose rate
 or availability cannot be verified from its recorded primary source; remove it
 from the snapshot so the normal unknown-price remediation is shown instead.
+
+## Release price review
+
+Before a release, a maintainer must review each retained bundled direct-provider
+rate against its recorded primary source. Record the review date in the
+snapshot's `as_of` metadata, update the deterministic snapshot test in the
+same change, and run `--pricing-check` against the tracked
+[`examples/approved-smoke.json`](../../examples/approved-smoke.json) cohort.
+That example is the published release cohort; a user's ignored
+`benchmarks/approved-tests.json` remains their own local evidence and is never
+treated as release evidence. The release remains blocked until an owner has
+explicitly approved the bounded paid smoke.
 
 ## Sensitive data
 

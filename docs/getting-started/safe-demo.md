@@ -1,6 +1,6 @@
 # Getting started
 
-**Last reviewed:** 2026-08-20 · **As of:** v2.7.4
+**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 LLM Preflight answers a practical question before you change production:
 

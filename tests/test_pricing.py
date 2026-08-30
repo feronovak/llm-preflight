@@ -1,4 +1,6 @@
+import json
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -102,6 +104,38 @@ def test_gemini_3_1_pricing_has_cache_and_long_context_tiers():
     }
 
 
+@pytest.mark.parametrize(
+    ("model_id", "short_cached", "long_cached", "long_input", "long_output"),
+    [
+        ("gpt-5.6-luna", 0.02, 0.04, 0.4, 1.8),
+        ("gpt-5.6-terra", 0.2, 0.4, 4.0, 18.0),
+        ("gpt-5.6-sol", 0.4, 0.8, 8.0, 30.0),
+    ],
+)
+def test_gpt_5_6_pricing_has_cache_and_long_context_tiers(
+    model_id, short_cached, long_cached, long_input, long_output
+):
+    model = apply_public_pricing({"provider": "openai", "model": model_id})
+
+    assert model["cached_input_cost_per_million"] == short_cached
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": long_input,
+        "output_cost_per_million": long_output,
+        "cached_input_cost_per_million": long_cached,
+    }
+
+
+def test_grok_4_3_pricing_has_cache_and_long_context_tiers():
+    model = apply_public_pricing({"provider": "xai", "model": "grok-4.3"})
+
+    assert model["cached_input_cost_per_million"] == 0.2
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": 2.5,
+        "output_cost_per_million": 5.0,
+        "cached_input_cost_per_million": 0.4,
+    }
+
+
 def test_tier_only_pricing_counts_as_covered():
     report = pricing_coverage_report(
         [
@@ -168,7 +202,7 @@ def test_gemini_3_1_flash_lite_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 0.25
     assert model["output_cost_per_million"] == 1.5
     assert model["cached_input_cost_per_million"] == 0.025
-    assert model["pricing_metadata"]["as_of"] == "2026-08-11"
+    assert model["pricing_metadata"]["as_of"] == "2026-08-30"
 
 
 @pytest.mark.parametrize(
@@ -176,7 +210,7 @@ def test_gemini_3_1_flash_lite_official_snapshot_pricing():
     [
         ("gpt-5.6-luna", 0.2, 1.2),
         ("gpt-5.6-terra", 2.0, 12.0),
-        ("gpt-5.6-sol", 5.0, 30.0),
+        ("gpt-5.6-sol", 4.0, 20.0),
     ],
 )
 def test_gpt_5_6_official_snapshot_pricing(model_id, input_price, output_price):
@@ -189,13 +223,56 @@ def test_gpt_5_6_official_snapshot_pricing(model_id, input_price, output_price):
 def test_public_pricing_snapshot_is_reviewed_for_this_release():
     from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
 
-    assert {as_of for _, _, as_of in PUBLIC_PRICING.values()} == {"2026-08-11"}
+    assert PUBLIC_PRICING == {
+        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-30"),
+        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-30"),
+        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-08-30"),
+        ("openai", "gpt-5.5"): (5.0, 30.0, "2026-08-30"),
+        ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-08-30"),
+        ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-08-30"),
+        ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
+        ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
+        ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
+        ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
+        ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
+        ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
+        ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
+        ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
+        ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
+        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
+        ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
+        ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
+        ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
+        ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
+    }
     assert set(PUBLIC_PRICING_SOURCES) == set(PUBLIC_PRICING)
     assert all(
         source.startswith("https://") for source in PUBLIC_PRICING_SOURCES.values()
     )
-    assert PUBLIC_PRICING[("openai", "gpt-5.6-terra")][:2] == (2.0, 12.0)
-    assert PUBLIC_PRICING[("openai", "gpt-5.6-luna")][:2] == (0.2, 1.2)
+    assert PUBLIC_PRICING_SOURCES[("xai", "grok-4.3")] == (
+        "https://docs.x.ai/developers/pricing"
+    )
+
+
+def test_approved_smoke_cohort_has_complete_current_pricing():
+    approved = json.loads(Path("examples/approved-smoke.json").read_text())
+
+    report = pricing_coverage_report(
+        resolve_pricing(approved["models"])["models"],
+        today=date(2026, 8, 30),
+        require_current_pricing=True,
+    )
+
+    assert report["summary"] == {
+        "selected": 7,
+        "billable": 7,
+        "exempt": 0,
+        "priced": 7,
+        "undated": 0,
+        "stale": 0,
+        "unknown": 0,
+    }
+    assert report["enforcement_ok"] is True
 
 
 def test_mock_fixtures_do_not_count_as_priced_billable_models():

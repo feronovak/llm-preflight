@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 2.9.0 - Unreleased
+## 2.9.0 - 2026-08-31
 
 ### Added
 
@@ -12,6 +12,12 @@ All notable changes to this project are documented here.
 - Add safe provider-breakage and pricing-drift issue forms, plus a concise
   comparison page that keeps local contract preflight distinct from evaluation,
   observability, and provider administration.
+
+### Changed
+
+- Align GitHub repository metadata and README discovery with the local
+  integration-change preflight niche: safe first run, workflow choices,
+  explicit spend boundary, and a link to complete release history.
 
 ## 2.8.0 - 2026-08-31
 

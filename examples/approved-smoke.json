@@ -12,12 +12,47 @@
     "max_output_tokens": 128
   },
   "models": [
-    {"provider": "openai", "model": "gpt-5.6-luna"},
-    {"provider": "openai", "model": "gpt-5.6-sol"},
-    {"provider": "openai", "model": "gpt-5.5"},
-    {"provider": "openai", "model": "gpt-5.4-mini"},
-    {"provider": "anthropic", "model": "claude-fable-5"},
-    {"provider": "anthropic", "model": "claude-opus-4-8"},
-    {"provider": "gemini", "model": "gemini-3.5-flash"}
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "openai_responses"}
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "openai_responses"}
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "openai_responses"}
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-mini",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "openai_responses"}
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "anthropic_messages"}
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "anthropic_messages"}
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "catalog_type": "text-ready",
+      "capabilities": {"adapter": "gemini_generate_content"}
+    }
   ]
 }

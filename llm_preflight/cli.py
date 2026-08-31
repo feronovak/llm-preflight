@@ -25,6 +25,7 @@ from .catalog_watch import (
     snapshot_catalog,
 )
 from .client import PROVIDER_DEFAULTS
+from .eligibility import smoke_eligibility_report
 from .env import load_env_file
 from .features import (
     apply_environment,
@@ -329,6 +330,7 @@ def _dry_run_plan(
         "pricing_coverage": pricing_coverage_report(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
+        "smoke_eligibility": smoke_eligibility_report(models, config),
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -404,6 +406,15 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{entry['remediation']}"
             for entry in coverage.get("models", [])
             if entry.get("status") != "priced"
+        )
+    eligibility = plan.get("smoke_eligibility", {}).get("summary", {})
+    if eligibility:
+        needs_review = eligibility.get("needs_review", 0)
+        review_verb = "needs" if needs_review == 1 else "need"
+        lines.append(
+            "Smoke eligibility: "
+            f"{eligibility.get('eligible', 0)} eligible; "
+            f"{needs_review} {review_verb} review."
         )
     return "\n".join(lines) + "\n"
 
@@ -697,6 +708,16 @@ def _result_exit_code(result: dict[str, object]) -> int:
 
 
 def _format_catalog_watch(payload: dict[str, Any]) -> str:
+    eligibility = payload.get("smoke_eligibility", {}).get("summary", {})
+    needs_review = eligibility.get("needs_review", 0)
+    review_verb = "needs" if needs_review == 1 else "need"
+    eligibility_line = (
+        "Smoke eligibility: "
+        f"{eligibility.get('eligible', 0)} eligible; "
+        f"{needs_review} {review_verb} review.\n"
+        if eligibility
+        else ""
+    )
     if payload["initialized"]:
         categories = ", ".join(
             f"{kind}: {count}" for kind, count in payload["categories"].items()
@@ -705,13 +726,16 @@ def _format_catalog_watch(payload: dict[str, Any]) -> str:
             f"Catalog snapshot initialized: {payload['snapshot']}\n"
             f"Tracked models: {payload['models']}\n"
             f"Categories: {categories}\n"
-            "Run this command again after providers update their catalogs.\n"
+            + eligibility_line
+            + "Run this command again after providers update their catalogs.\n"
         )
     lines = [f"Catalog updated: {payload['snapshot']}"]
     lines.append(
         "Categories: "
         + ", ".join(f"{kind}: {count}" for kind, count in payload["categories"].items())
     )
+    if eligibility:
+        lines.append(eligibility_line.rstrip())
     for label in ("added", "removed", "renamed", "changed"):
         items = payload["diff"][label]
         lines.append(f"{label.title()}: {len(items)}")
@@ -1056,6 +1080,7 @@ def _watch_new_main(argv: list[str]) -> None:
         ),
         "initialized": previous is None,
         "diff": diff,
+        "smoke_eligibility": smoke_eligibility_report(models, watch_config),
     }
     if not args.test and not args.interactive and not args.write_config:
         save_snapshot(snapshot_path, models)
@@ -1096,8 +1121,23 @@ def _watch_new_main(argv: list[str]) -> None:
                 if (model.get("provider", "openai_compatible"), model["model"])
                 in candidate_keys
             ]
+        eligibility = smoke_eligibility_report(candidates, watch_config)
+        eligible_keys = {
+            (entry["provider"], entry["model"])
+            for entry in eligibility["models"]
+            if entry["eligible"]
+        }
+        candidates = [
+            model
+            for model in candidates
+            if (model.get("provider", "openai_compatible"), model["model"])
+            in eligible_keys
+        ]
         if not candidates:
-            print("No newly discovered models to write.", file=sys.stderr)
+            print(
+                "No smoke-eligible models to write; review catalog refresh JSON for reasons.",
+                file=sys.stderr,
+            )
             return
         if args.select_candidates:
             candidates = interactive_catalog_candidate_selection(candidates)
@@ -1372,6 +1412,7 @@ def _catalog_main(argv: list[str]) -> None:
             "warmups": 0,
             "concurrency": 1,
             "max_requests": 100,
+            "max_estimated_cost_usd": 0.05,
             "request": {"temperature": 0, "max_output_tokens": 128},
             "discovery": [sources[name] for name in names],
         }

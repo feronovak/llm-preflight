@@ -1,11 +1,13 @@
 # Model catalogue: discover, test, and keep models
 
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+
 Use the catalogue when you want a small, trusted list of models for your own
 work. It is deliberately a local workflow: provider catalogues are broad;
 your approved list contains only models you chose after testing.
 
 ```text
-provider metadata → confirm compatibility → benchmark → approve → re-test
+provider metadata → price check → probe → bounded smoke → human approval → re-test
 ```
 
 You do not need to edit the catalogue files by hand. Commands create and update
@@ -51,12 +53,15 @@ Each discovered model is placed in one of three useful groups:
 
 | Group | Meaning | What you do |
 |---|---|---|
-| **Ready to benchmark** | Provider metadata, or a previous successful probe, identifies a supported text adapter. | Select it for a candidate benchmark. |
+| **Ready to review for smoke** | Provider metadata, or a previous successful probe, identifies a supported text adapter. | Check current pricing and declared bounds in the dry-run before selecting it. |
 | **Needs one probe** | It looks like a text model but metadata cannot safely prove the request shape. | Optionally make one small, provider-native request. |
 | **Not a generic text benchmark model** | It is image, audio, video, realtime, agent, or another incompatible endpoint. | Leave it out of a normal text suite. |
 
 The third group remains visible. It is not silently deleted or treated as a
-failed chat model.
+failed chat model. Refresh also returns `smoke_eligibility` in JSON: every
+model is either `eligible` or has one stable reason explaining the next review
+step. A model can be text-ready yet still need pricing, declared limits, or
+adapter evidence before it is eligible for a paid smoke.
 
 ### 2. Probe only the text candidates you care about
 
@@ -78,7 +83,7 @@ Do not probe everything merely because it is listed. Use it for models you are
 actually considering. Account access, regions, and provider rollouts can make a
 model available to one user and unavailable to another.
 
-### 3. Make a temporary candidate plan
+### 3. Make a temporary candidate plan and inspect its evidence
 
 ```bash
 llm-preflight catalog prepare benchmarks/watch.json \
@@ -86,10 +91,38 @@ llm-preflight catalog prepare benchmarks/watch.json \
   --output benchmarks/candidates.json
 ```
 
-The selector shows only **Ready to benchmark** models. Pick the few models you
+The selector shows only **Ready to review for smoke** models. Pick the few models you
 want to compare; `all` means all displayed compatible text models, never every
 ID in every provider catalogue. The resulting `candidates.json` is temporary.
-It does not change your approved list.
+It does not change your approved list or authorize a request. Preview the exact
+selection before any paid work:
+
+```bash
+llm-preflight benchmarks/candidates.json --migration-check --smoke --dry-run --json
+```
+
+Read `smoke_eligibility.models[]` before authorizing a run. Only an
+`eligible: true` row has compatible text type, provider-adapter evidence,
+current pricing, and both a request and cost bound. The stable reasons are:
+
+| Reason | Required next step |
+|---|---|
+| `catalog_evidence_required` | Discover through a supported catalogue or add reviewed catalogue evidence. |
+| `probe_required` | Explicitly run one minimal `catalog probe` request for the selected text candidate. |
+| `adapter_evidence_required` | Retain compatible provider-adapter evidence; do not guess a request shape. |
+| `incompatible_catalog_type` | Keep it out of the generic text smoke cohort. |
+| `unknown_pricing`, `undated_pricing`, `stale_pricing` | Review the direct-provider price evidence. |
+| `bounded_limits_required` | Declare both `max_requests` and `max_estimated_cost_usd`. |
+
+Do not change a reason by editing a result. Fix the evidence in the candidate
+configuration or local probe ledger, then preview again.
+
+`catalog prepare` writes only rows that are already smoke-eligible; models
+needing a probe, price review, catalogue/adapter evidence, or bounds remain in
+the refresh output rather than being smuggled into a runnable candidate file.
+Eligibility confirms that both caps are declared; immediately before any paid
+catalog run, the existing budget gate recalculates the retry-expanded request
+count and maximum estimated cost and refuses a plan that exceeds either cap.
 
 If you intentionally want a fresh temporary plan, make replacement explicit:
 
@@ -148,7 +181,7 @@ llm-preflight models approve openai:MODEL_ID \
 Repeat this short loop:
 
 ```text
-refresh → probe only candidates you want → migration check → contract test → approve
+refresh → price check → probe only candidates you want → bounded smoke → contract test → approve
 ```
 
 Existing approvals do not change during discovery. If a selected model returns

@@ -1365,7 +1365,30 @@ def test_catalog_refresh_uses_the_catalog_command_family(monkeypatch, tmp_path, 
 
     cli.main()
 
-    assert json.loads(capsys.readouterr().out)["initialized"] is True
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["initialized"] is True
+    assert payload["smoke_eligibility"]["summary"] == {
+        "discovered": 1,
+        "eligible": 0,
+        "needs_review": 1,
+    }
+
+
+def test_catalog_refresh_terminal_summary_includes_smoke_eligibility():
+    output = cli._format_catalog_watch(
+        {
+            "snapshot": "catalog.json",
+            "models": 2,
+            "categories": {"text-ready": 2},
+            "initialized": True,
+            "diff": None,
+            "smoke_eligibility": {
+                "summary": {"discovered": 2, "eligible": 1, "needs_review": 1}
+            },
+        }
+    )
+
+    assert "Smoke eligibility: 1 eligible; 1 needs review." in output
 
 
 def test_catalog_init_creates_a_ready_local_workspace(monkeypatch, tmp_path):
@@ -1387,6 +1410,7 @@ def test_catalog_init_creates_a_ready_local_workspace(monkeypatch, tmp_path):
 
     watch = json.loads((workspace / "watch.json").read_text())
     assert [item["provider"] for item in watch["discovery"]] == ["openai", "anthropic"]
+    assert watch["max_estimated_cost_usd"] == 0.05
     assert json.loads((workspace / "approved.json").read_text()) == {
         "models": [],
         "approvals": [],
@@ -1582,7 +1606,10 @@ def test_catalog_candidate_selection_groups_before_listing_models():
 
 def test_watch_new_writes_a_regular_candidate_benchmark_config(monkeypatch, tmp_path):
     watch = tmp_path / "watch.json"
-    watch.write_text('{"prompt":"hello","models":[{"model":"old"}]}')
+    watch.write_text(
+        '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'
+        '"models":[{"model":"old"}]}'
+    )
     approved = tmp_path / "approved.json"
     approved.write_text('{"models":[{"provider":"openai","model":"old"}]}')
     snapshot = tmp_path / "snapshot.json"
@@ -1595,7 +1622,15 @@ def test_watch_new_writes_a_regular_candidate_benchmark_config(monkeypatch, tmp_
         "resolve_models",
         lambda value: [
             {"provider": "openai", "model": "old"},
-            {"provider": "openai", "model": "new"},
+            {
+                "provider": "openai",
+                "model": "new",
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+                "pricing_metadata": {"as_of": "2026-08-31"},
+            },
         ],
     )
     monkeypatch.setattr(
@@ -1617,15 +1652,78 @@ def test_watch_new_writes_a_regular_candidate_benchmark_config(monkeypatch, tmp_
     cli.main()
 
     assert json.loads(output.read_text())["models"] == [
-        {"provider": "openai", "model": "new"},
+        {
+            "provider": "openai",
+            "model": "new",
+            "catalog_type": "text-ready",
+            "capabilities": {"adapter": "openai_responses"},
+            "input_cost_per_million": 1,
+            "output_cost_per_million": 2,
+            "pricing_metadata": {"as_of": "2026-08-31"},
+        },
     ]
+
+
+def test_watch_new_writes_only_smoke_eligible_candidates(monkeypatch, tmp_path):
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        json.dumps(
+            {
+                "prompt": "hello",
+                "max_requests": 2,
+                "max_estimated_cost_usd": 0.01,
+                "models": [{"provider": "mock", "model": "base"}],
+            }
+        )
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models":[]}')
+    output = tmp_path / "candidates.json"
+    ready = {
+        "provider": "openai",
+        "model": "ready",
+        "catalog_type": "text-ready",
+        "capabilities": {"adapter": "openai_responses"},
+        "input_cost_per_million": 1,
+        "output_cost_per_million": 2,
+        "pricing_metadata": {"as_of": "2026-08-31"},
+    }
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [
+            ready,
+            {**ready, "model": "probe", "catalog_type": "text-candidate"},
+        ],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "watch-new",
+            str(watch),
+            "--against",
+            str(approved),
+            "--all-unapproved",
+            "--write-config",
+            str(output),
+        ],
+    )
+
+    cli.main()
+
+    assert json.loads(output.read_text())["models"] == [ready]
 
 
 def test_watch_new_candidate_config_does_not_persist_inherited_headers(
     monkeypatch, tmp_path
 ):
     watch = tmp_path / "watch.json"
-    watch.write_text('{"prompt":"hello","models":[{"model":"old"}]}')
+    watch.write_text(
+        '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'
+        '"models":[{"model":"old"}]}'
+    )
     approved = tmp_path / "approved.json"
     approved.write_text('{"models":[]}')
     output = tmp_path / "candidates.json"
@@ -1636,6 +1734,11 @@ def test_watch_new_candidate_config_does_not_persist_inherited_headers(
             {
                 "provider": "openai",
                 "model": "new",
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+                "pricing_metadata": {"as_of": "2026-08-31"},
                 "headers": {"Authorization": "Bearer secret"},
             }
         ],
@@ -1706,7 +1809,10 @@ def test_watch_new_failed_candidate_run_does_not_advance_snapshot(
 
 def test_watch_new_can_write_all_currently_unapproved_models(monkeypatch, tmp_path):
     watch = tmp_path / "watch.json"
-    watch.write_text('{"prompt":"hello","models":[{"model":"old"}]}')
+    watch.write_text(
+        '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'
+        '"models":[{"model":"old"}]}'
+    )
     approved = tmp_path / "approved.json"
     approved.write_text('{"models":[{"provider":"openai","model":"old"}]}')
     output = tmp_path / "candidates.json"
@@ -1715,7 +1821,15 @@ def test_watch_new_can_write_all_currently_unapproved_models(monkeypatch, tmp_pa
         "resolve_models",
         lambda value: [
             {"provider": "openai", "model": "old"},
-            {"provider": "openai", "model": "already-discovered"},
+            {
+                "provider": "openai",
+                "model": "already-discovered",
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+                "pricing_metadata": {"as_of": "2026-08-31"},
+            },
         ],
     )
     monkeypatch.setattr(
@@ -1736,7 +1850,15 @@ def test_watch_new_can_write_all_currently_unapproved_models(monkeypatch, tmp_pa
     cli.main()
 
     assert json.loads(output.read_text())["models"] == [
-        {"provider": "openai", "model": "already-discovered"}
+        {
+            "provider": "openai",
+            "model": "already-discovered",
+            "catalog_type": "text-ready",
+            "capabilities": {"adapter": "openai_responses"},
+            "input_cost_per_million": 1,
+            "output_cost_per_million": 2,
+            "pricing_metadata": {"as_of": "2026-08-31"},
+        }
     ]
 
 
@@ -2160,6 +2282,32 @@ def test_main_dry_run_prints_human_readable_plan_by_default(
     assert "Requests: 5 nominal; up to 10 with 2 attempts" in output
     assert "Cost: unavailable" in output
     assert "Stop on: none" in output
+    assert "Smoke eligibility: 0 eligible; 1 needs review." in output
+
+
+def test_dry_run_summarizes_smoke_eligibility():
+    plan = {
+        "benchmark": "catalog",
+        "models": [{"provider": "openai", "model": "ready"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": 0.001,
+        "maximum_estimated_cost_usd": 0.001,
+        "pricing_warnings": [],
+        "pricing_coverage": {"summary": {}},
+        "smoke_eligibility": {
+            "summary": {"discovered": 3, "eligible": 1, "needs_review": 2}
+        },
+        "configuration_warnings": [],
+        "save_responses": False,
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert "Smoke eligibility: 1 eligible; 2 need review." in output
 
 
 def test_dry_run_summarizes_large_model_and_pricing_lists():

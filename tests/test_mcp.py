@@ -162,6 +162,11 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
         "stale": 0,
         "unknown": 0,
     }
+    assert plan["result"]["structuredContent"]["smoke_eligibility"]["summary"] == {
+        "discovered": 1,
+        "eligible": 0,
+        "needs_review": 1,
+    }
 
 
 def test_live_run_requires_paid_confirmation(tmp_path):

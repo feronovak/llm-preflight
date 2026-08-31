@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 2.8.0 - 2026-08-31
+
+### Added
+
+- Add deterministic smoke-eligibility evidence that distinguishes eligible
+  routes from models needing a probe, adapter evidence, compatible modality,
+  current pricing, or bounded limits.
+- Make `catalog prepare` retain only smoke-eligible models in its runnable
+  candidate configuration, while keeping excluded models and their reasons in
+  catalog refresh evidence.
+
 ## 2.7.5 - 2026-08-31
 
 ### Fixed

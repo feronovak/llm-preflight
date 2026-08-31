@@ -1,5 +1,7 @@
 # CLI reference
 
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
 `--quick`, `--diff`, or `--replay` is used.
@@ -33,7 +35,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--catalog` | off | Discover and print selected models; no generation. |
 | `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |
 | `--profiles LIST` | — | Compatibility alias for `--tests`. |
-| `--dry-run` | off | Safe preview: print resolved work and cost estimate; no generation. |
+| `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. |
 | `--no-env-file` | off | Do not load the adjacent `.env.production`. |
 | `--env-file PATH` | — | Load this env file instead of the default adjacent file. |
 | `--stop-on MODE` | — | Stop after `api-error`, `test-fail`, or `any-fail`. |
@@ -111,8 +113,8 @@ temporary candidate plan, benchmark execution, and permanent approval separate.
 | Command | Purpose |
 |---|---|
 | `catalog init [DIRECTORY] [--providers LIST] [--replace]` | Create an ignored local workspace with `watch.json`, `approved.json`, `.env.production`, and `results/`. Without `--providers`, it asks once and Enter means all supported providers. For an existing workspace, it asks before rewriting only `watch.json`; `--replace` is the scripted equivalent and preserves approvals, keys, and results. |
-| `catalog refresh WATCH_CONFIG` | Fetch provider metadata, classify catalogue entries, and update the local snapshot. It makes no generation requests. Optional legacy watch flags such as `--json`, `--snapshot`, and `--env-file` remain available. |
-| `catalog prepare WATCH_CONFIG --against APPROVED --output CANDIDATES` | Group unapproved `text-ready` candidates by provider, require an explicit model selection, then write a temporary benchmark plan. `text-candidate` models first use `catalog probe`; non-text types are not offered to the generic chat benchmark. Use `--replace` only when deliberately rebuilding that plan. |
+| `catalog refresh WATCH_CONFIG` | Fetch provider metadata, classify catalogue entries, update the local snapshot, and report per-model `smoke_eligibility`. It makes no generation requests. Optional legacy watch flags such as `--json`, `--snapshot`, and `--env-file` remain available. |
+| `catalog prepare WATCH_CONFIG --against APPROVED --output CANDIDATES` | Group unapproved `text-ready` candidates by provider, require an explicit model selection, then write a temporary benchmark plan containing only smoke-eligible rows. `text-candidate` models first use `catalog probe`; non-text, unpriced, unbounded, or unproven rows remain visible in refresh eligibility output. Use `--replace` only when deliberately rebuilding that plan. |
 | `catalog probe WATCH_CONFIG [--models LIST]` | Review `text-candidate` models, then make one explicitly confirmed, provider-native minimal request per selection. Results are saved locally in `.llm-preflight/capabilities.json`; response text and keys are never stored. |
 | `catalog test WATCH_CONFIG --approved APPROVED --output CONFIG` | Write a runnable benchmark plan for permanent approved models, using the test settings in the watch config. |
 | `CANDIDATES --interactive --approve-to APPROVED` | Run the single interactive benchmark flow, then offer passing models for approval. |

@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
 
 LLM Preflight includes a local stdio MCP server so a coding agent can collect
 the same preflight evidence without parsing shell output or gaining arbitrary
@@ -90,7 +90,7 @@ use `validate_config` or `dry_run_plan` by name. Leave tool approval enabled.
 | Tool | What it does | Provider access |
 |---|---|---|
 | `validate_config` | Validates one benchmark configuration. | Never contacts a provider or loads credentials. |
-| `dry_run_plan` | Resolves the redacted request and cost plan. | Never contacts a provider or loads credentials. |
+| `dry_run_plan` | Resolves the redacted request, cost plan, and per-model `smoke_eligibility`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 
@@ -112,9 +112,10 @@ See [Agent decision contract](../reference/decision.md).
 ## Safe agent workflow
 
 1. Ask the agent to run `validate_config` after an LLM-related change.
-2. Ask it to run `dry_run_plan` and report models, request count, and estimated
-   cost.
-3. Review the plan and explicitly authorize a paid run when appropriate.
+2. Ask it to run `dry_run_plan` and report models, request count, estimated
+   cost, and every non-eligible `smoke_eligibility` reason.
+3. Review the plan and explicitly authorize a paid run only after the intended
+   smoke cohort is eligible and bounded.
 4. Use `run_preflight`, then retain the returned evidence or compare it with a
    reviewed baseline using `diff_baseline`.
 

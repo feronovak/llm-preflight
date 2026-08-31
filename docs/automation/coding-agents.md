@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
@@ -12,7 +12,8 @@ It does not judge semantic quality or authorize a production rollout.
    prompt, request settings, and validators unless the user explicitly asks to
    change the contract.
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before a live benchmark.
-   They make no generation requests.
+   They make no generation requests. For a candidate cohort, report every
+   non-eligible `smoke_eligibility` reason before proposing paid work.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or add an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID. Use explicit
@@ -73,7 +74,8 @@ llm-preflight benchmark.json --doctor --json
 # Enforce complete current pricing before approving paid work.
 llm-preflight benchmark.json --pricing-check
 
-# Inspect exact models, tests, retry-expanded request count, and estimated cost.
+# Inspect exact models, tests, retry-expanded request count, estimated cost,
+# and smoke-eligibility evidence.
 llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json
 
 # Make paid requests only after the plan is accepted.

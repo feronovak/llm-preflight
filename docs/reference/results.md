@@ -1,9 +1,26 @@
 # Result JSON schema
 
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is
 `1`; integrations should reject an unknown major schema version rather than
 guessing its meaning.
+
+## Dry-run plan fields
+
+`llm-preflight CONFIG --dry-run --json` prints a plan instead of a result and
+does not create an artifact. Its additive `smoke_eligibility` field contains a
+summary (`discovered`, `needs_review`, and `eligible`) and one entry per
+resolved model. Each entry has `provider`, `model`, `catalog_type`, `eligible`,
+and a stable `reason`: `eligible`, `catalog_evidence_required`,
+`probe_required`, `adapter_evidence_required`, `incompatible_catalog_type`,
+`unknown_pricing`, `undated_pricing`, `stale_pricing`, or
+`bounded_limits_required`. Agents must use this evidence rather than infer
+whether a newly discovered ID is safe to include in a paid smoke.
+Eligibility confirms that request and cost caps exist. The paid-run budget gate
+then enforces those caps against the dry-run's retry-expanded requests and
+maximum estimated cost; eligibility itself is not a cost estimate.
 
 ## Top-level fields
 

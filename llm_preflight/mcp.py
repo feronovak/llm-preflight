@@ -12,6 +12,7 @@ from typing import Any
 
 from . import __version__
 from .catalog import resolve_models
+from .eligibility import smoke_eligibility_report
 from .env import load_env_file
 from .features import (
     apply_model_aliases,
@@ -215,6 +216,7 @@ def _call(
                     models,
                     require_current_pricing=bool(config.get("require_current_pricing")),
                 ),
+                "smoke_eligibility": smoke_eligibility_report(models, config),
             },
             standard=standard,
         )

@@ -34,10 +34,11 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in feature_map
+    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
+    assert "Catalog-to-smoke eligibility" in feature_map
     assert "GPT-5.6 Luna" in changelog
     assert "GPT-5.6 Terra" in changelog
     pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
@@ -52,13 +53,14 @@ def test_coding_agents_documents_the_inconclusive_exit_code():
     assert "`3` for inconclusive evidence" in coding_agents
 
 
-def test_docs_match_the_2_7_5_release_and_current_workflow_pin():
+def test_docs_match_the_2_8_0_workflow_and_current_workflow_pin():
     readme = (ROOT / "README.md").read_text()
     ci = (ROOT / "docs/automation/ci.md").read_text()
     workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
-    assert "## What is new in 2.7.5" in readme
+    assert "## What is new in 2.8.0" in readme
+    assert "catalogue-to-smoke boundary" in readme
     assert "Refresh reviewed direct-provider pricing" in readme
     assert "examples/frontier-candidates.json" in readme
     assert "complete pricing across every configured tier" in readme
@@ -110,18 +112,25 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
-    required_stamps = (
+    retained_stamps = (
         ROOT / "docs/getting-started/safe-demo.md",
         ROOT / "docs/reference/decision.md",
-        ROOT / "docs/automation/coding-agents.md",
-        ROOT / "docs/automation/mcp.md",
         ROOT / "docs/automation/ci.md",
     )
-    for page in required_stamps:
+    for page in retained_stamps:
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     for page in (
         ROOT / "README.md",
+        ROOT / "docs/automation/coding-agents.md",
+        ROOT / "docs/automation/mcp.md",
+        ROOT / "docs/guides/model-catalog.md",
+        ROOT / "docs/reference/cli.md",
+        ROOT / "docs/reference/results.md",
+    ):
+        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in page.read_text()
+
+    for page in (
         ROOT / "docs/index.md",
         ROOT / "docs/guides/pricing-and-safety.md",
     ):

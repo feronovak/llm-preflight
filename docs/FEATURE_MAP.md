@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -19,6 +19,7 @@ module names.
 | `--changed-since` — run only models absent from a catalog snapshot | live | `catalog.py`, `catalog_watch.py` |
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
+| Catalog-to-smoke eligibility — classify each discovered model as eligible or requiring catalogue, probe, adapter, pricing, or bounds evidence; only eligible rows enter generated candidate plans | live | `eligibility.py`, `catalog.py`, `catalog_watch.py`, `cli.py` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |
 | JSON-preset comparability warnings for Anthropic results | live | `presets.py`, `cli.py`, `runner.py` |

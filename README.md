@@ -1,6 +1,6 @@
 # LLM Preflight
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
@@ -77,7 +77,24 @@ contract run. Only explicitly approved passing models belong in your ongoing
 test set. The [model catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md)
 has the complete discovery, probe, benchmark, and approval workflow.
 
-## What is new in 2.7.5
+In 2.8.0, a dry-run also exposes `smoke_eligibility`: models are either
+eligible for a bounded paid smoke or carry a stable reason such as
+`probe_required`, `adapter_evidence_required`, `unknown_pricing`, or
+`incompatible_catalog_type`. Discovery never turns a model into a paid
+candidate automatically: review the reason, fix the missing evidence, and
+explicitly authorize the bounded smoke.
+
+## What is new in 2.8.0
+
+- **Make the catalogue-to-smoke boundary explicit.** Catalog refresh, CLI
+  dry-runs, and MCP dry-run plans now separate discovered models, those needing
+  review, and the fully evidenced routes eligible for a bounded paid smoke.
+- **Give agents stable exclusion reasons.** Automation receives
+  `catalog_evidence_required`, `probe_required`,
+  `adapter_evidence_required`, `incompatible_catalog_type`, pricing status,
+  or `bounded_limits_required` rather than inferring readiness from a model ID.
+
+### Delivered in 2.7.5
 
 - **Refresh reviewed direct-provider pricing.** Corrected GPT-5.6 standard
   rates, refreshed all bundled official pricing evidence, and removed a

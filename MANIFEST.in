@@ -13,6 +13,8 @@ exclude CONTRIBUTING.md
 exclude LAUNCH.md
 exclude Makefile
 exclude RELEASING.md
+exclude server.json
 prune docs
 prune .github
+prune plugins
 prune tests

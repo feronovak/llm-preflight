@@ -40,7 +40,8 @@ Results stay local unless you decide to attach or publish them.
 - [Coding agents](automation/coding-agents.md) — a safe command sequence and
   decision rules for agents.
 - [MCP server](automation/mcp.md) — give a coding agent local, bounded access
-  to validation, planning, execution, and baseline diffs.
+  to validation, planning, execution, and baseline diffs; includes registry
+  metadata and the repository plugin skill.
 
 ## Reference and help
 

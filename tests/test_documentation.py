@@ -13,6 +13,8 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     assert "### Codex" in mcp_guide
     assert "### Claude Code" in mcp_guide
     assert "### Cursor" in mcp_guide
+    assert "## Registry discovery" in mcp_guide
+    assert "## Clean-install verification" in mcp_guide
     assert "docs/index.md" in readme
     assert (ROOT / "docs/index.md").is_file()
     assert (ROOT / "docs/automation/mcp.md").is_file()
@@ -40,6 +42,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "Opt-in, versioned agent-instruction block" in feature_map
     assert "Catalog-to-smoke eligibility" in feature_map
     assert "no-spend tool hints and workflow resource" in feature_map
+    assert "registry manifest and repository plugin skill" in feature_map
     assert "GPT-5.6 Luna" in changelog
     assert "GPT-5.6 Terra" in changelog
     pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
@@ -205,6 +208,8 @@ def test_project_map_indexes_distribution_assets():
 
     assert "CI workflows and safe issue forms" in project_map
     assert "action.yml" in project_map
+    assert "server.json" in project_map
+    assert "plugins/llm-preflight/" in project_map
 
 
 def test_local_markdown_links_resolve_after_docs_reorganization():

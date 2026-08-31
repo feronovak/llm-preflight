@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+from llm_preflight import __version__
 
 ROOT = Path(__file__).parent.parent
 
@@ -41,3 +44,40 @@ def test_issue_forms_and_comparison_page_keep_reporting_safe_and_scoped():
     assert "not a universal ranking" in comparison
     assert "../NORTH_STAR.md" in comparison
     assert "../reference/decision.md" in comparison
+
+
+def test_mcp_registry_manifest_and_plugin_keep_discovery_local_and_safe():
+    manifest = json.loads((ROOT / "server.json").read_text())
+    plugin = json.loads(
+        (ROOT / "plugins/llm-preflight/.codex-plugin/plugin.json").read_text()
+    )
+    skill = (ROOT / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    readme = (ROOT / "README.md").read_text()
+
+    assert manifest["name"] == "io.github.feronovak/llm-preflight"
+    assert manifest["version"] == __version__
+    assert manifest["packages"] == [
+        {
+            "registryType": "pypi",
+            "identifier": "llm-preflight",
+            "version": __version__,
+            "transport": {"type": "stdio"},
+        }
+    ]
+    assert "<!-- mcp-name: io.github.feronovak/llm-preflight -->" in readme
+    assert plugin["name"] == "llm-preflight"
+    assert plugin["version"] == __version__
+    assert plugin["skills"] == "./skills/"
+    assert "dry_run_plan" in skill
+    assert "confirm_paid_run: true" in skill
+    assert "must not infer approval" in skill
+
+
+def test_testpypi_clean_install_exercises_the_mcp_no_spend_handshake():
+    workflow = (ROOT / ".github/workflows/testpypi.yml").read_text()
+
+    assert "llm-preflight-mcp --workspace" in workflow
+    assert '"method":"initialize"' in workflow
+    assert '"method":"resources/read"' in workflow
+    assert "safe-workflow" in workflow
+    assert "confirm_paid_run" not in workflow

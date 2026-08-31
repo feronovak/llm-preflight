@@ -26,6 +26,18 @@ The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
 
+## Registry discovery
+
+[`server.json`](../../server.json) is the versioned manifest for the official
+MCP Registry. It identifies the public PyPI package and its local stdio
+transport; the registry stores metadata, not the server artifact. The manifest
+is published only after the matching package version is available on PyPI.
+
+The repository also includes a small Codex plugin at
+`plugins/llm-preflight/`. Its skill teaches the no-spend workflow but
+deliberately does not bundle an MCP command: choosing the workspace remains an
+explicit, project-local setup decision.
+
 On the standard protocol path, `tools/list` also declares a client-visible
 safety hint for every tool and a JSON output schema for its structured result.
 `validate_config`, `dry_run_plan`, and `diff_baseline` are read-only and closed
@@ -47,9 +59,9 @@ codex mcp add llm-preflight -- llm-preflight-mcp --workspace "$PWD"
 codex mcp list
 ```
 
-This works in Codex CLI, the IDE extension, and the ChatGPT desktop app when
-they share Codex configuration. To make it project-scoped instead, add this to
-`.codex/config.toml` in a trusted repository:
+This configures the Codex CLI. The IDE extension also accepts a local stdio
+command through its MCP servers settings. To make the CLI setup project-scoped,
+add this to `.codex/config.toml` in a trusted repository:
 
 ```toml
 [mcp_servers.llm-preflight]
@@ -57,6 +69,10 @@ command = "llm-preflight-mcp"
 args = ["--workspace", "/absolute/path/to/repository"]
 default_tools_approval_mode = "prompt"
 ```
+
+The official Codex MCP configuration supports the `prompt` approval mode. Keep
+that mode: the server’s read-only hints can streamline no-spend tools, while a
+live preflight remains visible for review.
 
 ### Claude Code
 
@@ -90,6 +106,14 @@ personal global installation):
 
 Restart Cursor, enable the server in the MCP tools list, and ask the agent to
 use `validate_config` or `dry_run_plan` by name. Leave tool approval enabled.
+
+## Clean-install verification
+
+The TestPyPI validation workflow installs the exact published package in a new
+virtual environment, starts `llm-preflight-mcp`, and verifies `initialize` plus
+the safe-workflow resource without credentials or provider traffic. The three
+client setups above all invoke that same local stdio command; client UI setup
+remains a user-controlled workspace decision.
 
 ## Available tools
 

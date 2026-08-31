@@ -1,5 +1,7 @@
 # LLM Preflight
 
+<!-- mcp-name: io.github.feronovak/llm-preflight -->
+
 **Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)

@@ -215,11 +215,19 @@ def test_source_distribution_manifest_keeps_only_public_release_material():
         "LAUNCH.md",
         "Makefile",
         "RELEASING.md",
+        "server.json",
         "docs",
+        "plugins",
     ):
         assert f"include {internal_path}" not in manifest
 
-    for excluded in ("exclude AGENTS.md", "exclude CONTRIBUTING.md", "prune docs"):
+    for excluded in (
+        "exclude AGENTS.md",
+        "exclude CONTRIBUTING.md",
+        "exclude server.json",
+        "prune docs",
+        "prune plugins",
+    ):
         assert excluded in manifest
     assert "legacy-pypi-shim" not in manifest
 

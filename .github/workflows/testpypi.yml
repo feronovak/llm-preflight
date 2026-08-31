@@ -78,3 +78,11 @@ jobs:
           status=$?
           set -e
           test "${status}" -eq 3
+      - name: Verify the installed MCP server advertises no-spend discovery
+        run: |
+          mkdir mcp-workspace
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"llm-preflight://guides/safe-workflow"}}' \
+            | .testpypi-venv/bin/llm-preflight-mcp --workspace "$PWD/mcp-workspace" > mcp-output.jsonl
+          python -c 'import json; rows = [json.loads(line) for line in open("mcp-output.jsonl")]; assert rows[0]["result"]["capabilities"]["resources"] == {}; assert rows[1]["result"]["contents"][0]["uri"] == "llm-preflight://guides/safe-workflow"'

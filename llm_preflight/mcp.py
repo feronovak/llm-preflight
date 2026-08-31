@@ -26,6 +26,20 @@ from .runner import load_config, run_benchmark, validate_config_validations
 
 PROTOCOL_VERSION = "2026-07-28"
 STANDARD_PROTOCOL_VERSION = "2025-06-18"
+SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
+SAFE_WORKFLOW = """# Safe LLM Preflight workflow
+
+1. Call `validate_config` after an LLM integration change.
+2. Call `dry_run_plan` and report the request bound, estimated cost, pricing
+   coverage, and every non-eligible smoke reason.
+3. Stop for explicit user approval before any live provider request. Do not
+   infer approval from a plan, tool call, or configuration file.
+4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
+   returned decision evidence or compare it with `diff_baseline`.
+
+Mock and dry-run tools never load credentials or contact providers. A live run
+does not approve a model, increase a budget, or replace production approval.
+"""
 
 
 class ProtocolError(ValueError):
@@ -131,6 +145,11 @@ def _tool_result(
 
 def _tools() -> list[dict[str, Any]]:
     path_schema = {"type": "string", "minLength": 1}
+    readonly_annotations = {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "openWorldHint": False,
+    }
     return [
         {
             "name": "validate_config",
@@ -141,6 +160,8 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
+            "outputSchema": {"type": "object"},
+            "annotations": readonly_annotations,
         },
         {
             "name": "dry_run_plan",
@@ -151,6 +172,8 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
+            "outputSchema": {"type": "object"},
+            "annotations": readonly_annotations,
         },
         {
             "name": "run_preflight",
@@ -165,6 +188,12 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
+            "outputSchema": {"type": "object"},
+            "annotations": {
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "openWorldHint": True,
+            },
         },
         {
             "name": "diff_baseline",
@@ -175,7 +204,21 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["baseline", "current"],
                 "additionalProperties": False,
             },
+            "outputSchema": {"type": "object"},
+            "annotations": readonly_annotations,
         },
+    ]
+
+
+def _resources() -> list[dict[str, Any]]:
+    return [
+        {
+            "uri": SAFE_WORKFLOW_URI,
+            "name": "safe-workflow",
+            "title": "Safe LLM Preflight Workflow",
+            "description": "No-spend-first workflow and explicit paid-run boundary.",
+            "mimeType": "text/markdown",
+        }
     ]
 
 
@@ -299,7 +342,7 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
         if method == "initialize":
             result = {
                 "protocolVersion": STANDARD_PROTOCOL_VERSION,
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "resources": {}},
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
                 "instructions": (
                     "Use validate_config and dry_run_plan before a live run. "
@@ -313,13 +356,27 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
             result = {
                 "resultType": "complete",
                 "supportedVersions": [PROTOCOL_VERSION],
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "resources": {}},
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
             }
         elif method == "tools/list":
             result = {"tools": _tools()}
             if not standard:
                 result["resultType"] = "complete"
+        elif method == "resources/list":
+            result = {"resources": _resources()}
+        elif method == "resources/read":
+            if params.get("uri") != SAFE_WORKFLOW_URI:
+                raise ProtocolError(-32602, "unknown resource URI")
+            result = {
+                "contents": [
+                    {
+                        "uri": SAFE_WORKFLOW_URI,
+                        "mimeType": "text/markdown",
+                        "text": SAFE_WORKFLOW,
+                    }
+                ]
+            }
         elif method == "tools/call":
             name = str(params.get("name", ""))
             arguments = _arguments(name, params.get("arguments", {}))

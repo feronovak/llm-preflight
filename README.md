@@ -1,6 +1,6 @@
 # LLM Preflight
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -65,16 +65,11 @@ Its results apply to your account, network, prompts, and validation rules.
 > Live benchmarks make paid API requests. Start with the no-key demo, preview
 > the plan before a live run, and keep limits and repetitions small.
 
-## What is new in 2.9.0
+## What is new in 2.10.0
 
-- **Use a safe GitHub Action.** The Marketplace Action runs doctor, pricing,
-  and dry-run checks without provider traffic by default. A paid smoke needs
-  an explicit workflow input and credentials supplied by the caller. See the
-  [Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
-- **Report drift safely.** Provider-breakage and pricing-drift issue forms ask
-  for redacted reproduction metadata, never credentials or private prompts.
-- **Choose the right tool.** Read [when to use LLM Preflight](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md)
-  for its boundary with evaluation, observability, and provider tools.
+- **Make MCP discovery safer.** Coding agents can identify no-spend MCP tools,
+  their structured outputs, and the local safe-workflow resource before any
+  provider request. See the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
 For earlier releases, see the [changelog](CHANGELOG.md).
 

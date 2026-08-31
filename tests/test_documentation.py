@@ -34,11 +34,12 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.9.0" in feature_map
+    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
     assert "Catalog-to-smoke eligibility" in feature_map
+    assert "no-spend tool hints and workflow resource" in feature_map
     assert "GPT-5.6 Luna" in changelog
     assert "GPT-5.6 Terra" in changelog
     pricing_guide = (ROOT / "docs/guides/pricing-and-safety.md").read_text()
@@ -53,14 +54,14 @@ def test_coding_agents_documents_the_inconclusive_exit_code():
     assert "`3` for inconclusive evidence" in coding_agents
 
 
-def test_docs_match_the_2_9_0_workflow_and_current_workflow_pin():
+def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     readme = (ROOT / "README.md").read_text()
     ci = (ROOT / "docs/automation/ci.md").read_text()
     workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
-    assert "## What is new in 2.9.0" in readme
-    assert "safe GitHub Action" in readme
+    assert "## What is new in 2.10.0" in readme
+    assert "Make MCP discovery safer" in readme
     assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
@@ -77,7 +78,7 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "## Choose your path" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
-    assert "## What is new in 2.9.0" in readme
+    assert "## What is new in 2.10.0" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
     assert (
@@ -85,7 +86,7 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
         < readme.index("## Choose your path")
         < readme.index("## Safety boundary")
     )
-    assert readme.index("## What is new in 2.9.0") < readme.index("## Purpose")
+    assert readme.index("## What is new in 2.10.0") < readme.index("## Purpose")
 
 
 def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
@@ -141,7 +142,6 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 
     for page in (
         ROOT / "docs/automation/coding-agents.md",
-        ROOT / "docs/automation/mcp.md",
         ROOT / "docs/guides/model-catalog.md",
         ROOT / "docs/reference/cli.md",
         ROOT / "docs/reference/results.md",
@@ -153,10 +153,9 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         ROOT / "docs/index.md",
         ROOT / "docs/FEATURE_MAP.md",
         ROOT / "docs/PROJECT_MAP.md",
-        ROOT / "docs/automation/github-action.md",
-        ROOT / "docs/product/when-to-use.md",
+        ROOT / "docs/automation/mcp.md",
     ):
-        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.9.0" in page.read_text()
+        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in page.read_text()
 
     for page in (ROOT / "docs/guides/pricing-and-safety.md",):
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()

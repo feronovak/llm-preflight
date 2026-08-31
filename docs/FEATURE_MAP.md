@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -12,7 +12,7 @@ module names.
 |---|---|---|
 | Cross-provider preflight run against a set of models before a switch | live | `runner.py`, `client.py` |
 | CLI, as `llm-preflight` and `python -m llm_preflight` | live | `cli.py`, `__main__.py`; see `--help` for installed flags |
-| Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, safe live-run gate | live | `mcp.py` |
+| Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, no-spend tool hints and workflow resource, safe live-run gate | live | `mcp.py`, `docs/automation/mcp.md` |
 | `--doctor` — validate config, keys, model resolution, and report pricing coverage without a run | live | `cli.py` |
 | `--audit-source` — audit literal model IDs in a repository, no provider requests | live | `source_audit.py`, `cli.py` |
 | `--baseline` / `--ci` — compare against a previous result, fail when thresholds regress | live | `cli.py` |

@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 LLM Preflight includes a local stdio MCP server so a coding agent can collect
 the same preflight evidence without parsing shell output or gaining arbitrary
@@ -25,6 +25,12 @@ that contains the benchmark configuration:
 The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
+
+On the standard protocol path, `tools/list` also declares a client-visible
+safety hint for every tool and a JSON output schema for its structured result.
+`validate_config`, `dry_run_plan`, and `diff_baseline` are read-only and closed
+to the external world. `run_preflight` is marked as external-world capable,
+because a confirmed live configuration can contact a provider.
 
 ## Connect common coding agents
 
@@ -93,6 +99,15 @@ use `validate_config` or `dry_run_plan` by name. Leave tool approval enabled.
 | `dry_run_plan` | Resolves the redacted request, cost plan, and per-model `smoke_eligibility`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
+
+## Discover the safe workflow
+
+Clients that support MCP resources can read
+`llm-preflight://guides/safe-workflow`. It is a short, static no-spend-first
+checklist: validate, inspect the dry-run plan, stop for explicit user approval,
+then use `run_preflight` only with `confirm_paid_run: true`. Reading this
+resource never accesses the workspace, loads credentials, or contacts a
+provider.
 
 `run_preflight` can run a mock benchmark without credentials. Before a live
 run, the server requires `confirm_paid_run: true`. For standard clients, this

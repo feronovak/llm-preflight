@@ -82,6 +82,63 @@ def test_standard_mcp_ping_returns_an_empty_result(tmp_path):
     assert response["result"] == {}
 
 
+def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_path):
+    initialized = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2025-06-18", "capabilities": {}},
+        },
+        tmp_path,
+    )
+    tools = mcp._response(
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        tmp_path,
+    )
+    resources = mcp._response(
+        {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
+        tmp_path,
+    )
+    workflow = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "resources/read",
+            "params": {"uri": "llm-preflight://guides/safe-workflow"},
+        },
+        tmp_path,
+    )
+
+    assert initialized["result"]["capabilities"] == {"tools": {}, "resources": {}}
+    by_name = {tool["name"]: tool for tool in tools["result"]["tools"]}
+    for name in ("validate_config", "dry_run_plan", "diff_baseline"):
+        assert by_name[name]["annotations"] == {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "openWorldHint": False,
+        }
+        assert by_name[name]["outputSchema"]["type"] == "object"
+    assert by_name["run_preflight"]["annotations"] == {
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "openWorldHint": True,
+    }
+    assert resources["result"]["resources"] == [
+        {
+            "uri": "llm-preflight://guides/safe-workflow",
+            "name": "safe-workflow",
+            "title": "Safe LLM Preflight Workflow",
+            "description": "No-spend-first workflow and explicit paid-run boundary.",
+            "mimeType": "text/markdown",
+        }
+    ]
+    content = workflow["result"]["contents"][0]
+    assert content["uri"] == "llm-preflight://guides/safe-workflow"
+    assert "dry_run_plan" in content["text"]
+    assert "confirm_paid_run: true" in content["text"]
+
+
 def test_mcp_config_applies_model_aliases_and_provider_presets(tmp_path):
     path = tmp_path / "benchmark.json"
     path.write_text(

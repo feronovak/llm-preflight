@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## 2.10.0 - Unreleased
+
+### Added
+
+- Add standard MCP tool safety annotations, output-schema declarations, and a
+  discoverable no-spend workflow resource for coding agents.
+
 ## 2.9.0 - 2026-08-31
 
 ### Added

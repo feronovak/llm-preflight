@@ -1,6 +1,6 @@
 # Code map
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 Where code lives, and what each area is responsible for.
 

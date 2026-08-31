@@ -267,7 +267,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     readme = Path("README.md").read_text()
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
-    assert "## What is new in 2.10.0" in readme
+    assert "## CLI, CI, and MCP" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
     assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme

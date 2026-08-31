@@ -1,6 +1,6 @@
 # North star
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
 
 ## Mission
 

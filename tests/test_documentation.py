@@ -63,8 +63,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
-    assert "## What is new in 2.10.0" in readme
-    assert "Make MCP discovery safer" in readme
+    assert "## CLI, CI, and MCP" in readme
+    assert "Works as a CLI, GitHub Action, and local MCP server" in readme
     assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
@@ -79,9 +79,11 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
 
     assert "## Try it in 60 seconds" in readme
     assert "## Choose your path" in readme
+    assert "**Configure a coding agent.**" in readme
+    assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
-    assert "## What is new in 2.10.0" in readme
+    assert "## CLI, CI, and MCP" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
     assert (
@@ -89,7 +91,10 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
         < readme.index("## Choose your path")
         < readme.index("## Safety boundary")
     )
-    assert readme.index("## What is new in 2.10.0") < readme.index("## Purpose")
+    assert readme.index("## CLI, CI, and MCP") < readme.index("## Purpose")
+    assert readme.index("## What live evidence looks like") < readme.index(
+        "## First live run"
+    )
 
 
 def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
@@ -179,6 +184,7 @@ def test_positioning_and_decisions_are_public_and_current():
     readme = (ROOT / "README.md").read_text()
     positioning = (ROOT / "docs/product/positioning.md").read_text()
     north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
+    when_to_use = (ROOT / "docs/product/when-to-use.md").read_text()
     decisions = (ROOT / "docs/DECISIONS.md").read_text()
     metadata = (ROOT / "pyproject.toml").read_text()
 
@@ -186,9 +192,10 @@ def test_positioning_and_decisions_are_public_and_current():
     assert "Review a new model" in readme
     assert "local contract preflight for LLM integration\nchanges" in readme
     assert "[North star](../NORTH_STAR.md)" in positioning
-    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in north_star
+    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in north_star
     assert "## Mission" in north_star
     assert "## Niche" in north_star
+    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
     assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in decisions
     for decision in (
         "Local-first execution",

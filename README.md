@@ -47,6 +47,10 @@ validates configuration and output handling, but cannot approve a live model.
 - **Automate an established contract.** Add the no-spend
   [GitHub Marketplace Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
   or use [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md).
+- **Configure a coding agent.** Start the local MCP server from a trusted
+  repository with `llm-preflight-mcp --workspace "$PWD"`, then use the
+  [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md)
+  for your client configuration.
 
 ## Safety boundary
 
@@ -67,11 +71,12 @@ Its results apply to your account, network, prompts, and validation rules.
 > Live benchmarks make paid API requests. Start with the no-key demo, preview
 > the plan before a live run, and keep limits and repetitions small.
 
-## What is new in 2.10.0
+## CLI, CI, and MCP
 
-- **Make MCP discovery safer.** Coding agents can identify no-spend MCP tools,
-  their structured outputs, and the local safe-workflow resource before any
-  provider request. See the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+Works as a CLI, GitHub Action, and local MCP server. Every path starts with
+no-spend validation and planning; a live provider run remains an explicit,
+bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
+or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
 For earlier releases, see the [changelog](CHANGELOG.md).
 
@@ -132,48 +137,16 @@ an exact routing label — so the same response always produces the same verdict
 The tool does not score semantic quality; that is your task-specific
 evaluation, and it stays out of scope on purpose.
 
-## What a live run reports
+## What live evidence looks like
 
-Real output from a cross-provider run (2026-08-14, one short support prompt,
-three repetitions per model, total spend $0.051867):
+A completed preflight retains per-request observations and a machine-readable
+decision: contract validity, latency (including TTFT where observable), token
+usage, estimated cost, pricing evidence, and blocking warnings. The terminal
+summary is a convenience; automation should consume the saved JSON decision.
 
-| Model | Success | Latency p50 | Latency p95 | TTFT p50 | Tokens/s p50 | Cost |
-|---|---:|---:|---:|---:|---:|---:|
-| gpt-5.6-luna | 100% | 1.525s | 1.654s | 0.977s | 150.9 | $0.000350 |
-| claude-opus-5 | 100% | 6.052s | 6.991s | 2.088s | 67.0 | $0.022805 |
-| claude-sonnet-5 | 100% | 4.068s | 4.277s | 1.928s | 90.2 | $0.006092 |
-| gemini-3.7-flash | 100% | 2.244s | 3.060s | 2.119s | 3273.0 | $0.005689 |
-| grok-4.6 | 100% | 9.734s | 9.955s | 7.889s | 53.5 | $0.003096 |
-| deepseek/deepseek-v4-pro-0813 | 100% | 6.883s | 10.460s | 5.003s | 116.5 | $0.000891 |
-
-Tokens/s reads `n/a` when a provider delivers the response as a terminal
-burst instead of an incremental stream — the observable window measures
-transport, not generation, so no rate is reported. Cost reads `n/a` when
-pricing for the model is unknown.
-
-The report ends with an executive summary:
-
-```
-- Fastest: gpt-5.6-luna — 1.560s mean latency.
-- Cheapest: gpt-5.6-luna — $0.000350 total.
-- Best value: gpt-5.6-luna — 100% composite score.
-- Recommended: gpt-5.6-luna — passed every selected test and led the
-  qualified value ranking.
-- Total spent: $0.051867 including warmups.
-```
-
-Numbers like these are evidence for one environment at one time, not a
-leaderboard. Latency depends on your network and region; run the preflight
-from the host that will serve production traffic.
-
-The same comparison can be driven interactively — pick models and tests at
-the terminal, read the cost ceiling before anything is sent, watch each
-request report its own cost, and end on the decision. This capture is a real
-two-model paid run that cost $0.005404
-([config](https://github.com/feronovak/llm-preflight/blob/main/examples/flagship-comparison.json),
-[details](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md)):
-
-![Interactive comparison of two commercial models on two custom chat prompts, from selection through cost preview to the results table and decision](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/interactive-demo.gif)
+That evidence applies to your account, network, prompts, and validator at one
+time—not a universal model ranking. For a complete interactive example, see
+[interactive runs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md).
 
 ## First live run
 

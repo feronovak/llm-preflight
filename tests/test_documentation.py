@@ -61,12 +61,31 @@ def test_docs_match_the_2_9_0_workflow_and_current_workflow_pin():
 
     assert "## What is new in 2.9.0" in readme
     assert "safe GitHub Action" in readme
-    assert "Refresh reviewed direct-provider pricing" in readme
-    assert "examples/frontier-candidates.json" in readme
-    assert "complete pricing across every configured tier" in readme
+    assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
+    assert "## Common jobs" in readme
+    assert "catalog prepare benchmarks/watch.json" in readme
+    assert "## Safety boundary" in readme
     assert "llm-preflight==2.7.3" in workflow
     assert "Pin the starter workflow to the current release" in ci
     assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
+
+
+def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
+    readme = (ROOT / "README.md").read_text()
+
+    assert "## Try it in 60 seconds" in readme
+    assert "## Choose your path" in readme
+    assert "## Safety boundary" in readme
+    assert "## Common jobs" in readme
+    assert "## What is new in 2.9.0" in readme
+    assert "## Delivered in 2.8.0" not in readme
+    assert "## Delivered in 2.7.5" not in readme
+    assert (
+        readme.index("## Try it in 60 seconds")
+        < readme.index("## Choose your path")
+        < readme.index("## Safety boundary")
+    )
+    assert readme.index("## What is new in 2.9.0") < readme.index("## Purpose")
 
 
 def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
@@ -161,7 +180,8 @@ def test_positioning_and_decisions_are_public_and_current():
     decisions = (ROOT / "docs/DECISIONS.md").read_text()
     metadata = (ROOT / "pyproject.toml").read_text()
 
-    assert "## A new model appeared" in readme
+    assert "## Choose your path" in readme
+    assert "Review a new model" in readme
     assert "local contract preflight for LLM integration\nchanges" in readme
     assert "[North star](../NORTH_STAR.md)" in positioning
     assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in north_star

@@ -2,6 +2,10 @@
 
 **Last reviewed:** 2026-08-31 · **As of:** v2.9.0
 
+[![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
+[![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
+[![License](https://img.shields.io/github/license/feronovak/llm-preflight)](LICENSE)
+
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
 Know whether an AI-generated LLM integration is safe before it reaches
@@ -9,33 +13,6 @@ production. LLM Preflight is a local contract preflight for LLM integration
 changes: model, prompt, structured-output, and provider-call changes. It runs
 a small cross-provider preflight and compares validated output, response
 speed, tokens, and estimated cost.
-
-It is a local preflight tool—not a hosted evaluation platform, tracing system,
-RAG framework, or public leaderboard. Its results are evidence for your
-account, network, prompts, and validation rules.
-
-## Purpose
-
-**Mission:** make every LLM integration change evidence-based before production.
-
-**Vision:** AI-assisted software delivery where an agent can validate its LLM
-changes as routinely as it runs tests, while people retain control of spend and
-production approval.
-
-**Positioning:** LLM Preflight is the fast, local, cross-provider contract
-preflight for AI-powered application changes. It is not a general evaluation,
-observability, or autonomous-deployment platform.
-
-It is built for engineers and coding agents working on AI features: teams that
-need to check a real application contract against live model APIs before a
-model ID, prompt, parser, tool definition, or provider option ships. Read the
-[north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
-and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
-for the intended workflow and boundaries.
-
-> [!WARNING]
-> Live benchmarks make paid API requests. Start with the no-key demo, preview
-> the plan before a live run, and keep limits and repetitions small.
 
 ## Try it in 60 seconds
 
@@ -59,30 +36,34 @@ you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
 
-## A new model appeared
+## Choose your path
 
-This is the workflow that keeps a small, trusted model set current. Refresh
-reads provider metadata only; it does not send your benchmark prompt. Then
-probe and benchmark only the text candidates you decide to consider.
+- **Validate a change.** Compare an approved model, prompt, schema, or provider
+  route with a candidate using the [model-change guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md).
+- **Review a new model.** Discover metadata, deliberately probe a route, then
+  prepare a bounded candidate smoke with the [model-catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
+- **Automate an established contract.** Add the no-spend
+  [GitHub Marketplace Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
+  or use [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md).
 
-```bash
-llm-preflight catalog refresh benchmarks/watch.json
-llm-preflight catalog prepare benchmarks/watch.json \
-  --against benchmarks/approved.json --output benchmarks/candidates.json
-llm-preflight benchmarks/candidates.json --migration-check --dry-run
+## Safety boundary
+
+```mermaid
+flowchart LR
+    A[Integration change] --> B[No-spend validation\ndoctor, pricing, dry run]
+    B --> C{Human reviews\nevidence and cost bound}
+    C -->|Explicit approval| D[Bounded paid smoke]
+    C -->|No approval or missing evidence| E[Inconclusive: fix or stop]
+    D --> F[Local evidence for\nproduction approval]
 ```
 
-Review pricing and the bounded request plan before authorizing a paid smoke or
-contract run. Only explicitly approved passing models belong in your ongoing
-test set. The [model catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md)
-has the complete discovery, probe, benchmark, and approval workflow.
+LLM Preflight is local evidence, not production approval. It is not a hosted
+evaluation platform, tracing system, RAG framework, or public leaderboard.
+Its results apply to your account, network, prompts, and validation rules.
 
-In 2.8.0, a dry-run also exposes `smoke_eligibility`: models are either
-eligible for a bounded paid smoke or carry a stable reason such as
-`probe_required`, `adapter_evidence_required`, `unknown_pricing`, or
-`incompatible_catalog_type`. Discovery never turns a model into a paid
-candidate automatically: review the reason, fix the missing evidence, and
-explicitly authorize the bounded smoke.
+> [!WARNING]
+> Live benchmarks make paid API requests. Start with the no-key demo, preview
+> the plan before a live run, and keep limits and repetitions small.
 
 ## What is new in 2.9.0
 
@@ -95,60 +76,53 @@ explicitly authorize the bounded smoke.
 - **Choose the right tool.** Read [when to use LLM Preflight](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md)
   for its boundary with evaluation, observability, and provider tools.
 
-### Delivered in 2.8.0
+For earlier releases, see the [changelog](CHANGELOG.md).
 
-- **Make the catalogue-to-smoke boundary explicit.** Catalog refresh, CLI
-  dry-runs, and MCP dry-run plans now separate discovered models, those needing
-  review, and the fully evidenced routes eligible for a bounded paid smoke.
-- **Give agents stable exclusion reasons.** Automation receives
-  `catalog_evidence_required`, `probe_required`,
-  `adapter_evidence_required`, `incompatible_catalog_type`, pricing status,
-  or `bounded_limits_required` rather than inferring readiness from a model ID.
+## Purpose
 
-### Delivered in 2.7.5
+**Mission:** make every LLM integration change evidence-based before production.
 
-- **Refresh reviewed direct-provider pricing.** Corrected GPT-5.6 standard
-  rates, refreshed all bundled official pricing evidence, and removed a
-  retired, unpriced OpenRouter route from the approved smoke cohort.
-- **Compare current frontier candidates separately.** Start from
-  [`examples/frontier-candidates.json`](examples/frontier-candidates.json) to
-  price-check current OpenAI, Anthropic, Gemini, and xAI candidates—including
-  Grok 4.5 and 4.6—before retaining compatibility evidence or approving one.
+**Vision:** AI-assisted software delivery where an agent can validate its LLM
+changes as routinely as it runs tests, while people retain control of spend and
+production approval.
 
-### Delivered in 2.7.4
+**Positioning:** LLM Preflight is the fast, local, cross-provider contract
+preflight for AI-powered application changes. It is not a general evaluation,
+observability, or autonomous-deployment platform.
 
-- **Separate human terminal decision state and blocking warnings from the
-  executive ranking.** JSON and MCP remain the machine-readable decision
-  surfaces.
+It is built for engineers and coding agents working on AI features: teams that
+need to check a real application contract against live model APIs before a
+model ID, prompt, parser, tool definition, or provider option ships. Read the
+[north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
+and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
+for the intended workflow and boundaries.
 
-### Delivered in 2.7.3
+## Common jobs
 
-- **Keep paid-run pricing gates complete.** A current-pricing gate now requires
-  complete pricing across every configured tier, so an incomplete long-context
-  tier cannot authorize a paid benchmark.
-- **Fail closed in automation.** Only a `pass` decision exits successfully;
-  unknown decision states fail, and `inconclusive` consistently exits `3`.
+- **Switch a model or provider.** Run the bounded
+  [migration check](#change-a-model-safely), then add the contract test your
+  feature needs.
+- **Check a prompt, schema, parser, or tool change.** Define an explicit
+  [output contract](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md)
+  before the smoke.
+- **Review a newly discovered model.** Refresh metadata, then prepare—not run—
+  a bounded candidate plan:
 
-### Since 2.7.1
+  ```bash
+  llm-preflight catalog refresh benchmarks/watch.json
+  llm-preflight catalog prepare benchmarks/watch.json \
+    --against benchmarks/approved.json --output benchmarks/candidates.json
+  llm-preflight benchmarks/candidates.json --migration-check --dry-run
+  ```
 
-- **Make automation consume a decision, not terminal text.** Every completed
-  result now carries a schema-versioned decision object: `pass`, `fail`, or
-  `inconclusive`, with exact blocking warnings and a safe next command. It is
-  available in saved JSON and MCP results. See the [agent decision contract](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/decision.md).
-  Mock-only runs intentionally produce `inconclusive`; API and contract
-  failures have separate remediation commands.
-- **Add repository guidance only when you opt in.** `llm-preflight init
-  --agent-instructions AGENTS.md` writes a versioned, marker-delimited block
-  without touching surrounding instructions. Use `--check` in CI to detect
-  drift. The [coding-agent guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
-  explains the operating rules and safe workflow.
-
-## Use it when
-
-- You are switching models or providers.
-- A provider publishes a new model or changes a `latest` alias.
-- You need to compare your own prompt's validity, latency, and cost.
-- You want local result artifacts instead of a hosted dashboard.
+  Only explicitly approved, fully evidenced models proceed to paid work; see
+  the [model catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
+- **Investigate a provider or price change.** Run `--doctor`,
+  `--pricing-check`, and a dry-run; report a suspected regression through the
+  redacted issue forms.
+- **Automate a known contract.** Use the no-spend GitHub Action or the
+  [CI guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md)
+  with a saved baseline and `--ci`.
 
 It measures deterministic test validity, end-to-end latency (p50/p95), time to
 first token, throughput when the stream is incremental and usage is available,
@@ -298,41 +272,6 @@ explicitly confirmed preflight, and compare saved baselines. The first, second,
 and fourth tools never contact providers or load credentials. A live run still
 needs an explicit paid-run confirmation. See the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md) for tool
 semantics, workspace boundaries, and the safe agent workflow.
-
-## Choose your path
-
-**I am new and want to see the tool safely.** Start with the
-[Getting started guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/safe-demo.md). It uses a no-key local mock
-before any provider request.
-
-**I know the current and candidate model IDs.** Edit one config, run the
-[migration check](#change-a-model-safely), then add a
-[custom contract test](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md) for the output your feature must
-preserve. You do not need the catalogue.
-
-**I want to find and review provider releases.** Use the local catalogue
-lifecycle below. It keeps broad provider metadata separate from the small set
-of models you approve for ongoing testing.
-
-```bash
-llm-preflight catalog init
-llm-preflight catalog refresh benchmarks/watch.json
-# If a model is shown as “Needs one probe”, review and confirm a minimal request:
-llm-preflight catalog probe benchmarks/watch.json
-llm-preflight catalog prepare benchmarks/watch.json \
-  --against benchmarks/approved.json --output benchmarks/candidates.json
-llm-preflight benchmarks/candidates.json --interactive \
-  --approve-to benchmarks/approved.json
-```
-
-Refresh reads metadata only. A probe sends one minimal request only for text
-candidates you select and confirm. The interactive benchmark then lets you
-approve passing models explicitly. Follow the complete
-[catalogue tutorial](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md) for the decision points.
-
-**I am automating an established contract.** Use
-[CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md), with a saved baseline and `--ci` where a
-regression should fail the pipeline.
 
 ## Useful commands once you know your path
 

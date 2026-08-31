@@ -260,8 +260,9 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert "llm-preflight init" in getting_started
     assert "examples/github-actions/preflight.yml" in ci
     assert "## What is new in 2.9.0" in readme
-    assert "**Make automation consume a decision, not terminal text.**" in readme
-    assert "**Add repository guidance only when you opt in.**" in readme
+    assert "## Safety boundary" in readme
+    assert "## Common jobs" in readme
+    assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
     assert "## Next release" not in readme
 
 

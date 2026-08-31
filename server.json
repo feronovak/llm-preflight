@@ -15,7 +15,16 @@
       "version": "2.10.0",
       "transport": {
         "type": "stdio"
-      }
+      },
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--workspace",
+          "description": "Absolute path to the repository that the server may read.",
+          "isRequired": true,
+          "format": "filepath"
+        }
+      ]
     }
   ]
 }

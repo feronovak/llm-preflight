@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 
@@ -118,12 +119,42 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
             "destructiveHint": False,
             "openWorldHint": False,
         }
-        assert by_name[name]["outputSchema"]["type"] == "object"
+        schema = by_name[name]["outputSchema"]
+        assert schema["oneOf"][0] == {
+            "type": "object",
+            "properties": {"error": {"type": "string"}},
+            "required": ["error"],
+            "additionalProperties": False,
+        }
+        assert schema["oneOf"][1]["type"] == "object"
     assert by_name["run_preflight"]["annotations"] == {
         "readOnlyHint": False,
         "destructiveHint": False,
         "openWorldHint": True,
     }
+    assert by_name["validate_config"]["outputSchema"]["oneOf"][1]["required"] == [
+        "ok",
+        "name",
+        "models",
+    ]
+    assert by_name["dry_run_plan"]["outputSchema"]["oneOf"][1]["required"] == [
+        "ok",
+        "models",
+        "requests",
+        "possible_requests",
+        "retry_max_attempts",
+        "estimated_cost_usd",
+        "maximum_estimated_cost_usd",
+        "pricing_ledger",
+        "pricing_fingerprint",
+        "pricing_warnings",
+        "pricing_coverage",
+        "smoke_eligibility",
+    ]
+    assert by_name["run_preflight"]["outputSchema"]["oneOf"][1]["required"] == [
+        "decision",
+        "models",
+    ]
     assert resources["result"]["resources"] == [
         {
             "uri": "llm-preflight://guides/safe-workflow",
@@ -250,6 +281,53 @@ def test_live_run_requires_paid_confirmation(tmp_path):
     assert response["result"]["resultType"] == "input_required"
 
 
+def test_elicitation_request_state_preserves_env_file_for_paid_retry(tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        '{"prompt":"ok","models":[{"provider":"openai","model":"gpt-test"}]}'
+    )
+
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "_meta": {
+                    **META,
+                    "io.modelcontextprotocol/clientCapabilities": {"elicitation": {}},
+                },
+                "name": "run_preflight",
+                "arguments": {
+                    "config": "benchmark.json",
+                    "env_file": "credentials/approved.env",
+                },
+            },
+        },
+        tmp_path,
+    )
+
+    assert response["result"] == {
+        "resultType": "input_required",
+        "inputRequests": {
+            "paid_run": {
+                "method": "elicitation/create",
+                "params": {
+                    "mode": "form",
+                    "message": "This preflight can make paid provider requests. Continue?",
+                    "requestedSchema": {
+                        "type": "object",
+                        "properties": {"confirm": {"type": "boolean"}},
+                        "required": ["confirm"],
+                    },
+                },
+            }
+        },
+        "requestState": (
+            '{"config": "benchmark.json", "env_file": "credentials/approved.env"}'
+        ),
+    }
+
+
 def test_live_run_without_elicitation_returns_a_protocol_capability_error(tmp_path):
     (tmp_path / "benchmark.json").write_text(
         '{"prompt":"ok","models":[{"provider":"openai","model":"gpt-test"}]}'
@@ -316,7 +394,78 @@ def test_unconfirmed_live_run_never_loads_the_env_file(monkeypatch, tmp_path):
     )
 
     assert response["result"]["resultType"] == "input_required"
-    assert "TEST_MCP_SECRET" not in __import__("os").environ
+    assert "TEST_MCP_SECRET" not in os.environ
+
+
+def test_default_live_env_symlink_must_stay_in_the_mcp_workspace(monkeypatch, tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        '{"prompt":"ok","models":[{"provider":"openai","model":"gpt-test"}]}'
+    )
+    outside = tmp_path.parent / "outside.env"
+    outside.write_text("TEST_MCP_SECRET=must-not-load\n")
+    (tmp_path / ".env.production").symlink_to(outside)
+    monkeypatch.delenv("TEST_MCP_SECRET", raising=False)
+    monkeypatch.setattr(mcp, "run_benchmark", lambda config: {"unexpected": config})
+
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "run_preflight",
+                "arguments": {
+                    "config": "benchmark.json",
+                    "confirm_paid_run": True,
+                },
+            },
+        },
+        tmp_path,
+    )
+
+    assert response["result"]["isError"] is True
+    assert (
+        "path must stay within the MCP workspace"
+        in response["result"]["content"][0]["text"]
+    )
+    assert "TEST_MCP_SECRET" not in os.environ
+
+
+def test_explicit_live_env_symlink_must_stay_in_the_mcp_workspace(
+    monkeypatch, tmp_path
+):
+    (tmp_path / "benchmark.json").write_text(
+        '{"prompt":"ok","models":[{"provider":"openai","model":"gpt-test"}]}'
+    )
+    outside = tmp_path.parent / "outside.env"
+    outside.write_text("TEST_MCP_SECRET=must-not-load\n")
+    (tmp_path / "credentials.env").symlink_to(outside)
+    monkeypatch.delenv("TEST_MCP_SECRET", raising=False)
+    monkeypatch.setattr(mcp, "run_benchmark", lambda config: {"unexpected": config})
+
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "run_preflight",
+                "arguments": {
+                    "config": "benchmark.json",
+                    "env_file": "credentials.env",
+                    "confirm_paid_run": True,
+                },
+            },
+        },
+        tmp_path,
+    )
+
+    assert response["result"]["isError"] is True
+    assert (
+        "path must stay within the MCP workspace"
+        in response["result"]["content"][0]["text"]
+    )
+    assert "TEST_MCP_SECRET" not in os.environ
 
 
 def test_mock_run_never_loads_the_env_file(monkeypatch, tmp_path):
@@ -341,7 +490,7 @@ def test_mock_run_never_loads_the_env_file(monkeypatch, tmp_path):
     )
 
     assert response["result"]["isError"] is False
-    assert "TEST_MCP_SECRET" not in __import__("os").environ
+    assert "TEST_MCP_SECRET" not in os.environ
     assert response["result"]["structuredContent"]["decision"] == {
         "schema_version": 1,
         "state": "inconclusive",

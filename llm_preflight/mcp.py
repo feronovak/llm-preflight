@@ -59,6 +59,14 @@ def _path(value: str, workspace: Path) -> Path:
     return resolved
 
 
+def _env_path(arguments: dict[str, Any], config_path: Path, workspace: Path) -> Path:
+    """Return a workspace-contained explicit or config-adjacent env file."""
+    if "env_file" in arguments:
+        return _path(arguments["env_file"], workspace)
+    config_relative_path = config_path.relative_to(workspace)
+    return _path(str(config_relative_path.parent / ".env.production"), workspace)
+
+
 def _meta(params: dict[str, Any]) -> dict[str, Any]:
     metadata = params.get("_meta")
     if (
@@ -143,8 +151,110 @@ def _tool_result(
     return result
 
 
+def _output_schema(
+    success_properties: dict[str, Any], success_required: list[str], description: str
+) -> dict[str, Any]:
+    """Describe stable response fields while allowing benchmark extensions."""
+    return {
+        "oneOf": [
+            {
+                "type": "object",
+                "properties": {"error": {"type": "string"}},
+                "required": ["error"],
+                "additionalProperties": False,
+            },
+            {
+                "type": "object",
+                "description": description,
+                "properties": success_properties,
+                "required": success_required,
+                "additionalProperties": True,
+            },
+        ]
+    }
+
+
 def _tools() -> list[dict[str, Any]]:
     path_schema = {"type": "string", "minLength": 1}
+    optional_number_schema = {"type": ["number", "null"]}
+    error_or_validate = _output_schema(
+        {
+            "ok": {"const": True},
+            "name": {"type": ["string", "null"]},
+            "models": {"type": "integer", "minimum": 0},
+        },
+        ["ok", "name", "models"],
+        "Validated local configuration summary.",
+    )
+    error_or_dry_run = _output_schema(
+        {
+            "ok": {"const": True},
+            "models": {"type": "array", "items": {"type": "object"}},
+            "requests": {"type": "integer", "minimum": 0},
+            "possible_requests": {"type": "integer", "minimum": 0},
+            "retry_max_attempts": {"type": "integer", "minimum": 1},
+            "estimated_cost_usd": optional_number_schema,
+            "maximum_estimated_cost_usd": optional_number_schema,
+            "pricing_ledger": {"type": "array", "items": {"type": "object"}},
+            "pricing_fingerprint": {"type": "string"},
+            "pricing_warnings": {"type": "array", "items": {"type": "string"}},
+            "pricing_coverage": {"type": "object"},
+            "smoke_eligibility": {"type": "object"},
+        },
+        [
+            "ok",
+            "models",
+            "requests",
+            "possible_requests",
+            "retry_max_attempts",
+            "estimated_cost_usd",
+            "maximum_estimated_cost_usd",
+            "pricing_ledger",
+            "pricing_fingerprint",
+            "pricing_warnings",
+            "pricing_coverage",
+            "smoke_eligibility",
+        ],
+        "No-spend plan with resolved models, request bound, cost estimate, and pricing evidence.",
+    )
+    error_or_run = _output_schema(
+        {
+            "models": {"type": "array", "items": {"type": "object"}},
+            "decision": {
+                "type": "object",
+                "properties": {
+                    "schema_version": {"type": "integer"},
+                    "state": {"enum": ["pass", "fail", "inconclusive"]},
+                    "reason_code": {"type": "string"},
+                    "reason": {"type": "string"},
+                    "safe_next_command": {"type": "string"},
+                    "blocking_warnings": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                },
+                "required": [
+                    "schema_version",
+                    "state",
+                    "reason_code",
+                    "reason",
+                    "safe_next_command",
+                    "blocking_warnings",
+                ],
+                "additionalProperties": True,
+            },
+        },
+        ["decision", "models"],
+        "Completed local preflight evidence. A decision of inconclusive is not approval.",
+    )
+    error_or_diff = _output_schema(
+        {
+            "ok": {"type": "boolean"},
+            "models": {"type": "array", "items": {"type": "object"}},
+        },
+        ["ok", "models"],
+        "Comparison of two saved local result artifacts.",
+    )
     readonly_annotations = {
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -160,7 +270,7 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
-            "outputSchema": {"type": "object"},
+            "outputSchema": error_or_validate,
             "annotations": readonly_annotations,
         },
         {
@@ -172,7 +282,7 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
-            "outputSchema": {"type": "object"},
+            "outputSchema": error_or_dry_run,
             "annotations": readonly_annotations,
         },
         {
@@ -188,7 +298,7 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["config"],
                 "additionalProperties": False,
             },
-            "outputSchema": {"type": "object"},
+            "outputSchema": error_or_run,
             "annotations": {
                 "readOnlyHint": False,
                 "destructiveHint": False,
@@ -204,7 +314,7 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["baseline", "current"],
                 "additionalProperties": False,
             },
-            "outputSchema": {"type": "object"},
+            "outputSchema": error_or_diff,
             "annotations": readonly_annotations,
         },
     ]
@@ -309,14 +419,16 @@ def _call(
                         },
                     }
                 },
-                "requestState": json.dumps({"config": arguments["config"]}),
+                "requestState": json.dumps(
+                    {
+                        key: arguments[key]
+                        for key in ("config", "env_file")
+                        if key in arguments
+                    }
+                ),
             }
         if live:
-            env_path = (
-                _path(arguments["env_file"], workspace)
-                if arguments.get("env_file")
-                else config_path.parent / ".env.production"
-            )
+            env_path = _env_path(arguments, config_path, workspace)
             with _temporary_env(env_path):
                 return _tool_result(run_benchmark(config), standard=standard)
         return _tool_result(run_benchmark(config), standard=standard)

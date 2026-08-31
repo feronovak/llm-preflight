@@ -30,8 +30,9 @@ initialization flow used by current coding agents (protocol version
 
 [`server.json`](../../server.json) is the versioned manifest for the official
 MCP Registry. It identifies the public PyPI package and its local stdio
-transport; the registry stores metadata, not the server artifact. The manifest
-is published only after the matching package version is available on PyPI.
+transport, including a required `--workspace` filepath argument; the registry
+stores metadata, not the server artifact. The manifest is published only after
+the matching package version is available on PyPI.
 
 The repository also includes a small Codex plugin at
 `plugins/llm-preflight/`. Its skill teaches the no-spend workflow but
@@ -138,9 +139,10 @@ run, the server requires `confirm_paid_run: true`. For standard clients, this
 is an agent-supplied boolean, not proof of user approval. Keep client-side tool
 approval enabled and require an explicit user instruction in the agent's
 operating rules. Only a confirmed live run may read the
-config-adjacent `.env.production`, an explicit workspace-relative environment
-file, or keys already supplied to the MCP client process. Mock and
-unconfirmed runs do not load those files.
+config-adjacent `.env.production` or an explicit workspace-relative environment
+file, and both resolved paths must remain inside the workspace (including after
+symlink resolution). Keys already supplied to the MCP client process remain
+available. Mock and unconfirmed runs do not load environment files.
 
 For a completed run, `run_preflight` returns the same `decision` object as the
 saved JSON artifact. Agents must consume that structured object instead of

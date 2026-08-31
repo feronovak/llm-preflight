@@ -2,12 +2,24 @@
 
 All notable changes to this project are documented here.
 
-## 2.10.0 - Unreleased
+## 2.10.0 - 2026-08-31
 
 ### Added
 
-- Add standard MCP tool safety annotations, output-schema declarations, and a
-  discoverable no-spend workflow resource for coding agents.
+- Add standard MCP tool safety annotations, honest structured-output schemas,
+  and a discoverable no-spend workflow resource for coding agents.
+- Add a registry-ready `server.json` for the local PyPI stdio package, with a
+  required `--workspace` filepath argument, plus a repository plugin skill that
+  teaches the same no-spend workflow without adding a workspace command.
+- Add TestPyPI clean-install coverage that starts the MCP server and reads its
+  safe-workflow resource without credentials or provider traffic.
+
+### Fixed
+
+- Resolve the default config-adjacent `.env.production` through the same
+  workspace-containment check as explicit paths, including symlink targets.
+- Preserve an explicit `env_file` in the elicitation retry state so an
+  approved paid-run retry uses the environment file the user selected.
 
 ## 2.9.0 - 2026-08-31
 

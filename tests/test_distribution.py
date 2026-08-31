@@ -62,6 +62,15 @@ def test_mcp_registry_manifest_and_plugin_keep_discovery_local_and_safe():
             "identifier": "llm-preflight",
             "version": __version__,
             "transport": {"type": "stdio"},
+            "packageArguments": [
+                {
+                    "type": "named",
+                    "name": "--workspace",
+                    "description": "Absolute path to the repository that the server may read.",
+                    "isRequired": True,
+                    "format": "filepath",
+                }
+            ],
         }
     ]
     assert "<!-- mcp-name: io.github.feronovak/llm-preflight -->" in readme

@@ -34,7 +34,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in feature_map
+    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.9.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
@@ -53,14 +53,14 @@ def test_coding_agents_documents_the_inconclusive_exit_code():
     assert "`3` for inconclusive evidence" in coding_agents
 
 
-def test_docs_match_the_2_8_0_workflow_and_current_workflow_pin():
+def test_docs_match_the_2_9_0_workflow_and_current_workflow_pin():
     readme = (ROOT / "README.md").read_text()
     ci = (ROOT / "docs/automation/ci.md").read_text()
     workflow = (ROOT / "examples/github-actions/preflight.yml").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
-    assert "## What is new in 2.8.0" in readme
-    assert "catalogue-to-smoke boundary" in readme
+    assert "## What is new in 2.9.0" in readme
+    assert "safe GitHub Action" in readme
     assert "Refresh reviewed direct-provider pricing" in readme
     assert "examples/frontier-candidates.json" in readme
     assert "complete pricing across every configured tier" in readme
@@ -121,7 +121,6 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     for page in (
-        ROOT / "README.md",
         ROOT / "docs/automation/coding-agents.md",
         ROOT / "docs/automation/mcp.md",
         ROOT / "docs/guides/model-catalog.md",
@@ -131,9 +130,16 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in page.read_text()
 
     for page in (
+        ROOT / "README.md",
         ROOT / "docs/index.md",
-        ROOT / "docs/guides/pricing-and-safety.md",
+        ROOT / "docs/FEATURE_MAP.md",
+        ROOT / "docs/PROJECT_MAP.md",
+        ROOT / "docs/automation/github-action.md",
+        ROOT / "docs/product/when-to-use.md",
     ):
+        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.9.0" in page.read_text()
+
+    for page in (ROOT / "docs/guides/pricing-and-safety.md",):
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
@@ -175,11 +181,11 @@ def test_positioning_and_decisions_are_public_and_current():
     )
 
 
-def test_project_map_does_not_claim_missing_issue_templates():
+def test_project_map_indexes_distribution_assets():
     project_map = (ROOT / "docs/PROJECT_MAP.md").read_text()
 
-    assert "| `.github/` | CI workflows |" in project_map
-    assert "issue templates" not in project_map
+    assert "CI workflows and safe issue forms" in project_map
+    assert "action.yml" in project_map
 
 
 def test_local_markdown_links_resolve_after_docs_reorganization():

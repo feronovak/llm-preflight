@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -20,6 +20,9 @@ module names.
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
 | Catalog-to-smoke eligibility — classify each discovered model as eligible or requiring catalogue, probe, adapter, pricing, or bounds evidence; only eligible rows enter generated candidate plans | live | `eligibility.py`, `catalog.py`, `catalog_watch.py`, `cli.py` |
+| GitHub Marketplace Action — doctor, pricing, and dry-run checks without provider generation by default; an explicitly set input is required for a paid smoke | live | `action.yml`, `.github/workflows/action-smoke.yml` |
+| Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
+| Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |
 | JSON-preset comparability warnings for Anthropic results | live | `presets.py`, `cli.py`, `runner.py` |

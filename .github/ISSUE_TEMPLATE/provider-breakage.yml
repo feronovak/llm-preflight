@@ -1,0 +1,41 @@
+name: Provider or model breakage
+description: Report a provider response, model route, or compatibility regression without sharing credentials or private content.
+title: "provider: "
+labels: [provider]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, authorization headers, account identifiers, or private prompts/responses. Use a redacted minimal reproduction.
+  - type: input
+    id: provider-model
+    attributes:
+      label: Provider and model ID
+      placeholder: provider:model-id
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Redacted command and configuration shape
+      description: Include flags, validation type, and request settings. Remove all secrets and private prompts.
+      placeholder: llm-preflight benchmark.json --smoke --dry-run --json
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed result
+      description: Include HTTP status/category, safe error text, and whether validation failed. Do not paste private prompts or responses.
+    validations:
+      required: true
+  - type: dropdown
+    id: reproduction
+    attributes:
+      label: Reproduction scope
+      options:
+        - Reproduces with a redacted minimal configuration
+        - Reproduces only with a private application contract
+        - Not yet reproduced
+    validations:
+      required: true

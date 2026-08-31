@@ -1,0 +1,37 @@
+name: Pricing drift
+description: Report a suspected pricing-source or bundled-rate change without sharing credentials or account billing data.
+title: "pricing: "
+labels: [pricing]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, authorization headers, account identifiers, billing exports, or private prompts/responses. Link the public provider source and use redacted evidence only.
+  - type: input
+    id: provider-model
+    attributes:
+      label: Provider and model ID
+      placeholder: provider:model-id
+    validations:
+      required: true
+  - type: input
+    id: source-url
+    attributes:
+      label: Public pricing source URL
+      placeholder: https://provider.example/pricing
+    validations:
+      required: true
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Redacted rate comparison
+      description: State the observed input/output/cache or context-tier difference, currency, and source date. Do not include account billing data.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Affected configuration and validation
+      description: State whether --pricing-check or a dry-run changes. Remove private prompts, responses, and secrets.
+    validations:
+      required: true

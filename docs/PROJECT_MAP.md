@@ -1,5 +1,7 @@
 # Code map
 
+**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
+
 Where code lives, and what each area is responsible for.
 
 | Path | Responsibility |
@@ -9,7 +11,8 @@ Where code lives, and what each area is responsible for.
 | `docs/` | published documentation — guides, reference, operations, automation |
 | `examples/` | runnable configuration samples referenced by the guides |
 | `requirements/` | pinned dependency sets for development and CI |
-| `.github/` | CI workflows |
+| `.github/` | CI workflows and safe issue forms for provider breakage and pricing drift |
+| `action.yml` | GitHub Marketplace composite action; no-spend preflight checks by default |
 
 Entry points, declared in `pyproject.toml`:
 

@@ -1,6 +1,6 @@
 # LLM Preflight
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
@@ -84,7 +84,18 @@ eligible for a bounded paid smoke or carry a stable reason such as
 candidate automatically: review the reason, fix the missing evidence, and
 explicitly authorize the bounded smoke.
 
-## What is new in 2.8.0
+## What is new in 2.9.0
+
+- **Use a safe GitHub Action.** The Marketplace Action runs doctor, pricing,
+  and dry-run checks without provider traffic by default. A paid smoke needs
+  an explicit workflow input and credentials supplied by the caller. See the
+  [Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
+- **Report drift safely.** Provider-breakage and pricing-drift issue forms ask
+  for redacted reproduction metadata, never credentials or private prompts.
+- **Choose the right tool.** Read [when to use LLM Preflight](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md)
+  for its boundary with evaluation, observability, and provider tools.
+
+### Delivered in 2.8.0
 
 - **Make the catalogue-to-smoke boundary explicit.** Catalog refresh, CLI
   dry-runs, and MCP dry-run plans now separate discovered models, those needing

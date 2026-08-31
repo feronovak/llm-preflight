@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 2.9.0 - Unreleased
+
+### Added
+
+- Add a no-spend-by-default GitHub Marketplace Action: doctor, pricing, and
+  bounded dry-run checks run automatically; a paid smoke requires an explicit
+  action input and caller-provided credentials.
+- Add safe provider-breakage and pricing-drift issue forms, plus a concise
+  comparison page that keeps local contract preflight distinct from evaluation,
+  observability, and provider administration.
+
 ## 2.8.0 - 2026-08-31
 
 ### Added

@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-08-31 · **As of:** v2.9.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -35,6 +35,8 @@ Results stay local unless you decide to attach or publish them.
   stable machine-readable evidence.
 - [GitHub Actions starter](automation/ci.md#github-actions-starter) — a
   fork-safe mock workflow that uploads redacted evidence.
+- [Marketplace Action](automation/github-action.md) — run no-spend doctor,
+  pricing, and dry-run checks in a repository workflow.
 - [Coding agents](automation/coding-agents.md) — a safe command sequence and
   decision rules for agents.
 - [MCP server](automation/mcp.md) — give a coding agent local, bounded access
@@ -55,4 +57,6 @@ Results stay local unless you decide to attach or publish them.
   promise.
 - [Product positioning](product/positioning.md) — stable pointer for older
   links.
+- [When to use LLM Preflight](product/when-to-use.md) — choose it versus an
+  evaluation suite, observability platform, or provider CLI.
 - [Product decisions](DECISIONS.md)

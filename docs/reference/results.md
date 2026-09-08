@@ -1,6 +1,6 @@
 # Result JSON schema
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is
@@ -37,6 +37,7 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 | `pricing_coverage` | Coverage for every selected direct model and OpenRouter route, including `priced`, `undated`, `stale`, or `unknown` status, source, source URL, as-of date, stable warning code, remediation, and whether a mock fixture is pricing-exempt. The summary separates all `selected` rows from `billable` rows and `exempt` mock fixtures, so `priced` never counts a mock. `ok` is false for stale or unknown pricing; `enforcement_ok` additionally becomes false for undated pricing when `require_current_pricing` is enabled, and is the paid-run/CI gate verdict. |
 | `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
 | `pricing_ledger`, `pricing_fingerprint` | Redacted resolved per-model prices/provenance used by this run and their stable SHA-256 identity. These are additive fields in schema version 1. |
+| `provenance` | Secret-safe evidence identity. It includes versioned hashes of the effective configuration, contract, and resolved routes; reuses the pricing fingerprint; records per-prompt hashes and declared request/cost caps; and combines these in `evidence_sha256`. It never exposes routes, headers, prompts, or secrets through this field. |
 | `decision` | Additive agent decision object with its own `decision.schema_version`. It exposes `pass`, `fail`, or `inconclusive`, an exact safe next command, and verbatim blocking warnings. See [Agent decision contract](decision.md). |
 | `source_config` | Redacted input configuration, retained for replay and audit. |
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from . import VERSION
-from . import defaults, docmap, routes as routes_mod, runner
+from . import claims, defaults, docmap, routes as routes_mod, runner
 from .findings import ERROR, SKIPPED, WARN
 from .gitio import repo_root
 
@@ -52,6 +52,13 @@ def build_parser():
     r.add_argument("--repo", default=".")
     r.add_argument("--app", help="import path, e.g. app:create_app")
 
+    cl = sub.add_parser("claims",
+                        help="list the checkable units in each document, so a "
+                             "judgement pass has a denominator")
+    cl.add_argument("--repo", default=".")
+    cl.add_argument("--doc", help="one document, by repo-relative path")
+    cl.add_argument("--json", action="store_true", help="machine-readable")
+
     v = sub.add_parser("vendor",
                        help="copy the checker into a repo as "
                             "scripts/project_standard so CI can run it")
@@ -89,6 +96,8 @@ def main(argv=None):
         return _install_hooks(args)
     if args.command == "vendor":
         return _vendor(args)
+    if args.command == "claims":
+        return _claims(args)
 
     repos = resolve_repos(args)
     if not repos:
@@ -165,6 +174,51 @@ def _install_hooks(args):
     print(f"core.hooksPath set {'globally' if args.globally else 'for this repo'}")
     print("\nNote: setting core.hooksPath replaces any other hooks directory. "
           "If you already had one, merge its hooks into the new location.")
+    return 0
+
+
+def _claims(args):
+    """The worklist a judgement pass is measured against.
+
+    Printing the denominator is the whole point. A judgement pass that reports
+    what it happened to notice cannot say what it skipped, and five measured
+    runs over one product map each checked a different subset.
+    """
+    ctx = runner.build_ctx(Path(args.repo))
+    units, skipped = claims.enumerate_repo(ctx)
+
+    if args.doc:
+        units = {k: v for k, v in units.items() if k == args.doc}
+        skipped = {k: v for k, v in skipped.items() if k == args.doc}
+        if not units and not skipped:
+            print(f"no enumerable units in `{args.doc}` — it is either not a "
+                  f"standard document or not tracked", file=sys.stderr)
+            return 2
+
+    if args.json:
+        print(json.dumps(
+            {"units": {d: [u.as_dict() for u in us] for d, us in units.items()},
+             "not_enumerable": skipped,
+             "total": sum(len(u) for u in units.values())},
+            indent=2, sort_keys=True))
+        return 0
+
+    total = 0
+    for doc in sorted(units):
+        us = units[doc]
+        total += len(us)
+        print(f"\n{doc} — {len(us)} unit(s) to verify")
+        for u in us:
+            print(f"  {u.line:>5}  {u.kind:<11} {u.label}")
+        print(f"        ↳ {us[0].verify}")
+
+    if skipped:
+        print("\nno countable unit:")
+        for doc in sorted(skipped):
+            print(f"  {doc} — {skipped[doc]}")
+
+    print(f"\n{total} unit(s) across {len(units)} document(s). Report coverage "
+          f"against this number, and name what you did not check.")
     return 0
 
 

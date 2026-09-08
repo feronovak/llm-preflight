@@ -15,6 +15,12 @@ from typing import Any
 
 from .catalog import resolve_models
 from .client import create_client
+from .contracts import (
+    check_contract,
+    provenance,
+    validate_contract_config,
+    validation_evaluator,
+)
 from .decision import build_decision
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
@@ -194,66 +200,9 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
         selected["request"]["system_prompt"] = prompt["system_prompt"]
     if "validation" in prompt:
         selected["validation"] = dict(prompt["validation"])
+    if "validation_fixtures" in prompt:
+        selected["validation_fixtures"] = list(prompt["validation_fixtures"])
     return selected
-
-
-def _validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
-    evaluators: list[dict[str, Any]] = []
-    if "json_schema" in validation:
-        evaluator = {"type": "json_schema", "schema": validation["json_schema"]}
-        if "allow_fenced_json" in validation:
-            evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
-        evaluators.append(evaluator)
-    for key, evaluator_type in (
-        ("json_object", "json_object"),
-        ("json_array", "json_array"),
-    ):
-        if validation.get(key):
-            evaluator = {"type": evaluator_type}
-            if "allow_fenced_json" in validation:
-                evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
-            evaluators.append(evaluator)
-    if "exact_count" in validation:
-        evaluator = {"type": "exact_count", "expected": validation["exact_count"]}
-        if "allow_fenced_json" in validation:
-            evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
-        evaluators.append(evaluator)
-    if "json_set" in validation:
-        evaluator = {"type": "json_set", **validation["json_set"]}
-        if "allow_fenced_json" in validation:
-            evaluator["allow_fenced_json"] = validation["allow_fenced_json"]
-        evaluators.append(evaluator)
-    if validation.get("no_markdown"):
-        evaluators.append({"type": "no_markdown"})
-    if "allowed_values" in validation:
-        evaluators.append(
-            {"type": "allowed_values", "values": validation["allowed_values"]}
-        )
-    if "numeric_answer" in validation:
-        evaluator = {"type": "numeric_answer", "expected": validation["numeric_answer"]}
-        if "numeric_tolerance" in validation:
-            evaluator["tolerance"] = validation["numeric_tolerance"]
-        evaluators.append(evaluator)
-    if "max_chars" in validation:
-        evaluators.append({"type": "max_chars", "maximum": validation["max_chars"]})
-    if "regex" in validation:
-        evaluators.append({"type": "regex", "regex": validation["regex"]})
-    if "contains" in validation:
-        evaluators.append({"type": "contains", "contains": validation["contains"]})
-    if "exact" in validation:
-        evaluators.append({"type": "exact", "expected": validation["exact"]})
-    if "golden" in validation:
-        evaluators.append({"type": "golden", "expected": validation["golden"]})
-    if not evaluators:
-        return {"type": "nonempty"}
-    evaluator = (
-        evaluators[0]
-        if len(evaluators) == 1
-        else {"type": "all", "evaluators": evaluators}
-    )
-    if "consumer" in validation:
-        evaluator["consumer_parser"] = validation["consumer"]
-    return evaluator
 
 
 def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
@@ -264,7 +213,7 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
             {
                 "id": prompt["name"],
                 "prompt": prompt["prompt"],
-                "evaluator": _validation_evaluator(prompt.get("validation", {})),
+                "evaluator": validation_evaluator(prompt.get("validation", {})),
             }
         ],
     }
@@ -312,7 +261,7 @@ def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
         sample["valid_output"] = False
         sample["evaluation_error"] = "request failed"
         return
-    evaluator = _validation_evaluator(validation)
+    evaluator = validation_evaluator(validation)
     evaluation = evaluate_response(sample["response"], evaluator)
     sample["valid_output"] = evaluation["valid"]
     sample["evaluation_error"] = evaluation["error"]
@@ -500,6 +449,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             "custom prompt names collide with built-in profiles: "
             + ", ".join(collisions)
         )
+    validate_contract_config(config)
 
 
 def _validate_json_schema_config(schema: Any, location: str) -> None:
@@ -815,6 +765,10 @@ def run_benchmark(
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     validate_config_validations(config)
+    if config.get("validation_fixtures") and not check_contract(config)["ok"]:
+        raise ValueError(
+            "validation fixtures failed; run --contract-check to inspect the contract"
+        )
     repetitions = int(config.get("repetitions", 5))
     warmups = int(config.get("warmups", 1))
     concurrency = int(config.get("concurrency", 1))
@@ -1025,6 +979,7 @@ def run_benchmark(
         "models": models_result,
         "pricing_ledger": pricing_resolution["ledger"],
         "pricing_fingerprint": pricing_resolution["fingerprint"],
+        "provenance": provenance(config, models, pricing_resolution["fingerprint"]),
         "pricing_warnings": pricing_freshness_report(
             models,
             enforce_override_freshness=bool(config.get("require_current_pricing")),

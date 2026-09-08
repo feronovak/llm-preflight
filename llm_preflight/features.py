@@ -328,6 +328,7 @@ def compare_results(
         "cost": 0.25,
     }
     thresholds = {**defaults, **(thresholds or {})}
+    comparability, warnings, incompatibility = _comparison_evidence(baseline, current)
     previous = {
         model.get("name", model.get("model")): model for model in baseline["models"]
     }
@@ -335,6 +336,21 @@ def compare_results(
     current_names = {
         model.get("name", model.get("model")) for model in current["models"]
     }
+    if comparability == "incompatible":
+        names = sorted(previous.keys() | current_names)
+        return {
+            "ok": False,
+            "comparability": comparability,
+            "warnings": warnings,
+            "models": [
+                {
+                    "name": name,
+                    "status": "incompatible",
+                    "regressions": [incompatibility],
+                }
+                for name in names
+            ],
+        }
     for name in previous.keys() - current_names:
         rows.append({"name": name, "status": "removed", "regressions": ["removed"]})
     for model in current["models"]:
@@ -402,7 +418,73 @@ def compare_results(
                 "regressions": regressions,
             }
         )
-    return {"ok": not any(row["regressions"] for row in rows), "models": rows}
+    return {
+        "ok": not any(row["regressions"] for row in rows),
+        "comparability": comparability,
+        "warnings": warnings,
+        "models": rows,
+    }
+
+
+def _comparison_evidence(
+    baseline: dict[str, Any], current: dict[str, Any]
+) -> tuple[str, list[str], str | None]:
+    """Classify whether metric deltas use the same output-contract evidence."""
+    for result in (baseline, current):
+        labels = [
+            str(model.get("name", model.get("model")))
+            for model in result.get("models", [])
+            if isinstance(model, dict)
+        ]
+        if len(labels) != len(set(labels)):
+            return (
+                "incompatible",
+                [
+                    (
+                        "one or both results contain duplicate model names; "
+                        "metric deltas are ambiguous"
+                    )
+                ],
+                "duplicate_model_name",
+            )
+    baseline_provenance = baseline.get("provenance")
+    current_provenance = current.get("provenance")
+    if not isinstance(baseline_provenance, dict) or not isinstance(
+        current_provenance, dict
+    ):
+        return (
+            "unknown",
+            ["one or both results lack provenance; compare metric deltas with care"],
+            None,
+        )
+    if (
+        baseline_provenance.get("schema_version") != 1
+        or current_provenance.get("schema_version") != 1
+        or not isinstance(baseline_provenance.get("contract_sha256"), str)
+        or not isinstance(current_provenance.get("contract_sha256"), str)
+    ):
+        return (
+            "unknown",
+            [
+                (
+                    "one or both results have unsupported provenance; "
+                    "compare metric deltas with care"
+                )
+            ],
+            None,
+        )
+    if baseline_provenance["contract_sha256"] != current_provenance["contract_sha256"]:
+        return (
+            "incompatible",
+            [
+                (
+                    "results use different output-contract evidence; "
+                    "metric deltas are not comparable"
+                )
+            ],
+            "contract_changed",
+        )
+    return "compatible", [], None
 
 
 def replay_config(result: dict[str, Any]) -> dict[str, Any]:

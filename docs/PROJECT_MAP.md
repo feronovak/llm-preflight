@@ -1,12 +1,12 @@
 # Code map
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 Where code lives, and what each area is responsible for.
 
 | Path | Responsibility |
 |---|---|
-| `llm_preflight/` | the package: checks, providers, reporting, machine decisions, and the two console entry points |
+| `llm_preflight/` | the package: change planning, contract checks, providers, reporting, machine decisions, and the two console entry points |
 | `tests/` | the suite; every behaviour change starts here per the development contract above |
 | `docs/` | published documentation — guides, reference, operations, automation |
 | `examples/` | runnable configuration samples referenced by the guides |

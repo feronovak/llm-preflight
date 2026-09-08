@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -19,10 +19,12 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--smoke` | off | Set one repetition, no warmups, and concurrency one. It still makes paid requests; use `--dry-run` first. |
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
+| `--change-plan [REF]` | `HEAD` | Inspect local Git changes against `REF`, including staged and untracked files, for literal model IDs and likely contract surfaces. It recommends no-spend commands; it never loads credentials, contacts a provider, or authorizes paid work. |
+| `--contract-check` | off | Run configured accepted/rejected response fixtures and canonical tool-schema linting locally. It needs `validation_fixtures` or `tools`; it never loads credentials or contacts a provider. |
 | `--doctor` | off | Validate configuration, keys, and model resolution, and report selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
 | `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
 | `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |
-| `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. |
+| `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. Results with different output-contract evidence are incompatible; legacy artifacts without provenance are labelled `unknown`. |
 | `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. |
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
@@ -36,6 +38,8 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |
 | `--profiles LIST` | — | Compatibility alias for `--tests`. |
 | `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. |
+| `--approval-receipt PATH` | — | With `--dry-run`, write an expiring private local receipt bound to that exact plan. Requires a review note and timezone-qualified expiry; never authorizes paid work. |
+| `--verify-approval-receipt PATH` | — | With `--dry-run`, verify a receipt’s plan hash and expiry. A valid receipt is recorded evidence, not authorization. |
 | `--no-env-file` | off | Do not load the adjacent `.env.production`. |
 | `--env-file PATH` | — | Load this env file instead of the default adjacent file. |
 | `--stop-on MODE` | — | Stop after `api-error`, `test-fail`, or `any-fail`. |
@@ -46,7 +50,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 
 ## Compatible combinations
 
-- `--json` works with benchmark results, `--dry-run`, `--doctor`, `--diff`,
+- `--json` works with benchmark results, `--dry-run`, `--doctor`, `--contract-check`, `--diff`,
   `--baseline`, and `--catalog`. With `--baseline`, the comparison is embedded
   as `baseline_diff` in the single JSON result document.
 - `--ci` gates `--diff` and `--baseline`; ordinary benchmark failures already
@@ -63,6 +67,12 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 - `--profiles` and `--tests` cannot be combined.
 - `--migration-check` cannot be combined with `--profiles`, `--tests`,
   `--prompt`, or `--interactive`.
+- `--contract-check` cannot be combined with `--profiles`, `--tests`, or
+  `--migration-check`; it may use `--prompt` to check one named custom prompt.
+- `--change-plan` requires a configuration rather than `--quick` or `--replay`.
+- `--approval-receipt` and `--verify-approval-receipt` each require `--dry-run`
+  and cannot be combined. Writing also requires `--approval-note` and
+  `--approval-expires-at`.
 - `--profiles`/`--tests` cannot be combined with `--prompt`.
 - `--interactive` cannot be combined with `--catalog`, `--profiles`,
   `--tests`, or `--prompt`.
@@ -115,7 +125,7 @@ temporary candidate plan, benchmark execution, and permanent approval separate.
 | `catalog init [DIRECTORY] [--providers LIST] [--replace]` | Create an ignored local workspace with `watch.json`, `approved.json`, `.env.production`, and `results/`. Without `--providers`, it asks once and Enter means all supported providers. For an existing workspace, it asks before rewriting only `watch.json`; `--replace` is the scripted equivalent and preserves approvals, keys, and results. |
 | `catalog refresh WATCH_CONFIG` | Fetch provider metadata, classify catalogue entries, update the local snapshot, and report per-model `smoke_eligibility`. It makes no generation requests. Optional legacy watch flags such as `--json`, `--snapshot`, and `--env-file` remain available. |
 | `catalog prepare WATCH_CONFIG --against APPROVED --output CANDIDATES` | Group unapproved `text-ready` candidates by provider, require an explicit model selection, then write a temporary benchmark plan containing only smoke-eligible rows. `text-candidate` models first use `catalog probe`; non-text, unpriced, unbounded, or unproven rows remain visible in refresh eligibility output. Use `--replace` only when deliberately rebuilding that plan. |
-| `catalog probe WATCH_CONFIG [--models LIST]` | Review `text-candidate` models, then make one explicitly confirmed, provider-native minimal request per selection. Results are saved locally in `.llm-preflight/capabilities.json`; response text and keys are never stored. |
+| `catalog probe WATCH_CONFIG [--models LIST] [--no-env-file | --env-file PATH]` | Review `text-candidate` models, then make one explicitly confirmed, provider-native minimal request per selection. It uses the same explicit environment-file controls as benchmark runs. Results are saved locally in `.llm-preflight/capabilities.json`; response text and keys are never stored. |
 | `catalog test WATCH_CONFIG --approved APPROVED --output CONFIG` | Write a runnable benchmark plan for permanent approved models, using the test settings in the watch config. |
 | `CANDIDATES --interactive --approve-to APPROVED` | Run the single interactive benchmark flow, then offer passing models for approval. |
 | `models approve PROVIDER:MODEL --from RESULT --approved APPROVED` | Explicitly approve one passing model from a saved result, optionally with `--note TEXT`. |

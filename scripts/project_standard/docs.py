@@ -226,7 +226,15 @@ def _duplicates(ctx, tracked):
     out = []
     live = [f for f in markdown_files(tracked) if not excluded(f)]
 
-    backlogs = [f for f in live if Path(f).name in BACKLOG_NAMES]
+    # A backlog-named file under a `fixtures/` path segment is test data
+    # feeding the checker itself, never the repo's own backlog — a naive
+    # filename match otherwise counts eval fixtures as live roadmaps.
+    # `evals` is deliberately NOT excluded here: it names a suite, not test
+    # data, and can legitimately hold a real planning document (an
+    # `evals/ROADMAP.md` for the suite itself) that this check must still
+    # catch as a genuine duplicate backlog.
+    backlogs = [f for f in live if Path(f).name in BACKLOG_NAMES
+                and "fixtures" not in Path(f).parts]
     others = [f for f in backlogs if f != CANONICAL_BACKLOG]
     if CANONICAL_BACKLOG in backlogs and others:
         for f in others:
@@ -272,8 +280,14 @@ def _duplicates(ctx, tracked):
                       "as current and will drift — it belongs in FEATURE_MAP.md",
                 path=rel))
 
+    # A README inside a PRD directory is its index, not a PRD — the same
+    # exemption the loop above already makes for `docs/prds/README.md`. Without
+    # it, a repository that keeps an archive of shipped PRDs is told its index
+    # is a misplaced PRD, which is both wrong and unfixable without deleting
+    # the index.
     stray = [f for f in tracked
              if re.search(r"(^|/)PRDs?[-_./]", f, re.I)
+             and Path(f).name != "README.md"
              and not f.startswith("docs/prds/") and not excluded(f)
              and f.endswith(".md")]
     for f in stray:

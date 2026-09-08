@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-08 · **As of:** v2.12.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -10,11 +10,10 @@
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
-Know whether an AI-generated LLM integration is safe before it reaches
-production. LLM Preflight is a local contract preflight for LLM integration
-changes: model, prompt, structured-output, and provider-call changes. It runs
-a small cross-provider preflight and compares validated output, response
-speed, tokens, and estimated cost.
+Catch LLM integration regressions before they ship. LLM Preflight is a local
+contract preflight for model, prompt, structured-output, and provider-call
+changes. It runs a small cross-provider preflight and compares validated output,
+response speed, tokens, and estimated cost.
 
 ## Try it in 60 seconds
 
@@ -82,20 +81,19 @@ For earlier releases, see the [changelog](CHANGELOG.md).
 
 ## Purpose
 
-**Mission:** make every LLM integration change evidence-based before production.
+**Mission:** help engineers catch LLM integration regressions before shipping a
+change.
 
-**Vision:** AI-assisted software delivery where an agent can validate its LLM
-changes as routinely as it runs tests, while people retain control of spend and
-production approval.
+**Vision:** every LLM-related pull request carries reproducible evidence of
+compatibility, latency, and cost.
 
-**Positioning:** LLM Preflight is the fast, local, cross-provider contract
-preflight for AI-powered application changes. It is not a general evaluation,
-observability, or autonomous-deployment platform.
+**Positioning:** LLM Preflight is a local CLI and CI tool that checks an
+application's LLM contract and reports compatibility, latency, and estimated
+cost before a change ships.
 
-It is built for engineers and coding agents working on AI features: teams that
-need to check a real application contract against live model APIs before a
-model ID, prompt, parser, tool definition, or provider option ships. Read the
-[north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
+It is built for small engineering teams maintaining AI features. Coding agents
+can run the same checks, while engineers own the decision. Read the [north
+star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
 and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
 for the intended workflow and boundaries.
 
@@ -106,7 +104,11 @@ for the intended workflow and boundaries.
   feature needs.
 - **Check a prompt, schema, parser, or tool change.** Define an explicit
   [output contract](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md)
-  before the smoke.
+  before the smoke, then run `llm-preflight benchmark.json --contract-check`
+  to prove local accepted/rejected fixtures and lint declared tool schemas.
+- **Plan an agent-made change.** Run `llm-preflight benchmark.json --change-plan`
+  before the ordinary no-spend checks. It identifies static model and contract
+  signals in local Git changes, but never authorizes a paid run.
 - **Review a newly discovered model.** Refresh metadata, then prepare—not run—
   a bounded candidate plan:
 

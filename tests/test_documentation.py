@@ -36,7 +36,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in feature_map
+    assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
@@ -83,6 +83,7 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
+    assert "Catch LLM integration regressions before they ship." in readme
     assert "## CLI, CI, and MCP" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
@@ -148,22 +149,33 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in retained_stamps:
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
-    for page in (
-        ROOT / "docs/automation/coding-agents.md",
-        ROOT / "docs/guides/model-catalog.md",
-        ROOT / "docs/reference/cli.md",
-        ROOT / "docs/reference/results.md",
-    ):
+    for page in (ROOT / "docs/guides/model-catalog.md",):
         assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in page.read_text()
 
+    for page in (ROOT / "docs/reference/results.md",):
+        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+
     for page in (
-        ROOT / "README.md",
+        ROOT / "docs/automation/coding-agents.md",
+        ROOT / "docs/reference/cli.md",
+        ROOT / "docs/automation/change-plans.md",
+    ):
+        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+
+    for page in (ROOT / "docs/automation/mcp.md",):
+        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in page.read_text()
+
+    for page in (
         ROOT / "docs/index.md",
         ROOT / "docs/FEATURE_MAP.md",
         ROOT / "docs/PROJECT_MAP.md",
-        ROOT / "docs/automation/mcp.md",
     ):
-        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+
+    assert (
+        "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0"
+        in (ROOT / "README.md").read_text()
+    )
 
     for page in (ROOT / "docs/guides/pricing-and-safety.md",):
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
@@ -177,7 +189,22 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     assert "## Release documentation checklist" in ci
     assert "examples/github-actions/preflight.yml" in ci
     assert "tests/test_package.py" in ci
-    assert "not a built-in tool-schema validator" in north_star
+    assert "statically validates a deliberately portable" in north_star
+
+
+def test_marketplace_action_docs_describe_the_current_published_release():
+    action_guide = (ROOT / "docs/automation/github-action.md").read_text()
+
+    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.10.0" in action_guide
+    assert "default: `2.10.0`" in action_guide
+    assert "last published package (`2.10.0`)" in action_guide
+    assert "under development" not in action_guide
+
+
+def test_change_plans_guide_is_indexed_in_the_generated_document_map():
+    docmap = (ROOT / "docs/DOCMAP.md").read_text()
+
+    assert "docs/automation/change-plans.md" in docmap
 
 
 def test_positioning_and_decisions_are_public_and_current():
@@ -190,11 +217,16 @@ def test_positioning_and_decisions_are_public_and_current():
 
     assert "## Choose your path" in readme
     assert "Review a new model" in readme
-    assert "local contract preflight for LLM integration\nchanges" in readme
+    assert "Catch LLM integration regressions before they ship." in readme
+    assert "local CLI and CI tool that checks an\napplication's LLM contract" in readme
     assert "[North star](../NORTH_STAR.md)" in positioning
-    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in north_star
+    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
     assert "## Mission" in north_star
     assert "## Niche" in north_star
+    assert (
+        "Help engineers catch LLM integration regressions before shipping a change."
+        in north_star
+    )
     assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
     assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in decisions
     for decision in (

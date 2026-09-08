@@ -19,6 +19,13 @@ Direction is per baseline, and they do not all point the same way:
   - `adopted` marks where attribution errors begin. Walking it forward
     grandfathers in every violation it steps over, so it may only stay put or
     move back.
+
+A count baseline may fall for an honest reason — a documented route removed
+along with its reference entry lowers the floor without losing any
+documentation. That is indistinguishable, from the number alone, from a doc
+being deleted while the route lives on, so a reset is permitted only when the
+contract attaches a written `reason:` to the baseline key. This mirrors every
+other override in the standard: an override is trusted, a *silent* one is not.
 """
 
 import re
@@ -100,13 +107,27 @@ def _count(ctx, recorded, key, floor):
             return []
         moved, verb = "raised", "still scaffolded"
 
+    # The count can move the wrong way for an honest reason. A documented API
+    # route can be removed, taking its reference entry with it, so the floor
+    # falls without any documentation being lost — the denominator shrank. A
+    # pure ratchet cannot tell that apart from a doc being deleted while the
+    # route lives on, so it must be resettable. As with every other override in
+    # this standard, the reset is trusted only when it carries a written
+    # `reason:` on the baseline key; a silent loosening still fails. The
+    # invariant the ratchet only approximates — that every live route is
+    # documented — is enforced by a test, not by this count, so a reason here
+    # relaxes the proxy without unguarding the property.
+    if ctx.contract.reasons.get(key):
+        return []
+
     return [F.error(
         CHECK,
         f"`{key}` was {moved} from {best} to {declared}; the repository "
         f"already recorded {best} {verb} in {sha[:8]}. A baseline records "
         f"progress that was actually made — editing it to absorb a regression "
-        f"is how the gate stops meaning anything. Fix the regression, or "
-        f"explain the reset in the commit that makes it.",
+        f"is how the gate stops meaning anything. Fix the regression, or, if "
+        f"the reset is legitimate (a removed route takes its documentation "
+        f"with it), attach a `reason:` to `{key}` in the contract saying why.",
         path=ctx.contract.path)]
 
 

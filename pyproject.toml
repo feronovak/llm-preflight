@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-preflight"
-version = "2.10.0"
+version = "2.12.0"
 description = "Local, cross-provider preflight checks for LLM integration changes"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,10 +12,6 @@ license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["llm", "preflight", "integration-testing", "model-switch", "validation", "openai", "anthropic", "gemini"]
 dependencies = []
-
-[tool.setuptools.package-data]
-llm_preflight = ["py.typed"]
-
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -27,6 +23,15 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: System :: Benchmark",
 ]
+
+[project.urls]
+Homepage = "https://github.com/feronovak/llm-preflight"
+Documentation = "https://github.com/feronovak/llm-preflight/tree/main/docs"
+Issues = "https://github.com/feronovak/llm-preflight/issues"
+Changelog = "https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md"
+
+[tool.setuptools.package-data]
+llm_preflight = ["py.typed"]
 
 [project.optional-dependencies]
 dev = ["coverage==7.15.2", "pytest==9.0.3", "ruff==0.16.1"]

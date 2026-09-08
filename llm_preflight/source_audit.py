@@ -66,32 +66,10 @@ def audit_source(path: Path) -> dict[str, Any]:
             lines = file_path.read_text(encoding="utf-8").splitlines()
         except UnicodeDecodeError:
             continue
-        for line_number, line in enumerate(lines, 1):
-            candidates = [match.group("value") for match in _QUOTED.finditer(line)]
-            if file_path.suffix.casefold() in {".yaml", ".yml"}:
-                yaml_content = line.split("#", 1)[0]
-                candidates.extend(
-                    match.group("value") for match in _YAML_MODEL.finditer(yaml_content)
-                )
-            for model in candidates:
-                if not _MODEL_PREFIX.match(model):
-                    continue
-                provider = _provider_for(model)
-                catalog_model = model.rsplit("/", 1)[-1]
-                key = (provider, catalog_model) if provider else None
-                priced = key in PUBLIC_PRICING if key else False
-                references.append(
-                    {
-                        "path": str(file_path.relative_to(root))
-                        if root.is_dir()
-                        else str(file_path),
-                        "line": line_number,
-                        "provider": provider,
-                        "model": model,
-                        "status": "pricing_known" if priced else "pricing_unknown",
-                        "confidence": "official_snapshot" if priced else "unknown",
-                    }
-                )
+        display_path = (
+            str(file_path.relative_to(root)) if root.is_dir() else str(file_path)
+        )
+        references.extend(_references_for_lines(lines, file_path.suffix, display_path))
     unique = list(
         dict.fromkeys(
             (item["path"], item["line"], item["model"]) for item in references
@@ -119,3 +97,64 @@ def audit_source(path: Path) -> dict[str, Any]:
             "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog or retirement verdict.",
         ],
     }
+
+
+def audit_source_text(path: Path, text: str) -> dict[str, Any]:
+    """Find literal model IDs in supplied source text without writing it to disk."""
+    references = _references_for_lines(text.splitlines(), path.suffix, str(path))
+    return {
+        "root": str(path),
+        "network_accessed": False,
+        "files_scanned": 1,
+        "references": references,
+        "findings": [item for item in references if item["status"] != "pricing_known"],
+        "ok": True,
+        "confidence": "limited_static_pricing",
+        "notes": [
+            "Only literal model IDs are reported; dynamic model selection requires review.",
+            "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog or retirement verdict.",
+        ],
+    }
+
+
+def _references_for_lines(
+    lines: list[str], suffix: str, display_path: str
+) -> list[dict[str, Any]]:
+    references = []
+    for line_number, line in enumerate(lines, 1):
+        candidates = [match.group("value") for match in _QUOTED.finditer(line)]
+        if suffix.casefold() in {".yaml", ".yml"}:
+            yaml_content = line.split("#", 1)[0]
+            candidates.extend(
+                match.group("value") for match in _YAML_MODEL.finditer(yaml_content)
+            )
+        for model in candidates:
+            if not _MODEL_PREFIX.match(model):
+                continue
+            provider = _provider_for(model)
+            catalog_model = model.rsplit("/", 1)[-1]
+            key = (provider, catalog_model) if provider else None
+            priced = key in PUBLIC_PRICING if key else False
+            references.append(
+                {
+                    "path": display_path,
+                    "line": line_number,
+                    "provider": provider,
+                    "model": model,
+                    "status": "pricing_known" if priced else "pricing_unknown",
+                    "confidence": "official_snapshot" if priced else "unknown",
+                }
+            )
+    unique = list(
+        dict.fromkeys(
+            (item["path"], item["line"], item["model"]) for item in references
+        )
+    )
+    return [
+        next(
+            item
+            for item in references
+            if (item["path"], item["line"], item["model"]) == key
+        )
+        for key in unique
+    ]

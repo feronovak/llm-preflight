@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -39,6 +39,8 @@ Results stay local unless you decide to attach or publish them.
   pricing, and dry-run checks in a repository workflow.
 - [Coding agents](automation/coding-agents.md) — a safe command sequence and
   decision rules for agents.
+- [Git-aware change plans](automation/change-plans.md) — inspect local changes,
+  then retain a bounded review receipt without granting execution authority.
 - [MCP server](automation/mcp.md) — give a coding agent local, bounded access
   to validation, planning, execution, and baseline diffs; includes registry
   metadata and the repository plugin skill.

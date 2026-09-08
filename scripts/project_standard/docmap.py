@@ -97,17 +97,58 @@ def render(ctx):
 
 
 def check(ctx):
-    """Check 3 — regenerate and diff. Any difference is a finding."""
-    current = None
+    """Check 3 — is the index current.
+
+    Two modes, because a byte comparison only works when this tool wrote the
+    file. A repository that generates its own index — same slot, its own
+    format, often predating this standard — would fail a byte comparison
+    forever, and the only ways out would be to abandon a working generator or
+    to switch the check off. Both are worse than the check.
+
+    So a repository may declare `docmap: own`, and freshness is then answered
+    by ancestry instead: is the index's last commit an ancestor of any indexed
+    document's last commit? That is the technique check 10c already uses for a
+    route manifest, and it needs no knowledge of the format and no execution of
+    anything the repository declares.
+    """
     path = Path(ctx.repo) / HEADER
-    if HEADER in set(ctx.tracked) and path.is_file():
-        current = path.read_text(errors="ignore")
-    if current is None:
+    if HEADER not in set(ctx.tracked) or not path.is_file():
         return []
+
+    if str(ctx.contract.raw.get("docmap", "")).strip() in ("own", "external"):
+        return _freshness(ctx)
+
+    current = path.read_text(errors="ignore")
     if current.strip() != render(ctx).strip():
         return [F.error(
             "3", "DOCMAP is stale — regenerate with `project-standard generate`",
             path=HEADER)]
+    return []
+
+
+def _freshness(ctx):
+    """The index must not predate what it indexes.
+
+    Commit timestamps are second-resolution, so two commits made in quick
+    succession compare equal and the check silently never fires. Ancestry is
+    exact.
+    """
+    index_commit = ctx.git.last_commit_for(HEADER)
+    if not index_commit:
+        return []
+    for rel in sorted(ctx.tracked):
+        if not rel.endswith(".md") or rel == HEADER:
+            continue
+        if not (rel.startswith("docs/") or "/" not in rel):
+            continue
+        doc_commit = ctx.git.last_commit_for(rel)
+        if not doc_commit or doc_commit == index_commit:
+            continue
+        if ctx.git.is_ancestor(index_commit, doc_commit):
+            return [F.error(
+                "3", f"the index was last committed before `{rel}`, which it "
+                     f"indexes — regenerate it with this repository's own "
+                     f"generator, as `docmap: own` declares", path=HEADER)]
     return []
 
 

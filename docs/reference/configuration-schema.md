@@ -20,6 +20,8 @@ one top-level `prompt` or one or more named `prompts`.
 | `timeout_seconds` | `120` | Provider connect/read timeout, not a total streaming deadline. |
 | `request` | see below | Shared request options. |
 | `validation` | non-empty | Top-level response checks. |
+| `validation_fixtures` | — | Optional local accepted/rejected responses used by `--contract-check`; when set, include at least one `pass` and one `fail` expectation. |
+| `tools` | `[]` | Optional canonical tool definitions checked locally for portable names, descriptions, and parameter schemas. They are not sent to providers by this release. |
 | `presets` | `[]` | Shared provider-aware presets. |
 | `save_responses` | `false` | `true`, `false`, or `failures`. |
 | `stop_on` | none | `api-error`, `test-fail`, or `any-fail`. |
@@ -78,7 +80,7 @@ and `require_parameters` are OpenRouter catalog filters.
 Each prompt requires a unique `name` that does not reuse a built-in test-pack
 name, and either non-empty `prompt` or a relative
 `prompt_file` within the config directory. Optional keys are `description`,
-`system_prompt`, `request`, `validation`, and `presets`.
+`system_prompt`, `request`, `validation`, `validation_fixtures`, and `presets`.
 
 Validation supports non-empty `contains`, `regex`, `exact`, `golden`, `json_schema`,
 `json_set`, `json_object`, `json_array`, `exact_count`, `allowed_values`, `numeric_answer`,
@@ -110,3 +112,20 @@ config, including a complete `request` object when supplied.
 
 See [configuration examples](configuration.md) and the checked-in example JSON
 files for complete runnable examples.
+
+## Contract fixtures and tools
+
+`validation_fixtures` exercises the configured deterministic validator without
+loading credentials or contacting a provider. Each item has exactly `name`,
+`response`, and `expect`, where `expect` is `pass` or `fail`. A fixture list
+must contain at least one of each expectation, so it can catch an overly weak
+contract as well as an overly strict one. Put fixtures at the top level for a
+top-level prompt, or beside a named custom prompt and select it with
+`--prompt`. A benchmark refuses to start before provider work when configured
+top-level fixtures fail.
+
+`tools` is a local canonical declaration, not an implicit tool-calling request.
+Each entry has exactly `name`, `description`, and object-shaped `parameters`.
+The supported schema subset is `type`, `properties`, `required`, `items`,
+`enum`, and boolean `additionalProperties`; unsupported keys are rejected to
+avoid claiming portability the providers may not share.

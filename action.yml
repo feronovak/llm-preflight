@@ -13,7 +13,7 @@ inputs:
   package-version:
     description: Exact llm-preflight package version to install.
     required: false
-    default: "2.9.0"
+    default: "2.10.0"
   run-paid:
     description: Run the bounded paid smoke after no-spend checks. Requires an explicit true value and caller-provided credentials.
     required: false

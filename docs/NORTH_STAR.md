@@ -1,30 +1,28 @@
 # North star
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-08 · **As of:** v2.12.0
 
 ## Mission
 
-Make every LLM integration change evidence-based before production.
+Help engineers catch LLM integration regressions before shipping a change.
 
 ## Vision
 
-AI-assisted software delivery where an agent can validate its LLM changes as
-routinely as it runs tests, while people retain control of spend and production
-approval.
+Every LLM-related pull request carries reproducible evidence of compatibility,
+latency, and cost.
 
 ## Positioning statement
 
-LLM Preflight is the fast, local, cross-provider contract preflight for LLM
-integration changes. It measures a real application's configured contract
-against live model APIs: output validity, request reliability, latency, usage,
-and estimated cost.
+LLM Preflight is a local CLI and CI tool that checks an application's LLM
+contract and reports compatibility, latency, and estimated cost before a change
+ships.
 
 It is evidence for the user's account, environment, prompts, and validators;
 it is not a universal ranking of models.
 
 ## Niche
 
-The primary users are engineers and coding agents changing an AI feature:
+The primary users are small engineering teams maintaining an AI feature:
 
 - model IDs or provider routes;
 - prompts, request options, and tool definitions;
@@ -32,10 +30,12 @@ The primary users are engineers and coding agents changing an AI feature:
 - an approved model's cost or latency envelope.
 
 Tool definitions are a change trigger because they can alter an application's
-LLM behavior; LLM Preflight is not a built-in tool-schema validator.
+LLM behavior. LLM Preflight statically validates a deliberately portable
+canonical tool schema, but it does not yet invoke tools or test agent
+trajectories.
 
-The narrow job is to answer: **does this concrete integration still work from
-our environment, at an understood cost, before we ship it?**
+The narrow job is to answer: **does this concrete integration still meet its
+contract from our environment, at an understood cost, before we ship it?**
 
 ## What it is not
 
@@ -47,9 +47,8 @@ evidence, not production approval.
 ## Product promise
 
 An agent should be able to run a local, reviewable preflight before proposing
-an LLM-related change as complete. The preflight may automatically inspect and
-test within the approved repository scope, but paid requests, budget changes,
-and model approval remain explicit human decisions.
+an LLM-related change as complete. Engineers own the decision; paid requests,
+budget changes, and model approval remain explicit human decisions.
 
 See [AI implementation testing](automation/agent-validation.md) for the
 operational workflow, [LLM and coding-agent guide](automation/coding-agents.md)

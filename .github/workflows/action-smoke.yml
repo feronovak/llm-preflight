@@ -15,4 +15,4 @@ jobs:
       - uses: ./
         with:
           config: examples/starter/mock-benchmark.json
-          package-version: "2.8.0"
+          package-version: "2.10.0"

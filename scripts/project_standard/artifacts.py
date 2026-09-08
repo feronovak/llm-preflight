@@ -32,6 +32,17 @@ LOCAL_ALLOWED = {
     "release flow": "release-flow",
 }
 
+# Slots a repository may decline to owe at all, and the contract key that
+# declines it. Waiving costs a written reason, for the same purpose the profile
+# overrides do: an escape hatch that costs nothing becomes the default, and a
+# standard every repo can opt out of silently is not one.
+WAIVABLE = {
+    "decisions": "decisions",
+}
+
+DECISION_NAMES = ("docs/DECISIONS.md", "DECISIONS.md", "docs/adr/",
+                  "docs/decisions/", "docs/adrs/")
+
 
 @dataclass
 class Slot:
@@ -42,6 +53,7 @@ class Slot:
     satisfied_by: str = None
     local: bool = False
     declared_local: bool = False
+    waived: bool = False
 
 
 def required_for(resolved, contract):
@@ -52,6 +64,19 @@ def required_for(resolved, contract):
              describes="what this repo is, how to run it, its rules"),
         Slot("README", ("README.md",), describes="human entry point"),
         Slot("docmap", ("docs/DOCMAP.md",), describes="generated index"),
+        # Why a thing was done the way it was. None of the other slots holds
+        # it: direction is where the product is going, the product map is what
+        # it does today, the changelog is what shipped, and a PRD is a proposal
+        # — none answers "why this and not the obvious alternative". A repo
+        # that never records that relitigates the same argument every time
+        # someone new reads the code.
+        #
+        # A warn, not an error. Unlike a README, the content is judgement work
+        # that accrues over a project's life; a new repo has no decisions yet
+        # and erroring on an empty log would train people to scaffold a file
+        # nobody writes in.
+        Slot("decisions", DECISION_NAMES, severity=F.WARN,
+             describes="why a choice was made, and what it cost"),
     ]
     if profile == DOCS:
         return slots
@@ -93,11 +118,27 @@ def resolve_slots(ctx):
     slots = required_for(ctx.resolved, ctx.contract)
     for slot in slots:
         for cand in slot.candidates:
-            if cand in tracked:
+            if cand.endswith("/"):
+                # A directory slot — git tracks no directories, so it is
+                # satisfied by anything tracked beneath it. ADRs are
+                # conventionally one file per decision, not one file.
+                hit = next((t for t in sorted(tracked)
+                            if t.startswith(cand) and t.endswith(".md")), None)
+                if hit:
+                    slot.satisfied_by = cand
+                    break
+            elif cand in tracked:
                 slot.satisfied_by = cand
                 break
         if slot.satisfied_by:
             continue
+
+        waiver_key = WAIVABLE.get(slot.name)
+        if waiver_key and str(
+                ctx.contract.raw.get(waiver_key, "")).strip() == "waived":
+            slot.waived = True
+            continue
+
         key = LOCAL_ALLOWED.get(slot.name)
         if key and str(ctx.contract.raw.get(key, "")).strip() == "local":
             slot.declared_local = True
@@ -121,6 +162,11 @@ def check(ctx):
                          f"untracked `{slot.satisfied_by}` — deliberate, but "
                          f"invisible to anyone who clones this repository",
                     path=slot.satisfied_by))
+            continue
+        if slot.waived:
+            # Declined deliberately, with a written reason check 2 enforces.
+            # Silent here on purpose: the cost of the waiver is the reason,
+            # not a permanent line of output nagging about a settled decision.
             continue
         if slot.name == "direction" and _direction_declared(ctx):
             continue
@@ -181,6 +227,16 @@ def _contract_sections(ctx):
                  "interface every check reads, and the declaration saying so "
                  "would live in the file nobody reads", path=c.path))
 
+    for slot_name, key in sorted(WAIVABLE.items()):
+        if str(c.raw.get(key, "")).strip() != "waived":
+            continue
+        if not c.reasons.get(key):
+            out.append(F.error(
+                "2", f"`{key}: waived` declines the {slot_name} slot with no "
+                     f"`reason:` — waiving is allowed, silently waiving is "
+                     f"not. An escape hatch that costs nothing becomes the "
+                     f"default", path=c.path))
+
     if c.critical_paths is None:
         out.append(F.error(
             "2", "contract declares no `critical-paths` — it may be empty, "
@@ -239,4 +295,41 @@ def _contract_sections(ctx):
                 out.append(F.warn(
                     "20", f"declared critical path `{p}` no longer exists",
                     path=c.path))
+    out.extend(_critical_path_references(ctx, c))
+    return out
+
+
+# A reference a project declares as required reading is a promise to whoever edits that path next.
+# Two ways it silently stops being one, and both are worse than never having declared it: the file
+# moves, so the promise points at nothing; or it drifts, so the promise points at something wrong
+# and is believed. An undeclared reference misleads nobody.
+STAMP_HINT = "**Last reviewed:**"
+
+
+def _critical_path_references(ctx, c):
+    out = []
+    for path, ref in c.critical_path_refs:
+        target = Path(ctx.repo) / str(ref).lstrip("/")
+        if not target.exists():
+            out.append(F.error(
+                "20a", f"`{path}` declares `{ref}` as required reading, and that file does not "
+                       f"exist — anyone told to read it before editing `{path}` cannot",
+                path=c.path))
+            continue
+        # Generated references are the common case for this key (a field map, a schema dump), and
+        # they carry no review stamp because nobody reviews them — they are re-derived. Asking one
+        # for a stamp would train projects to hand-write a date onto a generated file, which is the
+        # opposite of the point. So the stamp is only *reported*, never required.
+        try:
+            text = target.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:                       # unreadable is not the same as absent
+            out.append(F.warn(
+                "20b", f"`{ref}` declared as required reading for `{path}` could not be read "
+                       f"({type(exc).__name__})", path=c.path))
+            continue
+        if STAMP_HINT not in text and "do not hand-edit" not in text.lower():
+            out.append(F.warn(
+                "20b", f"`{ref}` is declared as required reading for `{path}` but carries neither "
+                       f"a `Last reviewed:` stamp nor a generated-file marker, so a reader cannot "
+                       f"tell whether to trust it", path=c.path))
     return out

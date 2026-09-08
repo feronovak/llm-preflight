@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 from collections import Counter
@@ -13,6 +14,12 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .approval import (
+    create_approval_receipt,
+    load_approval_receipt,
+    verify_approval_receipt,
+    write_approval_receipt,
+)
 from .capability_ledger import apply_probe_evidence, load_ledger
 from .catalog import classify_catalog_model, discover_models, resolve_models
 from .catalog_probe import probe_model
@@ -24,7 +31,9 @@ from .catalog_watch import (
     save_snapshot,
     snapshot_catalog,
 )
+from .change_plan import git_change_plan
 from .client import PROVIDER_DEFAULTS
+from .contracts import check_contract
 from .eligibility import smoke_eligibility_report
 from .env import load_env_file
 from .features import (
@@ -81,6 +90,8 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 1. Read the benchmark configuration and preserve the deployed contract unless a
    contract change is explicitly approved.
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
+   When the config declares response fixtures or tools, also run
+   `--contract-check` without provider access.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.
@@ -257,8 +268,32 @@ def _format_doctor(report: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _format_contract_check(report: dict[str, Any]) -> str:
+    lines = ["Contract check: " + ("ok" if report["ok"] else "failed")]
+    for fixture in report["fixtures"]:
+        status = "ok" if fixture["actual"] == fixture["expected"] else "fail"
+        lines.append(
+            f"- {status}: fixture {fixture['name']} expected {fixture['expected']}, "
+            f"got {fixture['actual']}"
+        )
+    for tool in report["tools"]:
+        lines.append(f"- ok: tool {tool['name']} schema")
+    return "\n".join(lines) + "\n"
+
+
+def _change_plan_commands(config: dict[str, Any], config_path: Path) -> list[str]:
+    command = _display_command()
+    quoted_path = shlex.quote(str(config_path))
+    commands = [f"{command} {quoted_path} --doctor --json"]
+    if config.get("validation_fixtures") or config.get("tools"):
+        commands.append(f"{command} {quoted_path} --contract-check --json")
+    commands.append(f"{command} {quoted_path} --dry-run --json")
+    return commands
+
+
 def _format_diff(diff: dict[str, Any]) -> str:
     lines = [
+        *(f"Warning: {warning}" for warning in diff.get("warnings", [])),
         "| Model | Status | Latency p95 Δ | Success Δ | Cost Δ | Regressions |",
         "|---|---|---:|---:|---:|---|",
     ]
@@ -1438,8 +1473,20 @@ def _catalog_main(argv: list[str]) -> None:
         parser.add_argument("config", type=Path)
         parser.add_argument("--models", help="numbers, provider/family, or all")
         parser.add_argument("--ledger", type=Path)
+        parser.add_argument(
+            "--no-env-file",
+            action="store_true",
+            help="do not load .env.production next to the config",
+        )
+        parser.add_argument(
+            "--env-file",
+            type=Path,
+            help="load environment variables from this file instead of .env.production",
+        )
         args = parser.parse_args(rest)
-        load_env_file(args.config.resolve().parent / ".env.production")
+        if args.no_env_file and args.env_file:
+            parser.error("--no-env-file cannot be combined with --env-file")
+        _load_config_env_file(args.config, args)
         config = apply_provider_presets(apply_model_aliases(load_config(args.config)))
         models = apply_probe_evidence(
             resolve_models(config),
@@ -2029,6 +2076,18 @@ def main() -> None:
         help="statically audit literal model IDs in a repository without provider requests",
     )
     parser.add_argument(
+        "--change-plan",
+        nargs="?",
+        const="HEAD",
+        metavar="REF",
+        help="inspect local Git changes since REF (default HEAD) and recommend no-spend checks",
+    )
+    parser.add_argument(
+        "--contract-check",
+        action="store_true",
+        help="run response fixtures and canonical tool-schema checks without provider requests",
+    )
+    parser.add_argument(
         "--tests",
         dest="tests",
         help="alias for --profiles; comma-separated built-in/custom tests; agent-smoke is the recommended suite",
@@ -2041,6 +2100,29 @@ def main() -> None:
         "--dry-run",
         action="store_true",
         help="safe preview: print resolved models, tests, request count, and cost without generation",
+    )
+    parser.add_argument(
+        "--approval-receipt",
+        type=Path,
+        help="write an expiring, non-authorizing local receipt for this dry-run plan",
+    )
+    parser.add_argument(
+        "--approval-note",
+        help="human review note required when writing an approval receipt",
+    )
+    parser.add_argument(
+        "--approval-expires-at",
+        help="timezone-qualified ISO-8601 expiry required when writing an approval receipt",
+    )
+    parser.add_argument(
+        "--replace-approval-receipt",
+        action="store_true",
+        help="replace an existing receipt only with --approval-receipt",
+    )
+    parser.add_argument(
+        "--verify-approval-receipt",
+        type=Path,
+        help="verify one local receipt against this dry-run plan; never authorizes a run",
     )
     parser.add_argument(
         "--no-env-file",
@@ -2091,6 +2173,32 @@ def main() -> None:
             return
         if args.no_env_file and args.env_file:
             parser.error("--no-env-file cannot be combined with --env-file")
+        if args.change_plan and (args.quick or args.replay):
+            parser.error(
+                "--change-plan requires a benchmark configuration, not --quick or --replay"
+            )
+        if args.approval_receipt and args.verify_approval_receipt:
+            parser.error(
+                "--approval-receipt cannot be combined with --verify-approval-receipt"
+            )
+        if args.approval_receipt and not args.dry_run:
+            parser.error("--approval-receipt requires --dry-run")
+        if args.verify_approval_receipt and not args.dry_run:
+            parser.error("--verify-approval-receipt requires --dry-run")
+        if args.approval_receipt and (
+            not args.approval_note or not args.approval_expires_at
+        ):
+            parser.error(
+                "--approval-receipt requires --approval-note and --approval-expires-at"
+            )
+        if (
+            args.approval_note or args.approval_expires_at
+        ) and not args.approval_receipt:
+            parser.error(
+                "--approval-note and --approval-expires-at require --approval-receipt"
+            )
+        if args.replace_approval_receipt and not args.approval_receipt:
+            parser.error("--replace-approval-receipt requires --approval-receipt")
         if args.diff:
             diff = compare_results(load_json(args.diff[0]), load_json(args.diff[1]))
             print(json.dumps(diff, indent=2) if args.json else _format_diff(diff))
@@ -2137,13 +2245,30 @@ def main() -> None:
                 parser.error(
                     "config is required unless --quick, --diff, or --replay is used"
                 )
-            _load_config_env_file(args.config, args)
+            if not args.contract_check and not args.change_plan:
+                _load_config_env_file(args.config, args)
             config = load_config(args.config)
             config["_source_config_path"] = str(args.config.resolve())
         config = apply_environment(config, args.environment_name)
         config = apply_model_aliases(config)
         config = apply_provider_presets(config)
         validate_config_validations(config)
+        if args.change_plan:
+            change_plan = git_change_plan(Path.cwd(), args.change_plan)
+            change_payload = {
+                "change_plan": change_plan,
+                "recommended_commands": _change_plan_commands(config, args.config),
+            }
+            if args.json:
+                print(json.dumps(change_payload, indent=2))
+            else:
+                print(
+                    f"Changed files: {len(change_plan['changed_files'])}; "
+                    f"preflight signals: {len(change_plan['triggers'])}."
+                )
+                for command in change_payload["recommended_commands"]:
+                    print(command)
+            return
         if args.profiles and args.tests:
             parser.error("--profiles cannot be combined with --tests")
         if args.migration_check and (args.profiles or args.tests or args.prompt_name):
@@ -2154,6 +2279,12 @@ def main() -> None:
             parser.error("--profiles cannot be combined with --prompt")
         if args.tests and args.prompt_name:
             parser.error("--tests cannot be combined with --prompt")
+        if args.contract_check and (
+            args.profiles or args.tests or args.migration_check
+        ):
+            parser.error(
+                "--contract-check cannot be combined with --profiles, --tests, or --migration-check"
+            )
         if args.interactive and (
             args.catalog
             or args.profiles
@@ -2179,6 +2310,22 @@ def main() -> None:
             config["stop_on"] = args.stop_on
         if args.fail_fast:
             config["stop_on"] = "any-fail"
+        if args.prompt_name and args.contract_check:
+            config = select_custom_prompt(config, args.prompt_name)
+        if args.contract_check:
+            if not config.get("validation_fixtures") and not config.get("tools"):
+                raise ValueError(
+                    "--contract-check requires validation_fixtures or tools in the configuration"
+                )
+            report_data = check_contract(config)
+            print(
+                json.dumps(report_data, indent=2)
+                if args.json
+                else _format_contract_check(report_data)
+            )
+            if not report_data["ok"]:
+                raise SystemExit(1)
+            return
         if args.doctor:
             report_data = doctor_report(config)
             print(
@@ -2226,10 +2373,39 @@ def main() -> None:
             config, profile_selector = selection
         if args.dry_run:
             plan = _dry_run_plan(config, profile_selector)
+            payload: dict[str, Any] = plan
+            verification = None
+            if args.approval_receipt:
+                receipt = create_approval_receipt(
+                    plan,
+                    note=args.approval_note,
+                    expires_at=args.approval_expires_at,
+                )
+                write_approval_receipt(
+                    args.approval_receipt,
+                    receipt,
+                    replace=args.replace_approval_receipt,
+                )
+                payload = {
+                    "plan": plan,
+                    "approval_receipt": {
+                        "path": str(args.approval_receipt),
+                        "receipt": receipt,
+                    },
+                }
+            if args.verify_approval_receipt:
+                verification = verify_approval_receipt(
+                    load_approval_receipt(args.verify_approval_receipt), plan
+                )
+                payload = {"plan": plan, "approval_verification": verification}
             print(
-                json.dumps(plan, indent=2) if args.json else _format_dry_run_plan(plan),
+                json.dumps(payload, indent=2)
+                if args.json
+                else _format_dry_run_plan(plan),
                 end="" if not args.json else "\n",
             )
+            if verification is not None and not verification["ok"]:
+                raise SystemExit(1)
             return
         check_budget(_budget_config(config, profile_selector))
         use_color = sys.stdout.isatty()

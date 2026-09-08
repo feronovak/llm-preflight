@@ -61,6 +61,181 @@ def test_audit_source_is_a_no_config_no_spend_json_command(
     assert output["references"][0]["path"] == "app.py"
 
 
+def test_contract_check_runs_validation_fixtures_and_tool_lint_without_a_benchmark(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"Return JSON","validation":{"json_object":true},'
+        '"validation_fixtures":[{"name":"object","response":"{}","expect":"pass"},'
+        '{"name":"array","response":"[]","expect":"fail"}],'
+        '"tools":[{"name":"lookup","description":"Look up a record.",'
+        '"parameters":{"type":"object","properties":{}}}],'
+        '"models":[{"provider":"mock","model":"local","response":"{}"}]}'
+    )
+    monkeypatch.setattr(
+        cli,
+        "run_benchmark",
+        lambda *_args, **_kwargs: pytest.fail("contract check must not benchmark"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--contract-check", "--json"],
+    )
+
+    cli.main()
+
+    assert json.loads(capsys.readouterr().out) == {
+        "ok": True,
+        "fixtures": [
+            {"name": "object", "expected": "pass", "actual": "pass"},
+            {"name": "array", "expected": "fail", "actual": "fail"},
+        ],
+        "tools": [{"name": "lookup", "ok": True}],
+    }
+
+
+def test_contract_check_does_not_load_an_environment_file(monkeypatch, tmp_path):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
+        '"validation_fixtures":[{"name":"ok","response":"ok","expect":"pass"},'
+        '{"name":"wrong","response":"no","expect":"fail"}],'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    monkeypatch.setattr(
+        cli,
+        "_load_config_env_file",
+        lambda *_args: pytest.fail("contract check must not load an environment file"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--contract-check"],
+    )
+
+    cli.main()
+
+
+def test_change_plan_is_git_aware_and_does_not_load_credentials(
+    monkeypatch, tmp_path, capsys
+):
+    def git(*args):
+        return subprocess.run(
+            ["git", *args], cwd=tmp_path, check=True, text=True, capture_output=True
+        )
+
+    git("init")
+    git("config", "user.email", "test@example.invalid")
+    git("config", "user.name", "Test User")
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    app = tmp_path / "app.py"
+    app.write_text('model = "gpt-5.4-mini"\n')
+    git("add", "benchmark.json", "app.py")
+    git("commit", "-m", "initial")
+    app.write_text('model = "gpt-5.5"\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        cli,
+        "_load_config_env_file",
+        lambda *_args: pytest.fail("change plan must not load an environment file"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--change-plan", "HEAD", "--json"],
+    )
+
+    cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["change_plan"]["changed_files"] == ["app.py"]
+    assert output["change_plan"]["paid_work_authorized"] is False
+    assert output["recommended_commands"][-1].endswith("--dry-run --json")
+
+
+def test_catalog_probe_uses_the_main_cli_environment_file_switches(
+    monkeypatch, tmp_path
+):
+    config = tmp_path / "watch.json"
+    config.write_text(
+        '{"prompt":"Reply with ok",'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    loaded = []
+    monkeypatch.setattr(
+        cli,
+        "_load_config_env_file",
+        lambda config_path, args: loaded.append((config_path, args.no_env_file)),
+    )
+
+    cli._catalog_main(["probe", str(config), "--no-env-file"])
+
+    assert loaded == [(config, True)]
+
+
+def test_dry_run_writes_and_verifies_a_non_authorizing_approval_receipt(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    receipt = tmp_path / "approval.json"
+    config.write_text(
+        '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}],'
+        '"max_requests":2,"max_estimated_cost_usd":0.01}'
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(config),
+            "--dry-run",
+            "--no-env-file",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "Reviewed by the release owner.",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+            "--json",
+        ],
+    )
+
+    cli.main()
+
+    written = json.loads(receipt.read_text())
+    assert written["authorizes_paid_run"] is False
+    assert json.loads(capsys.readouterr().out)["approval_receipt"]["receipt"] == written
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(config),
+            "--dry-run",
+            "--no-env-file",
+            "--verify-approval-receipt",
+            str(receipt),
+            "--json",
+        ],
+    )
+    cli.main()
+
+    assert json.loads(capsys.readouterr().out)["approval_verification"] == {
+        "ok": True,
+        "state": "recorded",
+        "reason": "receipt matches the current no-spend plan and has not expired",
+        "authorizes_paid_run": False,
+    }
+
+
 def test_interactive_selection_can_cancel(monkeypatch):
     monkeypatch.setattr(
         "llm_preflight.cli.resolve_models",

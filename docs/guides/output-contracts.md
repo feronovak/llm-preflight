@@ -203,6 +203,32 @@ per-profile `golden_accuracy` and expected-versus-observed confusion counts.
 Use it for stable labels and known answers; open-ended semantic grading remains
 outside the deterministic preflight contract.
 
+## Prove the contract locally
+
+Add accepted and rejected response fixtures to test a deterministic validator
+before spending on a provider. This catches a contract that is too weak to
+reject a known bad response, or too strict to accept the response your consumer
+needs. The command does not load credentials or contact a provider.
+
+```json
+{
+  "validation": {"json_object": true},
+  "validation_fixtures": [
+    {"name": "object is accepted", "response": "{}", "expect": "pass"},
+    {"name": "array is rejected", "response": "[]", "expect": "fail"}
+  ]
+}
+```
+
+```bash
+llm-preflight benchmark.json --contract-check
+```
+
+If the integration declares callable tools, add canonical `tools` entries with
+`name`, `description`, and object-shaped `parameters`. `--contract-check`
+rejects names and JSON Schema features that are not portable in this local
+subset. It validates declarations only; it does not exercise a tool call.
+
 ## Keep generated contracts in sync
 
 When an application assembles prompts dynamically, keep the prompt builder and

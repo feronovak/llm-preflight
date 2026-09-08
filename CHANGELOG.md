@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented here.
 
+## 2.12.0 - 2026-09-08
+
+### Added
+
+- Add no-spend `--contract-check` validation fixtures. A configured contract
+  must prove both an accepted and a rejected response before its fixtures pass.
+- Add strict, canonical tool-definition linting for name, description, and a
+  portable JSON Schema parameter subset. It validates definitions but does not
+  invoke tools or make provider requests.
+- Add secret-safe result provenance: configuration, contract, resolved-route,
+  pricing, and combined evidence fingerprints, prompt hashes, and declared
+  request/cost caps.
+- Add `--change-plan REF`, a Git-aware local report of changed, staged, and
+  untracked files with literal model and contract-surface signals plus safe
+  next commands. It never loads credentials, calls a provider, or authorizes
+  paid work.
+- Add expiring local dry-run approval receipts. They bind a human review note
+  to a plan hash and its request/cost bounds, but are deliberately never
+  accepted as paid-run authorization.
+
+### Fixed
+
+- Reject baseline comparisons with changed output-contract evidence or duplicate
+  model names, and label legacy results without provenance as `unknown`.
+- Include deleted files in Git-aware change-plan evidence and preserve existing
+  parent-directory permissions when writing approval receipts.
+- Give `catalog probe` the same explicit environment-file controls as benchmark
+  commands.
+
+### Changed
+
+- Publish package classifiers and project URLs in wheel metadata, and clarify
+  the README and north star around catching integration regressions.
+
 ## 2.10.0 - 2026-08-31
 
 ### Added

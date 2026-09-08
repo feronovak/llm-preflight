@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -15,6 +15,8 @@ module names.
 | Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, no-spend tool hints and workflow resource, honest structured-output schemas, symlink-safe workspace credentials, and a safe live-run gate; registry manifest and repository plugin skill | live | `mcp.py`, `server.json`, `plugins/llm-preflight/`, `docs/automation/mcp.md` |
 | `--doctor` — validate config, keys, model resolution, and report pricing coverage without a run | live | `cli.py` |
 | `--audit-source` — audit literal model IDs in a repository, no provider requests | live | `source_audit.py`, `cli.py` |
+| `--change-plan [REF]` — inspect tracked, staged, and untracked Git changes for static LLM contract signals and recommend no-spend checks | live | `change_plan.py`, `source_audit.py`, `cli.py` |
+| `--contract-check` — local accepted/rejected validator fixtures and canonical tool-definition linting, without credentials or provider requests | live | `contracts.py`, `runner.py`, `cli.py` |
 | `--baseline` / `--ci` — compare against a previous result, fail when thresholds regress | live | `cli.py` |
 | `--changed-since` — run only models absent from a catalog snapshot | live | `catalog.py`, `catalog_watch.py` |
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
@@ -29,6 +31,8 @@ module names.
 | Secret redaction in output | live | `redaction.py`, `security.py` |
 | `--json` output contract, consumed by CI and the MCP server | live | `cli.py`, `docs/reference/results.md` |
 | Schema-versioned agent decision contract — pass, fail, or inconclusive with remediation and blocking warnings | live | `decision.py`, `runner.py`, `mcp.py` |
+| Secret-safe result provenance — configuration, contract, route, pricing, and combined evidence fingerprints with prompt hashes and spend limits | live | `contracts.py`, `runner.py` |
+| Expiring local approval receipts — bind a review note to one dry-run plan and its bounds, without granting paid-run authority | live | `approval.py`, `cli.py` |
 | Terminal report — separate machine decision state and warnings from the executive ranking | live | `runner.py`, `docs/reference/decision.md` |
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 

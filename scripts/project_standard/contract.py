@@ -26,6 +26,9 @@ KEY = re.compile(r"^(?P<key>[A-Za-z][\w-]*):\s*(?P<value>.*)$")
 ITEM = re.compile(r"^\s+-\s+(?P<item>.+?)\s*$")
 SUB = re.compile(r"^\s+(?P<key>[A-Za-z][\w-]*):\s*(?P<value>.+?)\s*$")
 
+#: Keys a LIST ITEM may carry as a mapping. Closed on purpose — see the gate in `parse_contract`.
+ITEM_MAPPING_KEYS = ("path", "reference")
+
 CONTRACT_NAMES = ("CLAUDE.md", "AGENTS.md")
 
 BOOLS = {"yes": True, "no": False, "true": True, "false": False}
@@ -38,11 +41,16 @@ OVERRIDE_KEYS = ("profile", "http-api", "channels")
 # admissible. An open grammar cannot tell a future extension from a typo, and
 # the typo is far more common — `chanels:` parsed clean, the typed accessor
 # returned None, and the override the author believed in never took effect.
+#
+# `next-steps` and `release-flow` are read indirectly, through
+# `artifacts.LOCAL_ALLOWED`, rather than by a literal `raw.get("...")` — which
+# is how they were missed when this list was first derived, and how a closed
+# grammar came to reject a contract the standard itself blesses.
 KNOWN_KEYS = (
     "adopted", "profile", "http-api", "channels", "direction", "prds",
     "critical-paths", "api-coverage", "scaffold", "local-only",
-    "track-anyway", "ai-attribution", "agent-contract", "next-steps",
-    "release-flow",
+    "track-anyway", "ai-attribution", "agent-contract",
+    "next-steps", "release-flow", "decisions", "docmap",
 )
 
 
@@ -83,10 +91,35 @@ class Contract:
 
     @property
     def critical_paths(self):
+        """The declared paths, as plain strings.
+
+        An entry may be a bare path or a `{path, reference}` mapping; both yield the path here, so
+        every existing caller and every existing contract keeps working unchanged.
+        """
         v = self.raw.get("critical-paths")
         if v is None:
             return None
-        return v if isinstance(v, list) else [v]
+        items = v if isinstance(v, list) else [v]
+        return [i.get("path") if isinstance(i, dict) else i for i in items]
+
+    @property
+    def critical_path_refs(self):
+        """`[(path, reference)]` for entries that declare where the knowledge for a path lives.
+
+        A critical path says "be careful here". It does not say **what you must have read** before
+        editing, and that gap is the one this exists to close: the reference lookups a project
+        depends on are discoverable only if you already know they exist, so the person most likely
+        to miss one is a newcomer — or an agent — editing exactly the code that needed it.
+
+        Optional and additive. An entry without a `reference:` is unchanged, so adopting this costs
+        nothing and declaring it is a deliberate act.
+        """
+        v = self.raw.get("critical-paths")
+        if v is None:
+            return []
+        items = v if isinstance(v, list) else [v]
+        return [(i.get("path"), i.get("reference")) for i in items
+                if isinstance(i, dict) and i.get("path") and i.get("reference")]
 
     @property
     def baselines(self):
@@ -153,10 +186,28 @@ def parse_contract(text, path=None):
             c.raw.setdefault(last_key, [])
             if not isinstance(c.raw[last_key], list):
                 c.raw[last_key] = []
-            c.raw[last_key].append(_scalar(m.group("item")))
+            item = m.group("item")
+            # `- path: x` opens a MAPPING item; anything else stays the scalar it has always been.
+            #
+            # Gated on an explicit key allow-list rather than on "contains a colon", so a value that
+            # happens to hold one — a URL, a Windows path, prose in a comment — keeps parsing exactly
+            # as before. This parser is deliberately not YAML, and widening it by shape rather than
+            # by name is how a simple parser starts silently reinterpreting old contracts.
+            im = SUB.match("  " + item)
+            if im and im.group("key") in ITEM_MAPPING_KEYS:
+                c.raw[last_key].append({im.group("key"): _scalar(im.group("value"))})
+            else:
+                c.raw[last_key].append(_scalar(item))
             continue
 
         m = SUB.match(line)
+        # A continuation line belonging to the mapping item opened just above.
+        if m and m.group("key") in ITEM_MAPPING_KEYS and last_key is not None:
+            bucket = c.raw.get(last_key)
+            if isinstance(bucket, list) and bucket and isinstance(bucket[-1], dict):
+                bucket[-1][m.group("key")] = _scalar(m.group("value"))
+                continue
+
         if m and m.group("key") == "reason":
             if last_key is None:
                 c.errors.append(f"line {lineno}: reason before any key")

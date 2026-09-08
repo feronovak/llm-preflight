@@ -116,6 +116,76 @@ def test_compare_results_reports_metric_deltas_and_regressions():
     assert "cost" in row["regressions"]
 
 
+def test_compare_results_marks_different_contract_evidence_inconclusive():
+    baseline = {
+        "provenance": {"schema_version": 1, "contract_sha256": "before"},
+        "models": [{"name": "candidate", "summary": _summary(1.0, 0.01)}],
+    }
+    current = {
+        "provenance": {"schema_version": 1, "contract_sha256": "after"},
+        "models": [{"name": "candidate", "summary": _summary(1.0, 0.01)}],
+    }
+
+    diff = compare_results(baseline, current)
+
+    assert diff["ok"] is False
+    assert diff["comparability"] == "incompatible"
+    assert diff["models"] == [
+        {
+            "name": "candidate",
+            "status": "incompatible",
+            "regressions": ["contract_changed"],
+        }
+    ]
+    assert diff["warnings"] == [
+        "results use different output-contract evidence; metric deltas are not comparable"
+    ]
+
+
+def test_compare_results_rejects_duplicate_model_display_names():
+    result = {
+        "provenance": {"schema_version": 1, "contract_sha256": "same"},
+        "models": [
+            {"name": "candidate", "summary": _summary(1.0, 0.01)},
+            {"name": "candidate", "summary": _summary(1.0, 0.01)},
+        ],
+    }
+
+    diff = compare_results(result, result)
+
+    assert diff["ok"] is False
+    assert diff["comparability"] == "incompatible"
+    assert diff["models"] == [
+        {
+            "name": "candidate",
+            "status": "incompatible",
+            "regressions": ["duplicate_model_name"],
+        }
+    ]
+    assert diff["warnings"] == [
+        "one or both results contain duplicate model names; metric deltas are ambiguous"
+    ]
+
+
+def test_compare_results_labels_legacy_artifacts_with_unknown_comparability():
+    result = {
+        "models": [
+            {
+                "name": "model",
+                "summary": {**_summary(1.0, 0.01), "valid_output_rate": 1},
+            }
+        ]
+    }
+
+    diff = compare_results(result, result)
+
+    assert diff["ok"] is True
+    assert diff["comparability"] == "unknown"
+    assert diff["warnings"] == [
+        "one or both results lack provenance; compare metric deltas with care"
+    ]
+
+
 def test_compare_results_gates_a_validity_collapse_even_when_requests_succeed():
     baseline = {
         "models": [

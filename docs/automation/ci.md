@@ -44,7 +44,9 @@ human output, it prints the report followed by a readable diff. Prefer the
 two-command form when a later CI step needs a standalone comparison artifact.
 
 The CI comparison fails for a latency increase, a request-success or validation
-rate drop, or a cost increase beyond its configured threshold. Costs are
+rate drop, a cost increase beyond its configured threshold, or different
+output-contract evidence. Legacy artifacts without provenance are reported as
+`unknown` comparability so their metric deltas remain visible. Costs are
 compared only when both result files contain a known estimate; retain
 `max_estimated_cost_usd` as the separate hard spend ceiling before a run.
 

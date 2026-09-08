@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
@@ -12,6 +12,8 @@ It does not judge semantic quality or authorize a production rollout.
    prompt, request settings, and validators unless the user explicitly asks to
    change the contract.
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before a live benchmark.
+   When the config declares validation fixtures or tools, run
+   `--contract-check` too; it is local and sends no provider request.
    They make no generation requests. For a candidate cohort, report every
    non-eligible `smoke_eligibility` reason before proposing paid work.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
@@ -49,6 +51,8 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 1. Read the benchmark configuration and preserve the deployed contract unless a
    contract change is explicitly approved.
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
+   When the config declares response fixtures or tools, also run
+   `--contract-check` without provider access.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.
@@ -68,11 +72,17 @@ support classification, code-patch summary, source-grounded quiz, and refusal
 boundary. It is production-shaped and excludes load testing.
 
 ```bash
+# If local Git changes may affect an LLM integration, inspect them first.
+llm-preflight benchmark.json --change-plan --json
+
 # Validate configuration, available credentials, and model resolution.
 llm-preflight benchmark.json --doctor --json
 
 # Enforce complete current pricing before approving paid work.
 llm-preflight benchmark.json --pricing-check
+
+# If configured, prove the validator rejects known bad responses and lint tools.
+llm-preflight benchmark.json --contract-check
 
 # Inspect exact models, tests, retry-expanded request count, estimated cost,
 # and smoke-eligibility evidence.
@@ -95,6 +105,31 @@ llm-preflight benchmark.json --interactive
 Select `agent-smoke` at the test prompt unless a different reviewed contract is
 needed. The run-plan screen and its separate `y` confirmation are the point at
 which a paid request becomes authorized.
+
+## Change plans and approval receipts
+
+`--change-plan` is a local static Git review. It includes modified, staged, and
+untracked files, then reports literal model IDs and likely prompt/schema/tool
+surface changes. It cannot see dynamic selection, imports no application code,
+loads no credentials, and never authorizes paid work.
+
+```bash
+llm-preflight benchmark.json --change-plan HEAD --json
+```
+
+After reviewing a dry-run plan, record—not grant—a bounded human decision in a
+private local receipt. The receipt contains a review note, expiry, exact plan
+hash, and retry-expanded request/cost bounds. No CLI or MCP command accepts it
+as paid-run authorization; the user must still explicitly authorize a live run.
+
+```bash
+llm-preflight benchmark.json --dry-run --no-env-file \
+  --approval-receipt .llm-preflight/approvals/checkout.json \
+  --approval-note "Reviewed checkout smoke." \
+  --approval-expires-at 2026-09-05T12:00:00+00:00 --json
+llm-preflight benchmark.json --dry-run --no-env-file \
+  --verify-approval-receipt .llm-preflight/approvals/checkout.json --json
+```
 
 ## Configuration contract
 

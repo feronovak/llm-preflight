@@ -7,8 +7,8 @@ from llm_preflight.runner import run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.10.0"
-    assert 'version = "2.10.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.12.0"
+    assert 'version = "2.12.0"' in Path("pyproject.toml").read_text()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -34,6 +34,23 @@ def test_build_backend_is_pinned_for_reproducible_release_artifacts():
 
     assert 'requires = ["setuptools==83.0.0"]' in pyproject
     assert 'build-backend = "setuptools.build_meta"' in pyproject
+
+
+def test_project_metadata_exposes_classifiers_and_public_project_urls():
+    metadata = Path("pyproject.toml").read_text()
+    project = metadata.split("[tool.setuptools.package-data]", 1)[0]
+    package_data = metadata.split("[tool.setuptools.package-data]", 1)[1]
+
+    assert "classifiers = [" in project
+    assert '"Development Status :: 4 - Beta"' in project
+    for url in (
+        "https://github.com/feronovak/llm-preflight",
+        "https://github.com/feronovak/llm-preflight/tree/main/docs",
+        "https://github.com/feronovak/llm-preflight/issues",
+        "https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md",
+    ):
+        assert url in project
+    assert "classifiers" not in package_data
 
 
 def test_ci_and_release_workflows_install_committed_tool_locks():

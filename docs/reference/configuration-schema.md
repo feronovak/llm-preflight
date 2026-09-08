@@ -40,11 +40,21 @@ one top-level `prompt` or one or more named `prompts`.
 | `temperature` | provider default | Sampling temperature, unless the model disables it. |
 | `max_output_tokens` | `256` | Maximum generated tokens for native providers. `max_tokens` is accepted for compatibility. |
 | `system_prompt` | — | Shared system instructions. |
+| `input_images` | — | Explicit local PNG, JPEG, WEBP, or GIF fixtures for supported image-to-text routes. |
 | `provider_options` | `{}` | Provider request body fields; one object or `{all, provider}` maps (`openai_compatible` is valid for a custom OpenAI-style endpoint). |
 | `retry` | two attempts | `true` or an object described below. |
 
 For the `mock` provider only, `response` supplies the returned text when it is
 not set on the model.
+
+`input_images` is a non-empty list of objects with either a config-relative
+`path` and matching `mime_type`, or a caller-provided base64 `data_url`. Paths cannot leave the configuration directory. The
+tool checks the file header, dimensions, a 10 MiB byte limit, and a 20-million
+pixel limit before sending a request. It records only the path, MIME type,
+dimensions, source type, and a content hash in the resolved configuration and
+results; image bytes are read and encoded only while making a supported provider request.
+Use it with OpenRouter/OpenAI-compatible chat routes or Gemini. Other adapters
+reject image inputs rather than silently dropping them.
 
 `retry` accepts `max_attempts` (2), `initial_delay_seconds` (0.25),
 `max_delay_seconds` (4), `backoff_multiplier` (2), `jitter_seconds` (0.1),

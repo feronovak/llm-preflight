@@ -79,3 +79,16 @@ def redact_secrets(value: Any) -> Any:
     if isinstance(value, str):
         return _redact_text(value)
     return value
+
+
+def without_private_fields(value: Any) -> Any:
+    """Remove runtime-only values before retaining configuration evidence."""
+    if isinstance(value, dict):
+        return {
+            key: without_private_fields(item)
+            for key, item in value.items()
+            if not key.startswith("_")
+        }
+    if isinstance(value, list):
+        return [without_private_fields(item) for item in value]
+    return value

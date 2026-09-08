@@ -477,6 +477,28 @@ def test_estimate_budget_treats_a_malformed_retry_value_as_default_attempts():
     assert budget["possible_requests"] == 2
 
 
+def test_estimate_budget_is_unknown_for_image_inputs_without_provider_token_evidence():
+    budget = estimate_budget(
+        {
+            "prompt": "Read the receipt.",
+            "request": {"input_images": [{"path": "receipt.png"}]},
+            "repetitions": 1,
+            "warmups": 0,
+            "models": [
+                {
+                    "provider": "openrouter",
+                    "model": "qwen/qwen3-vl",
+                    "input_cost_per_million": 1,
+                    "output_cost_per_million": 2,
+                }
+            ],
+        }
+    )
+
+    assert budget["estimated_cost_usd"] is None
+    assert budget["maximum_estimated_cost_usd"] is None
+
+
 def test_doctor_report_surfaces_discovery_errors_as_not_ok():
     report = doctor_report({"discovery": [{"provider": "bogus", "limit": 1}]})
 

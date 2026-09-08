@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from .profiles import evaluate_consumer_response, evaluate_response
-from .redaction import redact_secrets
+from .redaction import redact_secrets, without_private_fields
 
 _TOOL_NAME = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 _SCHEMA_TYPES = {"object", "array", "string", "number", "integer", "boolean"}
@@ -244,9 +244,7 @@ def provenance(
 ) -> dict[str, Any]:
     """Return non-secret, stable evidence fingerprints for a completed run."""
     prompts = _prompt_fingerprints(config)
-    clean_config = {
-        key: value for key, value in config.items() if key != "_source_config_path"
-    }
+    clean_config = without_private_fields(config)
     contract = {
         "validation": config.get("validation", {}),
         "validation_fixtures": config.get("validation_fixtures", []),

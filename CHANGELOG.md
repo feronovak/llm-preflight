@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Add local image-input preflight support for image-to-text contracts on
+  OpenRouter/OpenAI-compatible chat routes and Gemini. Inputs are constrained
+  to verified local image fixtures; results retain metadata and a content hash,
+  not image bytes.
+
 ## 2.12.0 - 2026-09-08
 
 ### Added

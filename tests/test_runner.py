@@ -333,6 +333,146 @@ def test_load_config_rejects_prompt_file_path_traversal(tmp_path):
         load_config(path)
 
 
+def test_load_config_prepares_a_confined_png_input_without_storing_its_bytes(tmp_path):
+    image_dir = tmp_path / "fixtures"
+    image_dir.mkdir()
+    image = image_dir / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (3).to_bytes(4, "big")
+        + (2).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read the receipt.","request":{"input_images":['
+        '{"path":"fixtures/receipt.png","mime_type":"image/png"}]},'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    image_input = load_config(path)["request"]["input_images"][0]
+
+    assert image_input["path"] == "fixtures/receipt.png"
+    assert image_input["mime_type"] == "image/png"
+    assert image_input["width"] == 3
+    assert image_input["height"] == 2
+    assert len(image_input["sha256"]) == 64
+    assert "data" not in image_input
+
+
+def test_load_config_rejects_image_input_outside_the_config_directory(tmp_path):
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read this.","request":{"input_images":['
+        '{"path":"../receipt.png","mime_type":"image/png"}]},'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    with pytest.raises(ValueError, match="must stay within the config directory"):
+        load_config(path)
+
+
+def test_load_config_rejects_an_image_mime_type_that_disagrees_with_its_header(
+    tmp_path,
+):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read this.","request":{"input_images":['
+        '{"path":"receipt.png","mime_type":"image/jpeg"}]},'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    with pytest.raises(ValueError, match="must match the file content"):
+        load_config(path)
+
+
+def test_image_input_results_retain_only_configured_metadata(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read this.","request":{"input_images":['
+        '{"path":"receipt.png","mime_type":"image/png"}]},'
+        '"repetitions":1,"warmups":0,'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+
+    result = run_benchmark(load_config(path))
+    image_input = result["source_config"]["request"]["input_images"][0]
+
+    assert image_input["path"] == "receipt.png"
+    assert len(image_input["sha256"]) == 64
+    assert "data" not in image_input
+    assert "_config_dir" not in result["source_config"]
+    assert "_image_base_dir" not in result["settings"]["request"]
+
+
+def test_load_config_accepts_data_url_inputs_without_retaining_image_bytes(tmp_path):
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read this.","request":{"input_images":['
+        '{"data_url":"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="}]},'
+        '"models":[{"model":"fake"}]}'
+    )
+
+    image_input = load_config(path)["request"]["input_images"][0]
+
+    assert image_input["source"] == "data_url"
+    assert image_input["mime_type"] == "image/gif"
+    assert "data_url" not in image_input
+    assert image_input["_data_base64"]
+
+    config = load_config(path)
+    config["models"] = [{"provider": "mock", "model": "local", "response": "ok"}]
+    config["repetitions"] = 1
+    config["warmups"] = 0
+    result = run_benchmark(config)
+
+    retained = result["source_config"]["request"]["input_images"][0]
+    assert retained["source"] == "data_url"
+    assert "_data_base64" not in retained
+    assert "data_url" not in retained
+
+
+def test_mock_provider_reads_verified_image_inputs(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        '{"prompt":"Read this.","request":{"input_images":['
+        '{"path":"receipt.png","mime_type":"image/png"}]},'
+        '"repetitions":1,"warmups":0,'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    config = load_config(path)
+    image.write_bytes(image.read_bytes() + b"changed")
+
+    result = run_benchmark(config)
+
+    assert result["models"][0]["samples"][0]["ok"] is False
+
+
 def test_select_custom_prompt_applies_named_request_and_validation():
     config = {
         "prompts": [

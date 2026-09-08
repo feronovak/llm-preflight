@@ -1,0 +1,22 @@
+{
+  "name": "gemini-image-to-text",
+  "prompt": "Read the order number in the supplied image. Return exactly JSON with order_number set to ORDER-4821.",
+  "request": {
+    "input_images": [
+      {"path": "order-4821.png", "mime_type": "image/png"}
+    ],
+    "max_output_tokens": 100
+  },
+  "validation": {
+    "contains": "ORDER-4821",
+    "json_schema": {
+      "type": "object",
+      "required": ["order_number"],
+      "properties": {"order_number": {"type": "string"}}
+    }
+  },
+  "models": [{"provider": "gemini", "model": "gemini-2.5-flash"}],
+  "repetitions": 1,
+  "warmups": 0,
+  "max_requests": 1
+}

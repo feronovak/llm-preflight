@@ -29,8 +29,11 @@ STANDARD_PROTOCOL_VERSION = "2025-06-18"
 SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
 SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
-1. Call `validate_config` after an LLM integration change.
-2. Call `dry_run_plan` and report the request bound, estimated cost, pricing
+1. Call `validate_config` after an LLM integration change. This validates any
+   local image fixture path, MIME type, size, and content fingerprint without a
+   provider call.
+2. Call `dry_run_plan` and report the request bound, estimated cost (which is
+   intentionally unavailable for image inputs), pricing
    coverage, and every non-eligible smoke reason.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.

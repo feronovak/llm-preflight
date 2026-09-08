@@ -150,6 +150,10 @@ def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 def _request_cost(
     model: dict[str, Any], prompt: str, options: dict[str, Any]
 ) -> float | None:
+    if options.get("input_images"):
+        # Providers meter image inputs differently; do not turn file dimensions
+        # into a made-up token count for a spend gate.
+        return None
     system_prompt = options.get("system_prompt", "")
     system_text = (
         system_prompt

@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
+**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -20,7 +20,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
 | `--change-plan [REF]` | `HEAD` | Inspect local Git changes against `REF`, including staged and untracked files, for literal model IDs and likely contract surfaces. It recommends no-spend commands; it never loads credentials, contacts a provider, or authorizes paid work. |
-| `--contract-check` | off | Run configured accepted/rejected response fixtures and canonical tool-schema linting locally. It needs `validation_fixtures` or `tools`; it never loads credentials or contacts a provider. |
+| `--contract-check` | off | Run configured accepted/rejected response fixtures, local image-fixture safety checks, and canonical tool-schema linting. It needs `validation_fixtures` or `tools`; it never loads credentials or contacts a provider. |
 | `--doctor` | off | Validate configuration, keys, and model resolution, and report selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
 | `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
 | `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |

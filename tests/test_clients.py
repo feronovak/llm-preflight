@@ -1,3 +1,4 @@
+import hashlib
 import io
 import urllib.error
 
@@ -125,6 +126,196 @@ def test_openrouter_uses_compatible_adapter():
     body = client.body("hello", {"max_output_tokens": 1})
     assert body["max_tokens"] == 1
     assert "max_completion_tokens" not in body
+
+
+def test_openrouter_uses_openai_multipart_content_for_local_image_inputs(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    client = create_client({"provider": "openrouter", "model": "qwen/qwen3-vl"}, 10)
+
+    body = client.body(
+        "Read the receipt.",
+        {
+            "input_images": [
+                {
+                    "path": "receipt.png",
+                    "mime_type": "image/png",
+                    "width": 1,
+                    "height": 1,
+                    "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+                }
+            ],
+            "_image_base_dir": str(tmp_path),
+        },
+    )
+
+    assert body["messages"][-1]["content"][0] == {
+        "type": "text",
+        "text": "Read the receipt.",
+    }
+    assert body["messages"][-1]["content"][1]["type"] == "image_url"
+    assert body["messages"][-1]["content"][1]["image_url"]["url"].startswith(
+        "data:image/png;base64,"
+    )
+
+
+def test_qwen_model_studio_uses_the_openai_compatible_image_protocol(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    client = create_client(
+        {
+            "provider": "openai_compatible",
+            "model": "qwen3-vl-plus",
+            "base_url": "https://workspace.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+        },
+        10,
+    )
+    body = client.body(
+        "Read the receipt.",
+        {
+            "input_images": [
+                {
+                    "path": "receipt.png",
+                    "mime_type": "image/png",
+                    "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+                }
+            ],
+            "_image_base_dir": str(tmp_path),
+        },
+    )
+
+    assert client.endpoint().endswith("/compatible-mode/v1/chat/completions")
+    assert body["messages"][-1]["content"][1]["type"] == "image_url"
+
+
+def test_gemini_uses_inline_data_for_local_image_inputs(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
+
+    body = client.body(
+        "Read the receipt.",
+        {
+            "input_images": [
+                {
+                    "path": "receipt.png",
+                    "mime_type": "image/png",
+                    "width": 1,
+                    "height": 1,
+                    "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+                }
+            ],
+            "_image_base_dir": str(tmp_path),
+        },
+    )
+
+    assert body["contents"][0]["parts"][0] == {"text": "Read the receipt."}
+    assert body["contents"][0]["parts"][1]["inlineData"]["mimeType"] == "image/png"
+    assert body["contents"][0]["parts"][1]["inlineData"]["data"]
+
+
+def test_image_input_fails_if_the_local_file_changes_after_validation(tmp_path):
+    image = tmp_path / "receipt.png"
+    original = (
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    image.write_bytes(original)
+    client = create_client({"provider": "openrouter", "model": "qwen/qwen3-vl"}, 10)
+    options = {
+        "input_images": [
+            {
+                "path": "receipt.png",
+                "mime_type": "image/png",
+                "sha256": hashlib.sha256(original).hexdigest(),
+            }
+        ],
+        "_image_base_dir": str(tmp_path),
+    }
+    image.write_bytes(original + b"changed")
+
+    with pytest.raises(ValueError, match="changed after configuration was loaded"):
+        client.body("Read the receipt.", options)
+
+
+def test_anthropic_rejects_image_inputs_instead_of_ignoring_them(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    client = create_client({"provider": "anthropic", "model": "claude-test"}, 10)
+
+    with pytest.raises(ValueError, match="does not support input_images"):
+        client.body(
+            "Read the receipt.",
+            {
+                "input_images": [{"path": "receipt.png", "mime_type": "image/png"}],
+                "_image_base_dir": str(tmp_path),
+            },
+        )
+
+
+def test_openai_responses_rejects_image_inputs_instead_of_ignoring_them():
+    client = create_client(
+        {"provider": "openai", "model": "gpt-test", "adapter": "openai_responses"},
+        10,
+    )
+
+    with pytest.raises(ValueError, match="does not support input_images"):
+        client.body("Read this.", {"input_images": [{"path": "receipt.png"}]})
+
+
+def test_xai_uses_the_verified_openai_compatible_image_protocol(tmp_path):
+    image = tmp_path / "receipt.png"
+    image.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x02\x00\x00\x00"
+    )
+    client = create_client({"provider": "xai", "model": "grok-test"}, 10)
+
+    body = client.body(
+        "Read this.",
+        {
+            "input_images": [
+                {
+                    "path": "receipt.png",
+                    "mime_type": "image/png",
+                    "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+                }
+            ],
+            "_image_base_dir": str(tmp_path),
+        },
+    )
+
+    assert body["messages"][-1]["content"][1]["type"] == "image_url"
 
 
 def test_openrouter_applies_provider_specific_options():

@@ -3,12 +3,35 @@ import re
 from pathlib import Path
 
 from llm_preflight import __version__, cli
-from llm_preflight.runner import run_benchmark
+from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.12.0"
-    assert 'version = "2.12.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.13.0"
+    assert 'version = "2.13.0"' in Path("pyproject.toml").read_text()
+
+
+def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
+    fixture = Path("examples/vision/order-4821.png")
+    assert fixture.is_file()
+
+    for path in (
+        Path("examples/vision/qwen-vl-model-studio.json"),
+        Path("examples/vision/gemini-image-to-text.json"),
+    ):
+        config = load_config(path)
+        image = config["request"]["input_images"][0]
+
+        assert image["source"] == "path"
+        assert image["path"] == "order-4821.png"
+        assert image["sha256"]
+        assert config["validation"]["contains"] == "ORDER-4821"
+
+
+def test_source_distribution_includes_image_to_text_fixture():
+    manifest = Path("MANIFEST.in").read_text()
+
+    assert "recursive-include examples/vision *.png" in manifest
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):

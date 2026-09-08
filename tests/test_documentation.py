@@ -36,7 +36,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in feature_map
+    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
@@ -157,20 +157,23 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 
     for page in (
         ROOT / "docs/automation/coding-agents.md",
-        ROOT / "docs/reference/cli.md",
         ROOT / "docs/automation/change-plans.md",
     ):
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
 
+    assert (
+        "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0"
+        in (ROOT / "docs/reference/cli.md").read_text()
+    )
+
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0" in page.read_text()
 
     for page in (
         ROOT / "docs/index.md",
         ROOT / "docs/FEATURE_MAP.md",
-        ROOT / "docs/PROJECT_MAP.md",
     ):
-        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0"
@@ -195,9 +198,9 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.10.0" in action_guide
-    assert "default: `2.10.0`" in action_guide
-    assert "last published package (`2.10.0`)" in action_guide
+    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in action_guide
+    assert "default: `2.12.0`" in action_guide
+    assert "last published package (`2.12.0`)" in action_guide
     assert "under development" not in action_guide
 
 
@@ -245,7 +248,9 @@ def test_positioning_and_decisions_are_public_and_current():
 def test_project_map_indexes_distribution_assets():
     project_map = (ROOT / "docs/PROJECT_MAP.md").read_text()
 
+    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0" in project_map
     assert "CI workflows and safe issue forms" in project_map
+    assert "llm_preflight/images.py" in project_map
     assert "action.yml" in project_map
     assert "server.json" in project_map
     assert "plugins/llm-preflight/" in project_map

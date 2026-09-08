@@ -58,6 +58,49 @@ in `.env.production` or your shell. The endpoint must be an HTTP(S) URL on a
 public host and is checked before requests are made; direct loopback and private
 network endpoints are intentionally rejected.
 
+## Image-to-text input fixtures
+
+Use `request.input_images` to preflight an existing text or JSON response
+contract that depends on a supplied image. This checks the integration shape;
+it does not rate image quality, prompt faithfulness, or models.
+
+```json
+{
+  "prompt": "Read the order number and return JSON.",
+  "request": {
+    "input_images": [
+      {"path": "fixtures/order.png", "mime_type": "image/png"}
+    ],
+    "max_output_tokens": 100
+  },
+  "models": [{
+    "name": "qwen-vl",
+    "provider": "openai_compatible",
+    "model": "qwen3-vl-plus",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "api_key_env": "DASHSCOPE_API_KEY"
+  }],
+  "validation": {
+    "json_schema": {
+      "type": "object",
+      "required": ["order_number"],
+      "properties": {"order_number": {"type": "string"}}
+    }
+  }
+}
+```
+
+The path must be relative to the config and cannot escape its directory. PNG,
+JPEG, WEBP, and GIF inputs are supported up to 10 MiB and 20 million pixels.
+The declared MIME type must match the file header. LLM Preflight stores a
+content hash and dimensions, never image bytes, in results. OpenRouter and
+OpenAI-compatible chat routes receive OpenAI multipart image content; Gemini
+receives inline image data. Unsupported adapters fail rather than ignoring an
+image. The pre-run cost plan reports image-input cost as unavailable because
+providers meter images differently; completed runs use provider-reported token
+usage when it is available. See [image-to-text contract inputs](../guides/vision-inputs.md)
+for the integration boundaries.
+
 ## Custom prompts
 
 Custom prompts are named, reusable tests:

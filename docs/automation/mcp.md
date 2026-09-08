@@ -1,6 +1,11 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+
+`validate_config` and `dry_run_plan` also inspect configured local image inputs
+without reading credentials or calling a provider. Their pre-run image cost is
+reported as unavailable rather than guessed. Image generation remains outside
+the MCP workflow.
 
 LLM Preflight includes a local stdio MCP server so a coding agent can collect
 the same preflight evidence without parsing shell output or gaining arbitrary

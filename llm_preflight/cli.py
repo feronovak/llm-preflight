@@ -2236,6 +2236,12 @@ def main() -> None:
             replay_result = load_json(args.replay)
             config = replay_config(replay_result)
             source_config_path = replay_result.get("source_config_path")
+            if config.get("request", {}).get("input_images"):
+                if not source_config_path:
+                    parser.error(
+                        "--replay with input_images requires the recorded source config path"
+                    )
+                config["_config_dir"] = str(Path(source_config_path).parent.resolve())
             _load_config_env_file(
                 Path(source_config_path) if source_config_path else args.replay,
                 args,

@@ -22,6 +22,7 @@ from .contracts import (
     validation_evaluator,
 )
 from .decision import build_decision
+from .images import prepare_image_inputs
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
@@ -35,7 +36,7 @@ from .profiles import (
     normalize_profile_selector,
     select_profiles,
 )
-from .redaction import redact_secrets
+from .redaction import redact_secrets, without_private_fields
 
 
 @contextmanager
@@ -179,7 +180,31 @@ def load_config(path: Path) -> dict[str, Any]:
             continue
         if not isinstance(model, dict) or "model" not in model:
             raise ValueError(f"models[{index}] requires 'model'")
+    _prepare_config_image_inputs(config, config_dir)
     return config
+
+
+def _prepare_config_image_inputs(
+    config: dict[str, Any], base_dir: Path | None = None
+) -> None:
+    if base_dir is None and isinstance(config.get("_config_dir"), str):
+        base_dir = Path(config["_config_dir"])
+    request = config.get("request")
+    if request is not None:
+        if not isinstance(request, dict):
+            raise ValueError("request must be an object")
+        if request.get("input_images") and base_dir is not None:
+            config["_config_dir"] = str(base_dir)
+        prepare_image_inputs(request, base_dir, "request")
+    for index, prompt in enumerate(config.get("prompts", [])):
+        if isinstance(prompt, dict) and "request" in prompt:
+            if not isinstance(prompt["request"], dict):
+                raise ValueError(f"prompts[{index}].request must be an object")
+            if prompt["request"].get("input_images") and base_dir is not None:
+                config["_config_dir"] = str(base_dir)
+            prepare_image_inputs(
+                prompt["request"], base_dir, f"prompts[{index}].request"
+            )
 
 
 def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
@@ -291,6 +316,7 @@ def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
 
 def validate_config_validations(config: dict[str, Any]) -> None:
     """Reject unsupported validation keys before planning or spending requests."""
+    _prepare_config_image_inputs(config)
 
     def validate_rules(validation: Any, location: str) -> None:
         if validation is None:
@@ -653,6 +679,8 @@ def _run_profiles(
         options.update(profile_request)
         if profile.get("system_prompt"):
             options["system_prompt"] = profile["system_prompt"]
+        if options.get("input_images"):
+            options["_image_base_dir"] = config.get("_config_dir")
         for _ in range(warmups):
             warmup_samples.append(
                 _safe_client_run(client, profile["cases"][0]["prompt"], options)
@@ -773,9 +801,11 @@ def run_benchmark(
     warmups = int(config.get("warmups", 1))
     concurrency = int(config.get("concurrency", 1))
     timeout = float(config.get("timeout_seconds", 120))
-    request_options = config.get(
-        "request", {"temperature": 0, "max_output_tokens": 256}
+    request_options = dict(
+        config.get("request", {"temperature": 0, "max_output_tokens": 256})
     )
+    if request_options.get("input_images"):
+        request_options["_image_base_dir"] = config.get("_config_dir")
     validation = config.get("validation", {})
     configured_profiles = config.get("profiles")
     if profile_selector is None and configured_profiles:
@@ -968,7 +998,7 @@ def run_benchmark(
             "warmups": warmups,
             "concurrency": concurrency,
             "timeout_seconds": timeout,
-            "request": request_options,
+            "request": without_private_fields(request_options),
             "profiles": [profile["name"] for profile in profiles],
             "suite_repetitions": int(config.get("suite_repetitions", 1)),
         },
@@ -988,13 +1018,7 @@ def run_benchmark(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
         "configuration_warnings": preset_warnings(config, models),
-        "source_config": redact_secrets(
-            {
-                key: value
-                for key, value in config.items()
-                if key != "_source_config_path"
-            }
-        ),
+        "source_config": redact_secrets(without_private_fields(config)),
         "total_input_tokens": sum(
             model[summary]["input_tokens"]
             for model in models_result

@@ -9,6 +9,7 @@ import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any
 
+from .images import input_image_parts
 from .security import open_public_url, require_http_url
 
 TokenUsage = dict[str, int | None]
@@ -332,7 +333,22 @@ class OpenAICompatibleClient(ProviderClient):
         messages = []
         if options.get("system_prompt"):
             messages.append({"role": "system", "content": options["system_prompt"]})
-        messages.append({"role": "user", "content": prompt})
+        content: str | list[dict[str, Any]] = prompt
+        image_parts = input_image_parts(options)
+        if image_parts:
+            content = [
+                {"type": "text", "text": prompt},
+                *[
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image['mime_type']};base64,{image['data']}"
+                        },
+                    }
+                    for image in image_parts
+                ],
+            ]
+        messages.append({"role": "user", "content": content})
         body: dict[str, Any] = {
             "model": self.model["model"],
             "messages": messages,
@@ -372,6 +388,10 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
         return self.model["base_url"].rstrip("/") + "/responses"
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        if options.get("input_images"):
+            raise ValueError(
+                "the OpenAI Responses adapter does not support input_images"
+            )
         body: dict[str, Any] = {
             "model": self.model["model"],
             "input": prompt,
@@ -478,6 +498,8 @@ class AnthropicClient(ProviderClient):
         }
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        if options.get("input_images"):
+            raise ValueError("the Anthropic adapter does not support input_images")
         body: dict[str, Any] = {
             "model": self.model["model"],
             "messages": [{"role": "user", "content": prompt}],
@@ -516,8 +538,18 @@ class GeminiClient(ProviderClient):
         return {"x-goog-api-key": api_key or ""}
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        parts: list[dict[str, Any]] = [{"text": prompt}]
+        parts.extend(
+            {
+                "inlineData": {
+                    "mimeType": image["mime_type"],
+                    "data": image["data"],
+                }
+            }
+            for image in input_image_parts(options)
+        )
         body: dict[str, Any] = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {},
         }
         generation = body["generationConfig"]
@@ -573,6 +605,7 @@ class MockClient(ProviderClient):
         return event.get("text"), event.get("usage", {})
 
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
+        input_image_parts(request_options)
         response = str(
             self.model.get("response", request_options.get("response", "ok"))
         )

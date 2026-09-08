@@ -1,0 +1,27 @@
+{
+  "name": "qwen-vl-order-number",
+  "prompt": "Read the order number in the supplied image. Return exactly JSON with order_number set to ORDER-4821.",
+  "request": {
+    "input_images": [
+      {"path": "order-4821.png", "mime_type": "image/png"}
+    ],
+    "max_output_tokens": 100
+  },
+  "validation": {
+    "contains": "ORDER-4821",
+    "json_schema": {
+      "type": "object",
+      "required": ["order_number"],
+      "properties": {"order_number": {"type": "string"}}
+    }
+  },
+  "models": [{
+    "provider": "openai_compatible",
+    "model": "qwen3-vl-plus",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "api_key_env": "DASHSCOPE_API_KEY"
+  }],
+  "repetitions": 1,
+  "warmups": 0,
+  "max_requests": 1
+}

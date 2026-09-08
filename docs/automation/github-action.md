@@ -1,6 +1,6 @@
 # GitHub Marketplace Action
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.12.0
+**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local
@@ -14,11 +14,11 @@ steps:
       config: benchmark.json
 ```
 
-The action installs the exact `package-version` input (default: `2.12.0`). Its
+The action installs the exact `package-version` input (default: `2.13.0`). Its
 default path makes no provider generation request and needs no secret.
 
 The repository's `Marketplace Action smoke` workflow intentionally pins the
-last published package (`2.12.0`), which keeps pull-request validation
+last published package (`2.13.0`), which keeps pull-request validation
 installable from PyPI. Update that pin only after publishing a newer package
 and confirming the workflow succeeds against it.
 

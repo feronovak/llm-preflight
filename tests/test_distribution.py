@@ -25,14 +25,14 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.12.0"' in workflow
+    assert 'package-version: "2.13.0"' in workflow
     assert "run-paid" not in workflow
 
 
 def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.12.0"' in action
+    assert 'default: "2.13.0"' in action
 
 
 def test_issue_forms_and_comparison_page_keep_reporting_safe_and_scoped():

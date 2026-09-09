@@ -29,7 +29,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
 | `--init [PATH]` | `benchmark.json` | Create a no-key mock config without overwriting a file. |
-| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, API-key environment-variable name, and optional config-relative `--env-file` reference. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
+| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, API-key environment-variable name, and optional config-relative `--env-file` reference. Add `--interactive` to collect the config path, provider, model, key-variable name, and optional env reference without prompting for a secret. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
 | `--models LIST` | — | Comma-separated `provider:model` list for `--quick`. An unprefixed ID is accepted only for recognizable OpenAI IDs. |
 | `--diff BASELINE CURRENT` | — | Compare two saved JSON result files; no benchmark run. |
 | `--replay PATH` | — | Re-run the saved source configuration in a result artifact. |

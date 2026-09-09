@@ -38,6 +38,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "not proof of user approval" in mcp_guide
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in feature_map
     assert "current-price coverage gate" in feature_map
+    assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
     assert "Catalog-to-smoke eligibility" in feature_map
@@ -184,6 +185,8 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
+    assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
+    assert "llm-preflight init --template provider --interactive" in safe_demo
     ci = (ROOT / "docs/automation/ci.md").read_text()
     north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
 

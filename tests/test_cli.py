@@ -220,9 +220,33 @@ def test_doctor_reports_redacted_credential_provenance_from_config_env_file(
     assert report["environment"] == {
         "source": "config",
         "path": str(credentials / "team.env"),
+        "status": "present",
     }
     assert report["checks"][0]["credential_source"] == "env_file"
     assert "not-for-output" not in json.dumps(report)
+
+
+def test_doctor_reports_an_explicitly_selected_missing_env_file(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"env_file":"credentials/missing.env","prompt":"ok",'
+        '"models":[{"provider":"openai","model":"gpt-test",'
+        '"api_key_env":"MISSING_OPENAI_KEY"}]}'
+    )
+    monkeypatch.delenv("MISSING_OPENAI_KEY", raising=False)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--json"]
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["environment"]["status"] == "missing_file"
+    assert report["environment"]["path"] == str(tmp_path / "credentials/missing.env")
 
 
 def test_dry_run_writes_and_verifies_a_non_authorizing_approval_receipt(
@@ -1012,6 +1036,33 @@ def test_init_provider_template_can_reference_an_existing_env_file(
     config = json.loads(config_path.read_text())
     assert config["env_file"] == "credentials/team.env"
     assert "TEAM_OPENAI_KEY=" not in config_path.read_text()
+
+
+def test_init_interactive_provider_setup_collects_config_and_env_reference(
+    monkeypatch, tmp_path
+):
+    config_path = tmp_path / "with space" / "benchmark.json"
+    answers = iter(
+        [
+            str(config_path),
+            "openai",
+            "gpt-test",
+            "TEAM_OPENAI_KEY",
+            "credentials/team.env",
+        ]
+    )
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "init", "--template", "provider", "--interactive"],
+    )
+
+    cli.main()
+
+    config = json.loads(config_path.read_text())
+    assert config["env_file"] == "credentials/team.env"
+    assert config["models"][0]["api_key_env"] == "TEAM_OPENAI_KEY"
 
 
 def test_init_provider_template_requires_complete_noninteractive_options(

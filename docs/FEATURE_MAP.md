@@ -13,7 +13,8 @@ module names.
 | Cross-provider preflight run against a set of models before a switch | live | `runner.py`, `client.py` |
 | CLI, as `llm-preflight` and `python -m llm_preflight` | live | `cli.py`, `__main__.py`; see `--help` for installed flags |
 | Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, no-spend tool hints and workflow resource, honest structured-output schemas, symlink-safe workspace credentials, and a safe live-run gate; registry manifest and repository plugin skill | live | `mcp.py`, `server.json`, `plugins/llm-preflight/`, `docs/automation/mcp.md` |
-| Project configuration reuse — a config-relative env-file reference or explicit override loads existing credentials without copying values; `--doctor` reports only redacted credential provenance | live | `env.py`, `cli.py`, `features.py`, `mcp.py` |
+| `--doctor` — validate config, keys, model resolution, redacted credential provenance, and pricing coverage without a run | live | `cli.py`, `features.py` |
+| Project configuration reuse — a config-relative env-file reference or explicit override loads existing credentials without copying values; MCP keeps the same workspace boundary | live | `env.py`, `cli.py`, `mcp.py` |
 | `--audit-source` — audit literal model IDs in a repository, no provider requests | live | `source_audit.py`, `cli.py` |
 | `--change-plan [REF]` — inspect tracked, staged, and untracked Git changes for static LLM contract signals and recommend no-spend checks | live | `change_plan.py`, `source_audit.py`, `cli.py` |
 | `--contract-check` — local accepted/rejected validator fixtures, local image-fixture safety checks, and canonical tool-definition linting, without provider requests | live | `contracts.py`, `images.py`, `runner.py`, `cli.py` |

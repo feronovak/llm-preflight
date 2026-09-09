@@ -333,6 +333,7 @@ def doctor_report(
         report["environment"] = {
             "source": environment["source"],
             "path": environment["path"],
+            "status": environment.get("status", "not_checked"),
         }
     return report
 

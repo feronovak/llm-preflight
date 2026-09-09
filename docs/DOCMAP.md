@@ -27,7 +27,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-09-04 | v2.12.0 |
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-09-09 | v2.14.0 |
-| [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-08-30 | v2.7.5 |
+| [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-09-09 | v2.14.0 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | unstamped | — | — |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-08-31 | v2.8.0 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |

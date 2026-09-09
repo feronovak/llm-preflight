@@ -40,7 +40,9 @@ Set a config-relative `env_file` to reference an existing local file without
 copying credentials. The reference cannot escape the configuration directory;
 shell values still take precedence. `--env-file PATH` explicitly overrides it,
 and `--no-env-file` disables all env-file loading. `--doctor --json` reports
-only `shell`, `env_file`, `missing`, or `not_checked` credential provenance.
+credential provenance as `shell`, `env_file`, or `missing`, plus the selected
+file status: `present`, `missing_file`, or `not_checked` when file loading was
+disabled. It never prints credential values.
 
 ```json
 {

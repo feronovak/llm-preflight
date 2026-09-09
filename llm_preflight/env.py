@@ -28,7 +28,7 @@ def resolve_config_env_file(
         return (config_dir / ".env.production").resolve(), "default"
     if not isinstance(reference, str) or not reference.strip():
         raise ValueError("env_file must be a non-empty relative path")
-    candidate = Path(reference)
+    candidate = Path(reference.replace("\\", "/"))
     if candidate.is_absolute():
         raise ValueError("env_file must be relative to the config directory")
     resolved = (config_dir / candidate).resolve()

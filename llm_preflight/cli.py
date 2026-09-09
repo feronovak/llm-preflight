@@ -480,6 +480,7 @@ def _load_config_env_file(
     return {
         "source": _source,
         "path": str(env_file),
+        "status": "present" if env_file.exists() else "missing_file",
         "loaded": loaded,
         "before": before,
     }
@@ -605,6 +606,11 @@ def _init_main(argv: list[str]) -> None:
         type=Path,
         help="reference an existing env file relative to the new benchmark config",
     )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="prompt for a provider starter configuration and optional env-file reference",
+    )
     parser.add_argument("--write-env-example", action="store_true")
     parser.add_argument(
         "--agent-instructions",
@@ -618,6 +624,28 @@ def _init_main(argv: list[str]) -> None:
     )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args(argv)
+    if args.interactive:
+        if args.template != "provider":
+            parser.error("--interactive requires --template provider")
+        entered_path = input(f"Benchmark config path [{args.path}]: ").strip()
+        if entered_path:
+            args.path = Path(entered_path)
+        for attribute, label in (
+            ("provider", "Provider"),
+            ("model", "Model"),
+            ("api_key_env", "API key environment variable"),
+        ):
+            if getattr(args, attribute) is None:
+                value = input(f"{label}: ").strip()
+                if not value:
+                    parser.error(f"{label.lower()} is required")
+                setattr(args, attribute, value)
+        if args.env_file is None:
+            entered_env_file = input(
+                "Existing env file relative to the config (blank for default): "
+            ).strip()
+            if entered_env_file:
+                args.env_file = Path(entered_env_file)
     if args.check:
         if args.agent_instructions is None:
             parser.error("--check requires --agent-instructions PATH")

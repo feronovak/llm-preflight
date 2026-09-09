@@ -62,6 +62,26 @@ def test_explicit_env_file_precedes_config_reference_and_no_env_disables_all(tmp
     ) == (None, "disabled")
 
 
+def test_config_env_file_reference_rejects_symlink_escape_and_accepts_windows_separators(
+    tmp_path,
+):
+    config = tmp_path / "benchmark.json"
+    outside = tmp_path.parent / "outside.env"
+    outside.write_text("KEY=value\n")
+    credentials = tmp_path / "credentials"
+    credentials.mkdir()
+    (credentials / "escape.env").symlink_to(outside)
+
+    with pytest.raises(ValueError, match="must stay within the config directory"):
+        resolve_config_env_file(config, {"env_file": "credentials/escape.env"})
+
+    resolved, source = resolve_config_env_file(
+        config, {"env_file": r"credentials\\team.env"}
+    )
+    assert resolved == credentials / "team.env"
+    assert source == "config"
+
+
 def test_load_env_file_strips_the_export_keyword(tmp_path, monkeypatch):
     path = tmp_path / ".env.production"
     path.write_text("export EXPORTED_KEY=value\n")

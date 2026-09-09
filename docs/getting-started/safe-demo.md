@@ -1,5 +1,24 @@
 # Getting started
 
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+
+## Reuse a project env file safely
+
+To prepare a provider config without copying a key, use the guided provider
+starter. It asks for a config path, provider, model, environment-variable name,
+and an optional existing env file; it never asks for the secret value.
+
+```bash
+llm-preflight init --template provider --interactive
+llm-preflight benchmark.json --doctor --json
+llm-preflight benchmark.json --dry-run --json
+```
+
+The env-file reference is relative to the benchmark config and cannot escape
+that directory. A shell variable wins over the file, `--env-file` wins over the
+config reference, and `--no-env-file` disables file loading. Review the
+no-spend dry run before separately deciding to make a paid provider request.
+
 **Last reviewed:** 2026-08-30 · **As of:** v2.7.5
 
 LLM Preflight answers a practical question before you change production:

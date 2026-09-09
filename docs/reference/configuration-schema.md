@@ -1,5 +1,7 @@
 # Configuration reference
 
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+
 Configurations are JSON. A config requires `models` or `discovery`, and either
 one top-level `prompt` or one or more named `prompts`.
 
@@ -8,6 +10,7 @@ one top-level `prompt` or one or more named `prompts`.
 | Key | Default | Meaning |
 |---|---:|---|
 | `name` | `llm-benchmark` | Label stored in results. |
+| `env_file` | adjacent `.env.production` | Optional non-empty relative path to an existing env file within the configuration directory. It records a path only; it never copies secrets. Shell values take precedence. |
 | `prompt` | — | Single prompt when not selecting test profiles. |
 | `models` | `[]` | Explicit model objects or alias strings. |
 | `discovery` | `[]` | Provider-catalog sources. |

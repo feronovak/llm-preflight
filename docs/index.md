@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -21,6 +21,8 @@ Results stay local unless you decide to attach or publish them.
   parser behavior, and deterministic golden answers.
 - [Image-to-text contract inputs](guides/vision-inputs.md) — validate an image-to-text
   integration contract without scoring image quality.
+- [Configuration](reference/configuration.md) — reuse an explicitly selected
+  project env file without copying credentials.
 
 ## Run and maintain preflights
 

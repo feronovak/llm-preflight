@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is
@@ -30,6 +30,11 @@ that contains the benchmark configuration:
 The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
+
+For a confirmed live run, a benchmark's relative `env_file` reference is
+accepted only when its resolved path remains within that workspace. An explicit
+MCP `env_file` argument has the same boundary. The server never returns a key
+or env-file contents.
 
 ## Registry discovery
 

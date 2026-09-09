@@ -1,5 +1,7 @@
 # Configuration
 
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+
 ## Models and providers
 
 Every `models` entry has the same basic shape:
@@ -31,6 +33,21 @@ For normal benchmarks, enter only the provider and model ID you intend to use.
 Do not copy catalogue internals such as `catalog_type`, `catalog_confidence`,
 or `adapter` into your JSON. The catalogue workflow discovers those details and
 keeps its compatibility evidence under `benchmarks/.llm-preflight/` automatically.
+
+## Reuse an existing project env file
+
+Set a config-relative `env_file` to reference an existing local file without
+copying credentials. The reference cannot escape the configuration directory;
+shell values still take precedence. `--env-file PATH` explicitly overrides it,
+and `--no-env-file` disables all env-file loading. `--doctor --json` reports
+only `shell`, `env_file`, `missing`, or `not_checked` credential provenance.
+
+```json
+{
+  "env_file": "credentials/team.env",
+  "models": [{"provider": "openai", "model": "gpt-5.4-mini", "api_key_env": "TEAM_OPENAI_KEY"}]
+}
+```
 
 ### OpenAI-compatible endpoints
 

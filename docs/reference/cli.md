@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -21,7 +21,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
 | `--change-plan [REF]` | `HEAD` | Inspect local Git changes against `REF`, including staged and untracked files, for literal model IDs and likely contract surfaces. It recommends no-spend commands; it never loads credentials, contacts a provider, or authorizes paid work. |
 | `--contract-check` | off | Run configured accepted/rejected response fixtures, local image-fixture safety checks, and canonical tool-schema linting. It needs `validation_fixtures` or `tools`; it never loads credentials or contacts a provider. |
-| `--doctor` | off | Validate configuration, keys, and model resolution, and report selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
+| `--doctor` | off | Validate configuration, keys, model resolution, redacted credential provenance, and selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
 | `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
 | `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |
 | `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. Results with different output-contract evidence are incompatible; legacy artifacts without provenance are labelled `unknown`. |
@@ -29,7 +29,7 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
 | `--init [PATH]` | `benchmark.json` | Create a no-key mock config without overwriting a file. |
-| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, and API-key environment-variable name. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
+| `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, API-key environment-variable name, and optional config-relative `--env-file` reference. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
 | `--models LIST` | — | Comma-separated `provider:model` list for `--quick`. An unprefixed ID is accepted only for recognizable OpenAI IDs. |
 | `--diff BASELINE CURRENT` | — | Compare two saved JSON result files; no benchmark run. |
 | `--replay PATH` | — | Re-run the saved source configuration in a result artifact. |
@@ -40,8 +40,8 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 | `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. |
 | `--approval-receipt PATH` | — | With `--dry-run`, write an expiring private local receipt bound to that exact plan. Requires a review note and timezone-qualified expiry; never authorizes paid work. |
 | `--verify-approval-receipt PATH` | — | With `--dry-run`, verify a receipt’s plan hash and expiry. A valid receipt is recorded evidence, not authorization. |
-| `--no-env-file` | off | Do not load the adjacent `.env.production`. |
-| `--env-file PATH` | — | Load this env file instead of the default adjacent file. |
+| `--no-env-file` | off | Do not load an env file. |
+| `--env-file PATH` | — | Load this selected env file instead of a config reference or adjacent default. |
 | `--stop-on MODE` | — | Stop after `api-error`, `test-fail`, or `any-fail`. |
 | `--fail-fast` | off | Compatibility alias for `--stop-on any-fail`. |
 | `--prompt NAME` | — | Run one named custom prompt from the config. |

@@ -35,7 +35,7 @@ from .change_plan import git_change_plan
 from .client import PROVIDER_DEFAULTS
 from .contracts import check_contract
 from .eligibility import smoke_eligibility_report
-from .env import load_env_file
+from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_environment,
     apply_migration_check,
@@ -463,11 +463,26 @@ def _budget_config(
     return budget_config
 
 
-def _load_config_env_file(config_path: Path, args: argparse.Namespace) -> None:
-    if args.no_env_file:
-        return
-    env_file = args.env_file or config_path.resolve().parent / ".env.production"
-    load_env_file(env_file)
+def _load_config_env_file(
+    config_path: Path, args: argparse.Namespace, config: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    config = config if config is not None else load_config(config_path)
+    env_file, _source = resolve_config_env_file(
+        config_path,
+        config,
+        explicit=args.env_file,
+        no_env_file=args.no_env_file,
+    )
+    if env_file is None:
+        return {"source": "disabled", "path": None, "loaded": set(), "before": set()}
+    before = set(os.environ)
+    loaded = load_env_file(env_file) or set()
+    return {
+        "source": _source,
+        "path": str(env_file),
+        "loaded": loaded,
+        "before": before,
+    }
 
 
 def _load_quick_env_file(args: argparse.Namespace) -> None:
@@ -499,7 +514,7 @@ def _starter_config() -> dict[str, Any]:
 
 
 def _provider_starter_config(
-    provider: str, model: str, api_key_env: str
+    provider: str, model: str, api_key_env: str, env_file: str | None = None
 ) -> dict[str, Any]:
     if provider not in PROVIDER_DEFAULTS or provider in {"mock", "openai_compatible"}:
         raise ValueError(f"unsupported starter provider {provider!r}")
@@ -507,7 +522,7 @@ def _provider_starter_config(
         raise ValueError("--model must not be empty")
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", api_key_env):
         raise ValueError("--api-key-env must be a valid environment variable name")
-    return {
+    config: dict[str, Any] = {
         "name": f"{provider}-starter",
         "prompt": "Reply with ok.",
         "validation": {"exact": "ok"},
@@ -527,6 +542,9 @@ def _provider_starter_config(
         "save_responses": "failures",
         "request": {"temperature": 0, "max_output_tokens": 128},
     }
+    if env_file is not None:
+        config["env_file"] = env_file
+    return config
 
 
 def _write_starter_config(
@@ -582,6 +600,11 @@ def _init_main(argv: list[str]) -> None:
     parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--api-key-env")
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        help="reference an existing env file relative to the new benchmark config",
+    )
     parser.add_argument("--write-env-example", action="store_true")
     parser.add_argument(
         "--agent-instructions",
@@ -614,7 +637,7 @@ def _init_main(argv: list[str]) -> None:
     if args.template == "mock":
         if args.write_env_example:
             parser.error("--write-env-example requires --template provider")
-        if any((args.provider, args.model, args.api_key_env)):
+        if any((args.provider, args.model, args.api_key_env, args.env_file)):
             parser.error("provider options require --template provider")
         config = _starter_config()
         live = False
@@ -624,8 +647,13 @@ def _init_main(argv: list[str]) -> None:
                 "--template provider requires --provider, --model and --api-key-env"
             )
         try:
+            if args.env_file is not None:
+                resolve_config_env_file(args.path, {"env_file": str(args.env_file)})
             config = _provider_starter_config(
-                args.provider, args.model, args.api_key_env
+                args.provider,
+                args.model,
+                args.api_key_env,
+                str(args.env_file) if args.env_file is not None else None,
             )
         except ValueError as exc:
             parser.error(str(exc))
@@ -2161,6 +2189,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     path: Path | None = None
+    environment: dict[str, Any] | None = None
     try:
         if args.init is not None:
             if args.config is not None:
@@ -2242,9 +2271,10 @@ def main() -> None:
                         "--replay with input_images requires the recorded source config path"
                     )
                 config["_config_dir"] = str(Path(source_config_path).parent.resolve())
-            _load_config_env_file(
+            environment = _load_config_env_file(
                 Path(source_config_path) if source_config_path else args.replay,
                 args,
+                config,
             )
         else:
             if args.config is None:
@@ -2252,7 +2282,7 @@ def main() -> None:
                     "config is required unless --quick, --diff, or --replay is used"
                 )
             if not args.contract_check and not args.change_plan:
-                _load_config_env_file(args.config, args)
+                environment = _load_config_env_file(args.config, args)
             config = load_config(args.config)
             config["_source_config_path"] = str(args.config.resolve())
         config = apply_environment(config, args.environment_name)
@@ -2333,7 +2363,7 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.doctor:
-            report_data = doctor_report(config)
+            report_data = doctor_report(config, environment)
             print(
                 json.dumps(report_data, indent=2)
                 if args.json

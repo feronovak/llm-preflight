@@ -1,6 +1,6 @@
 # Code map
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
 
 Where code lives, and what each area is responsible for.
 
@@ -8,6 +8,7 @@ Where code lives, and what each area is responsible for.
 |---|---|
 | `llm_preflight/` | the package: change planning, contract checks, providers, reporting, machine decisions, and the two console entry points |
 | `llm_preflight/images.py` | validate and materialize bounded local or caller-supplied image inputs without retaining bytes in results |
+| `llm_preflight/env.py` | resolve and load one explicitly selected project env file without executing shell code or overwriting shell values |
 | `tests/` | the suite; every behaviour change starts here per the development contract above |
 | `docs/` | published documentation — guides, reference, operations, automation |
 | `examples/` | runnable configuration samples referenced by the guides |

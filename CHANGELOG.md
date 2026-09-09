@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Reuse an explicitly selected project env file from a benchmark configuration
+  or provider starter. Shell values retain precedence; doctor reports only the
+  credential source, never a credential value.
+
 ## 2.13.0 - 2026-09-08
 
 ### Added

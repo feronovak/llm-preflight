@@ -13,7 +13,7 @@ from typing import Any
 from . import __version__
 from .catalog import resolve_models
 from .eligibility import smoke_eligibility_report
-from .env import load_env_file
+from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_model_aliases,
     apply_provider_presets,
@@ -62,12 +62,22 @@ def _path(value: str, workspace: Path) -> Path:
     return resolved
 
 
-def _env_path(arguments: dict[str, Any], config_path: Path, workspace: Path) -> Path:
-    """Return a workspace-contained explicit or config-adjacent env file."""
+def _env_path(
+    arguments: dict[str, Any],
+    config_path: Path,
+    workspace: Path,
+    config: dict[str, Any],
+) -> Path:
+    """Return a workspace-contained explicit or config-selected env file."""
     if "env_file" in arguments:
         return _path(arguments["env_file"], workspace)
-    config_relative_path = config_path.relative_to(workspace)
-    return _path(str(config_relative_path.parent / ".env.production"), workspace)
+    env_path, _source = resolve_config_env_file(config_path, config)
+    if env_path is None:
+        raise ValueError("MCP live runs require an env-file resolution")
+    resolved_workspace = workspace.resolve()
+    if env_path != resolved_workspace and resolved_workspace not in env_path.parents:
+        raise ValueError("path must stay within the MCP workspace")
+    return env_path
 
 
 def _meta(params: dict[str, Any]) -> dict[str, Any]:
@@ -431,7 +441,7 @@ def _call(
                 ),
             }
         if live:
-            env_path = _env_path(arguments, config_path, workspace)
+            env_path = _env_path(arguments, config_path, workspace, config)
             with _temporary_env(env_path):
                 return _tool_result(run_benchmark(config), standard=standard)
         return _tool_result(run_benchmark(config), standard=standard)

@@ -179,6 +179,52 @@ def test_catalog_probe_uses_the_main_cli_environment_file_switches(
     assert loaded == [(config, True)]
 
 
+def test_config_env_file_reference_is_loaded_when_no_cli_override(
+    monkeypatch, tmp_path
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"env_file":"credentials/team.env","prompt":"ok",'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    loaded = []
+    monkeypatch.setattr(cli, "load_env_file", loaded.append)
+
+    cli._load_config_env_file(
+        config, type("Args", (), {"no_env_file": False, "env_file": None})()
+    )
+
+    assert loaded == [tmp_path / "credentials/team.env"]
+
+
+def test_doctor_reports_redacted_credential_provenance_from_config_env_file(
+    monkeypatch, tmp_path, capsys
+):
+    credentials = tmp_path / "credentials"
+    credentials.mkdir()
+    (credentials / "team.env").write_text("TEST_OPENAI_KEY=not-for-output\n")
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"env_file":"credentials/team.env","prompt":"ok",'
+        '"models":[{"provider":"openai","model":"gpt-test",'
+        '"api_key_env":"TEST_OPENAI_KEY"}]}'
+    )
+    monkeypatch.delenv("TEST_OPENAI_KEY", raising=False)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--json"]
+    )
+
+    cli.main()
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["environment"] == {
+        "source": "config",
+        "path": str(credentials / "team.env"),
+    }
+    assert report["checks"][0]["credential_source"] == "env_file"
+    assert "not-for-output" not in json.dumps(report)
+
+
 def test_dry_run_writes_and_verifies_a_non_authorizing_approval_receipt(
     monkeypatch, tmp_path, capsys
 ):
@@ -935,6 +981,37 @@ def test_init_provider_template_is_safe_and_writes_no_secret(monkeypatch, tmp_pa
     assert "load" not in config.get("profiles", [])
     assert 'TEST_OPENAI_KEY=""' in (tmp_path / ".env.example").read_text()
     assert "sk-test-secret" not in config_path.read_text()
+
+
+def test_init_provider_template_can_reference_an_existing_env_file(
+    monkeypatch, tmp_path
+):
+    config_path = tmp_path / "benchmark.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            "init",
+            str(config_path),
+            "--template",
+            "provider",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-test",
+            "--api-key-env",
+            "TEAM_OPENAI_KEY",
+            "--env-file",
+            "credentials/team.env",
+        ],
+    )
+
+    cli.main()
+
+    config = json.loads(config_path.read_text())
+    assert config["env_file"] == "credentials/team.env"
+    assert "TEAM_OPENAI_KEY=" not in config_path.read_text()
 
 
 def test_init_provider_template_requires_complete_noninteractive_options(

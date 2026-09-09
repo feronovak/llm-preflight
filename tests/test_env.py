@@ -5,7 +5,7 @@ import urllib.request
 
 import pytest
 
-from llm_preflight.env import load_env_file
+from llm_preflight.env import load_env_file, resolve_config_env_file
 from llm_preflight.security import NoRedirectHandler, require_http_url
 
 
@@ -27,6 +27,39 @@ def test_loads_production_env_without_overwriting_existing_value(tmp_path, monke
 
 def test_missing_env_file_is_allowed(tmp_path):
     load_env_file(tmp_path / ".env.production")
+
+
+def test_config_env_file_reference_is_relative_and_cannot_escape_config_directory(
+    tmp_path,
+):
+    config = tmp_path / "bench" / "benchmark.json"
+    config.parent.mkdir()
+
+    resolved, source = resolve_config_env_file(
+        config, {"env_file": "credentials/team.env"}
+    )
+
+    assert resolved == config.parent / "credentials/team.env"
+    assert source == "config"
+    with pytest.raises(ValueError, match="must stay within the config directory"):
+        resolve_config_env_file(config, {"env_file": "../shared.env"})
+
+
+def test_explicit_env_file_precedes_config_reference_and_no_env_disables_all(tmp_path):
+    config = tmp_path / "benchmark.json"
+    explicit = tmp_path / "selected.env"
+
+    resolved, source = resolve_config_env_file(
+        config,
+        {"env_file": "credentials/team.env"},
+        explicit=explicit,
+    )
+
+    assert resolved == explicit
+    assert source == "explicit"
+    assert resolve_config_env_file(
+        config, {"env_file": "credentials/team.env"}, no_env_file=True
+    ) == (None, "disabled")
 
 
 def test_load_env_file_strips_the_export_keyword(tmp_path, monkeypatch):

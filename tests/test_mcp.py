@@ -8,6 +8,20 @@ from llm_preflight import mcp
 META = {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}
 
 
+def test_mcp_live_run_uses_a_workspace_contained_config_env_reference(tmp_path):
+    config_path = tmp_path / "benchmark.json"
+    config = {
+        "env_file": "credentials/team.env",
+        "prompt": "Reply with ok.",
+        "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+    }
+    config_path.write_text(json.dumps(config))
+
+    assert mcp._env_path({}, config_path, tmp_path, config) == (
+        tmp_path / "credentials/team.env"
+    )
+
+
 def test_standard_mcp_clients_negotiate_any_initialize_version_and_discover_tools(
     tmp_path,
 ):

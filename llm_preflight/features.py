@@ -255,7 +255,9 @@ def check_budget(config: dict[str, Any]) -> dict[str, Any]:
     return budget
 
 
-def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
+def doctor_report(
+    config: dict[str, Any], environment: dict[str, Any] | None = None
+) -> dict[str, Any]:
     checks = []
     try:
         models = resolve_models(config)
@@ -272,12 +274,23 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
         provider = model.get("provider", "openai_compatible")
         resolved = {**PROVIDER_DEFAULTS.get(provider, {}), **model}
         key_env = resolved.get("api_key_env")
-        if key_env and not os.environ.get(key_env):
+        credential_source = None
+        if key_env:
+            if not os.environ.get(key_env):
+                credential_source = "missing"
+            elif environment and key_env in environment.get("before", set()):
+                credential_source = "shell"
+            elif environment and key_env in environment.get("loaded", set()):
+                credential_source = "env_file"
+            else:
+                credential_source = "shell"
+        if key_env and credential_source == "missing":
             checks.append(
                 {
                     "ok": False,
                     "model": model["model"],
                     "message": f"environment variable {key_env} is not set",
+                    "credential_source": credential_source,
                 }
             )
         elif "base_url" not in resolved:
@@ -294,6 +307,11 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
                     "ok": True,
                     "model": model["model"],
                     "message": "configuration looks runnable",
+                    **(
+                        {"credential_source": credential_source}
+                        if credential_source is not None
+                        else {}
+                    ),
                 }
             )
     for warning in pricing_coverage["warnings"]:
@@ -305,12 +323,18 @@ def doctor_report(config: dict[str, Any]) -> dict[str, Any]:
                 "message": warning["message"],
             }
         )
-    return {
+    report = {
         "ok": all(check["ok"] for check in checks),
         "models": len(models),
         "checks": checks,
         "pricing_coverage": pricing_coverage,
     }
+    if environment is not None:
+        report["environment"] = {
+            "source": environment["source"],
+            "path": environment["path"],
+        }
+    return report
 
 
 def _metric(summary: dict[str, Any], path: tuple[str, ...]) -> float | None:

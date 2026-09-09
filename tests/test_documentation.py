@@ -143,7 +143,6 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     retained_stamps = (
-        ROOT / "docs/getting-started/safe-demo.md",
         ROOT / "docs/reference/decision.md",
         ROOT / "docs/automation/ci.md",
     )
@@ -187,6 +186,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
     assert "llm-preflight init --template provider --interactive" in safe_demo
+    assert safe_demo.count("**Last reviewed:**") == 1
     ci = (ROOT / "docs/automation/ci.md").read_text()
     north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
 

@@ -19,8 +19,6 @@ that directory. A shell variable wins over the file, `--env-file` wins over the
 config reference, and `--no-env-file` disables file loading. Review the
 no-spend dry run before separately deciding to make a paid provider request.
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
-
 LLM Preflight answers a practical question before you change production:
 
 > Can this candidate model replace our current model without breaking the

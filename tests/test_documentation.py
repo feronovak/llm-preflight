@@ -201,9 +201,9 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.13.0" in action_guide
-    assert "default: `2.13.0`" in action_guide
-    assert "last published package (`2.13.0`)" in action_guide
+    assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in action_guide
+    assert "default: `2.14.0`" in action_guide
+    assert "last published package (`2.14.0`)" in action_guide
     assert "under development" not in action_guide
 
 

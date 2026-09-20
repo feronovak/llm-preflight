@@ -360,6 +360,37 @@ def test_openrouter_enrichment_does_not_reclassify_official_decision_models():
     assert models[1]["catalog_type"] == "decision"
 
 
+def test_openrouter_does_not_promote_a_native_text_candidate_to_ready():
+    models = resolve_models(
+        {
+            "models": [
+                {
+                    "provider": "deepseek",
+                    "model": "deepseek-flash",
+                    "catalog_type": "text-candidate",
+                    "capabilities": {
+                        "text_generation": "candidate",
+                        "adapter": "openai_compatible_chat",
+                    },
+                },
+                {
+                    "provider": "openrouter",
+                    "model": "deepseek/deepseek-flash",
+                    "capabilities": {
+                        "output_modalities": ["text"],
+                        "text_generation": "ready",
+                        "adapter": "openrouter_chat",
+                    },
+                },
+            ]
+        }
+    )
+
+    assert models[0]["catalog_type"] == "text-candidate"
+    assert models[0]["capabilities"]["text_generation"] == "candidate"
+    assert models[0]["capabilities"]["adapter"] == "openai_compatible_chat"
+
+
 def test_resolve_adds_public_registry_pricing_and_preserves_overrides():
     models = resolve_models(
         {

@@ -4,10 +4,19 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.15.1 - 2026-09-20
+
 ### Changed
 
 - Update the GitHub Marketplace Action's default package version to the
   publicly available 2.15.0 release.
+- Refuse typed-decision and other non-text catalogue types on the text smoke
+  path before any provider request, including OpenRouter `jev-*` rows.
+- Enforce the CLI request and cost caps on MCP `run_preflight` live runs.
+- Keep native `text-candidate` rows on the probe path when OpenRouter metadata
+  claims they are text-ready.
+- Count CJK characters as whole tokens in the pre-run cost cap so the spend
+  gate does not under-count Qwen and other CJK prompts.
 
 ## 2.15.0 - 2026-09-20
 

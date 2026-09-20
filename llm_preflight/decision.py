@@ -10,6 +10,15 @@ SCHEMA_VERSION = 1
 SAFE_NEXT_COMMAND = "llm-preflight CONFIG --doctor --json"
 _SAFE_IDENTIFIER = re.compile(r"[^A-Za-z0-9._:/@+\-]")
 _MAX_IDENTIFIER_LENGTH = 120
+_FAIL_REASONS = {
+    "contract_failure": (
+        "One or more requested models failed the configured output contract."
+    ),
+    "incompatible_catalog_type": (
+        "One or more requested models are incompatible with the text smoke adapter."
+    ),
+    "api_failure": "One or more requested models failed an API request.",
+}
 
 
 def build_decision(result: dict[str, Any]) -> dict[str, Any]:
@@ -17,18 +26,13 @@ def build_decision(result: dict[str, Any]) -> dict[str, Any]:
     warnings = _blocking_warnings(result)
     failure = _failure_kind(result)
     if failure is not None:
-        is_contract_failure = failure == "contract_failure"
         return {
             "schema_version": SCHEMA_VERSION,
             "state": "fail",
             "reason_code": failure,
-            "reason": (
-                "One or more requested models failed the configured output contract."
-                if is_contract_failure
-                else "One or more requested models failed an API request."
-            ),
+            "reason": _FAIL_REASONS.get(failure, _FAIL_REASONS["api_failure"]),
             "safe_next_command": _safe_next_command(
-                result, contract_failure=is_contract_failure
+                result, contract_failure=failure == "contract_failure"
             ),
             "blocking_warnings": warnings,
         }
@@ -97,13 +101,19 @@ def _identifier(value: Any) -> str:
 def _failure_kind(result: dict[str, Any]) -> str | None:
     contract_failure = False
     for model in result.get("models", []):
+        samples = model.get("samples") or []
+        if any(
+            sample.get("failure_category") == "incompatible_catalog_type"
+            for sample in samples
+        ):
+            return "incompatible_catalog_type"
         for summary in _summaries(model):
             if summary.get("requests", 0) == 0 or summary.get("failed", 0):
                 return "api_failure"
             if summary.get("valid_output_rate", 1) < 1:
                 contract_failure = True
         if not model.get("profiles") and any(
-            sample.get("valid_output") is False for sample in model.get("samples", [])
+            sample.get("valid_output") is False for sample in samples
         ):
             contract_failure = True
     return "contract_failure" if contract_failure else None

@@ -894,6 +894,67 @@ def test_unexpected_per_model_request_exception_is_saved_as_api_failure(monkeypa
     assert result["models"][1]["samples"][0]["failure_category"] == "network"
 
 
+def test_run_benchmark_rejects_jev_before_any_provider_request(monkeypatch):
+    called = []
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client",
+        lambda *args, **kwargs: (
+            called.append(args)
+            or (_ for _ in ()).throw(AssertionError("create_client must not run"))
+        ),
+    )
+
+    with pytest.raises(ValueError, match="text smoke adapter|incompatible"):
+        run_benchmark(
+            {
+                "prompt": "Reply with ok.",
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "local",
+                        "response": "ok",
+                    },
+                    {
+                        "provider": "openrouter",
+                        "model": "typesafe/jev-latest",
+                        "catalog_type": "decision",
+                    },
+                ],
+                "repetitions": 1,
+                "warmups": 0,
+            }
+        )
+
+    assert called == []
+
+
+def test_incompatible_catalog_failure_is_not_an_api_failure():
+    decision = build_decision(
+        {
+            "source_config_path": "/workspace/benchmark.json",
+            "models": [
+                {
+                    "name": "jev",
+                    "summary": {"requests": 1, "failed": 1, "valid_output_rate": 0},
+                    "samples": [
+                        {
+                            "ok": False,
+                            "failure_category": "incompatible_catalog_type",
+                            "error": "typed-decision model",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert decision["state"] == "fail"
+    assert decision["reason_code"] == "incompatible_catalog_type"
+    assert decision["safe_next_command"] == (
+        "llm-preflight /workspace/benchmark.json --doctor --json"
+    )
+
+
 def test_profile_run_groups_quality_and_operational_metrics(monkeypatch):
     class FakeClient:
         model: ClassVar = {"base_url": "https://example.test"}

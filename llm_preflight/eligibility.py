@@ -6,6 +6,37 @@ from typing import Any
 
 from .pricing import pricing_coverage_report
 
+_TEXT_SMOKE_TYPES = {"text-ready", "text-candidate", "text-chat", "unknown"}
+
+
+class IncompatibleCatalogTypeError(ValueError):
+    """A model is not eligible for the generic text smoke adapter."""
+
+
+def incompatible_text_smoke_reason(model: dict[str, Any]) -> str | None:
+    provider = str(model.get("provider") or "")
+    name = str(model.get("model") or "").casefold()
+    catalog_type = model.get("catalog_type")
+    if provider == "typesafe" or "jev-" in name or catalog_type == "decision":
+        return "incompatible_catalog_type"
+    if catalog_type and catalog_type not in _TEXT_SMOKE_TYPES:
+        return "incompatible_catalog_type"
+    return None
+
+
+def assert_text_smoke_models(models: list[dict[str, Any]]) -> None:
+    blocked = [
+        f"{model.get('provider', 'openai_compatible')}:{model.get('model')}"
+        for model in models
+        if incompatible_text_smoke_reason(model)
+    ]
+    if not blocked:
+        return
+    raise IncompatibleCatalogTypeError(
+        "typed-decision and other non-text catalogue types are incompatible "
+        "with the text smoke adapter: " + ", ".join(blocked)
+    )
+
 
 def smoke_eligibility_report(
     models: list[dict[str, Any]], config: dict[str, Any]

@@ -485,6 +485,24 @@ def _enrich_from_openrouter(models: list[dict[str, Any]]) -> list[dict[str, Any]
             enriched.append(model)
             continue
         router_capabilities = candidate.get("capabilities") or {}
+        if catalog_type == "text-candidate":
+            merged = dict(model)
+            merged["capabilities"] = {
+                **(model.get("capabilities") or {}),
+                **{
+                    key: value
+                    for key, value in router_capabilities.items()
+                    if value is not None and key not in {"text_generation", "adapter"}
+                },
+                "text_generation": "candidate",
+            }
+            merged["catalog_type"] = "text-candidate"
+            merged["capability_evidence"] = [
+                *(model.get("capability_evidence") or []),
+                {"source": match_source, "confidence": "medium"},
+            ]
+            enriched.append(merged)
+            continue
         if not router_capabilities.get("output_modalities"):
             enriched.append(model)
             continue

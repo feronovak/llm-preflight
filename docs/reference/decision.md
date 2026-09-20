@@ -35,11 +35,12 @@ must reject an unknown decision schema version rather than guess its meaning.
 - `inconclusive` — no hard failure was observed, but evidence is degraded. Do
   not approve a change from an inconclusive result.
 
-`reason_code` is `benchmark_passed`, `api_failure`, `contract_failure`, or
-`degraded_evidence`, matching the state. `reason` is a concise explanation for
-a person. API failures point to `--doctor --json`; a pure contract failure
-points to `--dry-run --json` so the reviewed contract can be inspected without
-new requests. When the source config path is known, `safe_next_command` quotes
+`reason_code` is `benchmark_passed`, `api_failure`, `contract_failure`,
+`incompatible_catalog_type`, or `degraded_evidence`, matching the state.
+`reason` is a concise explanation for a person. API failures and incompatible
+catalogue types point to `--doctor --json`; a pure contract failure points to
+`--dry-run --json` so the reviewed contract can be inspected without new
+requests. When the source config path is known, `safe_next_command` quotes
 that exact path; otherwise it uses the literal `CONFIG` placeholder.
 
 ## Blocking warnings

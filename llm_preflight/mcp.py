@@ -17,6 +17,7 @@ from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_model_aliases,
     apply_provider_presets,
+    check_budget,
     compare_results,
     estimate_budget,
 )
@@ -441,6 +442,7 @@ def _call(
                 ),
             }
         if live:
+            check_budget(config)
             env_path = _env_path(arguments, config_path, workspace, config)
             with _temporary_env(env_path):
                 return _tool_result(run_benchmark(config), standard=standard)

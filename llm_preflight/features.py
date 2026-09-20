@@ -5,9 +5,11 @@ import json
 import os
 from pathlib import Path
 from typing import Any, cast
+from unicodedata import east_asian_width
 
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
+from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
 from .pricing import (
     estimate_sample_cost,
@@ -147,6 +149,20 @@ def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     return work
 
 
+def estimate_prompt_tokens(text: str) -> int:
+    """Conservative pre-run count: wide letters are one token; others are 4 chars."""
+    if not text:
+        return 0
+    wide = 0
+    other = 0
+    for char in text:
+        if east_asian_width(char) in {"W", "F"}:
+            wide += 1
+        else:
+            other += 1
+    return wide + other // 4
+
+
 def _request_cost(
     model: dict[str, Any], prompt: str, options: dict[str, Any]
 ) -> float | None:
@@ -160,8 +176,9 @@ def _request_cost(
         if isinstance(system_prompt, str)
         else json.dumps(system_prompt, separators=(",", ":"), sort_keys=True)
     )
-    input_chars = len(prompt) + len(system_text)
-    input_tokens = max(1, input_chars // 4)
+    input_tokens = max(
+        1, estimate_prompt_tokens(prompt) + estimate_prompt_tokens(system_text)
+    )
     max_output_tokens = int(
         options.get("max_output_tokens") or options.get("max_tokens") or 256
     )
@@ -299,6 +316,17 @@ def doctor_report(
                     "ok": False,
                     "model": model["model"],
                     "message": "base_url is required",
+                }
+            )
+        elif incompatible_text_smoke_reason(model):
+            checks.append(
+                {
+                    "ok": False,
+                    "model": model["model"],
+                    "message": (
+                        "typed-decision and other non-text catalogue types are "
+                        "not eligible for the text smoke adapter"
+                    ),
                 }
             )
         else:

@@ -541,6 +541,38 @@ def test_mcp_returns_a_tool_error_for_current_pricing_gate_failures(tmp_path):
     assert "pricing coverage is incomplete" in response["result"]["content"][0]["text"]
 
 
+def test_confirmed_live_run_enforces_request_and_cost_caps(monkeypatch, tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        '{"prompt":"ok","max_requests":1,'
+        '"models":[{"provider":"openai","model":"a"},'
+        '{"provider":"openai","model":"b"}]}'
+    )
+    monkeypatch.setattr(
+        mcp,
+        "run_benchmark",
+        lambda config: (_ for _ in ()).throw(AssertionError("budget gate skipped")),
+    )
+
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "run_preflight",
+                "arguments": {
+                    "config": "benchmark.json",
+                    "confirm_paid_run": True,
+                },
+            },
+        },
+        tmp_path,
+    )
+
+    assert response["result"]["isError"] is True
+    assert "max_requests" in response["result"]["content"][0]["text"]
+
+
 def test_tool_schema_rejects_unknown_arguments(tmp_path):
     response = mcp._response(
         {

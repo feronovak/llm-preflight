@@ -142,8 +142,33 @@ def test_qwen_uses_the_model_studio_compatible_chat_adapter():
 
 
 def test_typesafe_rejects_the_text_smoke_adapter():
-    with pytest.raises(ValueError, match="typed-decision|systemone"):
+    with pytest.raises(ValueError, match="text smoke adapter"):
         create_client({"provider": "typesafe", "model": "jev-latest"}, 10)
+
+
+def test_openrouter_jev_is_refused_as_a_typed_decision_model():
+    with pytest.raises(ValueError, match="text smoke adapter"):
+        create_client(
+            {
+                "provider": "openrouter",
+                "model": "typesafe/jev-latest",
+                "catalog_type": "decision",
+            },
+            10,
+        )
+
+
+def test_decision_catalog_type_is_refused_regardless_of_provider():
+    with pytest.raises(ValueError, match="text smoke adapter"):
+        create_client(
+            {
+                "provider": "openai_compatible",
+                "model": "custom-jev",
+                "base_url": "https://example.test/v1",
+                "catalog_type": "decision",
+            },
+            10,
+        )
 
 
 def test_openrouter_uses_compatible_adapter():

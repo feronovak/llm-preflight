@@ -9,6 +9,7 @@ import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any
 
+from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
 from .images import input_image_parts
 from .security import open_public_url, require_http_url
 
@@ -660,10 +661,10 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "gemini": GeminiClient,
         "mock": MockClient,
     }
-    if provider == "typesafe":
-        raise ValueError(
-            "typesafe models return typed decisions via POST /v1/systemone and "
-            "are not eligible for the text smoke adapter"
+    if incompatible_text_smoke_reason(resolved):
+        raise IncompatibleCatalogTypeError(
+            "typed-decision and other non-text catalogue types are incompatible "
+            "with the text smoke adapter"
         )
     try:
         adapter = (

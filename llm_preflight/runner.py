@@ -22,6 +22,7 @@ from .contracts import (
     validation_evaluator,
 )
 from .decision import build_decision
+from .eligibility import IncompatibleCatalogTypeError, assert_text_smoke_models
 from .images import prepare_image_inputs
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
@@ -503,14 +504,15 @@ def _validate_json_schema_config(schema: Any, location: str) -> None:
 
 def _request_exception_sample(exc: Exception) -> dict[str, Any]:
     error = str(exc)
-    category = (
-        "network"
-        if any(
-            token in error.casefold()
-            for token in ("resolve", "network", "connection", "timeout")
-        )
-        else "provider_error"
-    )
+    if isinstance(exc, IncompatibleCatalogTypeError):
+        category = "incompatible_catalog_type"
+    elif any(
+        token in error.casefold()
+        for token in ("resolve", "network", "connection", "timeout")
+    ):
+        category = "network"
+    else:
+        category = "provider_error"
     return {
         "ok": False,
         "latency_seconds": 0.0,
@@ -832,6 +834,7 @@ def run_benchmark(
                 "pricing coverage is incomplete; run --pricing-check and resolve "
                 "unknown, undated, or stale model prices before a paid benchmark"
             )
+    assert_text_smoke_models(models)
 
     for model_index, model in enumerate(models, 1):
         request_total = (

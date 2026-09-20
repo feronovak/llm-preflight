@@ -298,6 +298,35 @@ def test_replay_config_uses_the_recorded_pricing_ledger_over_current_prices():
     assert config["models"][0]["pricing_metadata"]["as_of"] == "2026-01-01"
 
 
+def test_pre_run_cost_estimate_counts_cjk_characters_as_whole_tokens():
+    priced = {
+        "model": "unit",
+        "input_cost_per_million": 1_000_000,
+        "output_cost_per_million": 0,
+    }
+    latin = estimate_budget(
+        {
+            "prompt": "abcd",
+            "models": [priced],
+            "repetitions": 1,
+            "warmups": 0,
+            "request": {"max_output_tokens": 0},
+        }
+    )
+    cjk = estimate_budget(
+        {
+            "prompt": "中文测试",
+            "models": [priced],
+            "repetitions": 1,
+            "warmups": 0,
+            "request": {"max_output_tokens": 0},
+        }
+    )
+
+    assert latin["estimated_cost_usd"] == 1.0
+    assert cjk["estimated_cost_usd"] == 4.0
+
+
 def test_budget_check_rejects_excess_requests_and_cost():
     config = {
         "prompt": "hi",
@@ -525,6 +554,20 @@ def test_doctor_report_flags_missing_base_url_and_confirms_a_runnable_model(
     assert report["checks"][0]["message"] == "base_url is required"
     assert report["checks"][1]["ok"] is True
     assert report["checks"][1]["message"] == "configuration looks runnable"
+
+
+def test_doctor_does_not_call_typesafe_text_smoke_runnable(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "configured")
+    report = doctor_report(
+        {
+            "prompt": "hi",
+            "models": [{"provider": "typesafe", "model": "jev-latest"}],
+        }
+    )
+
+    assert report["ok"] is False
+    assert report["checks"][0]["ok"] is False
+    assert "text smoke" in report["checks"][0]["message"]
 
 
 def test_compare_results_reports_new_models_as_added_without_regressions():

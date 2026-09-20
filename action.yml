@@ -31,7 +31,17 @@ runs:
         python-version: "3.13"
     - name: Install LLM Preflight
       shell: bash
-      run: python -m pip install "llm-preflight==${{ inputs.package-version }}"
+      run: |
+        set -euo pipefail
+        version="${{ inputs.package-version }}"
+        for attempt in 1 2 3 4 5 6; do
+          if python -m pip install "llm-preflight==${version}"; then
+            exit 0
+          fi
+          sleep 20
+        done
+        echo "PyPI does not yet serve llm-preflight==${version}" >&2
+        exit 1
     - name: Run no-spend preflight checks
       shell: bash
       env:

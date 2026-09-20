@@ -33,6 +33,8 @@ def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
     assert 'default: "2.15.1"' in action
+    assert 'python -m pip install "llm-preflight==${version}"' in action
+    assert "sleep 20" in action
 
 
 def test_issue_forms_and_comparison_page_keep_reporting_safe_and_scoped():

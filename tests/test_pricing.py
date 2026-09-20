@@ -220,6 +220,126 @@ def test_gpt_5_6_official_snapshot_pricing(model_id, input_price, output_price):
     assert model["output_cost_per_million"] == output_price
 
 
+def test_gpt_6_astra_pricing_has_cache_and_long_context_tiers():
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6-astra"})
+
+    assert model["input_cost_per_million"] == 10.0
+    assert model["output_cost_per_million"] == 50.0
+    assert model["cached_input_cost_per_million"] == 1.0
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": 20.0,
+        "output_cost_per_million": 75.0,
+        "cached_input_cost_per_million": 2.0,
+    }
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://developers.openai.com/api/docs/pricing"
+    )
+
+
+def test_gemini_3_8_flash_uses_the_current_introductory_rate():
+    model = apply_public_pricing({"provider": "gemini", "model": "gemini-3.8-flash"})
+
+    assert model["input_cost_per_million"] == 0.75
+    assert model["output_cost_per_million"] == 3.75
+    assert model["cached_input_cost_per_million"] == 0.075
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://ai.google.dev/gemini-api/docs/pricing"
+    )
+
+
+def test_gemini_4_is_not_invented_as_a_public_snapshot():
+    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4"})
+
+    assert "input_cost_per_million" not in model
+    assert "pricing_metadata" not in model
+
+
+def test_deepseek_flash_snapshot_uses_conservative_peak_rates():
+    model = apply_public_pricing({"provider": "deepseek", "model": "deepseek-flash"})
+
+    assert model["input_cost_per_million"] == 0.3
+    assert model["output_cost_per_million"] == 1.2
+    assert model["cached_input_cost_per_million"] == 0.006
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://api-docs.deepseek.com/quick_start/pricing"
+    )
+
+
+def test_qwen_3_8_max_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "qwen", "model": "qwen3.8-max"})
+
+    assert model["input_cost_per_million"] == 2.0
+    assert model["output_cost_per_million"] == 6.0
+    assert model["cached_input_cost_per_million"] == 0.25
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://www.qwencloud.com/models/qwen3.8-max"
+    )
+
+
+def test_qwen_3_8_flash_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "qwen", "model": "qwen3.8-flash"})
+
+    assert model["input_cost_per_million"] == 0.15
+    assert model["output_cost_per_million"] == 0.47
+    assert model["cached_input_cost_per_million"] == 0.016
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://www.qwencloud.com/models/qwen3.8-flash"
+    )
+
+
+def test_qwen_3_7_plus_uses_list_rates_not_the_temporary_discount():
+    from llm_preflight.pricing import estimate_sample_cost
+
+    model = apply_public_pricing({"provider": "qwen", "model": "qwen3.7-plus"})
+
+    assert model["input_cost_per_million"] == 0.4
+    assert model["output_cost_per_million"] == 1.6
+    assert model["cached_input_cost_per_million"] == 0.08
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": 1.2,
+        "output_cost_per_million": 4.8,
+        "cached_input_cost_per_million": 0.24,
+    }
+    assert (
+        estimate_sample_cost({"input_tokens": 400_000, "output_tokens": 0}, model)
+        == 0.48
+    )
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://www.qwencloud.com/models/qwen3.7-plus"
+    )
+
+
+def test_claude_fable_5_1_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-fable-5-1"})
+
+    assert model["input_cost_per_million"] == 10.0
+    assert model["output_cost_per_million"] == 50.0
+    assert model["cached_input_cost_per_million"] == 0.25
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+
+
+def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():
+    model = apply_public_pricing({"provider": "deepseek", "model": "deepseek-v4-pro"})
+
+    assert model["input_cost_per_million"] == 1.32
+    assert model["output_cost_per_million"] == 3.96
+    assert model["cached_input_cost_per_million"] == 0.044
+
+
+@pytest.mark.parametrize("model_id", ["jev-latest", "jev-1.13.0"])
+def test_jev_snapshot_prices_input_only(model_id):
+    model = apply_public_pricing({"provider": "typesafe", "model": model_id})
+
+    assert model["input_cost_per_million"] == 0.042
+    assert model["output_cost_per_million"] == 0.0
+    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["source_url"] == "https://docs.typesafe.ai/models"
+
+
 def test_public_pricing_snapshot_is_reviewed_for_this_release():
     from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
 
@@ -233,17 +353,27 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
         ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
         ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
+        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-20"),
         ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
         ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
         ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
         ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
+        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-20"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
+        ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-20"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
         ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
         ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
         ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
+        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-20"),
+        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-20"),
+        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-20"),
+        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-20"),
+        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-20"),
+        ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-20"),
+        ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-20"),
     }
     assert set(PUBLIC_PRICING_SOURCES) == set(PUBLIC_PRICING)
     assert all(

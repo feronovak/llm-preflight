@@ -8,10 +8,14 @@ from typing import Any
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
 # do not consistently return prices, so these public rates fill that gap.
 # OpenRouter prices remain dynamic and take precedence when its catalog returns
-# them. Gemini 3.1 Pro uses the <=200k-input tier. Gemini 3.7 Flash uses its
-# introductory rate through 2026-12-31; review its $1.50/$7.50 standard rate
-# before the next 2027 release. Every entry below was reviewed against its
-# primary official source on 2026-08-30.
+# them. Gemini 3.1 Pro uses the <=200k-input tier. Gemini 3.7 Flash and Gemini
+# 3.8 Flash use the introductory rate through 2026-12-31; review the
+# $1.50/$7.50 standard rate before the next 2027 release. Gemini 4 has no
+# public API model ID or price table as of 2026-09-20, so it is omitted.
+# DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
+# snapshots use QwenCloud USD list rates. TypeSafe Jev bills input only.
+# Entries dated 2026-08-30 were reviewed then; 2026-09-20 entries were reviewed
+# against their primary official source on that date.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-30"),
     ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-30"),
@@ -22,26 +26,45 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
     ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
     ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
+    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-20"),
     ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
     ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
     ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
     ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
+    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-20"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
+    ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-20"),
     ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
     ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
     ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
     ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
     ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
+    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-20"),
+    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-20"),
+    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-20"),
+    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-20"),
+    ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-20"),
+    ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-20"),
+    ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-20"),
 }
 
+_PROVIDER_PRICING_PAGES = {
+    "openai": "https://developers.openai.com/api/docs/pricing",
+    "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "gemini": "https://ai.google.dev/gemini-api/docs/pricing",
+    "xai": "https://docs.x.ai/developers/pricing",
+    "deepseek": "https://api-docs.deepseek.com/quick_start/pricing",
+    "qwen": "https://www.qwencloud.com/models/qwen3.8-max",
+    "typesafe": "https://docs.typesafe.ai/models",
+}
+_MODEL_PRICING_PAGES = {
+    ("qwen", "qwen3.8-max"): "https://www.qwencloud.com/models/qwen3.8-max",
+    ("qwen", "qwen3.8-flash"): "https://www.qwencloud.com/models/qwen3.8-flash",
+    ("qwen", "qwen3.7-plus"): "https://www.qwencloud.com/models/qwen3.7-plus",
+}
 PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
-    key: {
-        "openai": "https://developers.openai.com/api/docs/pricing",
-        "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
-        "gemini": "https://ai.google.dev/gemini-api/docs/pricing",
-        "xai": "https://docs.x.ai/developers/pricing",
-    }[key[0]]
+    key: _MODEL_PRICING_PAGES.get(key, _PROVIDER_PRICING_PAGES[key[0]])
     for key in PUBLIC_PRICING
 }
 
@@ -94,11 +117,61 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
             },
         ],
     },
+    ("openai", "gpt-6-astra"): {
+        "cached_input_cost_per_million": 1.0,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 10.0,
+                "output_cost_per_million": 50.0,
+                "cached_input_cost_per_million": 1.0,
+            },
+            {
+                "input_cost_per_million": 20.0,
+                "output_cost_per_million": 75.0,
+                "cached_input_cost_per_million": 2.0,
+            },
+        ],
+    },
     ("gemini", "gemini-3.1-flash-lite"): {
         "cached_input_cost_per_million": 0.025,
     },
     ("gemini", "gemini-3.7-flash"): {
         "cached_input_cost_per_million": 0.075,
+    },
+    ("gemini", "gemini-3.8-flash"): {
+        "cached_input_cost_per_million": 0.075,
+    },
+    ("deepseek", "deepseek-flash"): {
+        "cached_input_cost_per_million": 0.006,
+    },
+    ("deepseek", "deepseek-v4-pro"): {
+        "cached_input_cost_per_million": 0.044,
+    },
+    ("qwen", "qwen3.8-max"): {
+        "cached_input_cost_per_million": 0.25,
+    },
+    ("qwen", "qwen3.8-flash"): {
+        "cached_input_cost_per_million": 0.016,
+    },
+    ("qwen", "qwen3.7-plus"): {
+        "cached_input_cost_per_million": 0.08,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 256_000,
+                "input_cost_per_million": 0.4,
+                "output_cost_per_million": 1.6,
+                "cached_input_cost_per_million": 0.08,
+            },
+            {
+                "input_cost_per_million": 1.2,
+                "output_cost_per_million": 4.8,
+                "cached_input_cost_per_million": 0.24,
+            },
+        ],
+    },
+    ("anthropic", "claude-fable-5-1"): {
+        "cached_input_cost_per_million": 0.25,
     },
     ("gemini", "gemini-3.1-pro-preview"): {
         "cached_input_cost_per_million": 0.2,

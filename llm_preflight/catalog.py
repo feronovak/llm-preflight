@@ -5,6 +5,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -26,6 +27,7 @@ _NON_CHAT_NAME_TYPES = {
     "robotics": "agent",
     "multi-agent": "agent",
     "omni": "media",
+    "jev-": "decision",
 }
 
 
@@ -40,6 +42,10 @@ def classify_catalog_model(model: dict[str, Any]) -> dict[str, Any]:
     output = {
         str(item).casefold() for item in capabilities.get("output_modalities") or []
     }
+    if "jev-" in name:
+        classified["catalog_type"] = "decision"
+        classified["catalog_confidence"] = "heuristic"
+        return classified
     if capabilities.get("text_generation") == "ready":
         classified["catalog_type"] = "text-ready"
         classified["catalog_confidence"] = "official"
@@ -104,6 +110,14 @@ def _base(source: dict[str, Any]) -> dict[str, Any]:
 
 
 def _openai(source: dict[str, Any]) -> list[dict[str, Any]]:
+    return _openai_compatible_catalog(source, capabilities=_openai_capabilities)
+
+
+def _openai_compatible_catalog(
+    source: dict[str, Any],
+    *,
+    capabilities: Callable[[str], dict[str, Any]],
+) -> list[dict[str, Any]]:
     config = _base(source)
     payload = _get_json(
         config["base_url"].rstrip("/") + "/models",
@@ -119,7 +133,7 @@ def _openai(source: dict[str, Any]) -> list[dict[str, Any]]:
             "owned_by": item.get("owned_by"),
             "capabilities": {
                 "reasoning": None,
-                **_openai_capabilities(item["id"]),
+                **capabilities(item["id"]),
             },
             "capability_evidence": [{"source": "official-id", "confidence": "low"}],
             "catalog_metadata": item,
@@ -138,6 +152,60 @@ def _openai_capabilities(model_id: str) -> dict[str, Any]:
             "adapter": "openai_responses",
         }
     return {}
+
+
+def _deepseek_capabilities(model_id: str) -> dict[str, Any]:
+    if model_id.casefold().startswith("deepseek-"):
+        return {
+            "text_generation": "candidate",
+            "adapter": "openai_compatible_chat",
+        }
+    return {}
+
+
+def _qwen_capabilities(model_id: str) -> dict[str, Any]:
+    if "qwen" in model_id.casefold():
+        return {
+            "text_generation": "candidate",
+            "adapter": "openai_compatible_chat",
+        }
+    return {}
+
+
+def _deepseek(source: dict[str, Any]) -> list[dict[str, Any]]:
+    return _openai_compatible_catalog(source, capabilities=_deepseek_capabilities)
+
+
+def _qwen(source: dict[str, Any]) -> list[dict[str, Any]]:
+    return _openai_compatible_catalog(source, capabilities=_qwen_capabilities)
+
+
+def _typesafe(source: dict[str, Any]) -> list[dict[str, Any]]:
+    config = _base(source)
+    payload = _get_json(
+        config["base_url"].rstrip("/") + "/models",
+        config.get("api_key_env"),
+        config.get("headers"),
+    )
+    result = []
+    for item in payload.get("models") or payload.get("data") or []:
+        model_id = item.get("name") or item.get("id")
+        if not model_id:
+            continue
+        result.append(
+            {
+                "name": item.get("description", model_id),
+                "provider": "typesafe",
+                "model": model_id,
+                "created": item.get("release_date") or item.get("created"),
+                "capabilities": {"text_generation": None},
+                "capability_evidence": [{"source": "official", "confidence": "high"}],
+                "catalog_type": "decision",
+                "catalog_confidence": "official",
+                "catalog_metadata": item,
+            }
+        )
+    return result
 
 
 def _anthropic(source: dict[str, Any]) -> list[dict[str, Any]]:
@@ -319,6 +387,9 @@ DISCOVERERS = {
     "anthropic": _anthropic,
     "gemini": _gemini,
     "openrouter": _openrouter,
+    "deepseek": _deepseek,
+    "qwen": _qwen,
+    "typesafe": _typesafe,
 }
 
 
@@ -403,6 +474,14 @@ def _enrich_from_openrouter(models: list[dict[str, Any]]) -> list[dict[str, Any]
             )
             match_source = "openrouter-normalized"
         if provider == "openrouter" or candidate is None:
+            enriched.append(model)
+            continue
+        catalog_type = model.get("catalog_type")
+        if (
+            model.get("catalog_confidence") == "official"
+            and catalog_type
+            and catalog_type not in {"text-ready", "text-candidate", "text-chat"}
+        ):
             enriched.append(model)
             continue
         router_capabilities = candidate.get("capabilities") or {}

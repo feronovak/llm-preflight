@@ -34,6 +34,7 @@ def test_source_audit_reports_literal_model_ids_without_network(tmp_path):
 def test_source_audit_detects_provider_prefixed_and_unquoted_yaml_model_ids(tmp_path):
     (tmp_path / "models.yaml").write_text(
         "model: gpt-5.5\nmodel: anthropic/claude-sonnet-5\nmodel: x-ai/grok-4.3\n"
+        "model: deepseek-flash\nmodel: qwen3.8-max\nmodel: jev-latest\n"
     )
 
     report = audit_source(tmp_path)
@@ -42,6 +43,9 @@ def test_source_audit_detects_provider_prefixed_and_unquoted_yaml_model_ids(tmp_
         (1, "gpt-5.5"),
         (2, "anthropic/claude-sonnet-5"),
         (3, "x-ai/grok-4.3"),
+        (4, "deepseek-flash"),
+        (5, "qwen3.8-max"),
+        (6, "jev-latest"),
     ]
 
 

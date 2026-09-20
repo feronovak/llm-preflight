@@ -78,6 +78,9 @@ ANTHROPIC_API_KEY=""
 GEMINI_API_KEY=""
 OPENROUTER_API_KEY=""
 XAI_API_KEY=""
+DEEPSEEK_API_KEY=""
+DASHSCOPE_API_KEY=""
+TYPESAFE_API_KEY=""
 """
 
 INSTRUCTION_BLOCK_START = "<!-- llm-preflight:agent-instructions:v1:start -->"
@@ -1457,6 +1460,9 @@ def _catalog_main(argv: list[str]) -> None:
                 "output_modalities": "text",
                 "limit": 50,
             },
+            "deepseek": {"provider": "deepseek", "include": "^deepseek-", "limit": 30},
+            "qwen": {"provider": "qwen", "include": "qwen", "limit": 30},
+            "typesafe": {"provider": "typesafe", "include": "^jev-", "limit": 10},
         }
         watch_path = args.directory / "watch.json"
         approved_path = args.directory / "approved.json"
@@ -1484,7 +1490,7 @@ def _catalog_main(argv: list[str]) -> None:
             print("=== Catalog setup ===")
             print("Choose provider catalogues now; this does not make paid requests.")
             provider_answer = input(
-                "Providers to include (openai, anthropic, gemini, xai, openrouter, or all) [all]: "
+                "Providers to include (openai, anthropic, gemini, xai, openrouter, deepseek, qwen, typesafe, or all) [all]: "
             ).strip()
         if not provider_answer or provider_answer.casefold() == "all":
             names = list(sources)

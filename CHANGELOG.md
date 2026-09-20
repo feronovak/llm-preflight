@@ -4,10 +4,26 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.15.0 - 2026-09-20
+
+### Added
+
+- Add official pricing snapshots for GPT-6 Astra, Claude Fable 5.1, Gemini 3.8
+  Flash, DeepSeek V4.1 Flash (`deepseek-flash`) and V4 Pro, Qwen 3.8 Max,
+  Qwen 3.8 Flash, Qwen 3.7 Plus, and TypeSafe Jev.
+- Add native `deepseek` and `qwen` catalogue/chat routes, and a `typesafe`
+  catalogue route for Jev. Jev stays visible as a typed-decision model and is
+  not eligible for the generic text smoke adapter. OpenRouter metadata cannot
+  reclassify an official non-text catalogue type into a text smoke candidate.
+
 ### Changed
 
-- Update the GitHub Marketplace Action's default package version to the
-  publicly available 2.14.0 release.
+- Point the frontier candidate example at current public flagships: three
+  models each from OpenAI, Anthropic, Gemini, xAI, and Qwen, plus DeepSeek's
+  two live API IDs. Gemini 4 has no public API model ID or price table, so it
+  is omitted.
+- Default the native `qwen` route to the international DashScope
+  compatible-mode endpoint so discovery and USD snapshots share one region.
 
 ## 2.14.0 - 2026-09-09
 

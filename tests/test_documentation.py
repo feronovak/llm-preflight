@@ -240,6 +240,7 @@ def test_positioning_and_decisions_are_public_and_current():
         "Standard-library runtime",
         "Three-state decisions",
         "Human approval for spend and promotion",
+        "Typed-decision models stay out of text preflight",
     ):
         assert decision in decisions
     assert (

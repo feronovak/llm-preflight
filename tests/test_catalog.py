@@ -30,6 +30,17 @@ from llm_preflight.catalog import (
             ("image", "official"),
         ),
         ({"model": "gpt-realtime-2"}, ("realtime", "heuristic")),
+        ({"model": "jev-latest"}, ("decision", "heuristic")),
+        (
+            {
+                "model": "typesafe/jev-latest",
+                "capabilities": {
+                    "text_generation": "ready",
+                    "output_modalities": ["text"],
+                },
+            },
+            ("decision", "heuristic"),
+        ),
         ({"model": "future-model"}, ("unknown", "unknown")),
     ],
 )
@@ -319,6 +330,36 @@ def test_resolve_enriches_anthropic_version_separator_match():
     assert models[0]["capability_evidence"][-1]["source"] == "openrouter-normalized"
 
 
+def test_openrouter_enrichment_does_not_reclassify_official_decision_models():
+    models = resolve_models(
+        {
+            "models": [
+                {
+                    "provider": "typesafe",
+                    "model": "jev-latest",
+                    "catalog_type": "decision",
+                    "catalog_confidence": "official",
+                    "capabilities": {"text_generation": None},
+                },
+                {
+                    "provider": "openrouter",
+                    "model": "typesafe/jev-latest",
+                    "capabilities": {
+                        "output_modalities": ["text"],
+                        "supported_parameters": ["temperature"],
+                    },
+                },
+            ]
+        }
+    )
+
+    assert models[0]["catalog_type"] == "decision"
+    assert models[0]["catalog_confidence"] == "official"
+    assert models[0]["capabilities"].get("text_generation") is None
+    assert models[1]["provider"] == "openrouter"
+    assert models[1]["catalog_type"] == "decision"
+
+
 def test_resolve_adds_public_registry_pricing_and_preserves_overrides():
     models = resolve_models(
         {
@@ -381,3 +422,73 @@ def test_openrouter_encodes_list_query_values_as_repeated_parameters(monkeypatch
     )
 
     assert "output_modalities=text&output_modalities=image" in captured[0]
+
+
+def test_deepseek_catalog_marks_flash_as_a_text_probe_candidate(monkeypatch):
+    captured = []
+
+    def fake_get_json(url, *args, **kwargs):
+        captured.append(url)
+        return {"data": [{"id": "deepseek-flash"}]}
+
+    monkeypatch.setattr("llm_preflight.catalog._get_json", fake_get_json)
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
+
+    model = discover_models({"provider": "deepseek", "limit": 1})[0]
+
+    assert captured == ["https://api.deepseek.com/v1/models"]
+    assert model["provider"] == "deepseek"
+    assert model["model"] == "deepseek-flash"
+    assert model["catalog_type"] == "text-candidate"
+    assert model["capabilities"]["adapter"] == "openai_compatible_chat"
+    assert model["input_cost_per_million"] == 0.3
+
+
+def test_qwen_catalog_marks_max_as_a_text_probe_candidate(monkeypatch):
+    captured = []
+
+    def fake_get_json(url, *args, **kwargs):
+        captured.append(url)
+        return {"data": [{"id": "qwen3.8-max"}, {"id": "qwen-tts"}]}
+
+    monkeypatch.setattr("llm_preflight.catalog._get_json", fake_get_json)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test")
+
+    models = discover_models({"provider": "qwen", "limit": 5})
+
+    assert captured == ["https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models"]
+    assert [model["model"] for model in models] == ["qwen3.8-max", "qwen-tts"]
+    assert models[0]["catalog_type"] == "text-candidate"
+    assert models[0]["capabilities"]["adapter"] == "openai_compatible_chat"
+    assert models[0]["input_cost_per_million"] == 2.0
+    assert models[1]["catalog_type"] == "audio"
+
+
+def test_typesafe_catalog_marks_jev_as_a_decision_model(monkeypatch):
+    captured = []
+
+    def fake_get_json(url, *args, **kwargs):
+        captured.append(url)
+        return {
+            "models": [
+                {
+                    "name": "jev-latest",
+                    "description": "TypeSafe System One model",
+                    "release_date": "2026-09-15",
+                }
+            ]
+        }
+
+    monkeypatch.setattr("llm_preflight.catalog._get_json", fake_get_json)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test")
+
+    model = discover_models({"provider": "typesafe", "limit": 1})[0]
+
+    assert captured == ["https://api.typesafe.ai/v1/models"]
+    assert model["provider"] == "typesafe"
+    assert model["model"] == "jev-latest"
+    assert model["catalog_type"] == "decision"
+    assert model["catalog_confidence"] == "official"
+    assert model["capabilities"].get("text_generation") is None
+    assert model["input_cost_per_million"] == 0.042
+    assert model["output_cost_per_million"] == 0.0

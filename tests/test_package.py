@@ -7,8 +7,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.14.0"
-    assert 'version = "2.14.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.15.0"
+    assert 'version = "2.15.0"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -134,7 +134,9 @@ def test_cross_provider_example_is_a_currently_priced_smoke_plan():
     assert report["enforcement_ok"] is True
 
 
-def test_frontier_candidates_include_current_grok_4_5_and_are_priced():
+def test_frontier_candidates_include_current_flagships_and_are_priced():
+    from collections import Counter
+
     from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
 
     candidates = json.loads(Path("examples/frontier-candidates.json").read_text())
@@ -142,8 +144,35 @@ def test_frontier_candidates_include_current_grok_4_5_and_are_priced():
         resolve_pricing(candidates["models"])["models"],
         require_current_pricing=True,
     )
+    by_provider = Counter(model["provider"] for model in candidates["models"])
+    ids = {model["model"] for model in candidates["models"]}
 
-    assert {model["model"] for model in candidates["models"]} >= {"grok-4.5"}
+    assert by_provider["openai"] >= 3
+    assert by_provider["anthropic"] >= 3
+    assert by_provider["gemini"] >= 3
+    assert by_provider["xai"] >= 3
+    assert by_provider["deepseek"] >= 2
+    assert by_provider["qwen"] >= 3
+    assert ids >= {
+        "gpt-6-astra",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "claude-fable-5-1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "gemini-3.8-flash",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite",
+        "grok-4.6",
+        "grok-4.5",
+        "grok-4.3",
+        "deepseek-flash",
+        "deepseek-v4-pro",
+        "qwen3.8-max",
+        "qwen3.8-flash",
+        "qwen3.7-plus",
+    }
+    assert "gemini-4" not in ids
     assert report["enforcement_ok"] is True
 
 

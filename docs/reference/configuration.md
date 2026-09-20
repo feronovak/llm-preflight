@@ -23,7 +23,18 @@ Every `models` entry has the same basic shape:
 | `gemini` | `GEMINI_API_KEY` |
 | `xai` | `XAI_API_KEY` |
 | `openrouter` | `OPENROUTER_API_KEY` |
+| `deepseek` | `DEEPSEEK_API_KEY` |
+| `qwen` | `DASHSCOPE_API_KEY` |
+| `typesafe` | `TYPESAFE_API_KEY` |
 | `openai_compatible` | configured with `api_key_env` |
+
+`typesafe` discovers Jev for catalogue review. Jev returns typed decisions
+rather than generated text, so it is not eligible for a generic text smoke.
+Use `qwen` for Alibaba Model Studio's OpenAI-compatible chat route. The
+default endpoint is the international compatible-mode URL, which matches the
+bundled USD snapshots. A China Beijing endpoint remains valid by setting
+`base_url`; the checked-in Qwen-VL example does that. The existing
+`openai_compatible` plus `DASHSCOPE_API_KEY` form also remains valid.
 
 Override endpoint and authentication details with `base_url`, `api_key_env`,
 and `headers`. Use `provider_options` inside `request` only when normalized

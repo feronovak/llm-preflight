@@ -54,7 +54,9 @@ def test_factory_applies_openai_defaults():
     assert "max_tokens" not in body
 
 
-@pytest.mark.parametrize("provider", ["openai", "gemini", "openrouter", "xai"])
+@pytest.mark.parametrize(
+    "provider", ["openai", "gemini", "openrouter", "xai", "deepseek", "qwen"]
+)
 def test_non_anthropic_clients_apply_the_safe_default_output_limit(provider):
     client = create_client({"provider": provider, "model": "model-a"}, 10)
 
@@ -90,7 +92,8 @@ def test_runtime_url_validation_failure_becomes_a_normal_api_failure(monkeypatch
 
 
 @pytest.mark.parametrize(
-    "model", ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]
+    "model",
+    ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"],
 )
 def test_current_gpt_models_omit_unsupported_temperature(model):
     client = create_client({"provider": "openai", "model": model}, 10)
@@ -117,6 +120,30 @@ def test_model_can_explicitly_override_temperature_support():
         10,
     )
     assert supported.body("hello", {"temperature": 0.5})["temperature"] == 0.5
+
+
+def test_deepseek_uses_the_openai_compatible_chat_adapter():
+    client = create_client({"provider": "deepseek", "model": "deepseek-flash"}, 10)
+
+    assert isinstance(client, OpenAICompatibleClient)
+    assert client.model["base_url"] == "https://api.deepseek.com/v1"
+    assert client.model["api_key_env"] == "DEEPSEEK_API_KEY"
+    assert client.endpoint() == "https://api.deepseek.com/v1/chat/completions"
+
+
+def test_qwen_uses_the_model_studio_compatible_chat_adapter():
+    client = create_client({"provider": "qwen", "model": "qwen3.8-max"}, 10)
+
+    assert isinstance(client, OpenAICompatibleClient)
+    assert client.model["base_url"] == (
+        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    )
+    assert client.model["api_key_env"] == "DASHSCOPE_API_KEY"
+
+
+def test_typesafe_rejects_the_text_smoke_adapter():
+    with pytest.raises(ValueError, match="typed-decision|systemone"):
+        create_client({"provider": "typesafe", "model": "jev-latest"}, 10)
 
 
 def test_openrouter_uses_compatible_adapter():
@@ -386,6 +413,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
     for model in (
         "claude-sonnet-5",
         "claude-fable-5",
+        "claude-fable-5-1",
         "claude-opus-4-8",
         "claude-opus-5",
     ):

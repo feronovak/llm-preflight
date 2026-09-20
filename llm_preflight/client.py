@@ -40,6 +40,18 @@ PROVIDER_DEFAULTS = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
         "api_key_env": "GEMINI_API_KEY",
     },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "api_key_env": "DEEPSEEK_API_KEY",
+    },
+    "qwen": {
+        "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        "api_key_env": "DASHSCOPE_API_KEY",
+    },
+    "typesafe": {
+        "base_url": "https://api.typesafe.ai/v1",
+        "api_key_env": "TYPESAFE_API_KEY",
+    },
     "mock": {
         "base_url": "https://mock.local/v1",
     },
@@ -57,12 +69,14 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
     model_id = model["model"]
     if provider == "openai":
         return not (
-            model_id == "gpt-5.5" or model_id.startswith(("gpt-5.5-", "gpt-5.6-"))
+            model_id == "gpt-5.5"
+            or model_id.startswith(("gpt-5.5-", "gpt-5.6-", "gpt-6-"))
         )
     if provider == "anthropic":
         return model_id not in {
             "claude-sonnet-5",
             "claude-fable-5",
+            "claude-fable-5-1",
             "claude-opus-4-8",
             "claude-opus-5",
         }
@@ -640,10 +654,17 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "openrouter": OpenAICompatibleClient,
         "xai": OpenAICompatibleClient,
         "openai_compatible": OpenAICompatibleClient,
+        "deepseek": OpenAICompatibleClient,
+        "qwen": OpenAICompatibleClient,
         "anthropic": AnthropicClient,
         "gemini": GeminiClient,
         "mock": MockClient,
     }
+    if provider == "typesafe":
+        raise ValueError(
+            "typesafe models return typed decisions via POST /v1/systemone and "
+            "are not eligible for the text smoke adapter"
+        )
     try:
         adapter = (
             OpenAIResponsesClient

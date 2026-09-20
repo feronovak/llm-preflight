@@ -55,7 +55,7 @@ Each discovered model is placed in one of three useful groups:
 |---|---|---|
 | **Ready to review for smoke** | Provider metadata, or a previous successful probe, identifies a supported text adapter. | Check current pricing and declared bounds in the dry-run before selecting it. |
 | **Needs one probe** | It looks like a text model but metadata cannot safely prove the request shape. | Optionally make one small, provider-native request. |
-| **Not a generic text benchmark model** | It is image, audio, video, realtime, agent, or another incompatible endpoint. | Leave it out of a normal text suite. |
+| **Not a generic text benchmark model** | It is image, audio, video, realtime, agent, a typed-decision model such as TypeSafe Jev, or another incompatible endpoint. | Leave it out of a normal text suite. |
 
 The third group remains visible. It is not silently deleted or treated as a
 failed chat model. Refresh also returns `smoke_eligibility` in JSON: every

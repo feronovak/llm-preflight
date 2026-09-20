@@ -51,3 +51,21 @@ the person responsible for the integration.
 **Consequence:** The tool previews retry-expanded requests and pricing before
 live work, and a passing preflight never authorizes deployment on its own. See
 [AI implementation testing](automation/agent-validation.md).
+
+## Typed-decision models stay out of text preflight
+
+**Decision:** Keep TypeSafe Jev and similar System One routes in the catalogue
+for discovery and price review. Do not treat them as LLM candidates for smoke,
+probe, frontier examples, or a chat adapter. A typed-decision contract checker
+is a separate product slice, not another row in a text model switch.
+
+**Why:** This tool checks an LLM integration contract: prompt in, text or
+structured text out. Jev returns declared choices, scores, and probabilities
+over `POST /v1/systemone` and does not generate chat. Putting it in the same
+selection as GPT-6 or Qwen would invent a request shape the model cannot
+satisfy.
+
+**Consequence:** Catalogue type `decision` is visible and priced, then marked
+`incompatible_catalog_type` for generic text smoke. Native TypeSafe discovery
+remains opt-in through `catalog init`. Image, audio, and other non-text
+catalogue types already follow the same pattern.

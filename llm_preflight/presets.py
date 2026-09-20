@@ -54,7 +54,14 @@ def expand_presets(request: dict[str, Any], presets: list[str]) -> dict[str, Any
     provider_options = updated.setdefault("provider_options", {})
 
     if "json" in expanded:
-        for provider in ("openai", "openai_compatible", "xai", "openrouter"):
+        for provider in (
+            "openai",
+            "openai_compatible",
+            "xai",
+            "openrouter",
+            "deepseek",
+            "qwen",
+        ):
             _setdefault_nested(
                 provider_options,
                 (provider, "response_format"),

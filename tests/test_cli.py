@@ -1741,6 +1741,9 @@ def test_catalog_init_guides_new_users_to_all_providers_by_default(
         "gemini",
         "xai",
         "openrouter",
+        "deepseek",
+        "qwen",
+        "typesafe",
     ]
 
 

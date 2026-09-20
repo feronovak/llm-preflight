@@ -77,6 +77,25 @@ def test_smoke_eligibility_explains_every_catalog_and_pricing_outcome():
     ]
 
 
+def test_jev_decision_models_are_incompatible_with_text_smoke():
+    report = smoke_eligibility_report(
+        [
+            {
+                "provider": "typesafe",
+                "model": "jev-latest",
+                "catalog_type": "decision",
+                "input_cost_per_million": 0.042,
+                "output_cost_per_million": 0.0,
+                "pricing_metadata": {"as_of": "2026-09-20"},
+            }
+        ],
+        {"max_requests": 8, "max_estimated_cost_usd": 1},
+    )
+
+    assert report["models"][0]["eligible"] is False
+    assert report["models"][0]["reason"] == "incompatible_catalog_type"
+
+
 def test_smoke_eligibility_requires_bounded_limits_after_other_evidence():
     report = smoke_eligibility_report(
         [

@@ -82,7 +82,9 @@ models also accept `response`, `latency_seconds`, and `ttft_seconds` for
 deterministic local fixtures.
 
 Supported provider names are `openai`, `anthropic`, `gemini`, `xai`,
-`openrouter`, `openai_compatible`, and `mock`. A discovery object requires
+`openrouter`, `deepseek`, `qwen`, `typesafe`, `openai_compatible`, and `mock`.
+TypeSafe Jev models are catalogue-visible typed-decision routes and are not
+eligible for the generic text smoke adapter. A discovery object requires
 `provider` and positive `limit`; it can also set case-insensitive regex
 `include`/`exclude`, `sort`, `output_modalities`, `require_parameters`,
 `base_url`, `api_key_env`, `api_version`, and `headers`. `output_modalities`

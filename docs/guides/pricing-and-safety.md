@@ -55,8 +55,10 @@ fingerprint expires the prior probe result.
 
 OpenRouter pricing comes from its live catalog and is labelled `openrouter
 routed` with authoritative confidence: it applies when the benchmark is routed
-through OpenRouter. Selected direct OpenAI, Gemini, Anthropic, and xAI prices
-are maintained as timestamped `official snapshot` records. Unknown prices stay
+through OpenRouter. Selected direct OpenAI, Gemini, Anthropic, xAI, DeepSeek,
+Qwen, and TypeSafe prices are maintained as timestamped `official snapshot`
+records. DeepSeek snapshots use peak cache-miss rates; off-peak is half.
+Unknown prices stay
 unknown; the tool never silently treats an OpenRouter route as a direct-provider
 price.
 Explicit per-model prices override the registry. When a provider reports cache-hit

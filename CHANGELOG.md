@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Update the GitHub Marketplace Action's default package version to the
+  publicly available 2.15.1 release.
+
 ## 2.15.1 - 2026-09-20
 
 ### Changed

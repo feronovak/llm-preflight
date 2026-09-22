@@ -28,8 +28,8 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-09-22 | v2.16.0 |
 | [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-09-09 | v2.14.0 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-09-09 | v2.14.0 |
-| [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | unstamped | — | — |
 | [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-09-22 | v2.16.0 |
+| [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | unstamped | — | — |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-09-22 | v2.16.0 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |

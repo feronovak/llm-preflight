@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 NUL = "\x00"
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 SEMVER_TAG = re.compile(r"^(?:(?P<channel>[a-z][a-z0-9_-]*)/)?v"
                         r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
                         r"(?:-(?P<pre>.+))?$")
@@ -19,10 +20,12 @@ class Git:
     def __init__(self, repo):
         self.repo = Path(repo)
 
-    def _run(self, *args, check=False):
+    def _run(self, *args, check=False, stdin=None):
         proc = subprocess.run(
             ["git", "-C", str(self.repo), *args],
-            capture_output=True, text=True,
+            # `replace`: a diff over a non-UTF-8 file must not raise out of a
+            # read whose callers are built to handle "unknown", not a traceback.
+            capture_output=True, text=True, errors="replace", input=stdin,
         )
         if proc.returncode != 0:
             return None
@@ -87,6 +90,148 @@ class Git:
     def file_committed_at(self, path) -> int:
         out = self._run("log", "-1", "--format=%ct", "--", str(path))
         return int(out) if out else 0
+
+    # -- change windows ----------------------------------------------------
+
+    def diff_names(self, base, head="HEAD"):
+        """Repo-relative paths that differ between `base` and `head`.
+
+        Returns None — not an empty set — when git cannot answer, because the
+        two are opposite verdicts. An empty set says "nothing changed, the
+        stamp still holds"; None says "unknown". A caller that conflates them
+        certifies a document against a window it never looked at, which is the
+        one outcome a currency check exists to prevent. Every caller must treat
+        None as blocking.
+        """
+        if not self.commit_exists(base):
+            return None
+        out = self._run("diff", "--name-only", f"{base}..{head}")
+        if out is None:
+            return None
+        return {line for line in out.splitlines() if line}
+
+    def commit_before(self, date):
+        """The last commit at or before `date` (YYYY-MM-DD), or None.
+
+        The counterpart to `diff_names` for repositories that carry no tags:
+        a trust stamp is a date, and a date resolves to a commit. Without this
+        every change-window check is tag-only, and a repo that never tags — an
+        infrastructure or docs repo, say — silently gets no currency check at
+        all rather than a failing one.
+        """
+        if not date:
+            return None
+        return self._run("rev-list", "-1", f"--before={date} 00:00", "HEAD") or None
+
+    def changed_since(self, ref_or_date, head="HEAD"):
+        """`diff_names` from a commit-ish OR a YYYY-MM-DD date.
+
+        Dates are tried only when the value is not a resolvable commit-ish, so
+        a tag named like a date still resolves as a tag.
+        """
+        if not ref_or_date:
+            return None
+        if self.commit_exists(ref_or_date):
+            return self.diff_names(ref_or_date, head)
+        if DATE.fullmatch(str(ref_or_date).strip()):
+            base = self.commit_before(ref_or_date)
+            return self.diff_names(base, head) if base else None
+        return None
+
+    # -- line-level windows and working-tree content -----------------------
+
+    def diff_zero_context(self, base, head=None):
+        """`git diff -U0` from `base` to `head`, or to the working tree when
+        `head` is None. None — never "" — when git cannot answer.
+
+        Prefixes, quoting, renames and textconv are pinned rather than left to
+        the user's config: `diff.noprefix` or a rename pairing would change the
+        text a caller parses, and a parse that silently finds no hunks reads as
+        "nothing changed".
+        """
+        if not self.commit_exists(base) or (head and not self.commit_exists(head)):
+            return None
+        rng = [base] if head is None else [base, head]
+        return self._run("-c", "core.quotepath=off", "diff", "-U0",
+                         "--no-renames", "--no-color", "--no-ext-diff",
+                         "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/",
+                         *rng)
+
+    def names_changed(self, base, head=None):
+        """Paths differing from `base` — to `head`, or to the working tree
+        (staged and unstaged) when `head` is None. None when unanswerable."""
+        if not self.commit_exists(base):
+            return None
+        rng = [base] if head is None else [base, head]
+        out = self._run("diff", "--name-only", "--no-renames", "-z", *rng)
+        if out is None:
+            return None
+        return {p for p in out.split(NUL) if p}
+
+    # The three working-tree reads below answer None when git fails, never an
+    # empty list: "no untracked files" and "could not ask" are the same
+    # all-clear to a caller that cannot tell them apart.
+
+    def untracked(self):
+        """Untracked files git does not ignore — new work that no diff shows."""
+        out = self._run("ls-files", "--others", "--exclude-standard", "-z")
+        return None if out is None else [p for p in out.split(NUL) if p]
+
+    def index_blobs(self):
+        """-> {path: blob id} for every tracked path, as staged."""
+        out = self._run("ls-files", "-s", "-z")
+        if out is None:
+            return None
+        blobs = {}
+        for entry in out.split(NUL):
+            meta, _, path = entry.partition("\t")
+            parts = meta.split()
+            if path and len(parts) >= 2:
+                blobs[path] = parts[1]
+        return blobs
+
+    def unstaged(self):
+        """Tracked paths whose working-tree content differs from the index."""
+        out = self._run("diff", "--name-only", "--no-renames", "-z")
+        return None if out is None else [p for p in out.split(NUL) if p]
+
+    def hash_files(self, paths):
+        """-> {path: blob id} of the working-tree content, for existing files.
+
+        None when git fails, so a caller never mistakes an unhashed tree for an
+        unchanged one.
+        """
+        paths = [p for p in paths if (self.repo / p).is_file()]
+        if not paths:
+            return {}
+        out = self._run("hash-object", "--stdin-paths", stdin="\n".join(paths) + "\n")
+        if out is None:
+            return None
+        ids = out.splitlines()
+        return dict(zip(paths, ids, strict=True)) if len(ids) == len(paths) else None
+
+    def git_dir(self):
+        out = self._run("rev-parse", "--absolute-git-dir")
+        return Path(out) if out else None
+
+    def head(self):
+        return self._run("rev-parse", "HEAD") or None
+
+    def resolve(self, ref):
+        """The commit sha `ref` names, or None. A cache keyed on a moving name
+        like `HEAD` would serve one commit's answer for another's question."""
+        return self._run("rev-parse", "--verify", f"{ref}^{{commit}}") if ref else None
+
+    def default_branch(self):
+        """origin's HEAD branch, else a local `main` or `master`, else None."""
+        remote = self._run("symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+        for ref in ([remote] if remote else []) + ["main", "master"]:
+            if self.commit_exists(ref):
+                return ref
+        return None
+
+    def merge_base(self, a, b):
+        return self._run("merge-base", a, b) or None
 
     # -- history -----------------------------------------------------------
 

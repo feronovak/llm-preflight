@@ -51,6 +51,7 @@ KNOWN_KEYS = (
     "critical-paths", "api-coverage", "scaffold", "local-only",
     "track-anyway", "ai-attribution", "agent-contract",
     "next-steps", "release-flow", "decisions", "docmap",
+    "doc-paths", "tests-always-run", "untracked-inputs",
 )
 
 
@@ -120,6 +121,44 @@ class Contract:
         items = v if isinstance(v, list) else [v]
         return [(i.get("path"), i.get("reference")) for i in items
                 if isinstance(i, dict) and i.get("path") and i.get("reference")]
+
+    @property
+    def doc_paths(self):
+        """Globs `affected` treats as documentation, or None for the default set.
+
+        Declared, the list REPLACES the default rather than extending it, so a
+        repo whose tests read `VERSION` can say so by leaving it out. A `!glob`
+        re-admits a path an earlier glob excluded; the last match wins.
+        """
+        v = self.raw.get("doc-paths")
+        if v is None:
+            return None
+        return [str(i) for i in (v if isinstance(v, list) else [v])]
+
+    @property
+    def tests_always_run(self):
+        """Test globs run whenever any code changed.
+
+        For tests whose dependency no import graph can see — a test that reads
+        a source file as text, or enumerates a directory — so a scoped run
+        would otherwise skip exactly the test that guards the change.
+        """
+        v = self.raw.get("tests-always-run")
+        if v is None:
+            return []
+        return [str(i) for i in (v if isinstance(v, list) else [v])]
+
+    @property
+    def untracked_inputs(self):
+        """Gitignored directories a test reads, fingerprinted by `mark-green`.
+
+        Git sees none of their content, so a refreshed capture set would
+        otherwise read as "no code changed" to a gate that tests against it.
+        """
+        v = self.raw.get("untracked-inputs")
+        if v is None:
+            return []
+        return [str(i) for i in (v if isinstance(v, list) else [v])]
 
     @property
     def baselines(self):

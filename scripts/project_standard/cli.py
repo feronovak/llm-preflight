@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 from . import VERSION
-from . import claims, defaults, docmap, routes as routes_mod, runner
+from . import affected, changes, claims, defaults, docmap, reanchor
+from . import routes as routes_mod, runner
 from .findings import ERROR, SKIPPED, WARN
 from .gitio import repo_root
 
@@ -63,6 +64,40 @@ def build_parser():
                        help="copy the checker into a repo as "
                             "scripts/project_standard so CI can run it")
     v.add_argument("--repo", default=".")
+
+    a = sub.add_parser("affected",
+                       help="the tests a change since the last green run can "
+                            "reach; exit 3 when no code changed")
+    a.add_argument("--repo", default=".")
+    a.add_argument("--tests", action="append", default=[],
+                   help="limit Python tests to this root; repeatable")
+    a.add_argument("--base", help="diff against this ref instead of the "
+                                  "last-green marker")
+    out = a.add_mutually_exclusive_group()
+    out.add_argument("--json", action="store_true", help="machine-readable")
+    out.add_argument("--format", choices=("pytest-args", "pytest-deselect"),
+                     help="print only the pytest arguments: the selected files, "
+                          "or the roots with every other test deselected")
+
+    m = sub.add_parser("mark-green",
+                       help="record the working tree as green, for `affected`")
+    m.add_argument("--repo", default=".")
+    phase = m.add_mutually_exclusive_group()
+    phase.add_argument("--snapshot", metavar="FILE",
+                       help="record the tree as the gate starts, into FILE")
+    phase.add_argument("--commit", metavar="FILE",
+                       help="write FILE's snapshot as the marker; refuse if the "
+                            "tree moved since it was taken")
+    m.add_argument("--exclude", action="append", default=[], metavar="PREFIX",
+                   help="a path prefix whose leg did not run: it keeps the "
+                        "previous marker's state; repeatable")
+
+    ra = sub.add_parser("reanchor",
+                        help="move path:N citations to where their definition "
+                             "went; dry-run unless --write")
+    ra.add_argument("docs", nargs="*", help="documents (default: docs/**/*.md)")
+    ra.add_argument("--repo", default=".")
+    ra.add_argument("--write", action="store_true", help="edit in place")
     return p
 
 
@@ -98,6 +133,12 @@ def main(argv=None):
         return _vendor(args)
     if args.command == "claims":
         return _claims(args)
+    if args.command == "affected":
+        return affected.main(args)
+    if args.command == "mark-green":
+        return _mark_green(args)
+    if args.command == "reanchor":
+        return reanchor.main(args)
 
     repos = resolve_repos(args)
     if not repos:
@@ -254,6 +295,66 @@ def _vendor(args):
     print(f"vendored {copied} module(s) at version {VERSION} into {target}")
     print("commit this directory, and run `check` again to confirm it agrees "
           "with canonical")
+    return 0
+
+
+def _mark_green(args):
+    """Record the tree `affected` compares against.
+
+    Call it only after every leg of a gate passed. The marker is what lets the
+    next run skip tests, so writing it after a partial or scoped-and-red run
+    would certify code nobody tested. A gate snapshots when it starts and
+    commits when it ends, so an edit made while it ran is refused rather than
+    certified; `--exclude` keeps a skipped leg's scope uncertified.
+    """
+    from .contract import load
+    from .gitio import Git
+
+    repo = repo_root(Path(args.repo))
+    contract = load(repo, Git(repo).ls_files())
+    if contract.path and contract.errors:
+        print(f"mark-green: the contract in {contract.path} does not parse: "
+              + "; ".join(contract.errors), file=sys.stderr)
+        return 2
+    doc_paths = changes.doc_paths_for(contract)
+    inputs = contract.untracked_inputs
+
+    if args.snapshot:
+        snap = changes.snapshot(repo, doc_paths, inputs)
+        if snap is None:
+            print("mark-green: could not hash the working tree", file=sys.stderr)
+            return 2
+        Path(args.snapshot).write_text(json.dumps(snap, sort_keys=True))
+        print(f"snapshot at {snap['head'][:12]} — {len(snap['files'])} non-doc file(s)")
+        return 0
+
+    if args.commit:
+        try:
+            snap = json.loads(Path(args.commit).read_text())
+            snap["files"], snap["head"], snap["doc_paths"], snap["env"]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(f"mark-green: unreadable snapshot {args.commit}: {exc}", file=sys.stderr)
+            return 2
+        marker, moved = changes.commit(repo, snap, args.exclude)
+    else:
+        snap = changes.snapshot(repo, doc_paths, inputs)
+        marker, moved = changes.commit(repo, snap, args.exclude) if snap else (None, None)
+
+    if moved:
+        print(f"mark-green: REFUSED — {len(moved)} path(s) or fingerprint(s) moved "
+              f"while the gate ran, so the tests did not see them:", file=sys.stderr)
+        for item in moved[:20]:
+            print(f"  {item}", file=sys.stderr)
+        if len(moved) > 20:
+            print(f"  … and {len(moved) - 20} more", file=sys.stderr)
+        print("  nothing was marked green; re-run the gate", file=sys.stderr)
+        return 1
+    if marker is None:
+        print("mark-green: could not hash the working tree", file=sys.stderr)
+        return 2
+    print(f"marked green at {marker['head'][:12]} — {len(marker['files'])} "
+          f"non-doc file(s), content {marker['content_hash'][:12]}"
+          + (f"; NOT certified: {', '.join(marker['excluded'])}" if marker["excluded"] else ""))
     return 0
 
 

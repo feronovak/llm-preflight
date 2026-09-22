@@ -1,6 +1,6 @@
 # Model catalogue: discover, test, and keep models
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.8.0
+**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
 
 Use the catalogue when you want a small, trusted list of models for your own
 work. It is deliberately a local workflow: provider catalogues are broad;
@@ -22,7 +22,10 @@ Run this once in an empty project directory:
 llm-preflight catalog init
 ```
 
-Press Enter to include all supported providers. The command creates:
+Press Enter to include all supported providers (`openai`, `anthropic`,
+`gemini`, `xai`, `openrouter`, `deepseek`, `qwen`, `typesafe`). Official
+direct-provider prices this package ships are listed in
+[current snapshots](current-snapshots.md). The command creates:
 
 ```text
 benchmarks/

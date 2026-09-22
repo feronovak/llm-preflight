@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -13,6 +13,9 @@ Results stay local unless you decide to attach or publish them.
 
 - [Safe demo](getting-started/safe-demo.md) — run the no-key mock benchmark,
   then create a conservative provider starter.
+- [Official snapshots](guides/current-snapshots.md) — native routes and the
+  direct-provider prices this package version re-read; also the gaps (Gemini 4,
+  Kimi/GLM native, Jev).
 - [A new model appeared](guides/model-catalog.md) — refresh provider metadata,
   then deliberately probe, benchmark, and approve a small candidate set.
 - [Model change](guides/model-change.md) — compare an approved model and a

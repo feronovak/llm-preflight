@@ -1,6 +1,6 @@
 # Tests, pricing, and safety
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
 
 ## Built-in tests and validation
 
@@ -57,7 +57,10 @@ OpenRouter pricing comes from its live catalog and is labelled `openrouter
 routed` with authoritative confidence: it applies when the benchmark is routed
 through OpenRouter. Selected direct OpenAI, Gemini, Anthropic, xAI, DeepSeek,
 Qwen, and TypeSafe prices are maintained as timestamped `official snapshot`
-records. DeepSeek snapshots use peak cache-miss rates; off-peak is half.
+records. The IDs and headline rates in this package are listed in
+[current snapshots](current-snapshots.md). DeepSeek snapshots use peak
+cache-miss rates; off-peak is half. Gemini 4 is omitted until Google publishes
+an API ID and price table.
 Unknown prices stay
 unknown; the tool never silently treats an OpenRouter route as a direct-provider
 price.

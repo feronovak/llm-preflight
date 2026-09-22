@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
   publicly available 2.16.0 release.
 - Retry the Marketplace Action package install so a pin made just after
   publish is not failed by PyPI index lag.
+- Document native routes, official pricing snapshots, and remaining gaps
+  (Gemini 4, Kimi/GLM native, Jev) for package 2.16.0.
 
 ## 2.16.0 - 2026-09-22
 

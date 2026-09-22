@@ -4,6 +4,21 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 
 
+def test_current_snapshots_doc_lists_every_official_pricing_id():
+    from llm_preflight import __version__
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    page = (ROOT / "docs/guides/current-snapshots.md").read_text()
+
+    assert f"**As of:** v{__version__}" in page
+    assert f"Package version: **{__version__}**" in page
+    assert "not a ranking" in page
+    assert "Gemini 4" in page
+    for provider, model_id in PUBLIC_PRICING:
+        assert f"`{provider}`" in page
+        assert f"`{model_id}`" in page
+
+
 def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     readme = (ROOT / "README.md").read_text()
     mcp_guide = (ROOT / "docs/automation/mcp.md").read_text()
@@ -16,6 +31,7 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     assert "## Registry discovery" in mcp_guide
     assert "## Clean-install verification" in mcp_guide
     assert "docs/index.md" in readme
+    assert "docs/guides/current-snapshots.md" in readme
     assert (ROOT / "docs/index.md").is_file()
     assert (ROOT / "docs/automation/mcp.md").is_file()
 
@@ -36,12 +52,13 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in feature_map
+    assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
     assert "Opt-in, versioned agent-instruction block" in feature_map
     assert "Catalog-to-smoke eligibility" in feature_map
+    assert "Official pricing snapshots for named public model IDs" in feature_map
     assert "no-spend tool hints and workflow resource" in feature_map
     assert "registry manifest and repository plugin skill" in feature_map
     assert "GPT-5.6 Luna" in changelog
@@ -150,7 +167,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     for page in (ROOT / "docs/guides/model-catalog.md",):
-        assert "**Last reviewed:** 2026-08-31 · **As of:** v2.8.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
@@ -172,16 +189,13 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in (
         ROOT / "docs/index.md",
         ROOT / "docs/FEATURE_MAP.md",
+        ROOT / "docs/guides/model-catalog.md",
+        ROOT / "docs/guides/pricing-and-safety.md",
+        ROOT / "docs/guides/current-snapshots.md",
+        ROOT / "docs/reference/configuration.md",
+        ROOT / "README.md",
     ):
-        assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in page.read_text()
-
-    assert (
-        "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0"
-        in (ROOT / "README.md").read_text()
-    )
-
-    for page in (ROOT / "docs/guides/pricing-and-safety.md",):
-        assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
+        assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
@@ -211,6 +225,7 @@ def test_change_plans_guide_is_indexed_in_the_generated_document_map():
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
 
     assert "docs/automation/change-plans.md" in docmap
+    assert "docs/guides/current-snapshots.md" in docmap
 
 
 def test_positioning_and_decisions_are_public_and_current():

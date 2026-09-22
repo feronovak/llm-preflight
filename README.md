@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.12.0
+**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -76,6 +76,12 @@ Works as a CLI, GitHub Action, and local MCP server. Every path starts with
 no-spend validation and planning; a live provider run remains an explicit,
 bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
 or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+
+The published package is **2.16.0**. Native routes and the official pricing
+snapshots this release ships are listed in
+[current snapshots](docs/guides/current-snapshots.md). That list is coverage
+for direct-provider prices, not a ranking and not every ID the catalogue can
+discover.
 
 For earlier releases, see the [changelog](CHANGELOG.md).
 

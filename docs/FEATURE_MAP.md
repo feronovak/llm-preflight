@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -27,6 +27,7 @@ module names.
 | Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
 | Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
+| Official pricing snapshots for named public model IDs, listed for the current package version | live | `pricing.py`, `docs/guides/current-snapshots.md` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |
 | Image-to-text contract inputs — verified local paths or caller data URLs become OpenAI-compatible multipart content or Gemini inline data; image generation remains catalog-only | live | `images.py`, `client.py`, `runner.py` |
 | JSON-preset comparability warnings for Anthropic results | live | `presets.py`, `cli.py`, `runner.py` |

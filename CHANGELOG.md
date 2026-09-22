@@ -7,7 +7,7 @@ All notable changes to this project are documented here.
 ### Changed
 
 - Update the GitHub Marketplace Action's default package version to the
-  publicly available 2.15.1 release.
+  publicly available 2.16.0 release.
 - Retry the Marketplace Action package install so a pin made just after
   publish is not failed by PyPI index lag.
 

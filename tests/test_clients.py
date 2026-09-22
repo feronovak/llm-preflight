@@ -93,7 +93,15 @@ def test_runtime_url_validation_failure_becomes_a_normal_api_failure(monkeypatch
 
 @pytest.mark.parametrize(
     "model",
-    ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"],
+    [
+        "gpt-5.5",
+        "gpt-5.6-luna",
+        "gpt-5.6-terra",
+        "gpt-5.6-sol",
+        "gpt-6-astra",
+        "gpt-6-sol",
+        "gpt-6-luna",
+    ],
 )
 def test_current_gpt_models_omit_unsupported_temperature(model):
     client = create_client({"provider": "openai", "model": model}, 10)
@@ -441,6 +449,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         "claude-fable-5-1",
         "claude-opus-4-8",
         "claude-opus-5",
+        "claude-opus-5-5",
     ):
         client = create_client({"provider": "anthropic", "model": model}, 10)
         assert "temperature" not in client.body(

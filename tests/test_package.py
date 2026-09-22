@@ -7,8 +7,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_stable_release():
-    assert __version__ == "2.15.1"
-    assert 'version = "2.15.1"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.16.0"
+    assert 'version = "2.16.0"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -155,16 +155,16 @@ def test_frontier_candidates_include_current_flagships_and_are_priced():
     assert by_provider["qwen"] >= 3
     assert ids >= {
         "gpt-6-astra",
-        "gpt-5.6-sol",
-        "gpt-5.6-terra",
+        "gpt-6-sol",
+        "gpt-6-luna",
         "claude-fable-5-1",
-        "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "gemini-3.8-flash",
         "gemini-3.1-pro-preview",
         "gemini-3.1-flash-lite",
+        "grok-4.7",
         "grok-4.6",
-        "grok-4.5",
         "grok-4.3",
         "deepseek-flash",
         "deepseek-v4-pro",

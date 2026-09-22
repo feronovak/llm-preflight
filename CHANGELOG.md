@@ -11,6 +11,22 @@ All notable changes to this project are documented here.
 - Retry the Marketplace Action package install so a pin made just after
   publish is not failed by PyPI index lag.
 
+## 2.16.0 - 2026-09-22
+
+### Added
+
+- Add official pricing snapshots for GPT-6 Sol, GPT-6 Luna, Claude Opus 5.5,
+  and Grok 4.7.
+
+### Changed
+
+- Point the frontier candidate example at the current GPT-6, Claude, and Grok
+  flagship IDs. Gemini 4 still has no public API model ID or price table, so
+  the Gemini rows stay on 3.1 Pro, 3.8 Flash, and 3.1 Flash-Lite. DeepSeek
+  V4.1 Flash / V4 Pro and Qwen 3.8 remain the first-party Chinese routes we
+  snapshot; Kimi and GLM stay OpenRouter or `openai_compatible` until a
+  first-party adapter exists.
+
 ## 2.15.1 - 2026-09-20
 
 ### Changed

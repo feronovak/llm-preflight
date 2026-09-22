@@ -237,6 +237,29 @@ def test_gpt_6_astra_pricing_has_cache_and_long_context_tiers():
     )
 
 
+def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
+    sol = apply_public_pricing({"provider": "openai", "model": "gpt-6-sol"})
+    luna = apply_public_pricing({"provider": "openai", "model": "gpt-6-luna"})
+
+    assert sol["input_cost_per_million"] == 2.0
+    assert sol["output_cost_per_million"] == 10.0
+    assert sol["cached_input_cost_per_million"] == 0.2
+    assert sol["pricing_tiers"][1] == {
+        "input_cost_per_million": 4.0,
+        "output_cost_per_million": 15.0,
+        "cached_input_cost_per_million": 0.4,
+    }
+    assert luna["input_cost_per_million"] == 0.1
+    assert luna["output_cost_per_million"] == 0.5
+    assert luna["cached_input_cost_per_million"] == 0.01
+    assert luna["pricing_tiers"][1] == {
+        "input_cost_per_million": 0.2,
+        "output_cost_per_million": 0.75,
+        "cached_input_cost_per_million": 0.02,
+    }
+    assert sol["pricing_metadata"]["as_of"] == "2026-09-22"
+
+
 def test_gemini_3_8_flash_uses_the_current_introductory_rate():
     model = apply_public_pricing({"provider": "gemini", "model": "gemini-3.8-flash"})
 
@@ -313,6 +336,32 @@ def test_qwen_3_7_plus_uses_list_rates_not_the_temporary_discount():
     )
 
 
+def test_claude_opus_5_5_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-opus-5-5"})
+
+    assert model["input_cost_per_million"] == 4.0
+    assert model["output_cost_per_million"] == 20.0
+    assert model["cached_input_cost_per_million"] == 0.2
+    assert model["pricing_metadata"]["as_of"] == "2026-09-22"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://platform.claude.com/docs/en/about-claude/pricing"
+    )
+
+
+def test_grok_4_7_uses_official_200k_breakpoint():
+    model = apply_public_pricing({"provider": "xai", "model": "grok-4.7"})
+
+    assert model["input_cost_per_million"] == 2.0
+    assert model["output_cost_per_million"] == 6.0
+    assert model["cached_input_cost_per_million"] == 0.5
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": 4.0,
+        "output_cost_per_million": 12.0,
+        "cached_input_cost_per_million": 1.0,
+    }
+    assert model["pricing_metadata"]["as_of"] == "2026-09-22"
+
+
 def test_claude_fable_5_1_official_snapshot_pricing():
     model = apply_public_pricing({"provider": "anthropic", "model": "claude-fable-5-1"})
 
@@ -354,6 +403,8 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
         ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
         ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-20"),
+        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-22"),
+        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-22"),
         ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
         ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
         ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
@@ -364,9 +415,11 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-20"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
+        ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-22"),
         ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
         ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
         ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
+        ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-22"),
         ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-20"),
         ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-20"),
         ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-20"),

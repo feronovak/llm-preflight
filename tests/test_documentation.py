@@ -5,13 +5,12 @@ ROOT = Path(__file__).parent.parent
 
 
 def test_current_snapshots_doc_lists_every_official_pricing_id():
-    from llm_preflight import __version__
     from llm_preflight.pricing import PUBLIC_PRICING
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert f"**As of:** v{__version__}" in page
-    assert f"Package version: **{__version__}**" in page
+    assert "**As of:** v2.16.0" in page
+    assert "Package version: **2.16.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -52,7 +51,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in feature_map
+    assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
@@ -87,8 +86,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.7.3" in workflow
-    assert "Pin the starter workflow to the current release" in ci
+    assert "llm-preflight==2.16.0" in workflow
+    assert "starter workflow pins the latest published package, 2.16.0" in ci
     assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
 
 
@@ -101,7 +100,7 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
-    assert "Catch LLM integration regressions before they ship." in readme
+    assert "The pre-merge check for LLM changes." in readme
     assert "## CLI, CI, and MCP" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
@@ -114,6 +113,17 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert readme.index("## What live evidence looks like") < readme.index(
         "## First live run"
     )
+
+
+def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
+    action = (ROOT / "action.yml").read_text()
+
+    assert 'default: "2.16.0"' in action
+    assert "GITHUB_STEP_SUMMARY" in action
+    assert "No generation requests were made by the default checks." in action
+    assert 'python -m llm_preflight report "$result_file" --format markdown' in action
+    assert 'result_file="$(mktemp)"' in action
+    assert "trap 'rm -f \"$result_file\"' EXIT" in action
 
 
 def test_cli_and_pricing_docs_cover_every_builtin_pack_and_pricing_gate():
@@ -159,18 +169,19 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
-    retained_stamps = (
-        ROOT / "docs/reference/decision.md",
-        ROOT / "docs/automation/ci.md",
-    )
-    for page in retained_stamps:
+    for page in (ROOT / "docs/reference/decision.md",):
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
+
+    assert (
+        "**Last reviewed:** 2026-09-24 · **As of:** v2.16.0"
+        in (ROOT / "docs/automation/ci.md").read_text()
+    )
 
     for page in (ROOT / "docs/guides/model-catalog.md",):
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
-        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in page.read_text()
 
     for page in (
         ROOT / "docs/automation/coding-agents.md",
@@ -179,7 +190,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0"
+        "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
@@ -187,15 +198,19 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in page.read_text()
 
     for page in (
-        ROOT / "docs/index.md",
-        ROOT / "docs/FEATURE_MAP.md",
         ROOT / "docs/guides/model-catalog.md",
         ROOT / "docs/guides/pricing-and-safety.md",
         ROOT / "docs/guides/current-snapshots.md",
         ROOT / "docs/reference/configuration.md",
-        ROOT / "README.md",
     ):
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
+
+    for page in (
+        ROOT / "docs/index.md",
+        ROOT / "docs/FEATURE_MAP.md",
+        ROOT / "README.md",
+    ):
+        assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
@@ -215,7 +230,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in action_guide
+    assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in action_guide
     assert "default: `2.16.0`" in action_guide
     assert "last published package (`2.16.0`)" in action_guide
     assert "under development" not in action_guide
@@ -226,6 +241,7 @@ def test_change_plans_guide_is_indexed_in_the_generated_document_map():
 
     assert "docs/automation/change-plans.md" in docmap
     assert "docs/guides/current-snapshots.md" in docmap
+    assert "docs/guides/reports.md" in docmap
 
 
 def test_positioning_and_decisions_are_public_and_current():
@@ -238,7 +254,7 @@ def test_positioning_and_decisions_are_public_and_current():
 
     assert "## Choose your path" in readme
     assert "Review a new model" in readme
-    assert "Catch LLM integration regressions before they ship." in readme
+    assert "The pre-merge check for LLM changes." in readme
     assert "local CLI and CI tool that checks an\napplication's LLM contract" in readme
     assert "[North star](../NORTH_STAR.md)" in positioning
     assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
@@ -259,7 +275,7 @@ def test_positioning_and_decisions_are_public_and_current():
     ):
         assert decision in decisions
     assert (
-        'description = "Local, cross-provider preflight checks for LLM integration changes"'
+        'description = "The pre-merge check for LLM model, prompt, schema, and provider changes"'
         in metadata
     )
 

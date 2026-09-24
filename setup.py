@@ -16,7 +16,7 @@ PACKAGE_VERSION = _VERSION_MATCH.group(1)
 setup(
     name="llm-preflight",
     version=PACKAGE_VERSION,
-    description="Local, cross-provider preflight checks for an LLM model switch",
+    description="The pre-merge check for LLM model, prompt, schema, and provider changes",
     packages=find_packages(include=["llm_preflight", "llm_preflight.*"]),
     python_requires=">=3.10",
     entry_points={

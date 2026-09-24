@@ -4,10 +4,24 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.17.0 - 2026-09-24
+
+### Added
+
+- Render saved schema-version-1 results as self-contained offline HTML or a
+  compact, privacy-filtered GitHub Markdown job summary; unknown major schemas
+  are rejected.
+- Add synthetic report examples for a schema regression, a cheaper candidate
+  that fails its contract, and a latency/cost baseline regression.
+- Add no-spend and opt-in paid-run summaries to the Marketplace Action.
+- Add the pre-merge report story and reproducible gallery to the README.
+
 ### Changed
 
 - Update the GitHub Marketplace Action's default package version to the
   publicly available 2.16.0 release.
+- Pass the Action's package-version input through the step environment instead
+  of interpolating it into the shell script.
 - Retry the Marketplace Action package install so a pin made just after
   publish is not failed by PyPI index lag.
 - Document native routes, official pricing snapshots, and remaining gaps

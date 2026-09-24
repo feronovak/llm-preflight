@@ -1,11 +1,29 @@
 # Result JSON schema
 
-**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
+**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
 
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is
 `1`; integrations should reject an unknown major schema version rather than
 guessing its meaning.
+
+## Offline reports
+
+Render a saved result without contacting a provider:
+
+```bash
+llm-preflight report results/run.json --output report.html
+llm-preflight report results/run.json --format markdown
+```
+
+The renderer supports schema version 1 and rejects unknown major versions. It
+recomputes the run decision from the result evidence, shows baseline
+comparability separately, and reports contract validity, request count,
+latency, usage, estimated cost, and pricing status/source/date. It never embeds
+prompts, responses, credentials, local paths, host details, raw error text, or
+custom run labels. Model identifiers are escaped and constrained before display.
+The HTML uses inline CSS only; it makes no network requests. Small samples are
+directional and do not establish a universal model ranking.
 
 ## Dry-run plan fields
 

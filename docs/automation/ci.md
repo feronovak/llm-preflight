@@ -1,6 +1,6 @@
 # CI and JSON output
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-09-24 · **As of:** v2.16.0
 
 ## JSON output and exit status
 
@@ -74,7 +74,9 @@ llm-preflight benchmark.json --smoke --json --no-save > current.json
 A mock-only configuration intentionally exits 3: it proves local configuration
 and report handling, not a live-provider decision. Use it for a no-key example
 or test fixture, not as a passing production gate. A GitHub workflow that
-verifies the mock fixture should explicitly expect that exit code. Pin the starter workflow to the current release when adopting this behavior; the tracked example currently pins 2.7.3.
+verifies the mock fixture should explicitly expect that exit code. The tracked
+starter workflow pins the latest published package, 2.16.0; update it after
+2.17.0 is published and verify the workflow against the new package.
 
 For a mock-evidence job, preserve the JSON artifact while accepting only the
 expected inconclusive status:

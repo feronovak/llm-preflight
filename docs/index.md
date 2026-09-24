@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -40,6 +40,8 @@ Results stay local unless you decide to attach or publish them.
 
 - [CI and JSON output](automation/ci.md) — baselines, regression gates, and
   stable machine-readable evidence.
+- [Reviewable reports](guides/reports.md) — render saved results as offline
+  HTML or a privacy-filtered GitHub job summary.
 - [GitHub Actions starter](automation/ci.md#github-actions-starter) — a
   fork-safe mock workflow that uploads redacted evidence.
 - [Marketplace Action](automation/github-action.md) — run no-spend doctor,

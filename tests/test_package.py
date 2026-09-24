@@ -6,9 +6,9 @@ from llm_preflight import __version__, cli
 from llm_preflight.runner import load_config, run_benchmark
 
 
-def test_package_version_is_stable_release():
-    assert __version__ == "2.16.0"
-    assert 'version = "2.16.0"' in Path("pyproject.toml").read_text()
+def test_package_version_is_consistent():
+    assert __version__ == "2.17.0"
+    assert 'version = "2.17.0"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -32,6 +32,15 @@ def test_source_distribution_includes_image_to_text_fixture():
     manifest = Path("MANIFEST.in").read_text()
 
     assert "recursive-include examples/vision *.png" in manifest
+    assert "recursive-include examples/reports *.md" in manifest
+
+    for fixture in (
+        "schema-baseline.json",
+        "schema-break.json",
+        "cheaper-candidate-fails.json",
+        "latency-cost-change.json",
+    ):
+        assert (Path("examples/reports") / fixture).is_file()
 
 
 def test_llm_preflight_is_the_only_console_command(monkeypatch):
@@ -275,6 +284,7 @@ def test_source_distribution_manifest_keeps_only_public_release_material():
         "include README.md",
         "include SECURITY.md",
         "recursive-include examples *.json",
+        "recursive-include examples/reports *.md",
     ):
         assert included in manifest
 
@@ -319,7 +329,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.7.3",
+        "llm-preflight==2.16.0",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",

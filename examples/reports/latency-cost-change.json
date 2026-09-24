@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "run_id": "synthetic-cost-latency-change",
+  "timestamp": "2026-09-24T10:03:00+00:00",
+  "benchmark": "synthetic-baseline-review",
+  "prompt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "cost_confidence": "complete",
+  "models": [
+    {
+      "provider": "example",
+      "model": "approved-model",
+      "summary": {
+        "requests": 5,
+        "successful": 5,
+        "failed": 0,
+        "success_rate": 1.0,
+        "valid_output_rate": 1.0,
+        "latency_seconds": {"p50": 0.61, "p95": 0.91},
+        "input_tokens": 500,
+        "output_tokens": 90,
+        "estimated_cost_usd": 0.0008
+      },
+      "samples": [{"valid_output": true}]
+    }
+  ],
+  "pricing_coverage": {
+    "summary": {"billable": 1},
+    "models": [
+      {
+        "provider": "example",
+        "model": "approved-model",
+        "status": "priced",
+        "source": "synthetic fixture",
+        "as_of": "2026-09-24"
+      }
+    ]
+  },
+  "baseline_diff": {
+    "ok": false,
+    "comparability": "compatible",
+    "warnings": [],
+    "models": [
+      {
+        "status": "compared",
+        "latency_p95_delta_seconds": 0.36,
+        "cost_delta_usd": 0.0004,
+        "success_rate_delta": 0.0,
+        "valid_output_rate_delta": 0.0,
+        "regressions": ["latency_p95", "cost"]
+      }
+    ]
+  }
+}

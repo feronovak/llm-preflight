@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "run_id": "synthetic-cheaper-candidate",
+  "timestamp": "2026-09-24T10:02:00+00:00",
+  "benchmark": "synthetic-candidate-review",
+  "prompt_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "cost_confidence": "complete",
+  "models": [
+    {
+      "provider": "example",
+      "model": "approved-model",
+      "summary": {
+        "requests": 3,
+        "successful": 3,
+        "failed": 0,
+        "success_rate": 1.0,
+        "valid_output_rate": 1.0,
+        "latency_seconds": {"p50": 0.42, "p95": 0.53},
+        "input_tokens": 330,
+        "output_tokens": 45,
+        "estimated_cost_usd": 0.00033
+      },
+      "samples": [{"valid_output": true}]
+    },
+    {
+      "provider": "example",
+      "model": "cheaper-candidate",
+      "summary": {
+        "requests": 3,
+        "successful": 3,
+        "failed": 0,
+        "success_rate": 1.0,
+        "valid_output_rate": 0.6666666667,
+        "contract_only_failures": 1,
+        "consumer_rejections": 0,
+        "latency_seconds": {"p50": 0.28, "p95": 0.36},
+        "input_tokens": 330,
+        "output_tokens": 42,
+        "estimated_cost_usd": 0.00008
+      },
+      "samples": [{"valid_output": false}]
+    }
+  ],
+  "pricing_coverage": {
+    "summary": {"billable": 1},
+    "models": [
+      {
+        "provider": "example",
+        "model": "approved-model",
+        "status": "priced",
+        "source": "synthetic fixture",
+        "as_of": "2026-09-24"
+      },
+      {
+        "provider": "example",
+        "model": "cheaper-candidate",
+        "status": "priced",
+        "source": "synthetic fixture",
+        "as_of": "2026-09-24"
+      }
+    ]
+  }
+}

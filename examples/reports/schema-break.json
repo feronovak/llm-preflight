@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "run_id": "synthetic-schema-after",
+  "timestamp": "2026-09-24T10:01:00+00:00",
+  "benchmark": "synthetic-schema-check",
+  "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "cost_confidence": "complete",
+  "models": [
+    {
+      "provider": "example",
+      "model": "approved-model",
+      "summary": {
+        "requests": 3,
+        "successful": 3,
+        "failed": 0,
+        "success_rate": 1.0,
+        "valid_output_rate": 0.6666666667,
+        "contract_only_failures": 1,
+        "consumer_rejections": 0,
+        "latency_seconds": {"p50": 0.34, "p95": 0.43},
+        "input_tokens": 240,
+        "output_tokens": 38,
+        "estimated_cost_usd": 0.00025
+      },
+      "samples": [{"valid_output": false}]
+    }
+  ],
+  "pricing_coverage": {
+    "summary": {"billable": 1},
+    "models": [
+      {
+        "provider": "example",
+        "model": "approved-model",
+        "status": "priced",
+        "source": "synthetic fixture",
+        "as_of": "2026-09-24"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -10,8 +10,20 @@ release. `config` is a benchmark JSON path and is required unless `init` or `--i
 `python3 -m llm_preflight`. Use `--help` for the installed command surface and
 `--version` to print the installed release.
 
+Render a saved result without running a benchmark:
+
+```bash
+llm-preflight report results/run.json --output report.html
+llm-preflight report results/run.json --format markdown
+```
+
+The HTML is self-contained and opens offline. Both report formats accept only
+schema-version-1 results and omit prompt/response content, local paths, and
+identifying run metadata.
+
 | Option | Default | Purpose |
 |---|---:|---|
+| `report RESULT [--format html\|markdown] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. |
 | `--output-dir PATH` | `results` | Directory for saved result artifacts. |
 | `--no-save` | off | Do not create result artifacts. |
 | `--json` | off | Print the full result, plan, doctor report, or diff as JSON. |

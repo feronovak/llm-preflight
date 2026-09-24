@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
@@ -23,7 +23,7 @@ module names.
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
 | Catalog-to-smoke eligibility — classify each discovered model as eligible or requiring catalogue, probe, adapter, pricing, or bounds evidence; only eligible rows enter generated candidate plans | live | `eligibility.py`, `catalog.py`, `catalog_watch.py`, `cli.py` |
-| GitHub Marketplace Action — doctor, pricing, and dry-run checks without provider generation by default; an explicitly set input is required for a paid smoke | live | `action.yml`, `.github/workflows/action-smoke.yml` |
+| GitHub Marketplace Action — doctor, pricing, and dry-run checks without provider generation by default; adds a privacy-filtered job summary; an explicitly set input is required for a paid smoke | live | `action.yml`, `.github/workflows/action-smoke.yml` |
 | Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
 | Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
@@ -37,6 +37,7 @@ module names.
 | Secret-safe result provenance — configuration, contract, route, pricing, and combined evidence fingerprints with prompt hashes and spend limits | live | `contracts.py`, `runner.py` |
 | Expiring local approval receipts — bind a review note to one dry-run plan and its bounds, without granting paid-run authority | live | `approval.py`, `cli.py` |
 | Terminal report — separate machine decision state and warnings from the executive ranking | live | `runner.py`, `docs/reference/decision.md` |
+| `report` — render saved schema-version-1 evidence as offline HTML or a privacy-filtered Markdown summary | live | `reporting.py`, `cli.py`, `action.yml` |
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 
 Nothing listed here is gated, partial or deprecated. Work proposed but not

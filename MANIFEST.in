@@ -8,6 +8,7 @@ include benchmark.example.json
 recursive-include examples *.json
 recursive-include examples/vision *.png
 recursive-include examples *.yml
+recursive-include examples/reports *.md
 
 exclude AGENTS.md
 exclude CONTRIBUTING.md

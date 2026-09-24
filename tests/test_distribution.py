@@ -37,6 +37,18 @@ def test_marketplace_action_installs_the_latest_published_package():
     assert "sleep 20" in action
 
 
+def test_marketplace_action_passes_package_version_through_environment():
+    action = (ROOT / "action.yml").read_text()
+    install_step = action.split("name: Install LLM Preflight", 1)[1].split(
+        "    - name:", 1
+    )[0]
+
+    assert "PACKAGE_VERSION: ${{ inputs.package-version }}" in install_step
+    script = install_step.split("run: |", 1)[1]
+    assert "${{ inputs.package-version }}" not in script
+    assert 'version="$PACKAGE_VERSION"' in script
+
+
 def test_issue_forms_and_comparison_page_keep_reporting_safe_and_scoped():
     provider = (ROOT / ".github/ISSUE_TEMPLATE/provider-breakage.yml").read_text()
     pricing = (ROOT / ".github/ISSUE_TEMPLATE/pricing-drift.yml").read_text()

@@ -31,9 +31,11 @@ runs:
         python-version: "3.13"
     - name: Install LLM Preflight
       shell: bash
+      env:
+        PACKAGE_VERSION: ${{ inputs.package-version }}
       run: |
         set -euo pipefail
-        version="${{ inputs.package-version }}"
+        version="$PACKAGE_VERSION"
         for attempt in 1 2 3 4 5 6; do
           if python -m pip install "llm-preflight==${version}"; then
             exit 0
@@ -51,6 +53,14 @@ runs:
         llm-preflight "$CONFIG" --doctor --json
         llm-preflight "$CONFIG" --pricing-check
         llm-preflight "$CONFIG" --smoke --dry-run --json
+        {
+          echo "## LLM Preflight — no-spend checks"
+          echo
+          echo "Configuration doctor, pricing coverage, and bounded smoke planning completed."
+          echo "No generation requests were made by the default checks."
+          echo
+          echo 'A live smoke remains opt-in through run-paid: "true".'
+        } >> "$GITHUB_STEP_SUMMARY"
     - name: Run explicitly authorized paid smoke
       if: ${{ inputs.run-paid == 'true' }}
       shell: bash
@@ -63,4 +73,13 @@ runs:
         if [ -n "$ENV_FILE" ]; then
           args+=(--env-file "$ENV_FILE")
         fi
-        llm-preflight "${args[@]}"
+        result_file="$(mktemp)"
+        trap 'rm -f "$result_file"' EXIT
+        set +e
+        llm-preflight "${args[@]}" > "$result_file"
+        status=$?
+        set -e
+        PYTHONPATH="$GITHUB_ACTION_PATH${PYTHONPATH:+:$PYTHONPATH}" \
+          python -m llm_preflight report "$result_file" --format markdown \
+          >> "$GITHUB_STEP_SUMMARY"
+        exit "$status"

@@ -55,6 +55,7 @@ from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
+from .reporting import render_job_summary, render_report_html
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -1972,7 +1973,47 @@ def interactive_selection(
     return selected_config, profile_selector
 
 
+def _report_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        description="Render a safe offline report from saved result JSON"
+    )
+    parser.add_argument("result", type=Path, help="saved schema-version-1 result JSON")
+    parser.add_argument(
+        "--format",
+        choices=("html", "markdown"),
+        default="html",
+        help="offline HTML report or compact GitHub-flavored Markdown summary",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="write to this path instead of standard output",
+    )
+    args = parser.parse_args(argv)
+    payload = load_json(args.result)
+    rendered = (
+        render_report_html(payload)
+        if args.format == "html"
+        else render_job_summary(payload)
+    )
+    if args.output:
+        args.output.write_text(rendered, encoding="utf-8")
+        print(f"Saved {args.format} report to {args.output}")
+    else:
+        sys.stdout.write(rendered)
+
+
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "report":
+        try:
+            _report_main(sys.argv[2:])
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "pricing-refresh":
         try:
             _pricing_refresh_main(sys.argv[2:])

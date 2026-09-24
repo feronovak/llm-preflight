@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -10,10 +10,9 @@
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
-Catch LLM integration regressions before they ship. LLM Preflight is a local
-contract preflight for model, prompt, structured-output, and provider-call
-changes. It runs a small cross-provider preflight and compares validated output,
-response speed, tokens, and estimated cost.
+**The pre-merge check for LLM changes.** Catch model, prompt, schema, and
+provider-route regressions against your application's contract, then review
+latency, usage, and price evidence.
 
 ## Try it in 60 seconds
 
@@ -36,6 +35,34 @@ python3 -m llm_preflight benchmark.json --no-save
 you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
+
+## See a contract change fail
+
+These saved results are synthetic fixtures. Render the same report you can
+attach to a pull request, without contacting a provider. From a checkout of
+this repository, run:
+
+```bash
+python3 -m llm_preflight report examples/reports/schema-baseline.json --format markdown
+python3 -m llm_preflight report examples/reports/schema-break.json --format markdown
+```
+
+The first result passes. The second catches a response that no longer meets the
+declared output contract:
+
+```text
+Decision: pass (benchmark_passed)
+Contract validity: 100%
+
+Decision: fail (contract_failure)
+Contract validity: 67%
+Contract-only failures: 1
+```
+
+The [report gallery](https://github.com/feronovak/llm-preflight/tree/main/examples/reports)
+adds a cheaper candidate that fails the contract and a compatible baseline
+comparison with latency and cost regressions. Every number is labeled
+synthetic; none is a live model claim.
 
 ## Choose your path
 
@@ -151,6 +178,10 @@ A completed preflight retains per-request observations and a machine-readable
 decision: contract validity, latency (including TTFT where observable), token
 usage, estimated cost, pricing evidence, and blocking warnings. The terminal
 summary is a convenience; automation should consume the saved JSON decision.
+Render saved schema-version-1 JSON as a self-contained offline HTML report with
+`llm-preflight report results/run.json --output report.html`. The renderer
+omits prompts, responses, local paths, and identifying run metadata; the
+Marketplace Action adds a compact report to the GitHub Actions job summary.
 
 That evidence applies to your account, network, prompts, and validator at one
 time—not a universal model ranking. For a complete interactive example, see

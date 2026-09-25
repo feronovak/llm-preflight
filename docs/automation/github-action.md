@@ -16,14 +16,13 @@ steps:
 ```
 
 The Action installs the exact `package-version` input. The current repository
-source defaults to `2.17.0`; the `v2.17.1` release tag retains that earlier
-default, so the example sets the input explicitly. The default
-execution path makes no provider generation request
-and needs no secret. The action writes a compact job summary confirming those
-three no-spend checks completed.
+source defaults to `2.17.1`. The `v2.17.1` release tag retains the `2.17.0`
+default, so the example sets the input explicitly. The default execution path
+makes no provider generation request and needs no secret. The action writes a
+compact job summary confirming those three no-spend checks completed.
 
 The repository's `Marketplace Action smoke` workflow pins the
-last published package (`2.17.0`), which keeps pull-request validation
+latest published package (`2.17.1`), which keeps pull-request validation
 installable from PyPI. Update that pin after each newer package is published
 and the workflow succeeds against it.
 

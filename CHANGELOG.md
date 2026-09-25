@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Point the repository Action default, smoke check, and starter workflow at
+  the published 2.17.1 package.
+
 ## 2.17.1 - 2026-09-25
 
 ### Added

@@ -106,8 +106,8 @@ no-spend validation and planning; a live provider run remains an explicit,
 bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
 or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
-This source tree is **2.17.1**. Native routes and the official pricing
-snapshots it carries are listed in
+The latest published package is **2.17.1**. Native routes and the official
+pricing snapshots it carries are listed in
 [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md). That list is coverage
 for direct-provider prices, not a ranking and not every ID the catalogue can
 discover.

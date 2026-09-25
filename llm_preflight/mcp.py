@@ -30,6 +30,11 @@ STANDARD_PROTOCOL_VERSION = "2025-06-18"
 SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
 SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
+Start with a benchmark config that reflects the application's prompt and
+response contract. The MCP tools use an existing workspace-relative config;
+they do not create or approve one. Use the CLI's `--contract-check` to prove
+accepted and rejected response fixtures locally before a live run.
+
 1. Call `validate_config` after an LLM integration change. This validates any
    local image fixture path, MIME type, size, and content fingerprint without a
    provider call.
@@ -43,6 +48,8 @@ SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
 Mock and dry-run tools never load credentials or contact providers. A live run
 does not approve a model, increase a budget, or replace production approval.
+Use `llm-preflight report` on saved JSON for offline HTML or Markdown export;
+CI setup and report export are CLI workflows, not MCP tools.
 """
 
 

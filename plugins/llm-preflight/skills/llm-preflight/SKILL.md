@@ -7,6 +7,9 @@ description: Prepare and interpret local LLM integration preflights when a model
 
 Use the local MCP server or CLI to gather evidence for an LLM integration
 change. Keep the benchmark contract specific to the application change.
+If the project has no benchmark yet, follow the
+[project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md)
+to create one; MCP tools read an existing config and do not create it.
 
 1. Use `validate_config` after the change.
 2. Use `dry_run_plan`; report the request bound, estimated cost, pricing

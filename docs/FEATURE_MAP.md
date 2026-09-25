@@ -1,6 +1,6 @@
 # Product map
 
-**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
+**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
 
 What this tool does today. Present tense only — what is open belongs in the
 roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).

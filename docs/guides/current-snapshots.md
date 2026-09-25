@@ -1,14 +1,16 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
 
 This is not a ranking and not a complete list of models you can call. The
 catalogue can discover any ID a supported provider lists. The table below is
-the set of **direct-provider prices this package re-read against an official
-page**. Use it to see what `official snapshot` coverage the current release
-ships, then discover and probe the IDs you actually run.
+the set of **direct-provider prices re-read against official pages for
+2.16.0** and carried into 2.17.1. Use it to see what `official snapshot`
+coverage the current release ships, then discover and probe the IDs you
+actually run.
 
-Package version: **2.16.0**.
+Package version: **2.17.1**. The listed official price rows were last re-read
+for 2.16.0; 2.17.1 carries those snapshots without a new price review.
 
 ## Native routes
 
@@ -81,7 +83,7 @@ DeepSeek rows use peak cache-miss rates. Qwen 3.7 Plus has a higher band above
 These IDs are **not** in the snapshot table because they are not public
 first-party routes we can price honestly:
 
-| Gap | Status as of v2.16.0 |
+| Gap | Status as of v2.17.1 |
 |---|---|
 | Gemini 4 | No public API model ID or price table. Public Gemini remains 3.x. |
 | Kimi (Moonshot) native provider | Call via OpenRouter or `openai_compatible`. |
@@ -89,10 +91,11 @@ first-party routes we can price honestly:
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
 | Rows last checked 2026-08-30 | Still valid snapshots; not re-read for 2.16.0. Re-check before treating them as this week's official page. |
 
-The GitHub Marketplace Action default package is **2.16.0**. Docs whose
-**As of** stamp is older than that were not re-read for this release; they
+The [GitHub Marketplace Action guide](../automation/github-action.md) shows
+how to install package 2.17.1 from its released Action tag. Docs whose
+**As of** stamp is older than 2.17.1 were not re-read for this release; they
 remain true for the behaviour they describe, not a claim that every page was
-re-reviewed at 2.16.0.
+re-reviewed at 2.17.1.
 
 See the [model catalogue](model-catalog.md) for discover → probe → smoke, and
 [`examples/frontier-candidates.json`](../../examples/frontier-candidates.json)

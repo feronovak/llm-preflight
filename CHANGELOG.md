@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.17.1 - 2026-09-25
+
+### Added
+
+- Add a project integration guide with an application contract, local fixtures,
+  existing env-file reuse, report export, and a no-spend CI path.
+
+### Changed
+
+- Point the Marketplace Action default and no-spend CI examples at the
+  published 2.17.0 package.
+- Make MCP onboarding guidance explicit in its guide and safe-workflow resource.
+
 ## 2.17.0 - 2026-09-24
 
 ### Added

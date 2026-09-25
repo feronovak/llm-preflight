@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is
@@ -30,6 +30,22 @@ that contains the benchmark configuration:
 The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
+
+## Start with a project contract
+
+The MCP tools read an existing benchmark config; they do not create a project
+contract. Use the [project integration guide](../getting-started/project-integration.md)
+to adapt one representative request, the application's response rule, accepted
+and rejected fixtures, an existing env-file reference, and request bounds.
+Run `llm-preflight benchmark.json --contract-check` to test those fixtures
+locally without loading credentials or contacting a provider. Then give the
+MCP server the workspace and pass the config's workspace-relative path to
+`validate_config` and `dry_run_plan`.
+
+`run_preflight` returns a structured decision. To export a saved result as
+offline HTML or Markdown, use the CLI's `llm-preflight report` command; to
+add a pull-request check, use the [CI guide](ci.md). Report export and CI setup
+are not MCP tools.
 
 For a confirmed live run, a benchmark's relative `env_file` reference is
 accepted only when its resolved path remains within that workspace. An explicit
@@ -138,9 +154,9 @@ remains a user-controlled workspace decision.
 ## Discover the safe workflow
 
 Clients that support MCP resources can read
-`llm-preflight://guides/safe-workflow`. It is a short, static no-spend-first
-checklist: validate, inspect the dry-run plan, stop for explicit user approval,
-then use `run_preflight` only with `confirm_paid_run: true`. Reading this
+`llm-preflight://guides/safe-workflow`. It is a short, static checklist:
+validate, inspect the dry-run plan, stop for explicit user approval, then use
+`run_preflight` only with `confirm_paid_run: true`. Reading this
 resource never accesses the workspace, loads credentials, or contacts a
 provider.
 
@@ -162,12 +178,14 @@ See [Agent decision contract](../reference/decision.md).
 
 ## Safe agent workflow
 
-1. Ask the agent to run `validate_config` after an LLM-related change.
-2. Ask it to run `dry_run_plan` and report models, request count, estimated
+1. Select an existing benchmark that reflects the application's deployed
+   prompt and response contract. Prove its fixtures with `--contract-check`.
+2. Ask the agent to run `validate_config` after an LLM-related change.
+3. Ask it to run `dry_run_plan` and report models, request count, estimated
    cost, and every non-eligible `smoke_eligibility` reason.
-3. Review the plan and explicitly authorize a paid run only after the intended
+4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
-4. Use `run_preflight`, then retain the returned evidence or compare it with a
+5. Use `run_preflight`, then retain the returned evidence or compare it with a
    reviewed baseline using `diff_baseline`.
 
 An agent must not infer model IDs, weaken the application contract, approve a

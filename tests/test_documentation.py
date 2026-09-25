@@ -1,4 +1,7 @@
+import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -9,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.16.0" in page
-    assert "Package version: **2.16.0**" in page
+    assert "**As of:** v2.17.1" in page
+    assert "Package version: **2.17.1**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -51,7 +54,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in feature_map
+    assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
@@ -86,8 +89,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.16.0" in workflow
-    assert "starter workflow pins the latest published package, 2.16.0" in ci
+    assert "llm-preflight==2.17.0" in workflow
+    assert "starter workflow pins the latest published package, 2.17.0" in ci
     assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
 
 
@@ -118,7 +121,7 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.16.0"' in action
+    assert 'default: "2.17.0"' in action
     assert "GITHUB_STEP_SUMMARY" in action
     assert "No generation requests were made by the default checks." in action
     assert 'python -m llm_preflight report "$result_file" --format markdown' in action
@@ -173,7 +176,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-24 · **As of:** v2.16.0"
+        "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
@@ -195,12 +198,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in page.read_text()
 
     for page in (
         ROOT / "docs/guides/model-catalog.md",
         ROOT / "docs/guides/pricing-and-safety.md",
-        ROOT / "docs/guides/current-snapshots.md",
         ROOT / "docs/reference/configuration.md",
     ):
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
@@ -210,7 +212,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         ROOT / "docs/FEATURE_MAP.md",
         ROOT / "README.md",
     ):
-        assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
@@ -230,10 +232,33 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in action_guide
-    assert "default: `2.16.0`" in action_guide
-    assert "last published package (`2.16.0`)" in action_guide
+    assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in action_guide
+    assert 'package-version: "2.17.1"' in action_guide
+    assert "`v2.17.1` release tag retains that earlier" in action_guide
+    assert "last published package (`2.17.0`)" in action_guide
     assert "under development" not in action_guide
+
+
+def test_project_integration_example_supports_local_contract_and_plan():
+    config = ROOT / "examples/project-integration/support-routing.json"
+    guide = (ROOT / "docs/getting-started/project-integration.md").read_text()
+    copied_config = re.search(r"```json\n(.*?)\n```", guide, re.DOTALL)
+    assert copied_config is not None
+    assert json.loads(copied_config.group(1)) == json.loads(config.read_text())
+    for flag in ("--contract-check", "--dry-run"):
+        result = subprocess.run(
+            [sys.executable, "-m", "llm_preflight", str(config), flag, "--no-env-file"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr + result.stdout
+
+    readme = (ROOT / "README.md").read_text()
+    docs_index = (ROOT / "docs/index.md").read_text()
+    assert "docs/getting-started/project-integration.md" in readme
+    assert "getting-started/project-integration.md" in docs_index
 
 
 def test_change_plans_guide_is_indexed_in_the_generated_document_map():

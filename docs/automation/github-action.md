@@ -1,6 +1,6 @@
 # GitHub Marketplace Action
 
-**Last reviewed:** 2026-09-24 · **As of:** v2.17.0"""
+**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local
@@ -9,20 +9,23 @@ contract-preflight gate, not an evaluation platform or deployment approval.
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: feronovak/llm-preflight@v2
+  - uses: feronovak/llm-preflight@v2.17.1
     with:
       config: benchmark.json
+      package-version: "2.17.1"
 ```
 
-The action installs the exact `package-version` input (default: `2.16.0` until
-2.17.0 is published). Its default path makes no provider generation request
+The Action installs the exact `package-version` input. The current repository
+source defaults to `2.17.0`; the `v2.17.1` release tag retains that earlier
+default, so the example sets the input explicitly. The default
+execution path makes no provider generation request
 and needs no secret. The action writes a compact job summary confirming those
 three no-spend checks completed.
 
-The repository's `Marketplace Action smoke` workflow intentionally pins the
-last published package (`2.16.0`), which keeps pull-request validation
-installable from PyPI. Update that pin only after publishing a newer package
-and confirming the workflow succeeds against it.
+The repository's `Marketplace Action smoke` workflow pins the
+last published package (`2.17.0`), which keeps pull-request validation
+installable from PyPI. Update that pin after each newer package is published
+and the workflow succeeds against it.
 
 ## Paid smoke is opt-in
 
@@ -33,9 +36,10 @@ environment; do not commit an environment file or put a key in action inputs.
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: feronovak/llm-preflight@v2
+  - uses: feronovak/llm-preflight@v2.17.1
     with:
       config: benchmark.json
+      package-version: "2.17.1"
       run-paid: "true"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

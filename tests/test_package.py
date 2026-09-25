@@ -7,8 +7,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.17.0"
-    assert 'version = "2.17.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.17.1"
+    assert 'version = "2.17.1"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -329,7 +329,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.16.0",
+        "llm-preflight==2.17.0",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",

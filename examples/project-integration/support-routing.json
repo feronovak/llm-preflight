@@ -1,0 +1,27 @@
+{
+  "name": "support-routing-contract",
+  "env_file": ".env.production",
+  "prompt": "I was charged twice for the same subscription. Reply with only the support queue label.",
+  "models": [
+    {
+      "name": "approved-route",
+      "provider": "openai",
+      "model": "replace-with-your-reviewed-model-id",
+      "api_key_env": "PROJECT_OPENAI_KEY"
+    }
+  ],
+  "request": {
+    "system_prompt": "Route the ticket. Return one lowercase label: billing, technical, or account.",
+    "temperature": 0,
+    "max_output_tokens": 20
+  },
+  "validation": {"exact": "billing"},
+  "validation_fixtures": [
+    {"name": "expected queue", "response": "billing", "expect": "pass"},
+    {"name": "wrong queue", "response": "technical", "expect": "fail"}
+  ],
+  "repetitions": 1,
+  "warmups": 0,
+  "max_requests": 1,
+  "save_responses": false
+}

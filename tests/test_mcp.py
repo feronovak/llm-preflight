@@ -182,6 +182,10 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
     assert content["uri"] == "llm-preflight://guides/safe-workflow"
     assert "dry_run_plan" in content["text"]
     assert "confirm_paid_run: true" in content["text"]
+    assert "application's prompt and response contract" in " ".join(
+        content["text"].split()
+    )
+    assert "llm-preflight report" in content["text"]
 
 
 def test_mcp_config_applies_model_aliases_and_provider_presets(tmp_path):

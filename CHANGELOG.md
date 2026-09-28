@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Point the repository Action default, smoke workflow, and CI starter at the
+  published 2.18.0 package after the release.
+
 ## 2.18.0 - 2026-09-28
 
 ### Fixed

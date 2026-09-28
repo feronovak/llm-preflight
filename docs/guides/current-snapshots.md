@@ -90,7 +90,7 @@ first-party routes we can price honestly:
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
 
 The [GitHub Marketplace Action guide](../automation/github-action.md) shows
-how to use the previously published Action pin while 2.18.0 publishes. Pages
+how to use the published 2.18.0 package with its release-tag Action. Pages
 with an older **As of** stamp still describe their stated version; they were
 not all re-reviewed for 2.18.0.
 

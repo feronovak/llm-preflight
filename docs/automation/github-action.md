@@ -1,8 +1,8 @@
 # GitHub Marketplace Action
 
-During the 2.18.0 publication window, the repository Action defaults to the
-already published 2.17.1 package. After 2.18.0 reaches PyPI, the repository pin
-and mock workflow will move to 2.18.0. An inconclusive paid decision remains
+The repository Action now defaults to the published 2.18.0 package. The
+`v2.18.0` release tag retains its earlier 2.17.1 default, so set the package
+version explicitly when using that tag. An inconclusive paid decision remains
 exit 3; null cost and incomplete subtotals remain visible in attached evidence.
 
 **Last reviewed:** 2026-09-28 · **As of:** v2.18.0
@@ -14,20 +14,20 @@ contract-preflight gate, not an evaluation platform or deployment approval.
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: feronovak/llm-preflight@v2.17.1
+  - uses: feronovak/llm-preflight@v2.18.0
     with:
       config: benchmark.json
-      package-version: "2.17.1"
+      package-version: "2.18.0"
 ```
 
 The Action installs the exact `package-version` input. The current repository
-source defaults to `2.17.1`. The `v2.17.1` release tag retains the `2.17.0`
+source defaults to `2.18.0`. The `v2.18.0` release tag retains the `2.17.1`
 default, so the example sets the input explicitly. The default execution path
 makes no provider generation request and needs no secret. The action writes a
 compact job summary confirming those three no-spend checks completed.
 
 The repository's `Marketplace Action smoke` workflow pins the
-latest published package (`2.17.1`), which keeps pull-request validation
+latest published package (`2.18.0`), which keeps pull-request validation
 installable from PyPI. Update that pin after each newer package is published
 and the workflow succeeds against it.
 
@@ -40,10 +40,10 @@ environment; do not commit an environment file or put a key in action inputs.
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: feronovak/llm-preflight@v2.17.1
+  - uses: feronovak/llm-preflight@v2.18.0
     with:
       config: benchmark.json
-      package-version: "2.17.1"
+      package-version: "2.18.0"
       run-paid: "true"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

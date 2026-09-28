@@ -3,8 +3,9 @@
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability or leaked credential.
-Use GitHub's private vulnerability reporting feature for this repository. If it
-is unavailable, contact the repository maintainers privately.
+Use this repository's
+[private vulnerability reporting form](https://github.com/feronovak/llm-preflight/security/advisories/new).
+Private reporting is enabled. You must sign in to GitHub to submit a report.
 
 Include the affected version, reproduction steps, impact, and any suggested
 mitigation. Do not include active API keys.

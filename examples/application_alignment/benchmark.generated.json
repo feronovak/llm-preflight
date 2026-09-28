@@ -1,0 +1,32 @@
+{
+  "name": "application-owned-routing-contract",
+  "prompt": "Route this support ticket: I was charged twice for the same subscription.",
+  "request": {
+    "system_prompt": "Return only JSON with queue, priority, confidence. Allowed queues: billing, technical, account. Allowed priorities: high, normal.",
+    "temperature": 0,
+    "max_output_tokens": 100,
+    "retry": {"max_attempts": 1}
+  },
+  "models": [{
+    "name": "local-mock", "provider": "mock", "model": "application-alignment-demo",
+    "response": "{\"confidence\":0.95,\"priority\":\"high\",\"queue\":\"billing\"}",
+    "input_cost_per_million": 0, "output_cost_per_million": 0
+  }],
+  "validation": {"json_schema": {
+    "type": "object", "required": ["queue", "priority", "confidence"],
+    "additionalProperties": false,
+    "properties": {
+      "queue": {"type": "string", "enum": ["billing"]},
+      "priority": {"type": "string", "enum": ["high"]},
+      "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+    }
+  }},
+  "validation_fixtures": [
+    {"name": "accepted", "response": "{\"confidence\":0.95,\"priority\":\"high\",\"queue\":\"billing\"}", "expect": "pass"},
+    {"name": "wrong queue for this ticket", "response": "{\"confidence\":0.95,\"priority\":\"high\",\"queue\":\"technical\"}", "expect": "fail"},
+    {"name": "undeclared field", "response": "{\"confidence\":0.95,\"internal_note\":\"forbidden\",\"priority\":\"high\",\"queue\":\"billing\"}", "expect": "fail"},
+    {"name": "confidence outside range", "response": "{\"confidence\":2,\"priority\":\"high\",\"queue\":\"billing\"}", "expect": "fail"}
+  ],
+  "repetitions": 1, "warmups": 0, "concurrency": 1,
+  "max_requests": 1, "max_estimated_cost_usd": 0, "save_responses": false
+}

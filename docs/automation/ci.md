@@ -1,6 +1,6 @@
 # CI and JSON output
 
-**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 ## JSON output and exit status
 
@@ -107,6 +107,15 @@ llm-preflight pricing-refresh benchmark.json --offline --json
 ```
 
 For coding-agent integration, use the dedicated [MCP server guide](mcp.md).
+
+In 2.18.0, billable runs with missing usage or unobserved retry
+usage are inconclusive (exit 3), even when the output contract passes. Preserve
+the null total and incomplete subtotal in CI consumers. Legacy artifacts
+without `cost_coverage` cannot substantiate cost completeness or savings.
+Unsupported output-schema constraints fail before requests (exit 2). Strict
+pricing checks expire dated evidence independently of source descriptions.
+The starter workflow remains pinned to the latest published package until the
+new release is available.
 It documents the bounded local tool set, workspace rules, and explicit paid-run
 confirmation separately from the CI workflow.
 

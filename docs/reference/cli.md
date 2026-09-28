@@ -21,6 +21,12 @@ The HTML is self-contained and opens offline. Both report formats accept only
 schema-version-1 results and omit prompt/response content, local paths, and
 identifying run metadata.
 
+For 2.17.2 source builds, unsupported output-schema keywords stop validation
+before requests. Missing usage or unobserved retry usage keeps billable cost
+incomplete and the decision inconclusive. Reports and comparisons flag legacy
+artifacts without coverage; they do not convert missing cost into zero or
+claim savings. Strict pricing freshness checks every source description.
+
 | Option | Default | Purpose |
 |---|---:|---|
 | `report RESULT [--format html\|markdown] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. |

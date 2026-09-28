@@ -17,16 +17,36 @@
         "valid_output_rate": 0.6666666667,
         "contract_only_failures": 1,
         "consumer_rejections": 0,
-        "latency_seconds": {"p50": 0.34, "p95": 0.43},
+        "latency_seconds": {
+          "p50": 0.34,
+          "p95": 0.43
+        },
         "input_tokens": 240,
         "output_tokens": 38,
-        "estimated_cost_usd": 0.00025
+        "estimated_cost_usd": 0.00025,
+        "priced_cost_usd": 0.00025,
+        "cost_coverage": {
+          "known_requests": 3,
+          "missing_usage_requests": 0,
+          "missing_price_requests": 0,
+          "unobserved_retry_requests": 0
+        },
+        "usage_coverage": {
+          "input_tokens": 3,
+          "output_tokens": 3
+        }
       },
-      "samples": [{"valid_output": false}]
+      "samples": [
+        {
+          "valid_output": false
+        }
+      ]
     }
   ],
   "pricing_coverage": {
-    "summary": {"billable": 1},
+    "summary": {
+      "billable": 1
+    },
     "models": [
       {
         "provider": "example",
@@ -36,5 +56,19 @@
         "as_of": "2026-09-24"
       }
     ]
-  }
+  },
+  "cost_coverage": {
+    "known_requests": 3,
+    "missing_usage_requests": 0,
+    "missing_price_requests": 0,
+    "unobserved_retry_requests": 0
+  },
+  "usage_coverage": {
+    "input_tokens": 3,
+    "output_tokens": 3
+  },
+  "total_input_tokens": 240,
+  "total_output_tokens": 38,
+  "total_estimated_cost_usd": 0.00025,
+  "priced_cost_usd": 0.00025
 }

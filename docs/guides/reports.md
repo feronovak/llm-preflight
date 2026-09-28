@@ -22,6 +22,14 @@ count, latency, token usage, estimated cost, and pricing status/source/date.
 The run decision is recomputed from the saved evidence; baseline regression
 does not change that run decision.
 
+Whole-run cost includes warmups. Missing prices or usage make total cost `n/a`;
+any known cost is labelled an incomplete subtotal. Token subtotals also require
+coverage and are shown as unavailable when incomplete. Retry attempts without
+usage prevent completeness. Legacy schema-v1 artifacts without `cost_coverage`
+remain unchanged on disk, but their cost is displayed as unverified rather
+than a complete zero. Read the [result fields](../reference/results.md) for
+machine-readable coverage semantics.
+
 The renderer accepts schema-version-1 results and rejects unknown major
 versions. It escapes displayed values and omits prompts, responses,
 credentials, raw errors, custom run labels, local paths, host information, and

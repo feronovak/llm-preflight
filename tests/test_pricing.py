@@ -87,7 +87,7 @@ def test_public_pricing_marks_official_snapshot():
     assert model["pricing_metadata"]["source"] == "official snapshot"
     assert model["pricing_metadata"]["confidence"] == "official"
     assert model["pricing_metadata"]["source_url"] == (
-        "https://developers.openai.com/api/docs/pricing"
+        "https://developers.openai.com/api/docs/models/gpt-5.4-mini"
     )
 
 
@@ -202,7 +202,7 @@ def test_gemini_3_1_flash_lite_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 0.25
     assert model["output_cost_per_million"] == 1.5
     assert model["cached_input_cost_per_million"] == 0.025
-    assert model["pricing_metadata"]["as_of"] == "2026-08-30"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
 
 
 @pytest.mark.parametrize(
@@ -231,9 +231,9 @@ def test_gpt_6_astra_pricing_has_cache_and_long_context_tiers():
         "output_cost_per_million": 75.0,
         "cached_input_cost_per_million": 2.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == (
-        "https://developers.openai.com/api/docs/pricing"
+        "https://developers.openai.com/api/docs/models/gpt-6-astra"
     )
 
 
@@ -257,7 +257,7 @@ def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
         "output_cost_per_million": 0.75,
         "cached_input_cost_per_million": 0.02,
     }
-    assert sol["pricing_metadata"]["as_of"] == "2026-09-22"
+    assert sol["pricing_metadata"]["as_of"] == "2026-09-28"
 
 
 def test_gemini_3_8_flash_uses_the_current_introductory_rate():
@@ -266,7 +266,7 @@ def test_gemini_3_8_flash_uses_the_current_introductory_rate():
     assert model["input_cost_per_million"] == 0.75
     assert model["output_cost_per_million"] == 3.75
     assert model["cached_input_cost_per_million"] == 0.075
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == (
         "https://ai.google.dev/gemini-api/docs/pricing"
     )
@@ -285,7 +285,7 @@ def test_deepseek_flash_snapshot_uses_conservative_peak_rates():
     assert model["input_cost_per_million"] == 0.3
     assert model["output_cost_per_million"] == 1.2
     assert model["cached_input_cost_per_million"] == 0.006
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == (
         "https://api-docs.deepseek.com/quick_start/pricing"
     )
@@ -297,7 +297,7 @@ def test_qwen_3_8_max_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 6.0
     assert model["cached_input_cost_per_million"] == 0.25
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.qwencloud.com/models/qwen3.8-max"
     )
@@ -342,7 +342,7 @@ def test_claude_opus_5_5_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 4.0
     assert model["output_cost_per_million"] == 20.0
     assert model["cached_input_cost_per_million"] == 0.2
-    assert model["pricing_metadata"]["as_of"] == "2026-09-22"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == (
         "https://platform.claude.com/docs/en/about-claude/pricing"
     )
@@ -359,7 +359,7 @@ def test_grok_4_7_uses_official_200k_breakpoint():
         "output_cost_per_million": 12.0,
         "cached_input_cost_per_million": 1.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-09-22"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
 
 
 def test_claude_fable_5_1_official_snapshot_pricing():
@@ -368,7 +368,7 @@ def test_claude_fable_5_1_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 10.0
     assert model["output_cost_per_million"] == 50.0
     assert model["cached_input_cost_per_million"] == 0.25
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
 
 
 def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():
@@ -385,7 +385,7 @@ def test_jev_snapshot_prices_input_only(model_id):
 
     assert model["input_cost_per_million"] == 0.042
     assert model["output_cost_per_million"] == 0.0
-    assert model["pricing_metadata"]["as_of"] == "2026-09-20"
+    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
     assert model["pricing_metadata"]["source_url"] == "https://docs.typesafe.ai/models"
 
 
@@ -393,40 +393,40 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
     from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
 
     assert PUBLIC_PRICING == {
-        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-30"),
-        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-30"),
-        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-08-30"),
-        ("openai", "gpt-5.5"): (5.0, 30.0, "2026-08-30"),
-        ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-08-30"),
-        ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-08-30"),
-        ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
-        ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
-        ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
-        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-20"),
-        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-22"),
-        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-22"),
-        ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
-        ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
-        ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
-        ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
-        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-20"),
-        ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
-        ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
-        ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-20"),
-        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
-        ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
-        ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-22"),
-        ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
-        ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
-        ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
-        ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-22"),
-        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-20"),
-        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-20"),
-        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-20"),
-        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-20"),
-        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-20"),
-        ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-20"),
-        ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-20"),
+        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-09-28"),
+        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-09-28"),
+        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-09-28"),
+        ("openai", "gpt-5.5"): (5.0, 30.0, "2026-09-28"),
+        ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-09-28"),
+        ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-09-28"),
+        ("openai", "gpt-4.1"): (2.0, 8.0, "2026-09-28"),
+        ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
+        ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
+        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
+        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
+        ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
+        ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-09-28"),
+        ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-09-28"),
+        ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
+        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
+        ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
+        ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
+        ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
+        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-09-28"),
+        ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-09-28"),
+        ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-28"),
+        ("xai", "grok-4.3"): (1.25, 2.5, "2026-09-28"),
+        ("xai", "grok-4.5"): (2.0, 6.0, "2026-09-28"),
+        ("xai", "grok-4.6"): (2.0, 6.0, "2026-09-28"),
+        ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-28"),
+        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-28"),
+        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-28"),
+        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
+        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
+        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
+        ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
+        ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-28"),
     }
     assert set(PUBLIC_PRICING_SOURCES) == set(PUBLIC_PRICING)
     assert all(
@@ -435,6 +435,9 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
     assert PUBLIC_PRICING_SOURCES[("xai", "grok-4.3")] == (
         "https://docs.x.ai/developers/pricing"
     )
+    assert PUBLIC_PRICING_SOURCES[("openai", "gpt-5.6-luna")] == (
+        "https://developers.openai.com/api/docs/models/gpt-5.6-luna"
+    )
 
 
 def test_approved_smoke_cohort_has_complete_current_pricing():
@@ -442,7 +445,7 @@ def test_approved_smoke_cohort_has_complete_current_pricing():
 
     report = pricing_coverage_report(
         resolve_pricing(approved["models"])["models"],
-        today=date(2026, 8, 30),
+        today=date(2026, 9, 28),
         require_current_pricing=True,
     )
 
@@ -764,6 +767,70 @@ def test_current_pricing_enforcement_expires_old_user_overrides():
     )
     assert enforced["models"][0]["status"] == "stale"
     assert enforced["enforcement_ok"] is False
+
+
+@pytest.mark.parametrize(
+    "source",
+    ["user override", "official provider pricing", "custom", "unknown", "live catalog"],
+)
+@pytest.mark.parametrize("provider", ["openai", "openrouter"])
+@pytest.mark.parametrize(
+    ("as_of", "status", "enforced"),
+    [
+        ("2026-08-11", "priced", True),
+        ("2026-07-12", "priced", True),
+        ("2026-07-11", "stale", False),
+        (None, "undated", False),
+        ("invalid", "undated", False),
+        ("2026-08-12", "undated", False),
+    ],
+)
+def test_strict_pricing_dates_apply_to_all_source_labels(
+    source, provider, as_of, status, enforced
+):
+    model = {
+        "provider": provider,
+        "model": "test-model",
+        "input_cost_per_million": 1,
+        "output_cost_per_million": 2,
+        "pricing_metadata": {"source": source, "as_of": as_of},
+    }
+    result = pricing_coverage_report(
+        [model], today=date(2026, 8, 11), require_current_pricing=True
+    )
+    assert result["models"][0]["status"] == status
+    assert result["enforcement_ok"] is enforced
+    freshness = pricing_freshness_report(
+        [model], today=date(2026, 8, 11), enforce_override_freshness=True
+    )
+    assert freshness["warnings"] == result["warnings"]
+    if as_of == "2026-08-12":
+        assert result["warnings"][0]["code"] == "future_as_of"
+
+
+def test_default_custom_override_policy_and_strict_mock_exemption_are_preserved():
+    models = [
+        {
+            "provider": "openai",
+            "model": "test-model",
+            "input_cost_per_million": 1,
+            "output_cost_per_million": 2,
+            "pricing_metadata": {
+                "source": "official provider pricing",
+                "as_of": "2020-01-01",
+            },
+        },
+        {"provider": "mock", "model": "test-model"},
+    ]
+    assert (
+        pricing_coverage_report(models, today=date(2026, 8, 11))["enforcement_ok"]
+        is True
+    )
+    result = pricing_coverage_report(
+        models, today=date(2026, 8, 11), require_current_pricing=True
+    )
+    assert result["enforcement_ok"] is False
+    assert result["summary"]["exempt"] == 1
 
 
 def test_public_snapshot_metadata_is_refreshed_after_a_package_upgrade(monkeypatch):

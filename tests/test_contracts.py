@@ -6,6 +6,67 @@ from llm_preflight.contracts import check_contract
 from llm_preflight.runner import run_benchmark, validate_config_validations
 
 
+@pytest.mark.parametrize(
+    "entry", [check_contract, validate_config_validations, run_benchmark]
+)
+@pytest.mark.parametrize("named", [False, True])
+@pytest.mark.parametrize(
+    "keyword",
+    ["additionalProperties", "minimum", "maximum", "$ref", "description", "anyOf"],
+)
+def test_unsupported_nested_output_schema_stops_before_provider_work(
+    monkeypatch, entry, named, keyword
+):
+    schema = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {"confidence": {"type": "number", keyword: False}},
+        },
+    }
+    validation = {"json_schema": schema}
+    config = {"prompt": "test", "models": [{"provider": "mock", "model": "local"}]}
+    if named:
+        config["prompts"] = [
+            {"name": "routing", "prompt": "test", "validation": validation}
+        ]
+    else:
+        config["validation"] = validation
+    calls = []
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda *args: calls.append(args)
+    )
+    with pytest.raises(
+        ValueError,
+        match=rf"items.*properties.*confidence.*{keyword.replace('$', chr(92) + '$')}",
+    ):
+        entry(config)
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"type": "string", "properties": {}},
+        {"type": "number", "required": []},
+        {"type": "object", "items": {"type": "string"}},
+        {"type": "string", "minItems": 1},
+        {"type": "array", "minItems": True},
+        {"type": "array", "maxItems": -1},
+        {"type": "array", "minItems": 1.5},
+        {"type": "array", "minItems": 2, "maxItems": 1},
+        {"type": "string", "enum": "billing"},
+        {"type": "string", "enum": []},
+        {"type": "number", "enum": [True]},
+        {"type": "object", "required": ["queue", "queue"]},
+        {"type": ["string", "null"]},
+    ],
+)
+def test_output_schema_rejects_invalid_or_inapplicable_supported_rules(schema):
+    with pytest.raises(ValueError, match="json_schema"):
+        validate_config_validations({"validation": {"json_schema": schema}})
+
+
 def test_contract_check_exercises_accept_and_reject_fixtures_without_a_provider_call():
     report = check_contract(
         {

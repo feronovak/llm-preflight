@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.17.1" in page
-    assert "Package version: **2.17.1**" in page
+    assert "**As of:** v2.18.0" in page
+    assert "Package version: **2.18.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -54,7 +54,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in feature_map
+    assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
@@ -176,7 +176,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1"
+        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
@@ -198,21 +198,25 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in page.read_text()
+        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
 
     for page in (
         ROOT / "docs/guides/model-catalog.md",
-        ROOT / "docs/guides/pricing-and-safety.md",
         ROOT / "docs/reference/configuration.md",
     ):
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
+
+    assert (
+        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0"
+        in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
+    )
 
     for page in (
         ROOT / "docs/index.md",
         ROOT / "docs/FEATURE_MAP.md",
         ROOT / "README.md",
     ):
-        assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in page.read_text()
+        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
@@ -232,7 +236,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-09-25 · **As of:** v2.17.1" in action_guide
+    assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in action_guide
     assert 'package-version: "2.17.1"' in action_guide
     assert "source defaults to `2.17.1`" in action_guide
     assert "`v2.17.1` release tag retains the `2.17.0`" in action_guide

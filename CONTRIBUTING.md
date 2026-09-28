@@ -28,6 +28,11 @@ This project follows a strict red/green/refactor loop:
 Provider changes must include mocked protocol fixtures. Live requests may be
 used as optional verification, but never as part of the unit suite.
 
+For every reviewable build, record the evidence and rating defined in
+[Build quality rating](docs/development/build-rating.md). It covers OSS and
+code quality, integrity, product direction and documentation; a high score
+cannot override a failed correctness or artifact gate.
+
 ## Code map
 
 - `llm_preflight/cli.py` owns commands, interactive prompts, and output boundaries.

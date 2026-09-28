@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import json
+import math
 import re
-from typing import Any
+from decimal import Decimal, InvalidOperation
+from typing import Any, NoReturn
+
+# Bump when output-schema enforcement changes the meaning of retained evidence.
+OUTPUT_VALIDATOR_VERSION = "output-schema-3"
 
 BUILTIN_PROFILES: list[dict[str, Any]] = [
     {
@@ -342,17 +347,64 @@ def _exceeds_json_nesting_limit(value: str) -> bool:
     return False
 
 
+def _reject_non_json_constant(value: str) -> NoReturn:
+    raise json.JSONDecodeError("non-JSON numeric constant", value, 0)
+
+
+def _parse_finite_json_float(value: str) -> float:
+    parsed = float(value)
+    try:
+        faithful = math.isfinite(parsed) and Decimal(value) == Decimal(str(parsed))
+    except InvalidOperation:
+        faithful = False
+    if not faithful:
+        raise json.JSONDecodeError("JSON number loses precision", value, 0)
+    return parsed
+
+
+def _skip_invalid_json_candidate(response: str, start: int) -> int:
+    """Skip a malformed outer value so its nested values cannot be reused."""
+    openings = {"{", "["}
+    closing = {"}": "{", "]": "["}
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    for index in range(start, len(response)):
+        character = response[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+        elif character == '"':
+            in_string = True
+        elif character in openings:
+            stack.append(character)
+        elif character in closing:
+            if not stack or stack.pop() != closing[character]:
+                return len(response)
+            if not stack:
+                return index + 1
+    return len(response)
+
+
 def _load_json_response(
     response: str, parsing_policy: str
 ) -> tuple[Any | None, str | None]:
     if _exceeds_json_nesting_limit(response):
         return None, "invalid JSON"
+    decoder = json.JSONDecoder(
+        parse_constant=_reject_non_json_constant,
+        parse_float=_parse_finite_json_float,
+    )
     try:
-        return json.loads(response), None
+        return decoder.decode(response), None
     except RecursionError:
         # The stdlib decoder enforces the interpreter recursion limit; reject safely.
         return None, "invalid JSON"
-    except json.JSONDecodeError:
+    except ValueError:
         pass
     if parsing_policy == "single_fenced_block":
         blocks = re.findall(
@@ -362,10 +414,10 @@ def _load_json_response(
         )
         if len(blocks) == 1:
             try:
-                return json.loads(blocks[0].strip()), None
+                return decoder.decode(blocks[0].strip()), None
             except RecursionError:
                 return None, "invalid JSON"
-            except json.JSONDecodeError:
+            except ValueError:
                 pass
         return None, "invalid JSON (expected raw JSON or exactly one fenced JSON block)"
     if parsing_policy == "first_fenced_block":
@@ -374,12 +426,11 @@ def _load_json_response(
         )
         if match:
             try:
-                return json.loads(match.group(1).strip()), None
-            except (RecursionError, json.JSONDecodeError):
+                return decoder.decode(match.group(1).strip()), None
+            except (RecursionError, ValueError):
                 pass
         return None, "invalid JSON (expected raw JSON or a fenced JSON block)"
     if parsing_policy == "prose_tolerant":
-        decoder = json.JSONDecoder()
         values = []
         index = 0
         while index < len(response):
@@ -391,8 +442,8 @@ def _load_json_response(
                 value, end = decoder.raw_decode(response[index:])
             except RecursionError:
                 return None, "invalid JSON"
-            except json.JSONDecodeError:
-                index += 1
+            except ValueError:
+                index = _skip_invalid_json_candidate(response, index)
                 continue
             values.append(value)
             index += end
@@ -400,14 +451,16 @@ def _load_json_response(
             return values[0], None
         return None, "invalid JSON (expected exactly one JSON value in prose)"
     if parsing_policy == "first_json_value":
-        decoder = json.JSONDecoder()
-        for index, character in enumerate(response):
+        index = 0
+        while index < len(response):
+            character = response[index]
             if character not in "{[":
+                index += 1
                 continue
             try:
                 return decoder.raw_decode(response[index:])[0], None
-            except (RecursionError, json.JSONDecodeError):
-                continue
+            except (RecursionError, ValueError):
+                index = _skip_invalid_json_candidate(response, index)
         return None, "invalid JSON (expected a JSON value in prose)"
     return None, "invalid JSON"
 
@@ -649,6 +702,23 @@ def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any
     raise ValueError(f"unknown evaluator type {evaluator_type!r}")
 
 
+def _json_value_equal(left: Any, right: Any) -> bool:
+    """Compare JSON values without Python's boolean/number equivalence."""
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(
+            _json_value_equal(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(
+            _json_value_equal(a, b) for a, b in zip(left, right)
+        )
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return left == right
+    return type(left) is type(right) and left == right
+
+
 def _validate_json_schema(
     value: Any, schema: dict[str, Any], path: str = ""
 ) -> str | None:
@@ -661,6 +731,10 @@ def _validate_json_schema(
             if key not in value:
                 return f"{key} is required"
         properties = schema.get("properties", {})
+        if schema.get("additionalProperties") is False:
+            for key in value:
+                if key not in properties:
+                    return f"{label}.{key} is forbidden by additionalProperties"
         for key, child_schema in properties.items():
             if key in value:
                 child_path = f"{label}.{key}" if path else key
@@ -695,7 +769,16 @@ def _validate_json_schema(
         return f"{label} must be an integer"
     elif expected_type == "boolean" and not isinstance(value, bool):
         return f"{label} must be a boolean"
-    if "enum" in schema and value not in schema["enum"]:
+    if expected_type in {"number", "integer"}:
+        if isinstance(value, float) and not math.isfinite(value):
+            return f"{label} must be finite"
+        if "minimum" in schema and value < schema["minimum"]:
+            return f"{label} violates minimum {schema['minimum']}"
+        if "maximum" in schema and value > schema["maximum"]:
+            return f"{label} violates maximum {schema['maximum']}"
+    if "enum" in schema and not any(
+        _json_value_equal(value, member) for member in schema["enum"]
+    ):
         allowed = ", ".join(str(item) for item in schema["enum"])
         return f"{label} must be one of: {allowed}"
     return None

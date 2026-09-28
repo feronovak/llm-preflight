@@ -1,6 +1,11 @@
 # GitHub Marketplace Action
 
-**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
+During the 2.18.0 publication window, the repository Action defaults to the
+already published 2.17.1 package. After 2.18.0 reaches PyPI, the repository pin
+and mock workflow will move to 2.18.0. An inconclusive paid decision remains
+exit 3; null cost and incomplete subtotals remain visible in attached evidence.
+
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local

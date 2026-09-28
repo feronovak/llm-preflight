@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, TypeGuard, cast
 
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
 # do not consistently return prices, so these public rates fill that gap.
@@ -14,43 +15,43 @@ from typing import Any
 # public API model ID or price table as of 2026-09-22, so it is omitted.
 # DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
 # snapshots use QwenCloud USD list rates. TypeSafe Jev bills input only.
-# Entries dated 2026-08-30 were reviewed then; 2026-09-20 entries were reviewed
-# against their primary official source on that date.
+# Snapshot rows were reviewed against their primary official sources on
+# 2026-09-28. Qwen rows retain USD list rates, excluding temporary discounts.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
-    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-08-30"),
-    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-08-30"),
-    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-08-30"),
-    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-08-30"),
-    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-08-30"),
-    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-08-30"),
-    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-08-30"),
-    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-08-30"),
-    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-08-30"),
-    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-20"),
-    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-22"),
-    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-22"),
-    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-08-30"),
-    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-08-30"),
-    ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-08-30"),
-    ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-08-30"),
-    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-20"),
-    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-08-30"),
-    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-08-30"),
-    ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-20"),
-    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-08-30"),
-    ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-08-30"),
-    ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-22"),
-    ("xai", "grok-4.3"): (1.25, 2.5, "2026-08-30"),
-    ("xai", "grok-4.5"): (2.0, 6.0, "2026-08-30"),
-    ("xai", "grok-4.6"): (2.0, 6.0, "2026-08-30"),
-    ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-22"),
-    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-20"),
-    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-20"),
-    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-20"),
-    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-20"),
-    ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-20"),
-    ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-20"),
-    ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-20"),
+    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-09-28"),
+    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-09-28"),
+    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-09-28"),
+    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-09-28"),
+    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-09-28"),
+    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-09-28"),
+    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-09-28"),
+    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
+    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
+    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
+    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
+    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
+    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-09-28"),
+    ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-09-28"),
+    ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
+    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
+    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
+    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
+    ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
+    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-09-28"),
+    ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-09-28"),
+    ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-28"),
+    ("xai", "grok-4.3"): (1.25, 2.5, "2026-09-28"),
+    ("xai", "grok-4.5"): (2.0, 6.0, "2026-09-28"),
+    ("xai", "grok-4.6"): (2.0, 6.0, "2026-09-28"),
+    ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-28"),
+    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-28"),
+    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-28"),
+    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
+    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
+    ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
+    ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
+    ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-28"),
 }
 
 _PROVIDER_PRICING_PAGES = {
@@ -63,6 +64,23 @@ _PROVIDER_PRICING_PAGES = {
     "typesafe": "https://docs.typesafe.ai/models",
 }
 _MODEL_PRICING_PAGES = {
+    **{
+        ("openai", model): f"https://developers.openai.com/api/docs/models/{model}"
+        for model in (
+            "gpt-5.6-luna",
+            "gpt-5.6-terra",
+            "gpt-5.6-sol",
+            "gpt-5.5",
+            "gpt-5.4-mini",
+            "gpt-5.4-nano",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
+            "gpt-6-astra",
+            "gpt-6-sol",
+            "gpt-6-luna",
+        )
+    },
     ("qwen", "qwen3.8-max"): "https://www.qwencloud.com/models/qwen3.8-max",
     ("qwen", "qwen3.8-flash"): "https://www.qwencloud.com/models/qwen3.8-flash",
     ("qwen", "qwen3.7-plus"): "https://www.qwencloud.com/models/qwen3.7-plus",
@@ -307,26 +325,64 @@ def _pricing_tier(model: dict[str, Any], input_tokens: int) -> dict[str, Any]:
     return model
 
 
-def estimate_sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float | None:
-    """Estimate one request using its cache hits and applicable input tier."""
+def valid_token_count(value: Any) -> TypeGuard[int | float]:
+    """Usage evidence must be a nonnegative, finite, integral number."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+        and int(value) == value
+    )
+
+
+def sample_cost_evidence(
+    sample: dict[str, Any], model: dict[str, Any]
+) -> tuple[float | None, bool, bool]:
+    """Return cost, missing/invalid usage, and missing price flags."""
     input_tokens = sample.get("input_tokens")
     output_tokens = sample.get("output_tokens")
-    if input_tokens is None or output_tokens is None:
-        return None
-    tier = _pricing_tier(model, int(input_tokens))
+    cached_tokens = sample.get("cached_input_tokens")
+    missing_usage = not all(valid_token_count(v) for v in (input_tokens, output_tokens))
+    if cached_tokens is not None and not valid_token_count(cached_tokens):
+        missing_usage = True
+    tier = (
+        _pricing_tier(model, int(input_tokens))
+        if valid_token_count(input_tokens)
+        else model
+    )
     input_price = tier.get("input_cost_per_million")
     output_price = tier.get("output_cost_per_million")
-    if input_price is None or output_price is None:
-        return None
-    cached_input = min(
-        max(0, int(sample.get("cached_input_tokens") or 0)), int(input_tokens)
-    )
     cached_price = tier.get("cached_input_cost_per_million", input_price)
-    return (
-        (int(input_tokens) - cached_input) * float(input_price) / 1_000_000
-        + cached_input * float(cached_price) / 1_000_000
-        + int(output_tokens) * float(output_price) / 1_000_000
+    required_prices = [input_price, output_price]
+    if cached_tokens and valid_token_count(cached_tokens):
+        required_prices.append(cached_price)
+    missing_price = any(
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(value)
+        or value < 0
+        for value in required_prices
     )
+    if missing_usage or missing_price:
+        return None, missing_usage, missing_price
+    input_tokens = cast(int | float, input_tokens)
+    output_tokens = cast(int | float, output_tokens)
+    input_price = cast(int | float, input_price)
+    output_price = cast(int | float, output_price)
+    cached_price = cast(int | float, cached_price)
+    cached_input = min(int(cached_tokens or 0), int(input_tokens))
+    cost = (
+        (int(input_tokens) - cached_input) * float(input_price)
+        + (cached_input * float(cached_price) if cached_input else 0)
+        + int(output_tokens) * float(output_price)
+    ) / 1_000_000
+    return cost, False, False
+
+
+def estimate_sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float | None:
+    """Estimate one request using its cache hits and applicable input tier."""
+    return sample_cost_evidence(sample, model)[0]
 
 
 def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
@@ -475,11 +531,19 @@ def _classify_pricing(
             "pricing source has an invalid as-of date",
             "replace the pricing metadata as-of date with a valid ISO-8601 date",
         )
-    should_expire = source in {
+    if enforce_override_freshness and as_of_date > current:
+        return _pricing_problem(
+            entry,
+            "undated",
+            "future_as_of",
+            "pricing review date is in the future",
+            "review the price and record the actual review date",
+        )
+    should_expire = enforce_override_freshness or source in {
         "official snapshot",
         "live catalog",
         "openrouter routed",
-    } or (enforce_override_freshness and source == "user override")
+    }
     age_days = (current - as_of_date).days
     if should_expire and age_days > max_age_days:
         label = (

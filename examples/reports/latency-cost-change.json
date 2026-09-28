@@ -15,16 +15,36 @@
         "failed": 0,
         "success_rate": 1.0,
         "valid_output_rate": 1.0,
-        "latency_seconds": {"p50": 0.61, "p95": 0.91},
+        "latency_seconds": {
+          "p50": 0.61,
+          "p95": 0.91
+        },
         "input_tokens": 500,
         "output_tokens": 90,
-        "estimated_cost_usd": 0.0008
+        "estimated_cost_usd": 0.0008,
+        "priced_cost_usd": 0.0008,
+        "cost_coverage": {
+          "known_requests": 5,
+          "missing_usage_requests": 0,
+          "missing_price_requests": 0,
+          "unobserved_retry_requests": 0
+        },
+        "usage_coverage": {
+          "input_tokens": 5,
+          "output_tokens": 5
+        }
       },
-      "samples": [{"valid_output": true}]
+      "samples": [
+        {
+          "valid_output": true
+        }
+      ]
     }
   ],
   "pricing_coverage": {
-    "summary": {"billable": 1},
+    "summary": {
+      "billable": 1
+    },
     "models": [
       {
         "provider": "example",
@@ -46,8 +66,25 @@
         "cost_delta_usd": 0.0004,
         "success_rate_delta": 0.0,
         "valid_output_rate_delta": 0.0,
-        "regressions": ["latency_p95", "cost"]
+        "regressions": [
+          "latency_p95",
+          "cost"
+        ]
       }
     ]
-  }
+  },
+  "cost_coverage": {
+    "known_requests": 5,
+    "missing_usage_requests": 0,
+    "missing_price_requests": 0,
+    "unobserved_retry_requests": 0
+  },
+  "usage_coverage": {
+    "input_tokens": 5,
+    "output_tokens": 5
+  },
+  "total_input_tokens": 500,
+  "total_output_tokens": 90,
+  "total_estimated_cost_usd": 0.0008,
+  "priced_cost_usd": 0.0008
 }

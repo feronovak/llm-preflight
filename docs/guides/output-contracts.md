@@ -99,6 +99,31 @@ matches a whole response without regard to case or surrounding whitespace.
 
 ## A production JSON contract
 
+The output validator accepts only `type`, `properties`, `required`, `items`,
+`minItems`, `maxItems`, `enum`, boolean `additionalProperties`, and inclusive
+numeric `minimum`/`maximum`. Every node requires a supported type;
+unsupported keywords are configuration errors, including rules inside nested
+objects and arrays. On objects, `additionalProperties: false` rejects keys not
+declared in `properties`; omission or `true` permits them. Numeric bounds apply
+to number/integer fields, require finite values, and include both endpoints.
+Schema-valued additional properties and exclusive bounds are unsupported.
+Canonical tool-schema linting has a separate subset.
+
+Enum equality follows JSON value types recursively: boolean `true` is distinct
+from numeric `1`, including inside objects and arrays. Numerically equivalent
+`1` and `1.0` match; object key order does not matter, and array order does.
+The parser rejects non-JSON `NaN` and `Infinity` constants and exponents that
+overflow the finite numeric range under every parsing policy, including when
+an object field has no numeric schema rule. Decimal values that would round to
+a different number are rejected; oversized integers fail safely. Prose parsing
+will skip a malformed outer JSON value rather than accept one of its nested
+objects as a separate result.
+
+For a confidence field, use `{"type":"number","minimum":0,"maximum":1}`.
+Pair it with positive fixtures at the boundaries and negative fixtures such as
+confidence `2`. A generic schema still needs a case-specific expectation to
+detect a wrong route for a particular ticket.
+
 Use a JSON Schema subset when your code needs fields and types, not just valid
 JSON. This is a complete prompt object:
 

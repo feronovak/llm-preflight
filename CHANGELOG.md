@@ -4,10 +4,55 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.18.0 - 2026-09-28
+
+### Fixed
+
+- Compare output-schema enum members recursively by JSON value type so numeric
+  `1`/`0` cannot impersonate boolean `true`/`false` inside objects or arrays.
+  Preserve numerical equivalence.
+- Reject non-JSON `NaN` and `Infinity` constants and finite-range overflow in
+  all structured-output parsing policies, including fields with no numeric
+  schema rule. Reject decimal values that would round into a different number,
+  and treat oversized integers as invalid output instead of raising a decoder
+  exception. Prose parsing does not salvage nested values from a malformed
+  outer value. Bind these corrections to validator semantics
+  `output-schema-3` so earlier evidence is not treated as equivalent.
+- Preserve missing or invalid provider usage as unavailable cost evidence;
+  retain known subtotals and distinguish missing usage from missing prices.
+  Include warmups when deciding completeness and reporting run cost.
+- Apply strict pricing freshness to every billable source description and
+  reject future review dates under the strict policy.
+- Reject unsupported output-schema keywords and invalid rule combinations
+  recursively before planning or provider requests; retain the separate
+  canonical tool-schema subset.
+- Preserve omitted Gemini output usage and avoid coercing malformed token
+  counts into a valid estimate.
+- Flag unverified cost completeness in legacy artifacts and suppress cost
+  deltas or recommendations based on incomplete evidence. Retain known final
+  response cost after retries while keeping unobserved retry usage unknown.
+
+### Added
+
+- Enforce boolean `additionalProperties` on output objects and inclusive finite
+  `minimum`/`maximum` bounds on numeric outputs, including nested array items.
+  Reject invalid rule combinations and non-finite numeric responses.
+- Bind output-validator semantics to contract provenance. Different known
+  semantics are incompatible; matching contract hashes without a semantics
+  version have unknown comparability.
+- Add a source-checkout application-owned configuration example with reviewed
+  request/schema/config fixtures and tests for consumer drift. It does not
+  execute application code through Preflight or establish pilot adoption.
+
 ### Changed
 
 - Point the repository Action default, smoke check, and starter workflow at
-  the published 2.17.1 package.
+  the published 2.17.1 package during release preparation.
+- Recheck all 34 bundled public price snapshots on 2026-09-28 and link OpenAI
+  rows to their model-specific official pricing pages. Qwen rows retain
+  conservative USD list rates while a temporary discount is displayed.
+- Refresh the synthetic report gallery with explicit invented cost/usage
+  coverage so its intended decisions remain reproducible.
 
 ## 2.17.1 - 2026-09-25
 

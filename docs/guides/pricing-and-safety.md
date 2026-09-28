@@ -1,6 +1,6 @@
 # Tests, pricing, and safety
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 ## Built-in tests and validation
 
@@ -96,11 +96,22 @@ Treat unknown or stale prices as a reason not to compare cost rankings.
 an undated price when `"require_current_pricing": true` is set.
 
 That setting prevents a paid run until every billable selected route has a
-current dated price. It also applies the freshness window to dated user
-overrides, so a one-time override cannot satisfy the gate indefinitely. For a
+current dated price. The freshness window applies to every billable source,
+including user overrides and custom descriptions such as `official provider
+pricing`. A description is provenance, not a freshness exemption. Future review
+dates are invalid (`undated`, warning code `future_as_of`) in strict mode.
+Review the price and record its actual review date; do not advance a date just
+to pass the gate. Without strict mode, custom override freshness remains
+advisory; official snapshots and catalogue prices retain their age checks. For a
 stale direct-provider snapshot, upgrade `llm-preflight` once its official
 snapshot has been refreshed, or supply reviewed override evidence; a refresh
 write does not permanently freeze an older bundled snapshot.
+
+Observed cost also requires usable provider usage. Omitted counts are not zero
+tokens. Missing usage makes the run total unavailable and a passing contract
+inconclusive; any known cost is displayed as an incomplete subtotal. Reports
+include warmup cost, and omit cost-based recommendations for a model with
+incomplete evidence. Token subtotals must be read alongside `usage_coverage`.
 
 ## Snapshot verification
 

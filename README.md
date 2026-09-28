@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -106,11 +106,18 @@ no-spend validation and planning; a live provider run remains an explicit,
 bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
 or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
-The latest published package is **2.17.1**. Native routes and the official
-pricing snapshots it carries are listed in
-[current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md). That list is coverage
-for direct-provider prices, not a ranking and not every ID the catalogue can
-discover.
+Version **2.18.0** includes the evidence-integrity and output-validator
+corrections below. Native routes and release-reviewed official pricing snapshots
+are listed in [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
+That list is direct-provider price coverage, not a ranking or every discoverable ID.
+
+Missing or malformed provider usage keeps cost unavailable, with known spend
+shown as a subtotal. Strict pricing freshness applies to every source
+description. Unsupported output-schema constraints fail before provider work.
+Legacy results without request coverage show unverified cost evidence; unobserved
+retry usage also prevents a complete total. The output subset enforces boolean
+`additionalProperties` and inclusive finite numeric bounds, and records
+validator semantics in provenance.
 
 For earlier releases, see the [changelog](CHANGELOG.md).
 

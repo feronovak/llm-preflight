@@ -71,6 +71,10 @@ make package     # build the distribution
 make audit       # dependency and security audit
 ```
 
+For every reviewable build, apply the contributor-facing
+[build quality rating](docs/development/build-rating.md) and retain its evidence
+locally. Scores do not replace verification gates or owner release decisions.
+
 ## Git hygiene
 
 No AI assistant is recorded as a contributor: no `Co-Authored-By` trailer

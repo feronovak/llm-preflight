@@ -1,6 +1,13 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
+In 2.18.0, `run_preflight` preserves missing usage as unavailable cost and
+reports a passing contract with incomplete cost as inconclusive. Read its
+decision and coverage fields; do not turn null totals into zero. Output-schema
+keywords outside the documented subset are rejected recursively by validation,
+planning, and run tools. Strict pricing uses review dates for every billable
+source label.
+
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is

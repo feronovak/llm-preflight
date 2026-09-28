@@ -8,7 +8,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from .decision import build_decision
+from .decision import build_decision, legacy_cost_evidence
 
 _SCHEMA_VERSION = 1
 _SOURCE_LABELS = {
@@ -178,12 +178,23 @@ def _model_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
                         if isinstance(summary.get("latency_seconds", {}), dict)
                         else None
                     ),
-                    "input_tokens": _number(summary.get("input_tokens")),
-                    "output_tokens": _number(summary.get("output_tokens")),
+                    "input_tokens": _usage_value(summary, "input_tokens"),
+                    "output_tokens": _usage_value(summary, "output_tokens"),
                     "cost": _number(summary.get("estimated_cost_usd")),
                 }
             )
     return rows
+
+
+def _usage_value(summary: dict[str, Any], field: str) -> float | None:
+    if summary.get("cost_coverage", {}).get("unobserved_retry_requests", 0):
+        return None
+    coverage = summary.get("usage_coverage")
+    if isinstance(coverage, dict) and coverage.get(field, 0) < summary.get(
+        "requests", 0
+    ):
+        return None
+    return _number(summary.get(field))
 
 
 def _decision(result: dict[str, Any]) -> tuple[str, str]:
@@ -284,11 +295,48 @@ def _report_data(payload: Any) -> dict[str, Any]:
     state, reason = _decision(result)
     comparability, regressions, baseline_state = _comparability(result)
     rows = _model_rows(result)
+    legacy = legacy_cost_evidence(result)
+    if legacy:
+        for row in rows:
+            row["cost"] = None
+            row["input_tokens"] = row["output_tokens"] = None
     requests = sum(row["requests"] or 0 for row in rows)
-    input_tokens = sum(row["input_tokens"] or 0 for row in rows)
-    output_tokens = sum(row["output_tokens"] or 0 for row in rows)
+    input_tokens = (
+        None
+        if any(row["input_tokens"] is None for row in rows)
+        else sum(row["input_tokens"] for row in rows)
+    )
+    output_tokens = (
+        None
+        if any(row["output_tokens"] is None for row in rows)
+        else sum(row["output_tokens"] for row in rows)
+    )
     costs = [row["cost"] for row in rows]
     cost = None if not costs or any(value is None for value in costs) else sum(costs)
+    if "cost_coverage" in result:
+        # Modern results account for warmups and partial evidence at sample level.
+        cost = _number(result.get("total_estimated_cost_usd"))
+        requests = sum(
+            model.get(phase, {}).get("requests", 0)
+            for model in result["models"]
+            for phase in ("summary", "warmup_summary")
+        )
+        usage_summary = {
+            "requests": requests,
+            "usage_coverage": result.get("usage_coverage", {}),
+            "cost_coverage": result.get("cost_coverage", {}),
+        }
+        input_tokens = _usage_value(
+            {**usage_summary, "input_tokens": result.get("total_input_tokens")},
+            "input_tokens",
+        )
+        output_tokens = _usage_value(
+            {**usage_summary, "output_tokens": result.get("total_output_tokens")},
+            "output_tokens",
+        )
+    subtotal = (
+        _number(result.get("priced_cost_usd")) if cost is None and not legacy else None
+    )
     contract_failures = (
         None
         if not rows or any(row["contract_failures"] is None for row in rows)
@@ -315,6 +363,8 @@ def _report_data(payload: Any) -> dict[str, Any]:
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "cost": cost,
+        "priced_cost": subtotal,
+        "legacy_cost_evidence": legacy,
         "valid_rate": weighted_valid / valid_requests if valid_requests else None,
         "contract_failures": contract_failures,
         "pricing": _pricing_rows(result),
@@ -333,6 +383,8 @@ def render_job_summary(payload: Any) -> str:
     ]
     if data["regressions"]:
         lines.append(f"**Baseline regressions:** {', '.join(data['regressions'])}")
+    if data["legacy_cost_evidence"]:
+        lines.append("Legacy artifact: cost completeness is unverified.")
     lines.extend(
         [
             "",
@@ -354,6 +406,8 @@ def render_job_summary(payload: Any) -> str:
         )
     total_cost = data["cost"]
     cost_text = "n/a" if total_cost is None else f"${total_cost:.6f}"
+    if data["priced_cost"] is not None:
+        cost_text += f" · Known cost subtotal: ${data['priced_cost']:.6f} (incomplete)"
     lines.extend(
         [
             "",
@@ -429,6 +483,13 @@ def render_report_html(payload: Any) -> str:
         else ""
     )
     cost = "n/a" if data["cost"] is None else f"${data['cost']:.6f}"
+    legacy_note = (
+        "<p>Legacy artifact: cost completeness is unverified.</p>"
+        if data["legacy_cost_evidence"]
+        else ""
+    )
+    if data["priced_cost"] is not None:
+        cost += f"; Known cost subtotal: ${data['priced_cost']:.6f} (incomplete)"
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -462,6 +523,7 @@ code {{ overflow-wrap: anywhere; }}
 <tbody>{"".join(rows)}</tbody>
 </table>
 <h2>Totals</h2>
+{legacy_note}
 <p>Requests: {escaped(_format_number(data["requests"], 0))}; usage: {escaped(_format_number(data["input_tokens"], 0))} input / {escaped(_format_number(data["output_tokens"], 0))} output tokens; estimated cost: {escaped(cost)}</p>
 <h2>Pricing provenance</h2>
 <ul>{pricing}</ul>

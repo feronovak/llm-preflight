@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from .profiles import evaluate_consumer_response, evaluate_response
+from .profiles import (
+    OUTPUT_VALIDATOR_VERSION,
+    evaluate_consumer_response,
+    evaluate_response,
+)
 from .redaction import redact_secrets, without_private_fields
 
 _TOOL_NAME = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
@@ -76,14 +81,129 @@ def validation_evaluator(validation: dict[str, Any]) -> dict[str, Any]:
 
 def validate_contract_config(config: dict[str, Any]) -> None:
     """Validate optional response fixtures and canonical tool definitions."""
+    _validate_output_contract(config.get("validation"), "validation")
     _validate_fixtures(config.get("validation_fixtures"), "validation_fixtures")
     for prompt in config.get("prompts", []):
         if isinstance(prompt, dict):
+            _validate_output_contract(
+                prompt.get("validation"),
+                f"prompt {prompt.get('name', '<unnamed>')}.validation",
+            )
             _validate_fixtures(
                 prompt.get("validation_fixtures"),
                 f"prompt {prompt.get('name', '<unnamed>')}.validation_fixtures",
             )
     _validate_tools(config.get("tools", []))
+
+
+def _validate_output_contract(validation: Any, location: str) -> None:
+    if isinstance(validation, dict) and "json_schema" in validation:
+        validate_output_schema(validation["json_schema"], f"{location}.json_schema")
+
+
+def validate_output_schema(schema: Any, location: str) -> None:
+    """Reject output constraints that the portable validator cannot enforce."""
+    if not isinstance(schema, dict):
+        raise ValueError(f"{location} must be an object")  # noqa: TRY004
+    allowed = {
+        "type",
+        "properties",
+        "required",
+        "items",
+        "minItems",
+        "maxItems",
+        "enum",
+        "additionalProperties",
+        "minimum",
+        "maximum",
+    }
+    unknown = sorted(set(schema) - allowed)
+    if unknown:
+        raise ValueError(
+            f"{location}: unsupported output-schema keywords: {', '.join(unknown)}; "
+            "use the documented subset or a validator that enforces these constraints"
+        )
+    schema_type = schema.get("type")
+    if not isinstance(schema_type, str) or schema_type not in _SCHEMA_TYPES:
+        raise ValueError(
+            f"{location}.type must be one of: {', '.join(sorted(_SCHEMA_TYPES))}"
+        )
+    for key in ("properties", "required", "additionalProperties"):
+        if key in schema and schema_type != "object":
+            raise ValueError(f"{location}.{key} requires an object schema")
+    for key in ("items", "minItems", "maxItems"):
+        if key in schema and schema_type != "array":
+            raise ValueError(f"{location}.{key} requires an array schema")
+    if "required" in schema:
+        required = schema["required"]
+        if (
+            not isinstance(required, list)
+            or any(not isinstance(key, str) or not key for key in required)
+            or len(set(required)) != len(required)
+        ):
+            raise ValueError(f"{location}.required must be unique non-empty strings")
+    if "properties" in schema:
+        if not isinstance(schema["properties"], dict):
+            raise ValueError(f"{location}.properties must be an object")
+        for key, child in schema["properties"].items():
+            if not isinstance(key, str):
+                raise ValueError(f"{location}.properties names must be strings")  # noqa: TRY004
+            validate_output_schema(child, f"{location}.properties.{key}")
+    if "additionalProperties" in schema:
+        if not isinstance(schema["additionalProperties"], bool):
+            raise ValueError(f"{location}.additionalProperties must be a boolean")
+        if schema["additionalProperties"] is False and any(
+            key not in schema.get("properties", {})
+            for key in schema.get("required", [])
+        ):
+            raise ValueError(
+                f"{location}.required names must exist in properties when additionalProperties is false"
+            )
+    for key in ("minimum", "maximum"):
+        if key not in schema:
+            continue
+        if schema_type not in {"number", "integer"}:
+            raise ValueError(f"{location}.{key} requires a number or integer schema")
+        bound = schema[key]
+        if (
+            isinstance(bound, bool)
+            or not isinstance(bound, (int, float))
+            or (isinstance(bound, float) and not math.isfinite(bound))
+        ):
+            raise ValueError(f"{location}.{key} must be a finite number")
+    if (
+        "minimum" in schema
+        and "maximum" in schema
+        and schema["minimum"] > schema["maximum"]
+    ):
+        raise ValueError(f"{location}.minimum must not exceed maximum")
+    if "items" in schema:
+        validate_output_schema(schema["items"], f"{location}.items")
+    for key in ("minItems", "maxItems"):
+        if key in schema and (
+            not isinstance(schema[key], int)
+            or isinstance(schema[key], bool)
+            or schema[key] < 0
+        ):
+            raise ValueError(f"{location}.{key} must be a non-negative integer")
+    if schema.get("minItems", 0) > schema.get("maxItems", float("inf")):
+        raise ValueError(f"{location}.minItems must not exceed maxItems")
+    if "enum" in schema:
+        values = schema["enum"]
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"{location}.enum must be a non-empty list")
+        constraints = {key: value for key, value in schema.items() if key != "enum"}
+        for value in values:
+            try:
+                response = json.dumps(value, allow_nan=False)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"{location}.enum must contain finite JSON values"
+                ) from exc
+            if not evaluate_response(
+                response, {"type": "json_schema", "schema": constraints}
+            )["valid"]:
+                raise ValueError(f"{location}.enum values must satisfy the schema")
 
 
 def _validate_fixtures(fixtures: Any, location: str) -> None:
@@ -246,6 +366,7 @@ def provenance(
     prompts = _prompt_fingerprints(config)
     clean_config = without_private_fields(config)
     contract = {
+        "validator_version": OUTPUT_VALIDATOR_VERSION,
         "validation": config.get("validation", {}),
         "validation_fixtures": config.get("validation_fixtures", []),
         "prompts": [
@@ -278,6 +399,7 @@ def provenance(
     }
     result = {
         "schema_version": 1,
+        "validator_version": OUTPUT_VALIDATOR_VERSION,
         "config_sha256": _fingerprint(redact_secrets(clean_config)),
         "contract_sha256": _fingerprint(redact_secrets(contract)),
         "routes_sha256": _fingerprint(redact_secrets(routes)),

@@ -1122,6 +1122,94 @@ def test_wholly_unpriced_run_with_no_warmups_has_unknown_cost_confidence():
     assert result["cost_confidence"] == "unknown"
 
 
+@pytest.mark.parametrize(
+    ("usage", "warmups", "failed", "confidence", "subtotal"),
+    [
+        ([None], 0, False, "unknown", None),
+        ([20, None], 0, False, "partial", 0.00014),
+        ([None, 20], 1, False, "partial", 0.00014),
+        ([None], 0, True, "unknown", None),
+        ([0], 0, False, "complete", 0.0),
+    ],
+)
+def test_benchmark_cost_evidence_includes_every_request(
+    monkeypatch, usage, warmups, failed, confidence, subtotal
+):
+    from llm_preflight.reporting import render_job_summary, render_report_html
+
+    responses = iter(usage)
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            count = next(responses)
+            return {
+                "ok": not failed,
+                "error": "request failed" if failed else None,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "input_tokens": 0 if count == 0 else 100,
+                "output_tokens": count,
+                "response": "billing",
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    events = []
+    result = run_benchmark(
+        {
+            "prompt": "I was charged twice",
+            "warmups": warmups,
+            "repetitions": len(usage) - warmups,
+            "concurrency": 1,
+            "models": [
+                {
+                    "provider": "openai",
+                    "model": "test-model",
+                    "input_cost_per_million": 1,
+                    "output_cost_per_million": 2,
+                }
+            ],
+        },
+        progress=events.append,
+    )
+
+    assert result["cost_confidence"] == confidence
+    assert (
+        result["priced_cost_usd"] == pytest.approx(subtotal)
+        if subtotal is not None
+        else result["priced_cost_usd"] is None
+    )
+    assert result["total_estimated_cost_usd"] == (
+        0 if confidence == "complete" else None
+    )
+    assert result["unpriced_models"] == []
+    assert result["cost_coverage"] == {
+        "known_requests": sum(value is not None for value in usage),
+        "missing_usage_requests": usage.count(None),
+        "missing_price_requests": 0,
+        "unobserved_retry_requests": 0,
+    }
+    assert result["decision"]["state"] == (
+        "fail" if failed else "pass" if confidence == "complete" else "inconclusive"
+    )
+    if confidence != "complete":
+        assert "usage" in " ".join(result["decision"]["blocking_warnings"]).lower()
+        assert "missing usage" in report(result)
+        assert "- Recommended: unavailable" in report(result)
+        assert "Estimated cost: n/a" in render_job_summary(result)
+        assert "estimated cost: n/a" in render_report_html(result)
+        assert "output tokens" in render_job_summary(result)
+        assert "n/a output tokens" in render_job_summary(result)
+        if subtotal is not None:
+            assert "Known cost subtotal: $0.000140" in render_job_summary(result)
+    for event in events:
+        if event.get("type") == "request_complete" and event["output_tokens"] is None:
+            assert event["estimated_cost_usd"] is None
+
+
 def test_profile_progress_reports_invalid_outputs_separately(monkeypatch):
     class FakeClient:
         model: ClassVar = {"base_url": "https://example.test"}

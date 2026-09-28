@@ -1,6 +1,6 @@
 # Set up a real project
 
-**Last reviewed:** 2026-09-25 · **As of:** v2.17.1
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
 
 Use one representative request from your application and a rule its consumer
 actually enforces. This example routes a known billing ticket and rejects the
@@ -127,3 +127,40 @@ repository secrets and reviewed request and cost bounds. The [CI guide](../autom
 explains baseline gates and the fork-safe mock starter. For coding agents, use
 the same config with the [MCP server](../automation/mcp.md): `validate_config`
 and `dry_run_plan` inspect it without provider access.
+
+## 5. Generate configuration from application-owned code
+
+The [application-alignment example](../../examples/application_alignment/export_preflight.py)
+is a source-checkout prototype for the 2.18.0 validator subset. Its
+[small application contract](../../examples/application_alignment/app.py) owns
+request construction, response fields, and a separate parser. The exporter
+reuses those definitions and adds expectations for one billing ticket. It
+does not contact a provider, read credentials, or execute the parser.
+
+From a checkout of this source version:
+
+```bash
+python3 -m examples.application_alignment.export_preflight > /tmp/app-preflight.json
+python3 -m llm_preflight /tmp/app-preflight.json --contract-check --json
+python3 -m llm_preflight /tmp/app-preflight.json --dry-run --no-env-file --json
+```
+
+The generated configuration uses a mock, one request, zero synthetic cost,
+and no retained responses. A mock run remains inconclusive. The Python example
+is available in the repository, not an installed Preflight import or command.
+The request/schema and generated-config JSON fixtures are versioned beside it;
+[focused tests](../../tests/test_application_alignment.py) check their content
+and demonstrate a field rename changing the generated request and schema.
+
+In your application, regenerate during CI and compare against the reviewed
+configuration. If it differs, review the request, schema, and case expectations
+together with the application change. Keep application parser tests as a
+separate gate: a standalone contract can pass while a changed consumer fails.
+Shared generation reduces duplicate definitions; it does not prove production
+parser execution or semantic answer quality. A generic allowed queue is also
+different from the expected queue for a particular ticket.
+
+For a live adaptation, use the application's reviewed route and price evidence
+and choose approved request/cost caps. The mock's zero rates are not live model
+prices. This prototype has deterministic verification, not pilot adoption
+evidence; scope further integration work from actual team friction.

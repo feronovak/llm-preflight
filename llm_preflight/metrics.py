@@ -4,7 +4,7 @@ import math
 from collections.abc import Iterable
 from typing import Any, cast
 
-from .pricing import estimate_sample_cost
+from .pricing import sample_cost_evidence, valid_token_count
 
 
 def percentile(values: Iterable[float], p: float) -> float | None:
@@ -97,23 +97,22 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
 
     def usage_numbers(field: str) -> list[float]:
         return [
-            float(sample[field]) for sample in samples if sample.get(field) is not None
+            float(sample[field])
+            for sample in samples
+            if valid_token_count(sample.get(field))
         ]
 
     input_tokens = sum(usage_numbers("input_tokens"))
     output_tokens = sum(usage_numbers("output_tokens"))
-    sample_costs = [
-        estimate_sample_cost(sample, model)
-        for sample in samples
-        if sample.get("input_tokens") is not None
-        and sample.get("output_tokens") is not None
-    ]
+    evidence = [sample_cost_evidence(sample, model) for sample in samples]
+    sample_costs = [cost for cost, _, _ in evidence]
     known_sample_costs = [
         cast(float, value) for value in sample_costs if value is not None
     ]
+    unobserved_retries = sum(int(sample.get("retry_count") or 0) for sample in samples)
     cost = (
         sum(known_sample_costs)
-        if len(known_sample_costs) == len(sample_costs)
+        if len(known_sample_costs) == len(sample_costs) and not unobserved_retries
         else None
     )
     golden_samples = [sample for sample in samples if "golden_expected" in sample]
@@ -157,7 +156,22 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
         "input_tokens": int(input_tokens),
         "cached_input_tokens": int(sum(usage_numbers("cached_input_tokens"))),
         "output_tokens": int(output_tokens),
+        "usage_coverage": {
+            field: len(usage_numbers(field))
+            for field in ("input_tokens", "output_tokens")
+        },
         "estimated_cost_usd": cost,
+        "priced_cost_usd": sum(known_sample_costs) if known_sample_costs else None,
+        "cost_coverage": {
+            "known_requests": len(known_sample_costs),
+            "unobserved_retry_requests": unobserved_retries,
+            "missing_usage_requests": sum(
+                missing_usage for _, missing_usage, _ in evidence
+            ),
+            "missing_price_requests": sum(
+                missing_price for _, _, missing_price in evidence
+            ),
+        },
         "failure_reasons": failure_reasons,
         "failure_categories": failure_categories,
         "retry_count": sum(int(sample.get("retry_count") or 0) for sample in samples),

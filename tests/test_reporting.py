@@ -6,6 +6,23 @@ import pytest
 from llm_preflight.reporting import render_job_summary, render_report_html
 
 
+@pytest.mark.parametrize(
+    ("fixture", "state"),
+    [
+        ("schema-baseline", "pass"),
+        ("schema-break", "fail"),
+        ("cheaper-candidate-fails", "fail"),
+        ("latency-cost-change", "pass"),
+    ],
+)
+def test_synthetic_gallery_declares_coverage_for_its_intended_decision(fixture, state):
+    result = json.loads((Path("examples/reports") / f"{fixture}.json").read_text())
+    summary = render_job_summary(result)
+    assert f"**Decision:** {state}" in summary
+    assert "Legacy artifact" not in summary
+    assert "Estimated cost: n/a" not in summary
+
+
 def sample_result():
     return {
         "schema_version": 1,
@@ -17,6 +34,17 @@ def sample_result():
         "prompt_name": "customer-support-prompt",
         "prompt_sha256": "a" * 64,
         "source_config": {"prompt": "private prompt contents"},
+        "total_estimated_cost_usd": 0.002,
+        "cost_confidence": "complete",
+        "cost_coverage": {
+            "known_requests": 4,
+            "missing_usage_requests": 0,
+            "missing_price_requests": 0,
+            "unobserved_retry_requests": 0,
+        },
+        "usage_coverage": {"input_tokens": 4, "output_tokens": 4},
+        "total_input_tokens": 100,
+        "total_output_tokens": 20,
         "models": [
             {
                 "name": "internal-deployment-name",
@@ -105,6 +133,36 @@ def test_job_summary_is_compact_and_omits_prompts_and_local_paths():
     assert "private prompt" not in summary
     assert "private reply" not in summary
     assert "private response text" not in summary
+
+
+def test_legacy_complete_zero_cost_is_not_verified_evidence():
+    result = sample_result()
+    result.pop("cost_coverage")
+    result["models"][0]["summary"].update(
+        requests=1,
+        failed=0,
+        successful=1,
+        success_rate=1,
+        valid_output_rate=1,
+        estimated_cost_usd=0,
+        input_tokens=0,
+        output_tokens=0,
+    )
+    result["models"][0]["samples"] = [
+        {"ok": True, "valid_output": True, "input_tokens": None, "output_tokens": None}
+    ]
+    result["cost_confidence"] = "complete"
+    result["pricing_coverage"] = {"summary": {"billable": 1}, "models": []}
+    html = render_report_html(result)
+    summary = render_job_summary(result)
+    assert "Decision: inconclusive" in html
+    assert "estimated cost: n/a" in html
+    assert "Legacy artifact: cost completeness is unverified" in html
+    assert "Estimated cost: n/a" in summary
+    assert "Legacy artifact: cost completeness is unverified" in summary
+    assert (
+        result["cost_confidence"] == "complete"
+    )  # Rendering does not rewrite history.
 
 
 def test_saved_result_renderer_rejects_unknown_major_schema():

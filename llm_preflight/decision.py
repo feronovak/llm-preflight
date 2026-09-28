@@ -21,6 +21,11 @@ _FAIL_REASONS = {
 }
 
 
+def legacy_cost_evidence(result: dict[str, Any]) -> bool:
+    """Schema-v1 artifacts without request coverage cannot prove completeness."""
+    return result.get("schema_version") == 1 and "cost_coverage" not in result
+
+
 def build_decision(result: dict[str, Any]) -> dict[str, Any]:
     """Return the v1 decision contract without changing the enclosing schema."""
     warnings = _blocking_warnings(result)
@@ -73,6 +78,16 @@ def _blocking_warnings(result: dict[str, Any]) -> list[str]:
             "resolve its pricing before using this result."
         )
     confidence = result.get("cost_confidence")
+    if billable != 0 and legacy_cost_evidence(result):
+        warnings.append("Legacy artifact: cost completeness is unverified.")
+    if billable != 0 and result.get("cost_coverage", {}).get(
+        "unobserved_retry_requests", 0
+    ):
+        warnings.append("Unobserved retry usage prevents complete cost evidence.")
+    if billable != 0 and result.get("cost_coverage", {}).get(
+        "missing_usage_requests", 0
+    ):
+        warnings.append("Missing or invalid usage prevents complete cost evidence.")
     if billable != 0 and confidence != "complete":
         warnings.append(
             f"Cost confidence is {confidence or 'unknown'}; complete cost evidence is required."

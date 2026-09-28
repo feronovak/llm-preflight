@@ -9,6 +9,7 @@ from unicodedata import east_asian_width
 
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS
+from .decision import legacy_cost_evidence
 from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
 from .pricing import (
@@ -386,6 +387,18 @@ def compare_results(
     }
     thresholds = {**defaults, **(thresholds or {})}
     comparability, warnings, incompatibility = _comparison_evidence(baseline, current)
+    cost_evidence_unknown = any(
+        legacy_cost_evidence(result)
+        or (
+            result.get("schema_version") == 1
+            and result.get("cost_confidence") != "complete"
+        )
+        for result in (baseline, current)
+    )
+    if cost_evidence_unknown:
+        warnings.append(
+            "one or both results have unverified cost completeness; cost deltas are unavailable"
+        )
     previous = {
         model.get("name", model.get("model")): model for model in baseline["models"]
     }
@@ -398,6 +411,7 @@ def compare_results(
         return {
             "ok": False,
             "comparability": comparability,
+            "cost_comparability": "incompatible",
             "warnings": warnings,
             "models": [
                 {
@@ -421,6 +435,8 @@ def compare_results(
         new_latency = _metric(new_summary, ("latency_seconds", "p95"))
         old_cost = old_summary.get("estimated_cost_usd")
         new_cost = new_summary.get("estimated_cost_usd")
+        if cost_evidence_unknown:
+            old_cost = new_cost = None
         success_delta = new_summary.get("success_rate", 0) - old_summary.get(
             "success_rate", 0
         )
@@ -477,6 +493,7 @@ def compare_results(
         )
     return {
         "ok": not any(row["regressions"] for row in rows),
+        "cost_comparability": "unknown" if cost_evidence_unknown else comparability,
         "comparability": comparability,
         "warnings": warnings,
         "models": rows,
@@ -530,6 +547,19 @@ def _comparison_evidence(
             ],
             None,
         )
+    old_validator = baseline_provenance.get("validator_version")
+    new_validator = current_provenance.get("validator_version")
+    valid_versions = all(
+        isinstance(value, str) and value for value in (old_validator, new_validator)
+    )
+    if valid_versions and old_validator != new_validator:
+        return (
+            "incompatible",
+            [
+                "results use different output validator semantics; metric deltas are not comparable"
+            ],
+            "validator_changed",
+        )
     if baseline_provenance["contract_sha256"] != current_provenance["contract_sha256"]:
         return (
             "incompatible",
@@ -540,6 +570,14 @@ def _comparison_evidence(
                 )
             ],
             "contract_changed",
+        )
+    if not valid_versions:
+        return (
+            "unknown",
+            [
+                "one or both results lack an output validator semantics version; compare metric deltas with care"
+            ],
+            None,
         )
     return "compatible", [], None
 

@@ -119,7 +119,21 @@ Unknown validation keys are rejected before a benchmark can run. The supported
 JSON Schema subset handles object `required`/`properties`, arrays and item
 limits, primitive `type`, and `enum`. Every schema node must declare one of the
 supported types; a missing or misspelled type is a configuration error rather
-than a silently ignored constraint.
+than a silently ignored constraint. The exact output-schema keywords are
+`type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`,
+boolean `additionalProperties`, and inclusive numeric `minimum`/`maximum`.
+Unsupported keywords are rejected recursively before planning or requests,
+including annotations such as `description`. Object rules require an object;
+item rules require an array. Item bounds are nonnegative integers with
+`minItems <= maxItems`; enums are nonempty arrays whose values satisfy the
+schema. `additionalProperties: false` forbids undeclared keys at that object;
+`true` or omission permits them. Schema-valued additional properties are not
+supported. Numeric bounds require number/integer nodes and finite numeric
+values, excluding booleans; `minimum` must not exceed `maximum`. Non-finite
+numeric outputs are invalid. All rules apply recursively. References,
+composition, exclusive bounds, and other keywords remain unsupported. This
+is a bounded subset, not full JSON Schema compliance. Canonical tool definitions
+have their own separate subset described below.
 
 `aliases` maps a name to a model object; use its name in `models`. An
 `environments` item is a shallow overlay—its top-level keys replace the base

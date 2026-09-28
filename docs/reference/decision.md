@@ -51,11 +51,15 @@ approval. It may be attached to `fail` as well as `inconclusive`, and covers:
 
 - a selected billable route with unknown or stale pricing;
 - `cost_confidence` other than `complete` for a run with billable routes; or
+- missing or invalid provider usage, unobserved retry usage, or unverified
+  completeness in legacy schema-v1 artifacts without `cost_coverage`; or
 - a mock-only run, which is useful for local validation but cannot provide
   live-provider evidence.
 
-Retries remain informational in each model summary. Their final-attempt latency
-does not make the decision inconclusive.
+Final-attempt latency does not account for retry attempts. When their usage
+was not retained, retries make cost evidence incomplete and prevent a billable
+run from passing. Known final-response cost remains in the subtotal. A request
+or contract failure still takes precedence and retains these warnings.
 
 An `inconclusive` state is not a failed benchmark. It means the result cannot
 support a safe decision until its warnings are resolved or explicitly reviewed.

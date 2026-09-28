@@ -49,8 +49,10 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 | `settings` | Effective repetitions, warmups, concurrency, timeout, request options, and selected profiles. |
 | `environment` | Hostname and Python version that produced the evidence. |
 | `models` | One result object per attempted model, in run order. |
-| `total_input_tokens`, `total_output_tokens`, `total_estimated_cost_usd` | Totals including warmups. Total cost is `null` whenever any selected model has unknown pricing. |
-| `priced_cost_usd`, `cost_confidence`, `unpriced_models` | Additive cost detail: the partial sum of priced requests, whether coverage is `complete`, `partial`, or `unknown`, and the resolved models excluded from a partial or unknown total. |
+| `total_input_tokens`, `total_output_tokens`, `total_estimated_cost_usd` | Reported token subtotals including warmups. Total cost is `null` whenever any represented request lacks usable usage or pricing. |
+| `priced_cost_usd`, `cost_confidence`, `unpriced_models` | Known cost subtotal (`null` if none is known), coverage (`complete`, `partial`, or `unknown`), and models with missing usable prices. Missing usage alone does not make a model unpriced. |
+| `cost_coverage` | Additive counts across measured and warmup samples: `known_requests`, `missing_usage_requests`, `missing_price_requests`, and `unobserved_retry_requests`. Missing usage includes malformed counts. The two missing-evidence counts can overlap on one request. Retry attempts have no retained usage and prevent a complete total; known final-response cost remains in the subtotal. |
+| `usage_coverage` | Counts of requests reporting usable `input_tokens` and `output_tokens`, separately. Compare each with the sum of measured and warmup request counts before treating its token subtotal as complete. |
 | `pricing_warnings` | Pricing freshness or availability warnings. |
 | `pricing_coverage` | Coverage for every selected direct model and OpenRouter route, including `priced`, `undated`, `stale`, or `unknown` status, source, source URL, as-of date, stable warning code, remediation, and whether a mock fixture is pricing-exempt. The summary separates all `selected` rows from `billable` rows and `exempt` mock fixtures, so `priced` never counts a mock. `ok` is false for stale or unknown pricing; `enforcement_ok` additionally becomes false for undated pricing when `require_current_pricing` is enabled, and is the paid-run/CI gate verdict. |
 | `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
@@ -61,6 +63,24 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |
 
 ## Model result
+
+In 2.18.0, `provenance.validator_version` identifies the output-schema
+enforcement semantics (`output-schema-3`). This revision distinguishes JSON
+booleans from numbers recursively in object/array enum members; numerical
+equivalents such as `1` and `1.0` remain equal. All structured-output parsing
+policies reject non-JSON `NaN` and `Infinity` constants and numbers whose
+exponent overflows the finite numeric range, even in fields without numeric
+schema rules. Decimal values that would round into a different number are
+rejected rather than compared inaccurately; oversized integers produce an
+invalid-JSON result instead of a decoder error. Prose parsing skips malformed
+outer values without accepting their nested objects as separate results. The
+identifier is independent
+of the package
+version and is included in contract/evidence fingerprints. A semantics change
+requires a new identifier. Baselines with different known identifiers are
+incompatible; matching contract hashes without known semantics are `unknown`.
+Different contract hashes remain incompatible, including comparisons with
+legacy artifacts. Older artifacts are never backfilled with the new identifier.
 
 Each `models[]` object identifies the resolved provider/model and includes:
 
@@ -78,8 +98,34 @@ response can be successful at HTTP/API level yet invalid for its evaluator.
 `latency_seconds`, `ttft_seconds`, and `output_tokens_per_second` are objects
 with `mean`, `min`, `p50`, `p95`, and `max` (except where a metric only has a
 meaningful subset). They are `null` when unavailable. `estimated_cost_usd` is
-`null` for unknown pricing. Summaries also include `cached_input_tokens` when
+`null` when any sample lacks usable usage or pricing. Each summary also includes
+`priced_cost_usd`, `cost_coverage`, and `usage_coverage` with the same meanings
+as the run fields, scoped to that summary. A zero-request summary has a zero
+cost and zero coverage counts; it creates no missing-evidence warning.
+Token fields sum only valid reported counts; a partial subtotal is not a full
+usage total. Summaries also include `cached_input_tokens` when
 the provider reports cache hits; output usage includes billable reasoning tokens.
+
+Absent usage is distinct from explicitly reported zero usage. Usable counts are
+nonnegative finite integral numbers, excluding booleans and numeric strings.
+Missing or invalid input/output counts make cost unavailable; an explicitly
+reported invalid cached count also makes it unavailable. Missing optional cache
+counts use the ordinary uncached rate. Gemini requires a reported candidate
+count and adds a valid reported reasoning count; an omitted optional reasoning
+count adds nothing.
+
+A billable run that passes its output contract but lacks complete cost evidence
+is `inconclusive`. Request or contract failures retain their failure verdict
+and include evidence warnings. Complete zero-token evidence remains a known
+zero estimate. Mixed evidence preserves the known subtotal and never implies
+that the unavailable total is zero.
+
+Legacy schema-v1 artifacts without `cost_coverage` cannot establish cost
+completeness. Readers retain the saved data, mark its cost evidence unverified,
+and show cost as unavailable in reports. A billable result with unverified
+legacy evidence is inconclusive unless a failure takes precedence. Baseline
+comparisons suppress cost deltas and expose `cost_comparability: unknown` for
+legacy or incomplete saved evidence, independently of contract comparability.
 
 `output_tokens_per_second` is also `null` when the stream was not observably
 incremental — fewer than two text chunks, or a generation window under 100 ms.

@@ -19,14 +19,20 @@ from .contracts import (
     check_contract,
     provenance,
     validate_contract_config,
+    validate_output_schema,
     validation_evaluator,
 )
-from .decision import build_decision
+from .decision import build_decision, legacy_cost_evidence
 from .eligibility import IncompatibleCatalogTypeError, assert_text_smoke_models
 from .images import prepare_image_inputs
 from .metrics import summarize
 from .presets import expand_presets, preset_warnings
-from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
+from .pricing import (
+    estimate_sample_cost,
+    pricing_coverage_report,
+    pricing_freshness_report,
+    resolve_pricing,
+)
 from .profiles import (
     PROFILE_ALIASES,
     evaluate_consumer_response,
@@ -346,9 +352,7 @@ def validate_config_validations(config: dict[str, Any]) -> None:
         if unknown:
             raise ValueError(f"unknown validation keys: {', '.join(unknown)}")
         if "json_schema" in validation:
-            _validate_json_schema_config(
-                validation["json_schema"], f"{location}.json_schema"
-            )
+            validate_output_schema(validation["json_schema"], f"{location}.json_schema")
         if "json_set" in validation:
             json_set = validation["json_set"]
             if (
@@ -477,29 +481,6 @@ def validate_config_validations(config: dict[str, Any]) -> None:
             + ", ".join(collisions)
         )
     validate_contract_config(config)
-
-
-def _validate_json_schema_config(schema: Any, location: str) -> None:
-    supported = {"object", "array", "string", "number", "integer", "boolean"}
-    if not isinstance(schema, dict):
-        raise ValueError(f"{location} must be an object")  # noqa: TRY004
-    schema_type = schema.get("type")
-    if schema_type not in supported:
-        raise ValueError(
-            f"{location}.type must be one of: {', '.join(sorted(supported))}"
-        )
-    if "required" in schema and (
-        not isinstance(schema["required"], list)
-        or any(not isinstance(key, str) or not key for key in schema["required"])
-    ):
-        raise ValueError(f"{location}.required must be a list of strings")
-    if "properties" in schema:
-        if not isinstance(schema["properties"], dict):
-            raise ValueError(f"{location}.properties must be an object")
-        for key, child in schema["properties"].items():
-            _validate_json_schema_config(child, f"{location}.properties.{key}")
-    if "items" in schema:
-        _validate_json_schema_config(schema["items"], f"{location}.items")
 
 
 def _request_exception_sample(exc: Exception) -> dict[str, Any]:
@@ -740,14 +721,9 @@ def _run_profiles(
 
 
 def _sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float | None:
-    input_price = model.get("input_cost_per_million")
-    output_price = model.get("output_cost_per_million")
-    if input_price is None or output_price is None:
+    if sample.get("retry_count"):
         return None
-    return (
-        float(sample.get("input_tokens") or 0) * float(input_price)
-        + float(sample.get("output_tokens") or 0) * float(output_price)
-    ) / 1_000_000
+    return estimate_sample_cost(sample, model)
 
 
 def _profile_request_count(profiles: list[dict[str, Any]], repetitions: int) -> int:
@@ -966,13 +942,27 @@ def run_benchmark(
         if _should_stop(config, model_result):
             break
 
-    costs = [
-        model[summary]["estimated_cost_usd"]
+    summaries = [
+        model[summary]
         for model in models_result
         for summary in ("summary", "warmup_summary")
         if model[summary]["requests"] > 0
     ]
-    known_costs = [cost for cost in costs if cost is not None]
+    costs = [summary["estimated_cost_usd"] for summary in summaries]
+    known_costs = [
+        summary["priced_cost_usd"]
+        for summary in summaries
+        if summary["priced_cost_usd"] is not None
+    ]
+    cost_coverage = {
+        field: sum(summary["cost_coverage"][field] for summary in summaries)
+        for field in (
+            "known_requests",
+            "missing_usage_requests",
+            "missing_price_requests",
+            "unobserved_retry_requests",
+        )
+    }
     unpriced_models = [
         {
             "name": model["name"],
@@ -981,12 +971,16 @@ def run_benchmark(
         }
         for model in models_result
         if any(
-            model[summary]["estimated_cost_usd"] is None
+            model[summary]["cost_coverage"]["missing_price_requests"] > 0
             for summary in ("summary", "warmup_summary")
         )
     ]
     cost_confidence = (
-        "complete" if not unpriced_models else "partial" if known_costs else "unknown"
+        "complete"
+        if all(cost is not None for cost in costs)
+        else "partial"
+        if known_costs
+        else "unknown"
     )
     result = {
         "schema_version": 1,
@@ -1032,9 +1026,16 @@ def run_benchmark(
             for model in models_result
             for summary in ("summary", "warmup_summary")
         ),
-        "total_estimated_cost_usd": (sum(known_costs) if not unpriced_models else None),
+        "total_estimated_cost_usd": (
+            sum(known_costs) if cost_confidence == "complete" else None
+        ),
         "priced_cost_usd": sum(known_costs) if known_costs else None,
         "cost_confidence": cost_confidence,
+        "cost_coverage": cost_coverage,
+        "usage_coverage": {
+            field: sum(summary["usage_coverage"][field] for summary in summaries)
+            for field in ("input_tokens", "output_tokens")
+        },
         "unpriced_models": unpriced_models,
     }
     if config.get("_source_config_path"):
@@ -1122,6 +1123,13 @@ def _ranking_metrics(model: dict[str, Any]) -> dict[str, Any]:
 
 def _executive_summary(result: dict[str, Any]) -> list[str]:
     metrics = [_ranking_metrics(model) for model in result["models"]]
+    if legacy_cost_evidence(result):
+        for item in metrics:
+            item["cost"] = None
+    for model, item in zip(result["models"], metrics):
+        warmup = model.get("warmup_summary", {})
+        if warmup.get("requests", 0) and warmup.get("estimated_cost_usd") is None:
+            item["cost"] = None
     timed = [
         item
         for item in metrics
@@ -1189,9 +1197,20 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         lines.append(f"- Excluded from recommendations: {details}.")
     total_cost = result.get("total_estimated_cost_usd")
     priced_cost = result.get("priced_cost_usd")
+    if legacy_cost_evidence(result):
+        total_cost = priced_cost = None
     unpriced_names = ", ".join(
         model.get("name", model.get("model", "unknown"))
         for model in result.get("unpriced_models", [])
+    )
+    unavailable_reason = (
+        "legacy cost completeness is unverified"
+        if legacy_cost_evidence(result)
+        else "missing usage prevents complete cost evidence"
+        if result.get("cost_coverage", {}).get("missing_usage_requests", 0)
+        else "unobserved retry usage prevents complete cost evidence"
+        if result.get("cost_coverage", {}).get("unobserved_retry_requests", 0)
+        else "one or more models lack pricing"
     )
     lines.append(
         "- Total spent: "
@@ -1204,10 +1223,10 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
             )
             if total_cost is not None
             else (
-                f"unavailable; one or more models lack pricing. Priced spend: "
+                f"unavailable; {unavailable_reason}. Priced spend: "
                 f"**${priced_cost:.6f}** including warmups."
                 if priced_cost is not None
-                else "unavailable; one or more models lack pricing."
+                else f"unavailable; {unavailable_reason}."
             )
         )
     )
@@ -1336,7 +1355,11 @@ def report(result: dict[str, Any]) -> str:
         if profile_mode:
             for profile in model["profiles"]:
                 summary = profile["summary"]
-                cost = summary["estimated_cost_usd"]
+                cost = (
+                    None
+                    if legacy_cost_evidence(result)
+                    else summary["estimated_cost_usd"]
+                )
                 token_rate = summary["output_tokens_per_second"]["p50"]
                 lines.append(
                     f"| {model['name']} | {profile['name']} "
@@ -1349,7 +1372,7 @@ def report(result: dict[str, Any]) -> str:
                 )
             continue
         summary = model["summary"]
-        cost = summary["estimated_cost_usd"]
+        cost = None if legacy_cost_evidence(result) else summary["estimated_cost_usd"]
         token_rate = summary["output_tokens_per_second"]["p50"]
         token_rate_text = "n/a" if token_rate is None else f"{token_rate:.1f}"
         cost_text = "n/a" if cost is None else f"${cost:.6f}"
@@ -1449,7 +1472,11 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         for model in result["models"]:
             for profile in model["profiles"]:
                 summary = profile["summary"]
-                cost = summary["estimated_cost_usd"]
+                cost = (
+                    None
+                    if legacy_cost_evidence(result)
+                    else summary["estimated_cost_usd"]
+                )
                 rate = summary["output_tokens_per_second"]["p50"]
                 reliability = summary.get("valid_output_rate", summary["success_rate"])
                 rows.append(
@@ -1477,7 +1504,9 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         ]
         for model in result["models"]:
             summary = model["summary"]
-            cost = summary["estimated_cost_usd"]
+            cost = (
+                None if legacy_cost_evidence(result) else summary["estimated_cost_usd"]
+            )
             rate = summary["output_tokens_per_second"]["p50"]
             rows.append(
                 [

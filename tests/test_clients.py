@@ -476,6 +476,37 @@ def test_gemini_request_and_events():
     assert usage == {"input_tokens": 1, "output_tokens": 10}
 
 
+@pytest.mark.parametrize(
+    "usage_metadata", [{}, {"promptTokenCount": 100}, {"thoughtsTokenCount": 8}]
+)
+def test_gemini_does_not_invent_missing_output_usage(usage_metadata):
+    client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
+    _, usage = client.parse_event({"usageMetadata": usage_metadata})
+    assert usage.get("output_tokens") is None
+
+
+@pytest.mark.parametrize("value", [True, -1, "2", 1.5, float("nan"), float("inf")])
+def test_gemini_does_not_coerce_invalid_output_components(value):
+    client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
+    _, usage = client.parse_event(
+        {
+            "usageMetadata": {
+                "promptTokenCount": 100,
+                "candidatesTokenCount": value,
+                "thoughtsTokenCount": 8,
+            }
+        }
+    )
+    from llm_preflight.pricing import estimate_sample_cost
+
+    assert (
+        estimate_sample_cost(
+            usage, {"input_cost_per_million": 1, "output_cost_per_million": 2}
+        )
+        is None
+    )
+
+
 def test_gemini_merges_provider_specific_generation_config():
     client = create_client({"provider": "gemini", "model": "gemini-test"}, 10)
     body = client.body(

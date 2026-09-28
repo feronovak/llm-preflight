@@ -116,6 +116,25 @@ def test_compare_results_reports_metric_deltas_and_regressions():
     assert "cost" in row["regressions"]
 
 
+def test_saved_legacy_cost_does_not_substantiate_a_saving():
+    baseline = {
+        "schema_version": 1,
+        "cost_confidence": "complete",
+        "provenance": {"schema_version": 1, "contract_sha256": "same"},
+        "models": [{"name": "candidate", "summary": _summary(1, 1, 1)}],
+    }
+    current = {
+        **baseline,
+        "cost_coverage": {"known_requests": 1},
+        "models": [{"name": "candidate", "summary": _summary(1, 0, 1)}],
+    }
+    comparison = compare_results(baseline, current)
+    assert comparison["models"][0]["cost_delta_usd"] is None
+    assert comparison["cost_comparability"] == "unknown"
+    assert any("cost completeness" in warning for warning in comparison["warnings"])
+    assert baseline["models"][0]["summary"]["estimated_cost_usd"] == 1
+
+
 def test_compare_results_marks_different_contract_evidence_inconclusive():
     baseline = {
         "provenance": {"schema_version": 1, "contract_sha256": "before"},

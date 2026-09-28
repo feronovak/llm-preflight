@@ -11,6 +11,7 @@ from typing import Any
 
 from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
 from .images import input_image_parts
+from .pricing import valid_token_count
 from .security import open_public_url, require_http_url
 
 TokenUsage = dict[str, int | None]
@@ -263,7 +264,7 @@ class ProviderClient(ABC):
                 # only when the stream was observably incremental.
                 throughput = (
                     output_tokens / generation_seconds
-                    if output_tokens is not None
+                    if valid_token_count(output_tokens)
                     and generation_seconds is not None
                     and generation_seconds >= MIN_GENERATION_WINDOW_SECONDS
                     and len(content) >= 2
@@ -585,12 +586,19 @@ class GeminiClient(ProviderClient):
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
         usage = event.get("usageMetadata") or {}
+        output_tokens = usage.get("candidatesTokenCount")
+        thoughts = usage.get("thoughtsTokenCount", 0)
+        if valid_token_count(output_tokens):
+            # An omitted optional reasoning count means no reported reasoning.
+            # Explicit malformed components remain invalid evidence, without coercion.
+            output_tokens = (
+                int(output_tokens) + int(thoughts)
+                if valid_token_count(thoughts)
+                else thoughts
+            )
         normalized = {
             "input_tokens": usage.get("promptTokenCount"),
-            "output_tokens": sum(
-                int(usage.get(key) or 0)
-                for key in ("candidatesTokenCount", "thoughtsTokenCount")
-            ),
+            "output_tokens": output_tokens,
         }
         if usage.get("cachedContentTokenCount") is not None:
             normalized["cached_input_tokens"] = usage["cachedContentTokenCount"]

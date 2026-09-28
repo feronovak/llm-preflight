@@ -1,0 +1,21 @@
+{
+  "request": {
+    "prompt": "Route this support ticket: I was charged twice for the same subscription.",
+    "request": {
+      "system_prompt": "Return only JSON with queue, priority, confidence. Allowed queues: billing, technical, account. Allowed priorities: high, normal.",
+      "temperature": 0,
+      "max_output_tokens": 100,
+      "retry": {"max_attempts": 1}
+    }
+  },
+  "application_schema": {
+    "type": "object",
+    "required": ["queue", "priority", "confidence"],
+    "additionalProperties": false,
+    "properties": {
+      "queue": {"type": "string", "enum": ["billing", "technical", "account"]},
+      "priority": {"type": "string", "enum": ["high", "normal"]},
+      "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+    }
+  }
+}

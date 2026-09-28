@@ -92,10 +92,9 @@ first-party routes we can price honestly:
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
 
 The [GitHub Marketplace Action guide](../automation/github-action.md) shows
-how to use the published 2.18.1 package with its release-tag Action. Pages
+how to use the published 2.18.2 package with its release-tag Action. Pages
 with an older **As of** stamp still describe their stated version; they were
-not all re-reviewed for 2.18.2. After 2.18.2 publishes, the repository Action
-default and installation examples will be updated to that package.
+not all re-reviewed for 2.18.2.
 
 See the [model catalogue](model-catalog.md) for discover → probe → smoke, and
 [`examples/frontier-candidates.json`](../../examples/frontier-candidates.json)

@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- Point the repository Action default, smoke workflow, and CI examples at the
+  published 2.18.2 package after the release.
+
 ## 2.18.2 - 2026-09-28
 
 ### Fixed

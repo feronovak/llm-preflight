@@ -414,6 +414,8 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
             "input": prompt,
             "store": False,
         }
+        if options.get("system_prompt"):
+            body["instructions"] = options["system_prompt"]
         limit = options.get(
             "max_output_tokens", options.get("max_tokens", DEFAULT_MAX_OUTPUT_TOKENS)
         )

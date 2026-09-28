@@ -330,6 +330,47 @@ def test_resolve_enriches_anthropic_version_separator_match():
     assert models[0]["capability_evidence"][-1]["source"] == "openrouter-normalized"
 
 
+@pytest.mark.parametrize(
+    ("provider", "author", "model_id", "native_adapter"),
+    [
+        ("anthropic", "anthropic", "claude-opus-5-5", "anthropic_messages"),
+        ("xai", "x-ai", "grok-4.7", "xai_chat"),
+    ],
+)
+def test_router_enrichment_preserves_official_native_adapter(
+    provider, author, model_id, native_adapter
+):
+    models = resolve_models(
+        {
+            "models": [
+                {
+                    "provider": provider,
+                    "model": model_id,
+                    "catalog_type": "text-ready",
+                    "catalog_confidence": "official",
+                    "capabilities": {
+                        "text_generation": "ready",
+                        "adapter": native_adapter,
+                    },
+                },
+                {
+                    "provider": "openrouter",
+                    "model": f"{author}/{model_id}",
+                    "capabilities": {
+                        "output_modalities": ["text"],
+                        "adapter": "openrouter_chat",
+                        "supported_parameters": ["max_tokens"],
+                    },
+                },
+            ]
+        }
+    )
+
+    assert models[0]["capabilities"]["adapter"] == native_adapter
+    assert models[0]["catalog_confidence"] == "official"
+    assert models[0]["capabilities"]["supported_parameters"] == ["max_tokens"]
+
+
 def test_openrouter_enrichment_does_not_reclassify_official_decision_models():
     models = resolve_models(
         {

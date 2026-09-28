@@ -38,6 +38,27 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     assert (ROOT / "docs/automation/mcp.md").is_file()
 
 
+def test_homepage_model_list_matches_the_dated_observed_comparison():
+    readme = (ROOT / "README.md").read_text()
+    docs_index = (ROOT / "docs/index.md").read_text()
+    study_path = ROOT / "docs/guides/observed-model-comparison.md"
+    study = study_path.read_text()
+
+    assert "docs/guides/observed-model-comparison.md" in readme
+    assert "guides/observed-model-comparison.md" in docs_index
+    assert "2026-09-28" in study
+
+    homepage_section = readme.split("## Models exercised in a dated study", 1)[1]
+    homepage_section = homepage_section.split("\n## ", 1)[0]
+    study_section = study.split("## Observed results", 1)[1]
+    study_section = study_section.split("\n## ", 1)[0]
+    homepage_ids = set(re.findall(r"`([\w./-]+)`", homepage_section))
+    study_ids = set(re.findall(r"\| `([\w./-]+)` \|", study_section))
+
+    assert len(study_ids) == 24
+    assert homepage_ids == study_ids
+
+
 def test_mcp_release_notes_and_security_boundary_are_current():
     changelog = (ROOT / "CHANGELOG.md").read_text()
     mcp_guide = (ROOT / "docs/automation/mcp.md").read_text()
@@ -181,7 +202,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/guides/model-catalog.md",):
-        assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.1" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
         assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in page.read_text()
@@ -200,10 +221,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in (ROOT / "docs/automation/mcp.md",):
         assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
 
-    for page in (
-        ROOT / "docs/guides/model-catalog.md",
-        ROOT / "docs/reference/configuration.md",
-    ):
+    for page in (ROOT / "docs/reference/configuration.md",):
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     assert (
@@ -211,12 +229,12 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     )
 
-    for page in (
-        ROOT / "docs/index.md",
-        ROOT / "docs/FEATURE_MAP.md",
-        ROOT / "README.md",
-    ):
-        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
+    for page in (ROOT / "docs/index.md", ROOT / "README.md"):
+        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.1" in page.read_text()
+    assert (
+        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0"
+        in (ROOT / "docs/FEATURE_MAP.md").read_text()
+    )
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
     assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo

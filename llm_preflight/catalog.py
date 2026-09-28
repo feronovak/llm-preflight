@@ -513,12 +513,21 @@ def _enrich_from_openrouter(models: list[dict[str, Any]]) -> list[dict[str, Any]
                 key: value
                 for key, value in router_capabilities.items()
                 if value is not None
+                and key != "adapter"
+                and not (
+                    key == "text_generation"
+                    and model.get("catalog_confidence") == "official"
+                )
             },
         }
         merged = classify_catalog_model(
             {key: value for key, value in merged.items() if key != "catalog_type"}
         )
-        merged["catalog_confidence"] = "aggregator"
+        merged["catalog_confidence"] = (
+            "official"
+            if model.get("catalog_confidence") == "official"
+            else "aggregator"
+        )
         merged["capability_evidence"] = [
             *(model.get("capability_evidence") or []),
             {"source": match_source, "confidence": "medium"},

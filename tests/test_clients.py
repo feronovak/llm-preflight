@@ -31,6 +31,24 @@ def test_openai_responses_adapter_uses_minimal_safe_probe_request():
     }
 
 
+def test_openai_responses_adapter_preserves_system_prompt_for_contract_checks():
+    client = create_client(
+        {"provider": "openai", "model": "gpt-test", "adapter": "openai_responses"},
+        10,
+    )
+
+    body = client.body(
+        "A customer was charged twice. Route the ticket.",
+        {
+            "system_prompt": "Return only the support queue label.",
+            "max_output_tokens": 128,
+        },
+    )
+
+    assert body["input"] == "A customer was charged twice. Route the ticket."
+    assert body["instructions"] == "Return only the support queue label."
+
+
 @pytest.fixture(autouse=True)
 def _resolve_provider_hosts_to_a_public_address(monkeypatch):
     """Keep unit fixtures independent from the machine's DNS configuration."""

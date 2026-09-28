@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.1
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -33,6 +33,9 @@ Results stay local unless you decide to attach or publish them.
 
 - [Model catalogue](guides/model-catalog.md) — discover, probe, compare, and
   deliberately approve provider models.
+- [Observed 24-model comparison](guides/observed-model-comparison.md) — a
+  dated support-routing example with exact model IDs, request limits, measured
+  outcomes, and reasons the scores are scoped to that contract.
 - [Interactive runs](guides/interactive-runs.md) — select models and tests at
   the terminal, then review the paid-work plan.
 - [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing

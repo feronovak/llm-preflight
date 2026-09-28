@@ -1,10 +1,15 @@
 # Model catalogue: discover, test, and keep models
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.1
 
 Use the catalogue when you want a small, trusted list of models for your own
 work. It is deliberately a local workflow: provider catalogues are broad;
 your approved list contains only models you chose after testing.
+
+For a dated example of selecting and checking a small cohort, see the
+[observed 24-model comparison](observed-model-comparison.md). Its support-case
+scores are historical evidence for that request and validator, not a ready-made
+approved list for another project.
 
 ```text
 provider metadata → price check → probe → bounded smoke → human approval → re-test

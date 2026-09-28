@@ -2,7 +2,19 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.18.1 - 2026-09-28
+
+### Fixed
+
+- Preserve official native adapter and text-readiness metadata when enriching
+  provider catalogue entries with OpenRouter capabilities.
+- Pass configured system prompts to OpenAI Responses requests so contract
+  checks exercise the intended instructions.
+
+### Added
+
+- Document a dated, scoped model comparison and list its measured models on
+  the homepage without implying general model approval.
 
 ### Changed
 

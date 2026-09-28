@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## 2.18.2 - 2026-09-28
+
+### Fixed
+
+- Bundle Claude Sonnet 5.5 and Haiku 4.5's official direct-provider prices so
+  strict cost checks and estimates work for newly configured routes.
+- Omit `temperature` from Claude Sonnet 5.5 requests because its API rejects
+  nondefault sampling values.
+
+### Added
+
+- Include Claude Sonnet 5.5 in the priced frontier candidate example.
+
+### Changed
+
+- Point the repository Action default, smoke workflow, and CI examples at the
+  published 2.18.1 package while preparing 2.18.2.
+
 ## 2.18.1 - 2026-09-28
 
 ### Fixed

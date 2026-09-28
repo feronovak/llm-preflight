@@ -1,6 +1,6 @@
 # Set up a real project
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.1
 
 Use one representative request from your application and a rule its consumer
 actually enforces. This example routes a known billing ticket and rejects the
@@ -116,7 +116,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "llm-preflight==2.18.0"
+      - run: python -m pip install "llm-preflight==2.18.1"
       - run: llm-preflight benchmark.json --contract-check
       - run: llm-preflight benchmark.json --dry-run --no-env-file --json
 ```

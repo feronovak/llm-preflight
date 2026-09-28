@@ -1,6 +1,6 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.1
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.2
 
 **Study date:** 2026-09-28 · **Scope:** 24 selected API model IDs, 16 paid requests per ID
 
@@ -17,6 +17,8 @@ and the request method, not an independently auditable provider invoice.
 
 - Eight support-routing and JSON cases were run twice per model, with no
   warmups, one attempt, concurrency one, and a 512-token output limit.
+- These runs did not set `temperature`. The Sonnet 5.5 row therefore does not
+  test that request parameter; 2.18.2 omits it from native Sonnet 5.5 requests.
 - Validation checked the configured exact labels or raw JSON contract. A
   provider request can succeed while the returned response fails that
   contract. The JSON cases did not use native schema output; a real app should

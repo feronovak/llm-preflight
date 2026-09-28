@@ -463,6 +463,7 @@ def test_anthropic_request_and_events():
 def test_current_anthropic_models_omit_unsupported_temperature():
     for model in (
         "claude-sonnet-5",
+        "claude-sonnet-5-5",
         "claude-fable-5",
         "claude-fable-5-1",
         "claude-opus-4-8",

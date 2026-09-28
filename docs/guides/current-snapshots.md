@@ -1,13 +1,13 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
+**Last reviewed:** 2026-09-28 · **As of:** v2.18.2
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
-direct-provider price snapshots reviewed for **2.18.0** against official pages
-on 2026-09-28. Discover and probe the IDs you actually run.
+direct-provider price snapshots carried into **2.18.2** and reviewed against
+official pages on 2026-09-28. Discover and probe the IDs you actually run.
 
-Package version: **2.18.0**.
+Package version: **2.18.2**.
 
 ## Native routes
 
@@ -53,6 +53,8 @@ hours live in code; this table is the headline input/output pair.
 | `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-09-28 |
 | `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-09-28 |
 | `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-09-28 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-09-28 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-09-28 |
 | `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-09-28 |
 | `gemini` | `gemini-3.7-flash` | 0.75 | 3.75 | 2026-09-28 |
 | `gemini` | `gemini-3.5-flash` | 1.50 | 9.00 | 2026-09-28 |
@@ -82,7 +84,7 @@ input. GPT-6 and several Grok/Gemini IDs have long-context bands. See
 These IDs are **not** in the snapshot table because they are not public
 first-party routes we can price honestly:
 
-| Gap | Status as of v2.18.0 |
+| Gap | Status as of v2.18.2 |
 |---|---|
 | Gemini 4 | No public API model ID or price table. Public Gemini remains 3.x. |
 | Kimi (Moonshot) native provider | Call via OpenRouter or `openai_compatible`. |
@@ -90,9 +92,10 @@ first-party routes we can price honestly:
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
 
 The [GitHub Marketplace Action guide](../automation/github-action.md) shows
-how to use the published 2.18.0 package with its release-tag Action. Pages
+how to use the published 2.18.1 package with its release-tag Action. Pages
 with an older **As of** stamp still describe their stated version; they were
-not all re-reviewed for 2.18.0.
+not all re-reviewed for 2.18.2. After 2.18.2 publishes, the repository Action
+default and installation examples will be updated to that package.
 
 See the [model catalogue](model-catalog.md) for discover → probe → smoke, and
 [`examples/frontier-candidates.json`](../../examples/frontier-candidates.json)

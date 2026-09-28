@@ -36,6 +36,8 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
     ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
+    ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-09-28"),
+    ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-09-28"),
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
     ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
     ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-09-28"),
@@ -64,6 +66,12 @@ _PROVIDER_PRICING_PAGES = {
     "typesafe": "https://docs.typesafe.ai/models",
 }
 _MODEL_PRICING_PAGES = {
+    ("anthropic", "claude-haiku-4-5-20251001"): (
+        "https://platform.claude.com/docs/en/models/haiku-4-5/overview"
+    ),
+    ("anthropic", "claude-sonnet-5-5"): (
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview"
+    ),
     **{
         ("openai", model): f"https://developers.openai.com/api/docs/models/{model}"
         for model in (

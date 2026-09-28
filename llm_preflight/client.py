@@ -77,6 +77,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
     if provider == "anthropic":
         return model_id not in {
             "claude-sonnet-5",
+            "claude-sonnet-5-5",
             "claude-fable-5",
             "claude-fable-5-1",
             "claude-opus-4-8",

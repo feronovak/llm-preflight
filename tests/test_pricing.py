@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -89,6 +90,41 @@ def test_public_pricing_marks_official_snapshot():
     assert model["pricing_metadata"]["source_url"] == (
         "https://developers.openai.com/api/docs/models/gpt-5.4-mini"
     )
+
+
+def test_sonnet_5_5_has_bundled_pricing_for_cost_checks():
+    model = apply_public_pricing(
+        {"provider": "anthropic", "model": "claude-sonnet-5-5"}
+    )
+
+    assert model["input_cost_per_million"] == 2.0
+    assert model["output_cost_per_million"] == 10.0
+    assert model["pricing_metadata"]["source"] == "official snapshot"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview"
+    )
+
+
+def test_observed_direct_provider_routes_have_bundled_prices():
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    study = Path("docs/guides/observed-model-comparison.md").read_text()
+    providers = {
+        "OpenAI": "openai",
+        "Anthropic": "anthropic",
+        "Gemini": "gemini",
+        "xAI": "xai",
+    }
+    direct_rows = re.findall(
+        r"^\| (OpenAI|Anthropic|Gemini|xAI) \| `([^`]+)` \|",
+        study,
+        re.MULTILINE,
+    )
+
+    assert direct_rows
+    assert {
+        (providers[provider], model) for provider, model in direct_rows
+    } <= PUBLIC_PRICING.keys()
 
 
 def test_gemini_3_1_pricing_has_cache_and_long_context_tiers():
@@ -411,6 +447,8 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
         ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
+        ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-09-28"),
+        ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-09-28"),
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-09-28"),

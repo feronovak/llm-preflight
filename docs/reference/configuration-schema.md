@@ -68,7 +68,8 @@ and `retry_on` (`rate_limit`, `timeout`, `transient_provider`, `network`).
 A model requires `model`; `provider` defaults to `openai_compatible`. Useful
 optional model fields are `name`, `base_url`, `api_key_env`, `api_version`,
 `headers`, `input_cost_per_million`, `output_cost_per_million`,
-`cached_input_cost_per_million`, `pricing_tiers`, `max_tokens_parameter`, and
+`cached_input_cost_per_million`, `cache_write_input_cost_per_million`,
+`pricing_tiers`, `max_tokens_parameter`, and
 `supports_temperature`. When setting explicit prices, also set
 `pricing_metadata` with at least `source` and ISO-8601 `as_of`; otherwise
 `--pricing-check` reports the price as undated. `pricing_tiers` is an ordered per-request price list;
@@ -82,7 +83,8 @@ models also accept `response`, `latency_seconds`, and `ttft_seconds` for
 deterministic local fixtures.
 
 Supported provider names are `openai`, `anthropic`, `gemini`, `xai`,
-`openrouter`, `deepseek`, `qwen`, `typesafe`, `openai_compatible`, and `mock`.
+`openrouter`, `deepseek`, `qwen`, `zai`, `typesafe`, `openai_compatible`, and `mock`.
+Native `zai` text runs are supported; its catalogue is not implemented.
 TypeSafe Jev models are catalogue-visible typed-decision routes and are not
 eligible for the generic text smoke adapter. A discovery object requires
 `provider` and positive `limit`; it can also set case-insensitive regex

@@ -1,5 +1,6 @@
 import hashlib
 import io
+import json
 import urllib.error
 
 import pytest
@@ -117,6 +118,7 @@ def test_runtime_url_validation_failure_becomes_a_normal_api_failure(monkeypatch
         "gpt-5.6-terra",
         "gpt-5.6-sol",
         "gpt-6-astra",
+        "gpt-6.1-sol",
         "gpt-6-sol",
         "gpt-6-luna",
     ],
@@ -128,6 +130,182 @@ def test_current_gpt_models_omit_unsupported_temperature(model):
 
     older = create_client({"provider": "openai", "model": "gpt-5.4-mini"}, 10)
     assert older.body("hello", {"temperature": 0})["temperature"] == 0
+
+
+@pytest.mark.parametrize("adapter", ["openai_compatible_chat", "openai_responses"])
+def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter):
+    captured = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            event = {
+                "choices": [{"delta": {"content": "billing"}}],
+                "usage": {
+                    "prompt_tokens": 1000,
+                    "prompt_tokens_details": {
+                        "cached_tokens": 800,
+                        "cache_write_tokens": 100,
+                    },
+                    "completion_tokens": 20,
+                },
+            }
+            return iter([f"data: {json.dumps(event)}\n".encode()])
+
+        def read(self, *args):
+            return json.dumps(
+                {
+                    "output": [
+                        {"content": [{"type": "output_text", "text": "billing"}]}
+                    ],
+                    "usage": {
+                        "input_tokens": 1000,
+                        "input_tokens_details": {
+                            "cached_tokens": 800,
+                            "cache_write_tokens": 100,
+                        },
+                        "output_tokens": 20,
+                    },
+                }
+            ).encode()
+
+    def transport(request, timeout):
+        captured.append(json.loads(request.data))
+        return Response()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    client = create_client(
+        {"provider": "openai", "model": "gpt-6.1-sol", "adapter": adapter}, 10
+    )
+
+    sample = client.run(
+        "I was charged twice.",
+        {
+            "temperature": 0,
+            "system_prompt": "Return only the queue label.",
+            "max_output_tokens": 512,
+            "retry": {"max_attempts": 1},
+        },
+    )
+
+    assert sample["ok"] is True
+    assert sample["response"] == "billing"
+    assert sample["input_tokens"] == 1000
+    assert sample["cached_input_tokens"] == 800
+    assert sample["cache_write_input_tokens"] == 100
+    assert sample["output_tokens"] == 20
+    assert captured[0]["model"] == "gpt-6.1-sol"
+    assert "temperature" not in captured[0]
+
+    from llm_preflight.metrics import summarize
+    from llm_preflight.pricing import apply_public_pricing
+
+    summary = summarize([sample], apply_public_pricing(client.model))
+    assert summary["cache_write_input_tokens"] == 100
+    assert summary["estimated_cost_usd"] == pytest.approx(0.00073)
+
+
+def test_glm_5_3_native_stream_preserves_usage_and_ignores_reasoning_text(monkeypatch):
+    from llm_preflight.metrics import summarize
+    from llm_preflight.pricing import apply_public_pricing
+
+    captured = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            events = [
+                {"choices": [{"delta": {"reasoning_content": "private reasoning"}}]},
+                {"choices": [{"delta": {"content": "billing"}}]},
+                {
+                    "choices": [],
+                    "usage": {
+                        "prompt_tokens": 1000,
+                        "prompt_tokens_details": {"cached_tokens": 800},
+                        "completion_tokens": 100,
+                    },
+                },
+            ]
+            return iter(
+                [f"data: {json.dumps(e)}\n".encode() for e in events]
+                + [b"data: [DONE]\n"]
+            )
+
+    def transport(request, timeout):
+        captured.append(request)
+        return Response()
+
+    monkeypatch.setenv("ZAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    client = create_client({"provider": "zai", "model": "glm-5.3"}, 10)
+    sample = client.run(
+        "Charged twice",
+        {
+            "temperature": 0,
+            "max_output_tokens": 512,
+            "system_prompt": "Return the queue",
+            "provider_options": {"zai": {"reasoning_effort": "low"}},
+        },
+    )
+    assert sample["ok"] is True
+    assert sample["response"] == "billing"
+    assert sample["input_tokens"] == 1000
+    assert sample["cached_input_tokens"] == 800
+    assert sample["output_tokens"] == 100
+    assert captured[0].full_url == "https://api.z.ai/api/paas/v4/chat/completions"
+    assert captured[0].get_header("Authorization") == "Bearer test"
+    body = json.loads(captured[0].data)
+    assert body["model"] == "glm-5.3"
+    assert body["max_tokens"] == 512
+    assert body["temperature"] == 0
+    assert body["reasoning_effort"] == "low"
+    assert body["messages"][0] == {"role": "system", "content": "Return the queue"}
+    assert "stream_options" not in body
+    assert summarize([sample], apply_public_pricing(client.model))[
+        "estimated_cost_usd"
+    ] == pytest.approx(0.000928)
+
+
+@pytest.mark.parametrize(
+    "provider_options",
+    [
+        {"thinking": {"type": "disabled"}},
+        {"reasoning_effort": "none"},
+        {"reasoning_effort": "medium"},
+    ],
+)
+def test_glm_5_3_rejects_unsupported_reasoning_before_transport(
+    monkeypatch, provider_options
+):
+    def unexpected_transport(*args, **kwargs):
+        pytest.fail("invalid GLM reasoning must fail before transport")
+
+    monkeypatch.setenv("ZAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", unexpected_transport)
+    client = create_client({"provider": "zai", "model": "glm-5.3"}, 10)
+    sample = client.run(
+        "hello",
+        {"retry": {"max_attempts": 1}, "provider_options": {"zai": provider_options}},
+    )
+    assert sample["ok"] is False
+    assert "reasoning" in sample["error"]
+
+
+def test_glm_5_3_rejects_image_input():
+    client = create_client({"provider": "zai", "model": "glm-5.3"}, 10)
+    with pytest.raises(ValueError, match="text-only"):
+        client.body("hello", {"input_images": [{"path": "does-not-exist.png"}]})
 
 
 def test_model_can_explicitly_override_temperature_support():

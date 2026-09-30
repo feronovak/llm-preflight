@@ -36,8 +36,10 @@ This capture is a real paid run: two flagship models compared on two custom
 chat prompts, selected interactively. The plan screen shows the request and
 cost ceiling before confirmation, every request line reports its own cost,
 and the whole run cost $0.005404. The config is
-[examples/flagship-comparison.json](../../examples/flagship-comparison.json) —
-swap in your own model IDs and prompts to reproduce it.
+[examples/flagship-comparison.json](../../examples/flagship-comparison.json).
+The current example also includes GPT-6.1 Sol, GLM-5.3 and reviewed bundled pricing;
+that model was not part of the original capture. Swap in your own model IDs
+and prompts for a current run.
 
 ## How to answer the prompts
 

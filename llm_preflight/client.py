@@ -50,6 +50,10 @@ PROVIDER_DEFAULTS = {
         "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
         "api_key_env": "DASHSCOPE_API_KEY",
     },
+    "zai": {
+        "base_url": "https://api.z.ai/api/paas/v4",
+        "api_key_env": "ZAI_API_KEY",
+    },
     "typesafe": {
         "base_url": "https://api.typesafe.ai/v1",
         "api_key_env": "TYPESAFE_API_KEY",
@@ -72,7 +76,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
     if provider == "openai":
         return not (
             model_id == "gpt-5.5"
-            or model_id.startswith(("gpt-5.5-", "gpt-5.6-", "gpt-6-"))
+            or model_id.startswith(("gpt-5.5-", "gpt-5.6-", "gpt-6-", "gpt-6.1-"))
         )
     if provider == "anthropic":
         return model_id not in {
@@ -280,6 +284,11 @@ class ProviderClient(ABC):
                     "output_tokens_per_second": throughput,
                     "input_tokens": usage.get("input_tokens"),
                     "cached_input_tokens": usage.get("cached_input_tokens"),
+                    **(
+                        {"cache_write_input_tokens": usage["cache_write_input_tokens"]}
+                        if "cache_write_input_tokens" in usage
+                        else {}
+                    ),
                     "output_tokens": output_tokens,
                     "response_chars": sum(map(len, content)),
                     "response": "".join(content),
@@ -394,9 +403,32 @@ class OpenAICompatibleClient(ProviderClient):
             ),
             "output_tokens": usage.get("completion_tokens"),
         }
+        details = usage.get("prompt_tokens_details") or {}
+        if "cache_write_tokens" in details:
+            normalized["cache_write_input_tokens"] = details["cache_write_tokens"]
         choices = event.get("choices") or []
         text = (choices[0].get("delta") or {}).get("content") if choices else None
         return text, normalized
+
+
+class ZaiClient(OpenAICompatibleClient):
+    """Z.ai's native Chat Completion protocol, with usage in the final event."""
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        if self.model["model"] == "glm-5.3" and options.get("input_images"):
+            raise ValueError("GLM-5.3 is text-only; remove input_images")
+        body = super().body(prompt, options)
+        body.pop("stream_options", None)
+        if self.model["model"] == "glm-5.3":
+            thinking = body.get("thinking", {})
+            if (
+                not isinstance(thinking, dict)
+                or thinking.get("type", "enabled") != "enabled"
+            ):
+                raise ValueError("GLM-5.3 requires enabled reasoning")
+            if body.get("reasoning_effort", "max") not in {"low", "high", "max"}:
+                raise ValueError("GLM-5.3 reasoning effort must be low, high, or max")
+        return body
 
 
 class OpenAIResponsesClient(OpenAICompatibleClient):
@@ -466,6 +498,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                 last_category = _classify_exception(exc)
             else:
                 usage = payload.get("usage") or {}
+                input_details = usage.get("input_tokens_details") or {}
                 text = str(payload.get("output_text") or "")
                 if not text:
                     for output in payload.get("output") or []:
@@ -479,9 +512,16 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                     "ttft_seconds": None,
                     "output_tokens_per_second": None,
                     "input_tokens": usage.get("input_tokens"),
-                    "cached_input_tokens": (
-                        usage.get("input_tokens_details") or {}
-                    ).get("cached_tokens"),
+                    "cached_input_tokens": input_details.get("cached_tokens"),
+                    **(
+                        {
+                            "cache_write_input_tokens": input_details[
+                                "cache_write_tokens"
+                            ]
+                        }
+                        if "cache_write_tokens" in input_details
+                        else {}
+                    ),
                     "output_tokens": usage.get("output_tokens"),
                     "response_chars": len(text),
                     "response": text,
@@ -669,6 +709,7 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "openai_compatible": OpenAICompatibleClient,
         "deepseek": OpenAICompatibleClient,
         "qwen": OpenAICompatibleClient,
+        "zai": ZaiClient,
         "anthropic": AnthropicClient,
         "gemini": GeminiClient,
         "mock": MockClient,

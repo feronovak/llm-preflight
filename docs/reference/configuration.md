@@ -25,6 +25,7 @@ Every `models` entry has the same basic shape:
 | `openrouter` | `OPENROUTER_API_KEY` |
 | `deepseek` | `DEEPSEEK_API_KEY` |
 | `qwen` | `DASHSCOPE_API_KEY` |
+| `zai` | `ZAI_API_KEY` |
 | `typesafe` | `TYPESAFE_API_KEY` |
 | `openai_compatible` | configured with `api_key_env` |
 
@@ -35,6 +36,13 @@ default endpoint is the international compatible-mode URL, which matches the
 bundled USD snapshots. A China Beijing endpoint remains valid by setting
 `base_url`; the checked-in Qwen-VL example does that. The existing
 `openai_compatible` plus `DASHSCOPE_API_KEY` form also remains valid.
+
+Use `zai` for GLM-5.3 on the standard Z.ai Chat Completion endpoint,
+`https://api.z.ai/api/paas/v4`. Its native price snapshot does not apply to
+Coding Plan quotas or OpenRouter's `z-ai/glm-5.3` route. Reasoning is always
+enabled; select `low`, `high`, or `max` through
+`request.provider_options.zai.reasoning_effort`. The native adapter rejects
+unsupported efforts and image inputs for this text-only model.
 
 Override endpoint and authentication details with `base_url`, `api_key_env`,
 and `headers`. Use `provider_options` inside `request` only when normalized

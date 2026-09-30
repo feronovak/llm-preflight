@@ -7,7 +7,8 @@ work. It is deliberately a local workflow: provider catalogues are broad;
 your approved list contains only models you chose after testing.
 
 For a dated example of selecting and checking a small cohort, see the
-[observed 24-model comparison](observed-model-comparison.md). Its support-case
+[model comparison](observed-model-comparison.md), including GPT-6.1 Sol's and GLM-5.3's
+current evidence status. Its support-case
 scores are historical evidence for that request and validator, not a ready-made
 approved list for another project.
 

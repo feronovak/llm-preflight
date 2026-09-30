@@ -155,6 +155,7 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
         ),
         "input_tokens": int(input_tokens),
         "cached_input_tokens": int(sum(usage_numbers("cached_input_tokens"))),
+        "cache_write_input_tokens": int(sum(usage_numbers("cache_write_input_tokens"))),
         "output_tokens": int(output_tokens),
         "usage_coverage": {
             field: len(usage_numbers(field))

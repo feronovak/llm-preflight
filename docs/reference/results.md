@@ -1,6 +1,6 @@
 # Result JSON schema
 
-**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
+**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
 
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is
@@ -103,13 +103,18 @@ meaningful subset). They are `null` when unavailable. `estimated_cost_usd` is
 as the run fields, scoped to that summary. A zero-request summary has a zero
 cost and zero coverage counts; it creates no missing-evidence warning.
 Token fields sum only valid reported counts; a partial subtotal is not a full
-usage total. Summaries also include `cached_input_tokens` when
-the provider reports cache hits; output usage includes billable reasoning tokens.
+usage total. Summaries also include `cached_input_tokens` for cache reads and
+`cache_write_input_tokens` for reported cache writes. These counts partition
+total input tokens, rather than adding to them; output usage includes billable
+reasoning tokens. The pricing ledger retains
+`cache_write_input_cost_per_million` and any applicable per-request tiers.
 
 Absent usage is distinct from explicitly reported zero usage. Usable counts are
 nonnegative finite integral numbers, excluding booleans and numeric strings.
 Missing or invalid input/output counts make cost unavailable; an explicitly
-reported invalid cached count also makes it unavailable. Missing optional cache
+reported invalid cache read/write count, or a combined cache count above total
+input, also makes it unavailable. Reported writes need a known write price.
+Missing optional cache
 counts use the ordinary uncached rate. Gemini requires a reported candidate
 count and adds a valid reported reasoning count; an omitted optional reasoning
 count adds nothing.

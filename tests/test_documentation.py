@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.18.2" in page
-    assert "Package version: **2.18.2**" in page
+    assert "**As of:** v2.19.0" in page
+    assert "Package version: **2.19.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -38,7 +38,7 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     assert (ROOT / "docs/automation/mcp.md").is_file()
 
 
-def test_homepage_model_list_matches_the_dated_observed_comparison():
+def test_homepage_model_list_matches_comparison_evidence():
     readme = (ROOT / "README.md").read_text()
     docs_index = (ROOT / "docs/index.md").read_text()
     study_path = ROOT / "docs/guides/observed-model-comparison.md"
@@ -48,15 +48,42 @@ def test_homepage_model_list_matches_the_dated_observed_comparison():
     assert "guides/observed-model-comparison.md" in docs_index
     assert "2026-09-28" in study
 
-    homepage_section = readme.split("## Models exercised in a dated study", 1)[1]
+    homepage_section = readme.split("## Model comparison", 1)[1]
     homepage_section = homepage_section.split("\n## ", 1)[0]
-    study_section = study.split("## Observed results", 1)[1]
+    study_section = study.split("## Comparison results", 1)[1]
     study_section = study_section.split("\n## ", 1)[0]
     homepage_ids = set(re.findall(r"`([\w./-]+)`", homepage_section))
     study_ids = set(re.findall(r"\| `([\w./-]+)` \|", study_section))
 
-    assert len(study_ids) == 24
+    assert len(study_ids) == 26
+    assert "gpt-6.1-sol" in study_ids
+    assert "z-ai/glm-5.3" in study_ids
     assert homepage_ids == study_ids
+
+    rows = re.findall(
+        r"^\| [^|]+ \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
+        study_section,
+        re.MULTILINE,
+    )
+    assert len(rows) == len(study_ids)
+    measured = 0
+    for model, observed_on, valid, latency, cost in rows:
+        if observed_on == "Not run":
+            assert (valid, latency, cost) == ("—", "—", "—"), model
+        else:
+            assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", observed_on), model
+            assert 0 <= int(valid) <= 16
+            assert re.fullmatch(r"\d+\.\d+s", latency), model
+            assert re.fullmatch(r"\$\d+\.\d+", cost), model
+            measured += 1
+    assert f"{measured} measured" in readme
+    assert f"{measured} measured" in study
+    assert measured == 26
+    for model in ("gpt-6.1-sol", "z-ai/glm-5.3"):
+        row = next(row for row in rows if row[0] == model)
+        assert row[1] == "2026-09-30"
+    assert "OpenRouter / Relace" in study
+    assert "native Z.ai route was not tested" in study
 
 
 def test_mcp_release_notes_and_security_boundary_are_current():
@@ -205,7 +232,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.1" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
-        assert "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0" in page.read_text()
+        assert "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0" in page.read_text()
 
     for page in (
         ROOT / "docs/automation/coding-agents.md",
@@ -225,7 +252,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0"
+        "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0"
         in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     )
 
@@ -234,7 +261,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.2"
+        "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0"
         in (ROOT / "README.md").read_text()
     )
     assert (

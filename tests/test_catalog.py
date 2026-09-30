@@ -1,4 +1,6 @@
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -123,6 +125,24 @@ def test_openai_text_family_is_visible_as_a_probe_candidate(monkeypatch):
 
     assert model["catalog_type"] == "text-candidate"
     assert model["capabilities"]["adapter"] == "openai_responses"
+
+
+def test_auto_example_discovers_gpt_6_1_sol_with_current_pricing(monkeypatch):
+    config = json.loads(Path("benchmark.auto.example.json").read_text())
+    source = next(s for s in config["discovery"] if s["provider"] == "openai")
+    monkeypatch.setattr(
+        "llm_preflight.catalog._get_json",
+        lambda *args, **kwargs: {
+            "data": [{"id": "gpt-6.1-sol"}, {"id": "gpt-6.1-image"}]
+        },
+    )
+
+    models = discover_models(source)
+
+    assert [m["model"] for m in models] == ["gpt-6.1-sol"]
+    assert models[0]["catalog_type"] == "text-candidate"
+    assert models[0]["capabilities"]["adapter"] == "openai_responses"
+    assert models[0]["cached_input_cost_per_million"] == 0.1
 
 
 def test_gemini_tts_is_not_a_generic_text_probe(monkeypatch):
@@ -534,6 +554,37 @@ def test_qwen_catalog_marks_max_as_a_text_probe_candidate(monkeypatch):
     assert models[0]["capabilities"]["adapter"] == "openai_compatible_chat"
     assert models[0]["input_cost_per_million"] == 2.0
     assert models[1]["catalog_type"] == "audio"
+
+
+def test_auto_example_discovers_glm_5_3_through_openrouter(monkeypatch):
+    source = next(
+        s
+        for s in json.loads(Path("benchmark.auto.example.json").read_text())[
+            "discovery"
+        ]
+        if s.get("include") == r"^z-ai/glm-5\.3$"
+    )
+    monkeypatch.setattr(
+        "llm_preflight.catalog._get_json",
+        lambda *_args: {
+            "data": [
+                {
+                    "id": "z-ai/glm-5.3",
+                    "architecture": {
+                        "input_modalities": ["text"],
+                        "output_modalities": ["text"],
+                    },
+                    "supported_parameters": ["reasoning", "temperature"],
+                    "pricing": {"prompt": "0.00000012", "completion": "0.000004"},
+                }
+            ]
+        },
+    )
+    model = discover_models(source)[0]
+    assert model["model"] == "z-ai/glm-5.3"
+    assert model["capabilities"]["adapter"] == "openrouter_chat"
+    assert model["input_cost_per_million"] == pytest.approx(0.12)
+    assert model["output_cost_per_million"] == 4
 
 
 def test_typesafe_catalog_marks_jev_as_a_decision_model(monkeypatch):

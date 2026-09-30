@@ -8,6 +8,7 @@ import pytest
 from llm_preflight.pricing import (
     apply_live_catalog_pricing,
     apply_public_pricing,
+    estimate_sample_cost,
     pricing_coverage_report,
     pricing_freshness_report,
     resolve_pricing,
@@ -161,6 +162,27 @@ def test_gpt_5_6_pricing_has_cache_and_long_context_tiers(
     }
 
 
+@pytest.mark.parametrize(
+    ("model_id", "short_input", "short_output"),
+    [
+        ("grok-4.3", 1.25, 2.5),
+        ("grok-4.5", 2.0, 6.0),
+        ("grok-4.6", 2.0, 6.0),
+        ("grok-4.7", 2.0, 6.0),
+    ],
+)
+def test_grok_long_context_rate_starts_at_200000_tokens(
+    model_id, short_input, short_output
+):
+    model = apply_public_pricing({"provider": "xai", "model": model_id})
+    assert estimate_sample_cost(
+        {"input_tokens": 199_999, "output_tokens": 100}, model
+    ) == pytest.approx((199_999 * short_input + 100 * short_output) / 1_000_000)
+    assert estimate_sample_cost(
+        {"input_tokens": 200_000, "output_tokens": 100}, model
+    ) == pytest.approx((200_000 * short_input + 100 * short_output) * 2 / 1_000_000)
+
+
 def test_grok_4_3_pricing_has_cache_and_long_context_tiers():
     model = apply_public_pricing({"provider": "xai", "model": "grok-4.3"})
 
@@ -294,6 +316,129 @@ def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
         "cached_input_cost_per_million": 0.02,
     }
     assert sol["pricing_metadata"]["as_of"] == "2026-09-28"
+
+
+@pytest.mark.parametrize(
+    ("input_tokens", "cached_tokens", "expected_cost"),
+    [
+        (272_000, 0, 1.363),
+        (272_001, 0, 2.72451),
+        (272_000, 100_000, 0.913),
+        (272_001, 100_000, 1.82451),
+    ],
+)
+def test_gpt_5_5_applies_official_full_request_band_and_cached_rates(
+    input_tokens, cached_tokens, expected_cost
+):
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-5.5"})
+    assert estimate_sample_cost(
+        {
+            "input_tokens": input_tokens,
+            "cached_input_tokens": cached_tokens,
+            "output_tokens": 100,
+        },
+        model,
+    ) == pytest.approx(expected_cost)
+
+
+def test_gpt_6_1_sol_uses_official_cache_and_long_context_rates():
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6.1-sol"})
+
+    assert model["input_cost_per_million"] == 2.0
+    assert model["output_cost_per_million"] == 10.0
+    assert model["cached_input_cost_per_million"] == 0.1
+    assert model["cache_write_input_cost_per_million"] == 2.5
+    assert model["pricing_tiers"] == [
+        {
+            "up_to_input_tokens": 272_000,
+            "input_cost_per_million": 2.0,
+            "output_cost_per_million": 10.0,
+            "cached_input_cost_per_million": 0.1,
+            "cache_write_input_cost_per_million": 2.5,
+        },
+        {
+            "input_cost_per_million": 4.0,
+            "output_cost_per_million": 15.0,
+            "cached_input_cost_per_million": 0.2,
+            "cache_write_input_cost_per_million": 5.0,
+        },
+    ]
+    assert model["pricing_metadata"]["as_of"] == "2026-09-30"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
+    )
+
+
+@pytest.mark.parametrize(
+    ("input_tokens", "cached", "written", "expected_cost"),
+    [
+        (272_000, 0, 0, 0.545),
+        (272_001, 0, 0, 1.089504),
+        (272_000, 100_000, 10_000, 0.36),
+        (272_001, 100_000, 10_000, 0.719504),
+    ],
+)
+def test_gpt_6_1_cost_uses_total_input_tier_and_separate_cache_rates(
+    input_tokens, cached, written, expected_cost
+):
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6.1-sol"})
+    sample = {
+        "input_tokens": input_tokens,
+        "cached_input_tokens": cached,
+        "cache_write_input_tokens": written,
+        "output_tokens": 100,
+    }
+
+    assert estimate_sample_cost(sample, model) == pytest.approx(expected_cost)
+    assert (
+        resolve_pricing([model])["ledger"][0]["cache_write_input_cost_per_million"]
+        == 2.5
+    )
+
+
+@pytest.mark.parametrize("written", [-1, 0.5, True, "10", float("nan"), 51])
+def test_invalid_cache_write_usage_cannot_produce_a_cost(written):
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6.1-sol"})
+
+    assert (
+        estimate_sample_cost(
+            {
+                "input_tokens": 100,
+                "cached_input_tokens": 50,
+                "cache_write_input_tokens": written,
+                "output_tokens": 1,
+            },
+            model,
+        )
+        is None
+    )
+
+
+def test_reported_cache_writes_require_a_known_write_price():
+    model = {"input_cost_per_million": 2, "output_cost_per_million": 10}
+
+    assert (
+        estimate_sample_cost(
+            {"input_tokens": 100, "cache_write_input_tokens": 10, "output_tokens": 1},
+            model,
+        )
+        is None
+    )
+
+
+def test_glm_5_3_uses_official_native_rates_and_cache_discount():
+    model = apply_public_pricing({"provider": "zai", "model": "glm-5.3"})
+    assert model["input_cost_per_million"] == 1.4
+    assert model["output_cost_per_million"] == 4.4
+    assert model["cached_input_cost_per_million"] == 0.26
+    assert model["pricing_metadata"]["as_of"] == "2026-09-30"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://docs.z.ai/guides/overview/pricing"
+    )
+    assert estimate_sample_cost(
+        {"input_tokens": 1000, "cached_input_tokens": 800, "output_tokens": 100},
+        model,
+    ) == pytest.approx(0.000928)
 
 
 def test_gemini_3_8_flash_uses_the_current_introductory_rate():
@@ -439,6 +584,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
         ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
         ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+        ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-09-30"),
         ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
         ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
         ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
@@ -463,6 +609,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
         ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
         ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
+        ("zai", "glm-5.3"): (1.4, 4.4, "2026-09-30"),
         ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
         ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-28"),
     }

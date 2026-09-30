@@ -183,9 +183,19 @@ def _request_cost(
     max_output_tokens = int(
         options.get("max_output_tokens") or options.get("max_tokens") or 256
     )
-    return estimate_sample_cost(
-        {"input_tokens": input_tokens, "output_tokens": max_output_tokens}, model
-    )
+    sample = {"input_tokens": input_tokens, "output_tokens": max_output_tokens}
+    ordinary_cost = estimate_sample_cost(sample, model)
+    if any(
+        "cache_write_input_cost_per_million" in tier
+        for tier in model.get("pricing_tiers") or [model]
+    ):
+        write_cost = estimate_sample_cost(
+            {**sample, "cache_write_input_tokens": input_tokens}, model
+        )
+        if ordinary_cost is None or write_cost is None:
+            return None
+        return max(ordinary_cost, write_cost)
+    return ordinary_cost
 
 
 def estimate_budget(
@@ -601,6 +611,7 @@ def replay_config(result: dict[str, Any]) -> dict[str, Any]:
         "input_cost_per_million",
         "output_cost_per_million",
         "cached_input_cost_per_million",
+        "cache_write_input_cost_per_million",
         "pricing_tiers",
         "pricing_metadata",
     )

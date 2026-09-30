@@ -23,7 +23,7 @@ _QUOTED = re.compile(
     r"(?P<quote>['\"])(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)(?P=quote)"
 )
 _MODEL_PREFIX = re.compile(
-    r"^(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe)/)?(?:gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
+    r"^(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe|z-ai|zai)/)?(?:gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|glm-[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
     re.IGNORECASE,
 )
 _YAML_MODEL = re.compile(
@@ -45,6 +45,8 @@ def _provider_for(model: str) -> str | None:
         return "deepseek"
     if lowered.startswith("qwen"):
         return "qwen"
+    if lowered.startswith("glm-"):
+        return "zai"
     if lowered.startswith("jev-"):
         return "typesafe"
     return None

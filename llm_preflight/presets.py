@@ -61,6 +61,7 @@ def expand_presets(request: dict[str, Any], presets: list[str]) -> dict[str, Any
             "openrouter",
             "deepseek",
             "qwen",
+            "zai",
         ):
             _setdefault_nested(
                 provider_options,

@@ -1,6 +1,6 @@
 # Tests, pricing, and safety
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
+**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
 
 ## Built-in tests and validation
 
@@ -67,7 +67,12 @@ price.
 Explicit per-model prices override the registry. When a provider reports cache-hit
 tokens, the estimate applies the model's cached-input rate. Gemini 3.1 Pro
 Preview also uses its published per-request 200k-input tier, including thinking
-tokens in output usage. Estimates still exclude taxes, cache-storage fees, tool
+tokens in output usage. GPT-6.1 Sol also prices reported cache writes at
+$2.50 per million input tokens, or $5.00 above 272k total input tokens; its
+cache reads cost $0.10 or $0.20 respectively. Plans include the possible write
+premium. Reported writes without a reviewed write rate make cost unavailable;
+configure `cache_write_input_cost_per_million` when that rate is not bundled.
+Estimates still exclude taxes, cache-storage fees, tool
 fees, and account-specific discounts not reported in usage.
 
 An explicit override is reviewed evidence, not a timeless number. Include a

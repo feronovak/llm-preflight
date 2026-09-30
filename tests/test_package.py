@@ -2,13 +2,15 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 from llm_preflight import __version__, cli
 from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.18.2"
-    assert 'version = "2.18.2"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.19.0"
+    assert 'version = "2.19.0"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -143,6 +145,39 @@ def test_cross_provider_example_is_a_currently_priced_smoke_plan():
     assert report["enforcement_ok"] is True
 
 
+def test_current_comparison_examples_include_priced_gpt_6_1_sol():
+    from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
+
+    for path in (
+        Path("examples/frontier-candidates.json"),
+        Path("examples/flagship-comparison.json"),
+        Path("examples/cross-provider-run.json"),
+    ):
+        config = load_config(path)
+        assert any(m["model"] == "gpt-6.1-sol" for m in config["models"]), path
+        assert pricing_coverage_report(
+            resolve_pricing(config["models"])["models"],
+            require_current_pricing=True,
+        )["enforcement_ok"], path
+
+
+def test_gpt_6_1_comparison_reproduces_eight_cases_with_bounded_spend():
+    from llm_preflight.features import check_budget
+
+    config = load_config(Path("examples/gpt-6.1-sol-comparison.json"))
+    budget = check_budget(config)
+
+    assert config["models"] == [
+        {"provider": "openai", "model": "gpt-6.1-sol", "adapter": "openai_responses"}
+    ]
+    assert len(config["prompts"]) == 8
+    assert budget["requests"] == budget["possible_requests"] == 16
+    assert budget["maximum_estimated_cost_usd"] < 0.10
+    # Budget every input token as a cache write, rather than assuming an
+    # uncached input rate when the provider can charge a write premium.
+    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.08473)
+
+
 def test_frontier_candidates_include_current_flagships_and_are_priced():
     from collections import Counter
 
@@ -164,6 +199,7 @@ def test_frontier_candidates_include_current_flagships_and_are_priced():
     assert by_provider["qwen"] >= 3
     assert ids >= {
         "gpt-6-astra",
+        "gpt-6.1-sol",
         "gpt-6-sol",
         "gpt-6-luna",
         "claude-fable-5-1",
@@ -184,6 +220,52 @@ def test_frontier_candidates_include_current_flagships_and_are_priced():
     }
     assert "gemini-4" not in ids
     assert report["enforcement_ok"] is True
+
+
+def test_glm_5_3_examples_have_native_route_current_prices_and_bounded_comparison():
+    from llm_preflight.features import check_budget
+    from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
+
+    for name in (
+        "frontier-candidates",
+        "flagship-comparison",
+        "cross-provider-run",
+        "glm-5.3-comparison",
+    ):
+        config = load_config(Path(f"examples/{name}.json"))
+        assert any(
+            m["provider"] == "zai" and m["model"] == "glm-5.3" for m in config["models"]
+        )
+        assert pricing_coverage_report(
+            resolve_pricing(config["models"])["models"], require_current_pricing=True
+        )["enforcement_ok"]
+        if name == "glm-5.3-comparison":
+            budget = check_budget(config)
+            assert len(config["prompts"]) == 8
+            assert budget["requests"] == budget["possible_requests"] == 16
+            assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.0376184)
+            assert (
+                config["request"]["provider_options"]["zai"]["reasoning_effort"]
+                == "low"
+            )
+
+
+def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests():
+    from llm_preflight.features import check_budget
+
+    config = load_config(Path("examples/glm-5.3-openrouter-comparison.json"))
+    model = config["models"][0]
+    options = config["request"]["provider_options"]["openrouter"]
+    assert (model["provider"], model["model"]) == ("openrouter", "z-ai/glm-5.3")
+    assert options["provider"] == {"only": ["relace"], "allow_fallbacks": False}
+    assert options["reasoning"] == {"effort": "low"}
+    budget = check_budget(config)
+    assert budget["requests"] == budget["possible_requests"] == 16
+    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.03290288)
+    assert config["max_estimated_cost_usd"] == 0.1
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints"
+    )
 
 
 def test_custom_contract_examples_are_parseable_and_documented():

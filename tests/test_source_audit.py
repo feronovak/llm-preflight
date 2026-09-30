@@ -55,6 +55,14 @@ def test_source_audit_ignores_bare_model_prefix_fragments(tmp_path):
     assert audit_source(tmp_path)["references"] == []
 
 
+def test_source_audit_recognizes_glm_5_3_and_routed_id(tmp_path):
+    (tmp_path / "app.py").write_text('native = "glm-5.3"\nrouted = "z-ai/glm-5.3"\n')
+    report = audit_source(tmp_path)
+    assert [r["model"] for r in report["references"]] == ["glm-5.3", "z-ai/glm-5.3"]
+    assert all(r["provider"] == "zai" for r in report["references"])
+    assert report["references"][0]["status"] == "pricing_known"
+
+
 def test_source_audit_ignores_paths_and_commented_yaml(tmp_path):
     (tmp_path / "app.py").write_text('path = "docs/gpt-4-notes.md"\n')
     (tmp_path / "models.yaml").write_text("# model: gpt-4o-mini\n")

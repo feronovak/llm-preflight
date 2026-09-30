@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.2
+**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -73,7 +73,7 @@ synthetic; none is a live model claim.
 - **Review a new model.** Discover metadata, deliberately probe a route, then
   prepare a bounded candidate smoke with the [model-catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
 - **Inspect a measured example.** See the dated
-  [24-model support-routing comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+  [support-routing model comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
   to understand what a narrow contract run can and cannot establish.
 - **Automate an established contract.** Add the no-spend
   [GitHub Marketplace Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
@@ -117,6 +117,18 @@ Version **2.18.0** includes the evidence-integrity and output-validator
 corrections below. Native routes and release-reviewed official pricing snapshots
 are listed in [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
 That list is direct-provider price coverage, not a ranking or every discoverable ID.
+
+Version **2.19.0** adds `gpt-6.1-sol` to the priced OpenAI candidate
+set. Its official short-context rate is $2 input and $10 output per million
+tokens, with $0.10 cached input; the [snapshot table](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md)
+also records its long-context rates. As with any candidate, check access and
+run a bounded contract test before adopting it.
+
+The same version adds native Z.ai `glm-5.3` chat requests and official
+pricing. Use `provider: "zai"` with `ZAI_API_KEY`; the
+[bounded comparison example](examples/glm-5.3-comparison.json) reproduces
+the eight support-routing cases. OpenRouter discovery uses `z-ai/glm-5.3`
+and that route's live pricing.
 
 Missing or malformed provider usage keeps cost unavailable, with known spend
 shown as a subtotal. Strict pricing freshness applies to every source
@@ -203,21 +215,26 @@ That evidence applies to your account, network, prompts, and validator at one
 time—not a universal model ranking. For a complete interactive example, see
 [interactive runs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md).
 
-## Models exercised in a dated study
+## Model comparison
 
+The comparison lists **26 exact API IDs: 26 measured**.
 On 2026-09-28, we ran eight example support-routing and JSON cases twice each
-against these **24 exact API IDs**. This is a historical integration example,
-not a maintained compatibility guarantee or approval for your application.
+against 24 IDs. On 2026-09-30, the same cases were run against GPT-6.1 Sol
+and GLM-5.3 through OpenRouter / Relace: **16/16** and **14/16** valid outputs,
+respectively. GLM's result covers that routed endpoint. These observations
+apply to the dated example contract.
 The [observed comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 has the scores, request settings, cost method, and failure analysis.
 
-| Provider route | Model IDs exercised |
-|---|---|
-| OpenAI | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` |
-| Anthropic | `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` |
-| Gemini | `gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview` |
-| xAI | `grok-4.7`, `grok-4.6` |
-| OpenRouter | `qwen/qwen3.8-max-0902`, `qwen/qwen3.8-flash`, `deepseek/deepseek-v4-pro-0813`, `deepseek/deepseek-v4.1-flash`, `moonshotai/kimi-k3`, `moonshotai/kimi-k2.6` |
+| Provider route | Model IDs | Evidence |
+|---|---|---|
+| OpenAI | `gpt-6.1-sol` | Measured 2026-09-30; 16/16 valid |
+| OpenRouter / Relace | `z-ai/glm-5.3` | Measured 2026-09-30; 14/16 valid |
+| OpenAI | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` | Measured 2026-09-28 |
+| Anthropic | `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Measured 2026-09-28 |
+| Gemini | `gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview` | Measured 2026-09-28 |
+| xAI | `grok-4.7`, `grok-4.6` | Measured 2026-09-28 |
+| OpenRouter | `qwen/qwen3.8-max-0902`, `qwen/qwen3.8-flash`, `deepseek/deepseek-v4-pro-0813`, `deepseek/deepseek-v4.1-flash`, `moonshotai/kimi-k3`, `moonshotai/kimi-k2.6` | Measured 2026-09-28 |
 
 ## First live run
 

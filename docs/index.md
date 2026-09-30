@@ -17,7 +17,7 @@ Results stay local unless you decide to attach or publish them.
   application contract, reuse a project env file, and add a no-spend CI check.
 - [Official snapshots](guides/current-snapshots.md) — native routes and the
   direct-provider prices this package version re-read; also the gaps (Gemini 4,
-  Kimi/GLM native, Jev).
+  Kimi native, Z.ai native discovery, Jev).
 - [A new model appeared](guides/model-catalog.md) — refresh provider metadata,
   then deliberately probe, benchmark, and approve a small candidate set.
 - [Model change](guides/model-change.md) — compare an approved model and a
@@ -33,9 +33,9 @@ Results stay local unless you decide to attach or publish them.
 
 - [Model catalogue](guides/model-catalog.md) — discover, probe, compare, and
   deliberately approve provider models.
-- [Observed 24-model comparison](guides/observed-model-comparison.md) — a
-  dated support-routing example with exact model IDs, request limits, measured
-  outcomes, and reasons the scores are scoped to that contract.
+- [Model comparison](guides/observed-model-comparison.md) — dated
+  support-routing results including GPT-6.1 Sol and GLM-5.3 through Relace, with exact model
+  IDs, request limits, and the evidence status of each row.
 - [Interactive runs](guides/interactive-runs.md) — select models and tests at
   the terminal, then review the paid-work plan.
 - [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing

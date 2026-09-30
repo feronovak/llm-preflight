@@ -2,12 +2,40 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.19.0 - 2026-09-30
+
+### Added
+
+- Add native Z.ai GLM-5.3 chat with reviewed input/cache/output pricing,
+  deterministic streaming and invalid-reasoning fixtures, source detection,
+  OpenRouter discovery, and a bounded eight-case comparison example.
+- List GLM-5.3 on the homepage and comparison table, and
+  include it in maintained frontier and comparison examples.
+- Include GPT-6.1 Sol in the OpenAI frontier candidate example and bundled
+  official pricing snapshots, including its discounted cache and long-context
+  rates.
+- List GPT-6.1 Sol on the homepage and comparison table, and provide a
+  bounded example of the eight-case study.
+- Include GPT-6.1 Sol in automatic discovery and maintained comparison
+  examples, with deterministic provider and pricing-boundary tests.
+
+### Fixed
+
+- Omit unsupported `temperature` from GPT-6.1 Sol requests.
+- Preserve OpenAI's reported cache-write usage, price GPT-6.1 Sol's writes
+  separately from reads, and include the write premium in its cost plan.
+- Use current bundled prices in the flagship example instead of a stale
+  Anthropic price override.
+- Apply GPT-5.5's official cached-input rates and full-request price band
+  above 272,000 input tokens, correcting long-context underestimates.
+- Start Grok's long-context price band at 200,000 input tokens, matching
+  the official inclusive threshold.
 
 ### Changed
 
-- Point the repository Action default, smoke workflow, and CI examples at the
-  published 2.18.2 package after the release.
+- Add dated live comparison results: GPT-6.1 Sol passed 16/16 cases;
+  GLM-5.3 through OpenRouter / Relace passed 14/16. Document the two
+  validation failures, measured routes, latency, usage and estimated costs.
 
 ## 2.18.2 - 2026-09-28
 
@@ -26,6 +54,8 @@ All notable changes to this project are documented here.
 
 - Point the repository Action default, smoke workflow, and CI examples at the
   published 2.18.1 package while preparing 2.18.2.
+- Point the repository Action default, smoke workflow, and CI examples at the
+  published 2.18.2 package after the release.
 
 ## 2.18.1 - 2026-09-28
 

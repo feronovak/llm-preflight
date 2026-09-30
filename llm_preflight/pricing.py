@@ -16,7 +16,8 @@ from typing import Any, TypeGuard, cast
 # DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
 # snapshots use QwenCloud USD list rates. TypeSafe Jev bills input only.
 # Snapshot rows were reviewed against their primary official sources on
-# 2026-09-28. Qwen rows retain USD list rates, excluding temporary discounts.
+# their recorded dates. Qwen rows retain USD list rates, excluding temporary
+# discounts.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-09-28"),
     ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-09-28"),
@@ -28,6 +29,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
     ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
     ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+    ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-09-30"),
     ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
     ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
     ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
@@ -52,6 +54,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
     ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
     ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
+    ("zai", "glm-5.3"): (1.4, 4.4, "2026-09-30"),
     ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
     ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-28"),
 }
@@ -63,6 +66,7 @@ _PROVIDER_PRICING_PAGES = {
     "xai": "https://docs.x.ai/developers/pricing",
     "deepseek": "https://api-docs.deepseek.com/quick_start/pricing",
     "qwen": "https://www.qwencloud.com/models/qwen3.8-max",
+    "zai": "https://docs.z.ai/guides/overview/pricing",
     "typesafe": "https://docs.typesafe.ai/models",
 }
 _MODEL_PRICING_PAGES = {
@@ -85,6 +89,7 @@ _MODEL_PRICING_PAGES = {
             "gpt-4.1-mini",
             "gpt-4.1-nano",
             "gpt-6-astra",
+            "gpt-6.1-sol",
             "gpt-6-sol",
             "gpt-6-luna",
         )
@@ -99,6 +104,23 @@ PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
 }
 
 PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
+    ("zai", "glm-5.3"): {"cached_input_cost_per_million": 0.26},
+    ("openai", "gpt-5.5"): {
+        "cached_input_cost_per_million": 0.5,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 5.0,
+                "output_cost_per_million": 30.0,
+                "cached_input_cost_per_million": 0.5,
+            },
+            {
+                "input_cost_per_million": 10.0,
+                "output_cost_per_million": 45.0,
+                "cached_input_cost_per_million": 1.0,
+            },
+        ],
+    },
     ("openai", "gpt-5.6-luna"): {
         "cached_input_cost_per_million": 0.02,
         "pricing_tiers": [
@@ -160,6 +182,25 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
                 "input_cost_per_million": 20.0,
                 "output_cost_per_million": 75.0,
                 "cached_input_cost_per_million": 2.0,
+            },
+        ],
+    },
+    ("openai", "gpt-6.1-sol"): {
+        "cached_input_cost_per_million": 0.1,
+        "cache_write_input_cost_per_million": 2.5,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 2.0,
+                "output_cost_per_million": 10.0,
+                "cached_input_cost_per_million": 0.1,
+                "cache_write_input_cost_per_million": 2.5,
+            },
+            {
+                "input_cost_per_million": 4.0,
+                "output_cost_per_million": 15.0,
+                "cached_input_cost_per_million": 0.2,
+                "cache_write_input_cost_per_million": 5.0,
             },
         ],
     },
@@ -258,7 +299,7 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.2,
         "pricing_tiers": [
             {
-                "up_to_input_tokens": 200_000,
+                "up_to_input_tokens": 199_999,
                 "input_cost_per_million": 1.25,
                 "output_cost_per_million": 2.5,
                 "cached_input_cost_per_million": 0.2,
@@ -274,7 +315,7 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.3,
         "pricing_tiers": [
             {
-                "up_to_input_tokens": 200_000,
+                "up_to_input_tokens": 199_999,
                 "input_cost_per_million": 2.0,
                 "output_cost_per_million": 6.0,
                 "cached_input_cost_per_million": 0.3,
@@ -290,7 +331,7 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.5,
         "pricing_tiers": [
             {
-                "up_to_input_tokens": 200_000,
+                "up_to_input_tokens": 199_999,
                 "input_cost_per_million": 2.0,
                 "output_cost_per_million": 6.0,
                 "cached_input_cost_per_million": 0.5,
@@ -306,7 +347,7 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.5,
         "pricing_tiers": [
             {
-                "up_to_input_tokens": 200_000,
+                "up_to_input_tokens": 199_999,
                 "input_cost_per_million": 2.0,
                 "output_cost_per_million": 6.0,
                 "cached_input_cost_per_million": 0.5,
@@ -351,8 +392,17 @@ def sample_cost_evidence(
     input_tokens = sample.get("input_tokens")
     output_tokens = sample.get("output_tokens")
     cached_tokens = sample.get("cached_input_tokens")
+    written_tokens = sample.get("cache_write_input_tokens")
     missing_usage = not all(valid_token_count(v) for v in (input_tokens, output_tokens))
     if cached_tokens is not None and not valid_token_count(cached_tokens):
+        missing_usage = True
+    if written_tokens is not None and not valid_token_count(written_tokens):
+        missing_usage = True
+    if (
+        valid_token_count(input_tokens)
+        and not missing_usage
+        and int(cached_tokens or 0) + int(written_tokens or 0) > int(input_tokens)
+    ):
         missing_usage = True
     tier = (
         _pricing_tier(model, int(input_tokens))
@@ -362,9 +412,12 @@ def sample_cost_evidence(
     input_price = tier.get("input_cost_per_million")
     output_price = tier.get("output_cost_per_million")
     cached_price = tier.get("cached_input_cost_per_million", input_price)
+    write_price = tier.get("cache_write_input_cost_per_million")
     required_prices = [input_price, output_price]
     if cached_tokens and valid_token_count(cached_tokens):
         required_prices.append(cached_price)
+    if written_tokens and valid_token_count(written_tokens):
+        required_prices.append(write_price)
     missing_price = any(
         not isinstance(value, (int, float))
         or isinstance(value, bool)
@@ -379,10 +432,13 @@ def sample_cost_evidence(
     input_price = cast(int | float, input_price)
     output_price = cast(int | float, output_price)
     cached_price = cast(int | float, cached_price)
-    cached_input = min(int(cached_tokens or 0), int(input_tokens))
+    write_price = cast(int | float, write_price)
+    cached_input = int(cached_tokens or 0)
+    written_input = int(written_tokens or 0)
     cost = (
-        (int(input_tokens) - cached_input) * float(input_price)
+        (int(input_tokens) - cached_input - written_input) * float(input_price)
         + (cached_input * float(cached_price) if cached_input else 0)
+        + (written_input * float(write_price) if written_input else 0)
         + int(output_tokens) * float(output_price)
     ) / 1_000_000
     return cost, False, False
@@ -695,6 +751,7 @@ def resolve_pricing(
                 key: model[key]
                 for key in (
                     "cached_input_cost_per_million",
+                    "cache_write_input_cost_per_million",
                     "pricing_tiers",
                     "pricing_metadata",
                 )

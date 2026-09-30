@@ -35,6 +35,15 @@ def _summary(latency, cost, success=1.0):
     }
 
 
+def test_json_preset_applies_to_zai_without_disabling_reasoning():
+    from llm_preflight.presets import expand_presets
+
+    request = expand_presets({}, ["structured"])
+    assert request["provider_options"]["zai"] == {
+        "response_format": {"type": "json_object"}
+    }
+
+
 def test_smoke_mode_forces_one_repetition_without_warmup():
     config = apply_smoke_mode(
         {"prompt": "hi", "repetitions": 9, "warmups": 3, "suite_repetitions": 4}
@@ -293,6 +302,7 @@ def test_replay_config_uses_the_recorded_pricing_ledger_over_current_prices():
                 "input_cost_per_million": 4,
                 "output_cost_per_million": 8,
                 "cached_input_cost_per_million": 0.4,
+                "cache_write_input_cost_per_million": 5,
                 "pricing_tiers": [
                     {
                         "up_to_input_tokens": 2,
@@ -313,6 +323,7 @@ def test_replay_config_uses_the_recorded_pricing_ledger_over_current_prices():
 
     assert config["models"][0]["input_cost_per_million"] == 4
     assert config["models"][0]["cached_input_cost_per_million"] == 0.4
+    assert config["models"][0]["cache_write_input_cost_per_million"] == 5
     assert config["models"][0]["pricing_tiers"][1]["output_cost_per_million"] == 8
     assert config["models"][0]["pricing_metadata"]["as_of"] == "2026-01-01"
 

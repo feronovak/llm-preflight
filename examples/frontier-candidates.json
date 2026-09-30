@@ -13,6 +13,7 @@
   },
   "models": [
     {"provider": "openai", "model": "gpt-6-astra"},
+    {"provider": "openai", "model": "gpt-6.1-sol"},
     {"provider": "openai", "model": "gpt-6-sol"},
     {"provider": "openai", "model": "gpt-6-luna"},
     {"provider": "anthropic", "model": "claude-fable-5-1"},
@@ -29,6 +30,7 @@
     {"provider": "deepseek", "model": "deepseek-v4-pro"},
     {"provider": "qwen", "model": "qwen3.8-max"},
     {"provider": "qwen", "model": "qwen3.8-flash"},
-    {"provider": "qwen", "model": "qwen3.7-plus"}
+    {"provider": "qwen", "model": "qwen3.7-plus"},
+    {"provider": "zai", "model": "glm-5.3"}
   ]
 }

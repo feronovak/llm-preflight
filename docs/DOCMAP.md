@@ -23,9 +23,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/README.md`](README.md) | LLM Preflight documentation | unstamped | — | — |
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |
 | [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-09-04 | v2.12.0 |
-| [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-09-30 | v2.19.0 |
+| [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-10-08 | v2.19.1 |
 | [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-09-04 | v2.12.0 |
-| [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-09-30 | v2.19.0 |
+| [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-10-08 | v2.19.1 |
 | [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-09-28 | v2.18.0 |
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-09-30 | v2.19.0 |

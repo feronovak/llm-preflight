@@ -1,6 +1,6 @@
 # CI and JSON output
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
 ## JSON output and exit status
 
@@ -75,7 +75,7 @@ A mock-only configuration intentionally exits 3: it proves local configuration
 and report handling, not a live-provider decision. Use it for a no-key example
 or test fixture, not as a passing production gate. A GitHub workflow that
 verifies the mock fixture should explicitly expect that exit code. The tracked
-starter workflow pins the latest published package, 2.19.0; verify the
+starter workflow pins the latest published package, 2.19.1; verify the
 workflow against that package when updating the pin.
 
 For a mock-evidence job, preserve the JSON artifact while accepting only the

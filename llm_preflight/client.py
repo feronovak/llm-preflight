@@ -82,6 +82,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
         return model_id not in {
             "claude-sonnet-5",
             "claude-sonnet-5-5",
+            "claude-haiku-5-5",
             "claude-fable-5",
             "claude-fable-5-1",
             "claude-opus-4-8",
@@ -577,11 +578,27 @@ class AnthropicClient(ProviderClient):
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
         usage = event.get("usage") or (event.get("message") or {}).get("usage") or {}
+        # Anthropic's input count excludes both cache reads and writes; our
+        # normalized count includes them for partition costing and price bands.
+        uncached = usage.get("input_tokens")
+        cached = usage.get("cache_read_input_tokens", 0)
+        written = usage.get("cache_creation_input_tokens", 0)
+        total_input = (
+            int(uncached) + int(cached) + int(written)
+            if valid_token_count(uncached)
+            and valid_token_count(cached)
+            and valid_token_count(written)
+            else None
+        )
         normalized = {
-            "input_tokens": usage.get("input_tokens"),
+            "input_tokens": total_input,
             "cached_input_tokens": usage.get("cache_read_input_tokens"),
             "output_tokens": usage.get("output_tokens"),
         }
+        if "cache_creation_input_tokens" in usage:
+            normalized["cache_write_input_tokens"] = usage[
+                "cache_creation_input_tokens"
+            ]
         delta = event.get("delta") or {}
         return delta.get("text"), normalized
 

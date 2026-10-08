@@ -100,10 +100,70 @@ def test_sonnet_5_5_has_bundled_pricing_for_cost_checks():
 
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 10.0
+    assert model["cached_input_cost_per_million"] == 0.1
+    assert model["pricing_metadata"]["as_of"] == "2026-10-07"
     assert model["pricing_metadata"]["source"] == "official snapshot"
     assert model["pricing_metadata"]["source_url"] == (
-        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview"
+        "https://www.anthropic.com/claude-haiku-5-5"
     )
+    assert estimate_sample_cost(
+        {"input_tokens": 1000, "cached_input_tokens": 800, "output_tokens": 20},
+        model,
+    ) == pytest.approx(0.00068)
+
+
+def test_haiku_5_5_has_bundled_pricing_for_cost_checks():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-haiku-5-5"})
+
+    assert model["input_cost_per_million"] == 0.1
+    assert model["output_cost_per_million"] == 0.5
+    assert model["cached_input_cost_per_million"] == 0.01
+    assert model["pricing_metadata"] == {
+        "source": "official snapshot",
+        "confidence": "official",
+        "as_of": "2026-10-07",
+        "source_url": "https://platform.claude.com/docs/en/models/haiku-5-5/overview",
+    }
+
+
+@pytest.mark.parametrize(
+    ("input_tokens", "cached_tokens", "expected_cost"),
+    [
+        (99_999, 0, 0.0104999),
+        (100_000, 0, 0.0105),
+        (100_001, 0, 0.0525005),
+        (100_000, 90_000, 0.0024),
+        (100_001, 90_000, 0.0120005),
+    ],
+)
+def test_haiku_5_5_prices_total_input_and_cached_reads(
+    input_tokens, cached_tokens, expected_cost
+):
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-haiku-5-5"})
+
+    assert estimate_sample_cost(
+        {
+            "input_tokens": input_tokens,
+            "cached_input_tokens": cached_tokens,
+            "output_tokens": 1000,
+        },
+        model,
+    ) == pytest.approx(expected_cost)
+
+
+def test_sonnet_5_5_refreshes_persisted_cache_pricing_without_overwriting_user_rates():
+    persisted = {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5-5",
+        "input_cost_per_million": 2,
+        "output_cost_per_million": 10,
+        "cached_input_cost_per_million": 0.2,
+        "pricing_metadata": {"source": "official snapshot", "as_of": "2026-09-28"},
+    }
+
+    assert apply_public_pricing(persisted)["cached_input_cost_per_million"] == 0.1
+    override = {**persisted, "pricing_metadata": {"source": "user override"}}
+    assert apply_public_pricing(override) == override
 
 
 def test_observed_direct_provider_routes_have_bundled_prices():
@@ -593,7 +653,8 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
         ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
-        ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-09-28"),
+        ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-07"),
+        ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-07"),
         ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-09-28"),
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),

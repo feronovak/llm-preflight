@@ -38,7 +38,8 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
     ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
-    ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-09-28"),
+    ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-07"),
+    ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-07"),
     ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-09-28"),
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
     ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
@@ -73,8 +74,9 @@ _MODEL_PRICING_PAGES = {
     ("anthropic", "claude-haiku-4-5-20251001"): (
         "https://platform.claude.com/docs/en/models/haiku-4-5/overview"
     ),
-    ("anthropic", "claude-sonnet-5-5"): (
-        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview"
+    ("anthropic", "claude-sonnet-5-5"): ("https://www.anthropic.com/claude-haiku-5-5"),
+    ("anthropic", "claude-haiku-5-5"): (
+        "https://platform.claude.com/docs/en/models/haiku-5-5/overview"
     ),
     **{
         ("openai", model): f"https://developers.openai.com/api/docs/models/{model}"
@@ -278,6 +280,25 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("anthropic", "claude-opus-5-5"): {
         "cached_input_cost_per_million": 0.2,
+    },
+    ("anthropic", "claude-sonnet-5-5"): {
+        "cached_input_cost_per_million": 0.1,
+    },
+    ("anthropic", "claude-haiku-5-5"): {
+        "cached_input_cost_per_million": 0.01,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 100_000,
+                "input_cost_per_million": 0.1,
+                "output_cost_per_million": 0.5,
+                "cached_input_cost_per_million": 0.01,
+            },
+            {
+                "input_cost_per_million": 0.5,
+                "output_cost_per_million": 2.5,
+                "cached_input_cost_per_million": 0.05,
+            },
+        ],
     },
     ("gemini", "gemini-3.1-pro-preview"): {
         "cached_input_cost_per_million": 0.2,

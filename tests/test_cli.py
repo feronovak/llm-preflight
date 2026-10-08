@@ -1910,7 +1910,9 @@ def test_catalog_candidate_selection_groups_before_listing_models():
     assert "gpt-realtime-2" not in "\n".join(output)
 
 
-def test_watch_new_writes_a_regular_candidate_benchmark_config(monkeypatch, tmp_path):
+def test_watch_new_writes_a_regular_candidate_benchmark_config(
+    monkeypatch, tmp_path, august_catalog_review
+):
     watch = tmp_path / "watch.json"
     watch.write_text(
         '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'
@@ -1970,7 +1972,9 @@ def test_watch_new_writes_a_regular_candidate_benchmark_config(monkeypatch, tmp_
     ]
 
 
-def test_watch_new_writes_only_smoke_eligible_candidates(monkeypatch, tmp_path):
+def test_watch_new_writes_only_smoke_eligible_candidates(
+    monkeypatch, tmp_path, august_catalog_review
+):
     watch = tmp_path / "watch.json"
     watch.write_text(
         json.dumps(
@@ -2023,7 +2027,7 @@ def test_watch_new_writes_only_smoke_eligible_candidates(monkeypatch, tmp_path):
 
 
 def test_watch_new_candidate_config_does_not_persist_inherited_headers(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, august_catalog_review
 ):
     watch = tmp_path / "watch.json"
     watch.write_text(
@@ -2113,7 +2117,9 @@ def test_watch_new_failed_candidate_run_does_not_advance_snapshot(
     ]
 
 
-def test_watch_new_can_write_all_currently_unapproved_models(monkeypatch, tmp_path):
+def test_watch_new_can_write_all_currently_unapproved_models(
+    monkeypatch, tmp_path, august_catalog_review
+):
     watch = tmp_path / "watch.json"
     watch.write_text(
         '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'

@@ -1,12 +1,14 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
-**Study dates:** 2026-09-28 and 2026-09-30 · **Scope:** 26 selected API model IDs, 16 paid requests per ID
+**Study dates:** 2026-09-28, 2026-09-30 and 2026-10-07 · **Scope:** 27 selected API model IDs, 16 support-routing requests per comparison row
 
-The comparison lists **26 IDs: 26 measured**. The original 24 rows retain
-their 2026-09-28 measurements; GPT-6.1 Sol and the routed GLM-5.3 row were
-measured on 2026-09-30.
+The comparison lists **27 IDs: 27 measured**. Haiku 5.5 was added and
+Sonnet 5.5 was remeasured on 2026-10-07. The other 23 original rows retain
+their 2026-09-28 measurements; GPT-6.1 Sol and routed GLM-5.3 were measured
+on 2026-09-30. Separate full-profile and smoke scores for the two new
+Anthropic runs appear below the main table.
 
 This is a dated example of using LLM Preflight to narrow a model shortlist. It
 does not certify these models, rank general intelligence, or approve a route for
@@ -21,8 +23,10 @@ and the request method, not an independently auditable provider invoice.
 
 - Eight support-routing and JSON cases were run twice per model, with no
   warmups, one attempt, concurrency one, and a 512-token output limit.
-- These runs did not set `temperature`. The Sonnet 5.5 row therefore does not
-  test that request parameter; 2.18.2 omits it from native Sonnet 5.5 requests.
+- The September runs did not set `temperature`. The October Anthropic
+  configurations requested zero, which the native client omitted for both
+  models. Those runs used the source checkout before the **2.19.1** release;
+  that release includes the Haiku request compatibility and pricing update.
 - Validation checked the configured exact labels or raw JSON contract. A
   provider request can succeed while the returned response fails that
   contract. The JSON cases did not use native schema output; a real app should
@@ -46,6 +50,8 @@ and the request method, not an independently auditable provider invoice.
 
 | Provider | Exact API model ID | Observed date | Valid / 16 | Mean latency | Estimated cost / 16 |
 |---|---|---|---:|---:|---:|
+| Anthropic | `claude-haiku-5-5` | 2026-10-07 | 16 | 1.090s | $0.000481 |
+| Anthropic | `claude-sonnet-5-5` | 2026-10-07 | 16 | 1.390s | $0.005740 |
 | OpenAI | `gpt-6.1-sol` | 2026-09-30 | 16 | 2.071s | $0.004802 |
 | OpenRouter / Relace | `z-ai/glm-5.3` | 2026-09-30 | 14 | 0.948s | $0.001190 |
 | OpenAI | `gpt-5.6-sol` | 2026-09-28 | 16 | 1.480s | $0.008604 |
@@ -58,7 +64,6 @@ and the request method, not an independently auditable provider invoice.
 | Anthropic | `claude-opus-5-5` | 2026-09-28 | 16 | 2.041s | $0.012120 |
 | Anthropic | `claude-fable-5-1` | 2026-09-28 | 16 | 3.170s | $0.029250 |
 | Anthropic | `claude-sonnet-5` | 2026-09-28 | 14 | 1.821s | $0.006396 |
-| Anthropic | `claude-sonnet-5-5` | 2026-09-28 | 16 | 1.258s | $0.005740 |
 | Anthropic | `claude-haiku-4-5-20251001` | 2026-09-28 | 6 | 0.940s | $0.002816 |
 | Gemini | `gemini-3.5-flash` | 2026-09-28 | 15 | 2.406s | $0.047097 |
 | Gemini | `gemini-3.8-flash` | 2026-09-28 | 16 | 2.363s | $0.014768 |
@@ -72,6 +77,66 @@ and the request method, not an independently auditable provider invoice.
 | OpenRouter | `deepseek/deepseek-v4.1-flash` | 2026-09-28 | 16 | 0.963s | $0.001863 |
 | OpenRouter | `moonshotai/kimi-k3` | 2026-09-28 | 16 | 3.916s | $0.034866 |
 | OpenRouter | `moonshotai/kimi-k2.6` | 2026-09-28 | 15 | 3.005s | $0.012846 |
+
+## Anthropic 5.5 live checks
+
+The owner-approved 2026-10-07 run completed **150 API requests**, with no
+API failures or retries. Each model ran the original eight support-routing
+and JSON cases twice, all ten built-in profiles, and a separate `agent-smoke`.
+The original questions and validators were unchanged.
+
+| Exact API model ID | Original questions / 16 | Full checks / 53 | Smoke / 6 | Estimated cost / 75 |
+|---|---:|---:|---:|---:|
+| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |
+| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |
+
+The full run used two repetitions for ordinary cases and concurrency levels
+1, 5 and 10, making 2, 5 and 10 requests at those levels respectively. Smoke
+ran each of its six cases once per model. Every request used a 512-token
+output limit and no warmups or retries. These short concurrency bursts are
+not a sustained load test.
+
+Haiku's password-reset smoke case returned `technical` where the existing
+check required `account`; its separate full-profile calls passed that case
+twice. The failed smoke remains a failed observation. Sonnet passed every
+check. Overall, **149/150** outputs passed, at **$0.0236142** total estimated
+cost. This total covers all three runs; the main table's latency and cost
+cover only the 16 original questions per model.
+
+The original-question usage was 1,560 input and 650 output tokens for Haiku,
+and 1,560 input and 262 output tokens for Sonnet. All 150 calls had complete
+reported usage and price coverage, with zero reported cache reads or writes.
+These results therefore do not measure the Sonnet cache discount or Haiku's
+long-context band; deterministic protocol tests cover that accounting.
+Sonnet's previous 2026-09-28 result was 16/16, 1.258s mean latency and
+$0.005740 estimated cost; the main table now shows its October observation.
+
+The [Anthropic comparison example](../../examples/anthropic-5.5-comparison.json)
+reproduces the 32 original-question requests with a $0.15 estimated-cost cap.
+The [full-check example](../../examples/anthropic-5.5-checks.json) selects all
+built-in profiles, with 106 requests and a $0.50 cap. Selecting `agent-smoke`
+with `--smoke` reduces that plan to 12 requests. Use **2.19.1** or newer and
+`ANTHROPIC_API_KEY` for these configurations:
+
+```bash
+python3 -m llm_preflight examples/anthropic-5.5-comparison.json --pricing-check
+python3 -m llm_preflight examples/anthropic-5.5-comparison.json --dry-run
+python3 -m llm_preflight examples/anthropic-5.5-checks.json --dry-run
+python3 -m llm_preflight examples/anthropic-5.5-checks.json --tests agent-smoke --smoke --dry-run
+```
+
+The respective maximum planning estimates were $0.0883764, $0.2713263 and
+$0.0245973, using the reviewed prices and token limits. Preview the plan and
+review it before removing `--dry-run` for paid requests.
+To reuse an env file outside `examples/`, add `--env-file PATH` to select it
+explicitly; the default env-file location is beside each configuration.
+
+All 150 saved responses were reevaluated locally and costs recomputed. The
+full-profile wrapper ended with status 143 after saving and printing complete
+results; its CLI exit code was not retained. The matching saved result and
+stdout contained all 106 successful, valid responses, which were verified
+without repeating paid calls. Raw artifacts, configuration hashes and this
+execution-metadata gap remain in the maintainer's private evidence store.
 
 ## GPT-6.1 Sol measured run
 

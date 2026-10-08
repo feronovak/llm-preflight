@@ -1,14 +1,17 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
-direct-provider price snapshots bundled in **2.19.0**. The
+direct-provider price snapshots bundled in **2.19.1**. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
 
-Package version: **2.19.0**.
+Package version: **2.19.1**.
+
+Version 2.19.1 adds Haiku 5.5 and updates Sonnet 5.5 cache pricing; the
+Anthropic section below records the rates, request behavior and limits.
 
 ## Native routes
 
@@ -56,7 +59,8 @@ hours live in code; this table is the headline input/output pair.
 | `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-09-28 |
 | `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-09-28 |
 | `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-09-28 |
-| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-09-28 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-07 |
+| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-07 |
 | `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-09-28 |
 | `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-09-28 |
 | `gemini` | `gemini-3.7-flash` | 0.75 | 3.75 | 2026-09-28 |
@@ -85,6 +89,37 @@ has a $0.10 cached-input rate for up to 272k input tokens and $0.20 above
 that threshold. See
 [`pricing.py`](../../llm_preflight/pricing.py) and
 [pricing and safety](pricing-and-safety.md).
+
+### Anthropic pricing and request updates in 2.19.1
+
+Reviewed on **2026-10-07**. The
+[Haiku 5.5 model page](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
+documents `claude-haiku-5-5` with these standard synchronous USD rates per
+million tokens:
+
+| Total input length | Input | Cached input | Output |
+|---|---:|---:|---:|
+| Up to 100,000 tokens | 0.10 | 0.01 | 0.50 |
+| Above 100,000 tokens | 0.50 | 0.05 | 2.50 |
+
+The band applies to the full request, including cached input. Haiku 5.5 has
+a 1M-token context window, up to 128K output tokens and adaptive thinking with
+`medium` effort by default. The native text adapter omits `temperature`;
+configure effort through `request.provider_options.anthropic.output_config`.
+The model accepts images, but this project's Anthropic adapter remains text-only.
+
+The [October 7 announcement](https://www.anthropic.com/claude-haiku-5-5)
+also cuts `claude-sonnet-5-5` cache reads from $0.20 to **$0.10** per million
+tokens. Its input and output rates remain $2 and $10. The announcement is
+the updated snapshot source because the older Sonnet overview still lists
+the previous cache-read rate.
+
+Anthropic reports uncached input, cache reads and cache writes separately.
+The adapter now sums them into total input and retains the cache-write count.
+No Anthropic cache-write rate is bundled: five-minute and one-hour writes
+have different prices. Supply a reviewed `cache_write_input_cost_per_million`
+matching the configured cache lifetime, including any applicable input tiers,
+or reported writes make the cost estimate unavailable.
 
 ### GPT-6.1 Sol pricing and request limits
 
@@ -140,7 +175,7 @@ route prices. A successful discovery is not an access or compatibility probe.
 These IDs are **not** in the snapshot table because they are not public
 first-party routes we can price honestly:
 
-| Gap | Status as of 2.19.0 |
+| Gap | Status as of 2.19.1 |
 |---|---|
 | Gemini 4 | No public API model ID or price table. Public Gemini remains 3.x. |
 | Kimi (Moonshot) native provider | Call via OpenRouter or `openai_compatible`. |
@@ -150,7 +185,7 @@ first-party routes we can price honestly:
 The [GitHub Marketplace Action guide](../automation/github-action.md) shows
 how to use a published package with its release-tag Action. Pages
 with an older **As of** stamp still describe their stated version; they were
-not all re-reviewed for 2.19.0.
+not all re-reviewed for 2.19.1.
 
 See the [model catalogue](model-catalog.md) for discover → probe → smoke, and
 [`examples/frontier-candidates.json`](../../examples/frontier-candidates.json)

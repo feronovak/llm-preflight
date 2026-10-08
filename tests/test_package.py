@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.19.0"
-    assert 'version = "2.19.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.19.1"
+    assert 'version = "2.19.1"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():
@@ -176,6 +176,31 @@ def test_gpt_6_1_comparison_reproduces_eight_cases_with_bounded_spend():
     # Budget every input token as a cache write, rather than assuming an
     # uncached input rate when the provider can charge a write premium.
     assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.08473)
+
+
+def test_anthropic_5_5_examples_preserve_cases_and_bound_full_and_smoke_runs():
+    from llm_preflight.features import apply_smoke_mode, check_budget
+
+    comparison = load_config(Path("examples/anthropic-5.5-comparison.json"))
+    checks = load_config(Path("examples/anthropic-5.5-checks.json"))
+    baseline = load_config(Path("examples/gpt-6.1-sol-comparison.json"))
+    smoke = apply_smoke_mode({**checks, "profiles": "agent-smoke"})
+
+    assert comparison["prompts"] == baseline["prompts"]
+    assert comparison["profiles"].split(",") == [
+        prompt["name"] for prompt in comparison["prompts"]
+    ]
+    assert checks["profiles"] == "all"
+    for config, requests in ((comparison, 32), (checks, 106), (smoke, 12)):
+        assert {model["model"] for model in config["models"]} == {
+            "claude-haiku-5-5",
+            "claude-sonnet-5-5",
+        }
+        budget = check_budget(config)
+        assert budget["requests"] == budget["possible_requests"] == requests
+        assert budget["maximum_estimated_cost_usd"] <= config["max_estimated_cost_usd"]
+        assert config["warmups"] == 0
+        assert config["request"]["retry"]["max_attempts"] == 1
 
 
 def test_frontier_candidates_include_current_flagships_and_are_priced():

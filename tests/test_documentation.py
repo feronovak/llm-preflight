@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.19.0" in page
-    assert "Package version: **2.19.0**" in page
+    assert "**As of:** v2.19.1" in page
+    assert "Package version: **2.19.1**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -55,7 +55,8 @@ def test_homepage_model_list_matches_comparison_evidence():
     homepage_ids = set(re.findall(r"`([\w./-]+)`", homepage_section))
     study_ids = set(re.findall(r"\| `([\w./-]+)` \|", study_section))
 
-    assert len(study_ids) == 26
+    assert len(study_ids) == 27
+    assert "claude-haiku-5-5" in study_ids
     assert "gpt-6.1-sol" in study_ids
     assert "z-ai/glm-5.3" in study_ids
     assert homepage_ids == study_ids
@@ -78,12 +79,20 @@ def test_homepage_model_list_matches_comparison_evidence():
             measured += 1
     assert f"{measured} measured" in readme
     assert f"{measured} measured" in study
-    assert measured == 26
+    assert measured == 27
     for model in ("gpt-6.1-sol", "z-ai/glm-5.3"):
         row = next(row for row in rows if row[0] == model)
         assert row[1] == "2026-09-30"
     assert "OpenRouter / Relace" in study
     assert "native Z.ai route was not tested" in study
+    for model in ("claude-haiku-5-5", "claude-sonnet-5-5"):
+        row = next(row for row in rows if row[0] == model)
+        assert row[1:3] == ("2026-10-07", "16")
+    for page in (readme, docs_index, study):
+        assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
+        assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
+        assert "password-reset" in page
+        assert "2.19.1" in page
 
 
 def test_mcp_release_notes_and_security_boundary_are_current():
@@ -252,16 +261,16 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0"
+        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
         in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     )
 
     assert (
-        "**Last reviewed:** 2026-09-28 · **As of:** v2.18.1"
+        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0"
+        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
         in (ROOT / "README.md").read_text()
     )
     assert (

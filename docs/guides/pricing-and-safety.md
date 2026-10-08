@@ -1,6 +1,6 @@
 # Tests, pricing, and safety
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
 ## Built-in tests and validation
 
@@ -72,6 +72,15 @@ $2.50 per million input tokens, or $5.00 above 272k total input tokens; its
 cache reads cost $0.10 or $0.20 respectively. Plans include the possible write
 premium. Reported writes without a reviewed write rate make cost unavailable;
 configure `cache_write_input_cost_per_million` when that rate is not bundled.
+
+**Unreleased source-checkout update:** Claude Haiku 5.5 uses $0.10 input,
+$0.01 cache reads and $0.50 output per million tokens for prompts up to
+100,000 total input tokens; above that boundary all three rates are five
+times higher. Claude Sonnet 5.5 cache reads use the October 7 rate of $0.10
+per million tokens. Native Anthropic usage now includes cache reads and writes
+in the total input count. Reported writes require an explicit reviewed write
+rate matching the cache lifetime; the bundled snapshot does not assume one.
+
 Estimates still exclude taxes, cache-storage fees, tool
 fees, and account-specific discounts not reported in usage.
 

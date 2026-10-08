@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.1
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -34,12 +34,31 @@ Results stay local unless you decide to attach or publish them.
 - [Model catalogue](guides/model-catalog.md) — discover, probe, compare, and
   deliberately approve provider models.
 - [Model comparison](guides/observed-model-comparison.md) — dated
-  support-routing results including GPT-6.1 Sol and GLM-5.3 through Relace, with exact model
-  IDs, request limits, and the evidence status of each row.
+  results for **27 measured API model IDs**, including Haiku 5.5, Sonnet 5.5,
+  GPT-6.1 Sol and GLM-5.3 through Relace, with request limits and failure analysis.
 - [Interactive runs](guides/interactive-runs.md) — select models and tests at
   the terminal, then review the paid-work plan.
 - [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing
   confidence, retries, response retention, and sensitive-data handling.
+
+## Latest measured comparison
+
+On **2026-10-07**, the source checkout before the **2.19.1** release ran the original
+support-routing questions, all built-in checks, and a separate agent smoke
+against two native Anthropic models:
+
+| Exact API model ID | Original questions / 16 | Full checks / 53 | Smoke / 6 | Estimated cost / 75 |
+|---|---:|---:|---:|---:|
+| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |
+| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |
+
+All 150 API requests succeeded; 149 outputs passed. Haiku's password-reset
+smoke response selected "technical" where the check required "account".
+The [comparison page](guides/observed-model-comparison.md#anthropic-55-live-checks)
+records the cases, concurrency levels, costs and evidence limits. Version
+**2.19.1** includes Haiku 5.5 pricing and request compatibility, the Sonnet
+cache-price update and corrected Anthropic cache-usage accounting.
+See [official snapshots](guides/current-snapshots.md).
 
 ## Automate with confidence
 

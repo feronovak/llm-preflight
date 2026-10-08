@@ -1,0 +1,33 @@
+{
+  "prompt": "Reply with exactly: ready",
+  "models": [
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "name": "Claude Haiku 5.5"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "name": "Claude Sonnet 5.5"
+    }
+  ],
+  "suite_repetitions": 2,
+  "repetitions": 1,
+  "warmups": 0,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "require_current_pricing": true,
+  "save_responses": "failures",
+  "request": {
+    "temperature": 0,
+    "max_output_tokens": 512,
+    "retry": {
+      "max_attempts": 1
+    }
+  },
+  "name": "anthropic-5.5-full-checks",
+  "profiles": "all",
+  "max_requests": 106,
+  "max_estimated_cost_usd": 0.5
+}

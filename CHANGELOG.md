@@ -2,10 +2,29 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.19.1 - 2026-10-08
+
+### Added
+
+- Bundle Claude Haiku 5.5's reviewed input, output and cache-read pricing,
+  including the higher full-request band above 100,000 total input tokens.
+- Add bounded Anthropic 5.5 configurations for the original comparison cases,
+  full built-in checks and a separate agent smoke.
+
+### Fixed
+
+- Omit unsupported `temperature` from native Claude Haiku 5.5 requests.
+- Apply Claude Sonnet 5.5's October 7 cache-read price cut to $0.10 per
+  million tokens, including configurations with persisted official snapshots.
+- Normalize Anthropic input usage to include cache reads and writes, and
+  retain reported cache-write usage. Writes without an explicit reviewed
+  write rate make cost unavailable rather than silently understating it.
 
 ### Changed
 
+- Update the README, documentation homepage and 27-model comparison with
+  October 7 Haiku 5.5 and Sonnet 5.5 measurements, including the retained
+  Haiku smoke failure and the separate request and cost totals.
 - Point the repository Action default, smoke workflow, and CI examples at the
   published 2.19.0 package after the release.
 

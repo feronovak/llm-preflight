@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -130,6 +130,14 @@ pricing. Use `provider: "zai"` with `ZAI_API_KEY`; the
 the eight support-routing cases. OpenRouter discovery uses `z-ai/glm-5.3`
 and that route's live pricing.
 
+Version **2.19.1** adds native Claude Haiku 5.5
+pricing and request compatibility, and updates Sonnet 5.5 cache reads to
+$0.10 per million tokens. Haiku uses $0.10 input and $0.50 output per million
+tokens up to 100,000 total input tokens; above that boundary the full request
+uses rates five times higher. See [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md)
+for cache rates and limits. Anthropic cache usage includes reads and writes;
+complete write cost requires a reviewed TTL-specific rate.
+
 Missing or malformed provider usage keeps cost unavailable, with known spend
 shown as a subtotal. Strict pricing freshness applies to every source
 description. Unsupported output-schema constraints fail before provider work.
@@ -217,21 +225,37 @@ time—not a universal model ranking. For a complete interactive example, see
 
 ## Model comparison
 
-The comparison lists **26 exact API IDs: 26 measured**.
+The comparison lists **27 exact API IDs: 27 measured**.
 On 2026-09-28, we ran eight example support-routing and JSON cases twice each
 against 24 IDs. On 2026-09-30, the same cases were run against GPT-6.1 Sol
 and GLM-5.3 through OpenRouter / Relace: **16/16** and **14/16** valid outputs,
-respectively. GLM's result covers that routed endpoint. These observations
-apply to the dated example contract.
+respectively. On **2026-10-07**, Haiku 5.5 and Sonnet 5.5 both passed **16/16**
+on those cases, plus **53/53** built-in checks each. The separate smoke caught
+one Haiku password-reset routing mismatch. GLM's result covers the routed
+endpoint; all results apply to their dated example contracts.
 The [observed comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
-has the scores, request settings, cost method, and failure analysis.
+has the full table, runnable examples, request settings, and failure analysis.
+
+Latest Anthropic run, using the source checkout before the **2.19.1** release:
+
+| Exact API model ID | Original questions / 16 | Full checks / 53 | Smoke / 6 | Estimated cost / 75 |
+|---|---:|---:|---:|---:|
+| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |
+| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |
+
+All 150 API requests completed successfully, with **149/150** valid outputs
+and **$0.0236142** total estimated cost from reported token usage. Haiku's
+password-reset smoke response selected "technical" where the check required
+"account". The original expectations were retained; this is scoped evidence
+for a model review.
 
 | Provider route | Model IDs | Evidence |
 |---|---|---|
+| Anthropic | `claude-haiku-5-5`, `claude-sonnet-5-5` | Measured 2026-10-07; 16/16 each on the original cases; separate checks above |
 | OpenAI | `gpt-6.1-sol` | Measured 2026-09-30; 16/16 valid |
 | OpenRouter / Relace | `z-ai/glm-5.3` | Measured 2026-09-30; 14/16 valid |
 | OpenAI | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` | Measured 2026-09-28 |
-| Anthropic | `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` | Measured 2026-09-28 |
+| Anthropic | `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | Measured 2026-09-28 |
 | Gemini | `gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview` | Measured 2026-09-28 |
 | xAI | `grok-4.7`, `grok-4.6` | Measured 2026-09-28 |
 | OpenRouter | `qwen/qwen3.8-max-0902`, `qwen/qwen3.8-flash`, `deepseek/deepseek-v4-pro-0813`, `deepseek/deepseek-v4.1-flash`, `moonshotai/kimi-k3`, `moonshotai/kimi-k2.6` | Measured 2026-09-28 |

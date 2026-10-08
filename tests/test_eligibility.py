@@ -5,7 +5,9 @@ from llm_preflight.catalog import resolve_models
 from llm_preflight.eligibility import smoke_eligibility_report
 
 
-def test_smoke_eligibility_explains_every_catalog_and_pricing_outcome():
+def test_smoke_eligibility_explains_every_catalog_and_pricing_outcome(
+    august_catalog_review,
+):
     report = smoke_eligibility_report(
         [
             {
@@ -96,7 +98,9 @@ def test_jev_decision_models_are_incompatible_with_text_smoke():
     assert report["models"][0]["reason"] == "incompatible_catalog_type"
 
 
-def test_smoke_eligibility_requires_bounded_limits_after_other_evidence():
+def test_smoke_eligibility_requires_bounded_limits_after_other_evidence(
+    august_catalog_review,
+):
     report = smoke_eligibility_report(
         [
             {

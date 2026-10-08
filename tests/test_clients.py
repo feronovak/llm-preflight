@@ -642,6 +642,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
     for model in (
         "claude-sonnet-5",
         "claude-sonnet-5-5",
+        "claude-haiku-5-5",
         "claude-fable-5",
         "claude-fable-5-1",
         "claude-opus-4-8",
@@ -652,6 +653,117 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         assert "temperature" not in client.body(
             "hello", {"temperature": 0, "max_output_tokens": 16}
         )
+
+
+@pytest.mark.parametrize(
+    ("model_id", "expected_cost"),
+    [("claude-haiku-5-5", 0.000028), ("claude-sonnet-5-5", 0.00048)],
+)
+@pytest.mark.parametrize("written", [0, 100])
+def test_anthropic_stream_preserves_total_input_and_cache_usage(
+    monkeypatch, model_id, expected_cost, written
+):
+    from llm_preflight.metrics import summarize
+    from llm_preflight.pricing import apply_public_pricing
+
+    captured = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            events = [
+                {
+                    "type": "message_start",
+                    "message": {
+                        "usage": {
+                            "input_tokens": 100,
+                            "cache_read_input_tokens": 800,
+                            "cache_creation_input_tokens": written,
+                            "output_tokens": 0,
+                        }
+                    },
+                },
+                {
+                    "type": "content_block_delta",
+                    "delta": {"type": "thinking_delta", "thinking": "internal"},
+                },
+                {
+                    "type": "content_block_delta",
+                    "delta": {"type": "text_delta", "text": "billing"},
+                },
+                {"type": "message_delta", "usage": {"output_tokens": 20}},
+            ]
+            return iter(f"data: {json.dumps(event)}\n".encode() for event in events)
+
+    def transport(request, timeout):
+        captured.append(json.loads(request.data))
+        return Response()
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+    client = create_client(model, 10)
+
+    sample = client.run(
+        "I was charged twice.",
+        {
+            "temperature": 0,
+            "max_output_tokens": 128,
+            "system_prompt": "Return only the queue label.",
+            "provider_options": {"anthropic": {"output_config": {"effort": "low"}}},
+            "retry": {"max_attempts": 1},
+        },
+    )
+
+    assert sample["ok"] is True
+    assert sample["response"] == "billing"
+    assert sample["input_tokens"] == 900 + written
+    assert sample["cached_input_tokens"] == 800
+    assert sample["cache_write_input_tokens"] == written
+    assert sample["output_tokens"] == 20
+    assert "temperature" not in captured[0]
+    assert captured[0]["system"] == "Return only the queue label."
+    assert captured[0]["output_config"] == {"effort": "low"}
+    summary = summarize([sample], model)
+    assert summary["input_tokens"] == 900 + written
+    assert summary["cache_write_input_tokens"] == written
+    if written:
+        # Anthropic write prices vary by TTL; an aggregate count cannot pick one.
+        assert summary["estimated_cost_usd"] is None
+        assert summary["cost_coverage"]["missing_price_requests"] == 1
+    else:
+        assert summary["estimated_cost_usd"] == pytest.approx(expected_cost)
+
+
+@pytest.mark.parametrize(
+    "cache_usage",
+    [
+        {"cache_read_input_tokens": -1},
+        {"cache_read_input_tokens": "800"},
+        {"cache_creation_input_tokens": 0.5},
+        {"cache_creation_input_tokens": True},
+        {"cache_creation_input_tokens": None},
+    ],
+)
+def test_anthropic_invalid_cache_usage_cannot_produce_a_cost(cache_usage):
+    from llm_preflight.pricing import apply_public_pricing, estimate_sample_cost
+
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-haiku-5-5"})
+    client = create_client(model, 10)
+    _, usage = client.parse_event(
+        {
+            "message": {
+                "usage": {"input_tokens": 100, "output_tokens": 20, **cache_usage}
+            }
+        }
+    )
+
+    assert estimate_sample_cost(usage, model) is None
 
 
 def test_gemini_request_and_events():

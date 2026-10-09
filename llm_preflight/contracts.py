@@ -380,6 +380,13 @@ def check_contract(config: dict[str, Any]) -> dict[str, Any]:
         "ok": all(item.get("actual") == item.get("expected") for item in all_fixtures),
         "fixtures": fixture_results,
         "prompt_fixtures": prompt_results,
+        "unproven_prompts": [
+            prompt["name"]
+            for prompt in config.get("prompts", [])
+            if isinstance(prompt, dict)
+            and "validation" in prompt
+            and not prompt.get("validation_fixtures")
+        ],
         "tools": tool_results,
     }
 

@@ -253,7 +253,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
-        assert "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0" in page.read_text()
+        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     for page in (
         ROOT / "docs/automation/coding-agents.md",

@@ -160,3 +160,55 @@ def test_every_non_eligible_reason_has_a_next_step():
         "bounded_limits_required",
     }
     assert "eligible" not in ELIGIBILITY_NEXT_STEPS
+
+
+def test_eligibility_next_step_covers_refused_text_and_priced_entries():
+    from llm_preflight.eligibility import eligibility_next_step
+
+    refused = "a live run refuses this model; remove it from the plan"
+    assert (
+        eligibility_next_step(
+            {
+                "provider": "typesafe",
+                "model": "router",
+                "catalog_type": "unknown",
+                "reason": "catalog_evidence_required",
+            }
+        )
+        == refused
+    )
+    assert (
+        eligibility_next_step(
+            {
+                "provider": "mock",
+                "model": "jev-2",
+                "catalog_type": "text-chat",
+                "reason": "incompatible_catalog_type",
+            }
+        )
+        == refused
+    )
+    text_chat = eligibility_next_step(
+        {
+            "provider": "openai",
+            "model": "chat",
+            "catalog_type": "text-chat",
+            "reason": "incompatible_catalog_type",
+        }
+    )
+    assert text_chat == (
+        "text output without text-ready evidence; `catalog prepare` will not "
+        "write it; a reviewed bounded run accepts it"
+    )
+    image = eligibility_next_step(
+        {
+            "provider": "openai",
+            "model": "img",
+            "catalog_type": "image",
+            "reason": "incompatible_catalog_type",
+        }
+    )
+    assert "a live run refuses this catalogue type" in image
+    assert eligibility_next_step(
+        {"provider": "openai", "model": "m", "reason": "unknown_pricing"}
+    ) == ("add reviewed direct-provider pricing with an as_of date")

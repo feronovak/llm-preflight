@@ -288,6 +288,10 @@ def _format_contract_check(report: dict[str, Any]) -> str:
                 f"- {status}: prompt {entry['prompt']} fixture {fixture['name']} "
                 f"expected {fixture['expected']}, got {fixture['actual']}"
             )
+    lines.extend(
+        f"- note: prompt {name} declares no fixtures"
+        for name in report.get("unproven_prompts", [])
+    )
     for tool in report["tools"]:
         lines.append(f"- ok: tool {tool['name']} schema")
     return "\n".join(lines) + "\n"
@@ -476,8 +480,8 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
         if needs_review:
             lines.append(
                 "Eligibility gates `catalog prepare`. It does not block a reviewed "
-                "bounded run of text models; a live run refuses non-text "
-                "catalogue types."
+                "bounded run of text models; a live run refuses models it lists "
+                "as refused."
             )
     return "\n".join(lines) + "\n"
 

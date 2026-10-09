@@ -1,0 +1,12 @@
+{
+  "name": "two-prompts",
+  "repetitions": 1,
+  "warmups": 0,
+  "models": [
+    {"name": "local", "provider": "mock", "model": "local", "response": "alpha"}
+  ],
+  "prompts": [
+    {"name": "p1", "prompt": "say alpha", "validation": {"contains": "alpha"}},
+    {"name": "p2", "prompt": "say beta", "validation": {"contains": "beta"}}
+  ]
+}

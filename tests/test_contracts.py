@@ -110,6 +110,7 @@ def test_contract_check_exercises_accept_and_reject_fixtures_without_a_provider_
             {"name": "missing status", "expected": "fail", "actual": "fail"},
         ],
         "prompt_fixtures": [],
+        "unproven_prompts": [],
         "tools": [{"name": "lookup_order", "ok": True}],
     }
 
@@ -466,3 +467,38 @@ def test_hand_set_prompt_name_cannot_turn_a_prompt_check_off():
     )
 
     assert report["ok"] is False
+
+
+def test_contract_check_lists_prompts_that_declare_a_validator_but_no_fixtures():
+    config = {
+        "name": "mix",
+        "repetitions": 1,
+        "warmups": 0,
+        "models": [
+            {"name": "m", "provider": "mock", "model": "local", "response": "alpha"}
+        ],
+        "prompt": "say alpha",
+        "validation": {"contains": "alpha"},
+        "validation_fixtures": [
+            {"name": "top-pass", "response": "alpha", "expect": "pass"},
+            {"name": "top-fail", "response": "beta", "expect": "fail"},
+        ],
+        "prompts": [
+            {
+                "name": "p1",
+                "prompt": "say beta",
+                "validation": {"contains": "beta"},
+                "validation_fixtures": [
+                    {"name": "p1-pass", "response": "beta", "expect": "pass"},
+                    {"name": "p1-fail", "response": "alpha", "expect": "fail"},
+                ],
+            },
+            {"name": "p2", "prompt": "say gamma", "validation": {"regex": "^gamma$"}},
+            {"name": "p3", "prompt": "say delta"},
+        ],
+    }
+
+    report = check_contract(config)
+
+    assert report["ok"] is True
+    assert report["unproven_prompts"] == ["p2"]

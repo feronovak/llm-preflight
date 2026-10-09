@@ -127,7 +127,7 @@ Do not change a reason by editing a result. Fix the evidence in the candidate
 configuration or local probe ledger, then preview again. A dry run prints the
 reason and next step for each model that needs review; eligibility gates
 `catalog prepare` and does not block a reviewed bounded run of text models.
-Non-text catalogue types are refused at run time.
+A live run refuses the models the dry run lists as refused.
 
 `catalog prepare` writes only rows that are already smoke-eligible; models
 needing a probe, price review, catalogue/adapter evidence, or bounds remain in

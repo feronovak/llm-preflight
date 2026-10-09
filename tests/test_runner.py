@@ -1,6 +1,7 @@
 import json
 import stat
 import sys
+from pathlib import Path
 from typing import ClassVar
 
 import pytest
@@ -2755,3 +2756,40 @@ def test_selected_prompt_validation_does_not_inherit_top_level_fixtures():
     report = check_contract(selected)
     assert report["ok"] is True
     assert report["fixtures"] == []
+
+
+def test_selected_prompt_without_its_own_validation_keeps_top_level_fixtures_once():
+    config = {
+        "prompt": "Top.",
+        "validation": {"exact": "alpha"},
+        "validation_fixtures": [
+            {"name": "ok", "response": "alpha", "expect": "pass"},
+            {"name": "bad", "response": "beta", "expect": "fail"},
+        ],
+        "prompts": [{"name": "q", "prompt": "Q."}],
+        "models": [{"provider": "mock", "model": "local", "response": "alpha"}],
+    }
+
+    selected = select_custom_prompt(config, "q")
+
+    assert selected["validation"] == {"exact": "alpha"}
+    assert len(selected["validation_fixtures"]) == 2
+    report = check_contract(selected)
+    assert report["ok"] is True
+    assert len(report["fixtures"]) == 2
+    assert report["prompt_fixtures"] == []
+
+
+# Pinned from llm-preflight 2.19.1 running
+# `llm-preflight tests/fixtures/two-prompts.json --prompt p1 --no-save --json`.
+PUBLISHED_2_19_1_CONTRACT_SHA256 = (
+    "b904260fcda07fb9349d4652fec2ffe87eff55bd62bbea7629103d0571dde21e"
+)
+
+
+def test_prompt_selection_keeps_the_published_contract_fingerprint():
+    config = load_config(Path("tests/fixtures/two-prompts.json"))
+
+    result = run_benchmark(select_custom_prompt(config, "p1"))
+
+    assert result["provenance"]["contract_sha256"] == PUBLISHED_2_19_1_CONTRACT_SHA256

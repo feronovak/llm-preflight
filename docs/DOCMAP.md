@@ -47,6 +47,6 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-09-09 | v2.14.0 |
 | [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract | stamped | 2026-08-30 | v2.7.5 |
-| [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-09-30 | v2.19.0 |
+| [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-10-09 | v2.19.2 |
 | [`examples/reports/README.md`](../examples/reports/README.md) | Reviewable report gallery | unstamped | — | — |
 | [`plugins/llm-preflight/skills/llm-preflight/SKILL.md`](../plugins/llm-preflight/skills/llm-preflight/SKILL.md) | LLM Preflight | unstamped | — | — |

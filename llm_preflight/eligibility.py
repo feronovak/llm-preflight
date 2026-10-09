@@ -31,18 +31,6 @@ ELIGIBILITY_NEXT_STEPS: dict[str, str] = {
 }
 
 
-def eligibility_next_step(entry: dict[str, Any]) -> str:
-    """Return the next step for one non-eligible smoke-eligibility entry."""
-    reason = entry.get("reason", "unknown")
-    catalog_type = entry.get("catalog_type")
-    if reason == "incompatible_catalog_type" and catalog_type in _TEXT_SMOKE_TYPES:
-        return (
-            f"catalogued as {catalog_type}; eligibility needs text-ready evidence "
-            "from `catalog probe`; a reviewed bounded run may still proceed"
-        )
-    return ELIGIBILITY_NEXT_STEPS.get(reason, "review the catalogue evidence")
-
-
 class IncompatibleCatalogTypeError(ValueError):
     """A model is not eligible for the generic text smoke adapter."""
 
@@ -122,3 +110,27 @@ def smoke_eligibility_report(
         },
         "models": entries,
     }
+
+
+def eligibility_next_step(entry: dict[str, Any]) -> str:
+    """Return the next step for one non-eligible smoke-eligibility entry."""
+    reason = entry.get("reason", "unknown")
+    catalog_type = entry.get("catalog_type")
+    if incompatible_text_smoke_reason(
+        {
+            "provider": entry.get("provider"),
+            "model": entry.get("model"),
+            "catalog_type": catalog_type,
+        }
+    ):
+        if reason == "incompatible_catalog_type" and catalog_type not in (
+            _TEXT_SMOKE_TYPES
+        ):
+            return ELIGIBILITY_NEXT_STEPS[reason]
+        return "a live run refuses this model; remove it from the plan"
+    if reason == "incompatible_catalog_type" and catalog_type in _TEXT_SMOKE_TYPES:
+        return (
+            "text output without text-ready evidence; `catalog prepare` will not "
+            "write it; a reviewed bounded run accepts it"
+        )
+    return ELIGIBILITY_NEXT_STEPS.get(reason, "review the catalogue evidence")

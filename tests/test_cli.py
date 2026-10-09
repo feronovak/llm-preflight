@@ -93,6 +93,7 @@ def test_contract_check_runs_validation_fixtures_and_tool_lint_without_a_benchma
             {"name": "array", "expected": "fail", "actual": "fail"},
         ],
         "prompt_fixtures": [],
+        "unproven_prompts": [],
         "tools": [{"name": "lookup", "ok": True}],
     }
 
@@ -2671,11 +2672,20 @@ def test_dry_run_explains_each_non_eligible_model_and_that_it_does_not_block():
     )
     assert (
         "Eligibility gates `catalog prepare`. It does not block a reviewed "
-        "bounded run of text models; a live run refuses non-text catalogue types."
+        "bounded run of text models; a live run refuses models it lists as refused."
     ) in output
 
 
-def test_dry_run_distinguishes_text_and_non_text_incompatible_entries():
+def test_dry_run_distinguishes_text_and_refused_incompatible_entries():
+    def entry(provider, model, reason, catalog_type):
+        return {
+            "provider": provider,
+            "model": model,
+            "eligible": False,
+            "reason": reason,
+            "catalog_type": catalog_type,
+        }
+
     plan = {
         "benchmark": "triage",
         "models": [{"provider": "openai", "model": "chat"}],
@@ -2688,22 +2698,12 @@ def test_dry_run_distinguishes_text_and_non_text_incompatible_entries():
         "pricing_warnings": [],
         "pricing_coverage": {},
         "smoke_eligibility": {
-            "summary": {"discovered": 2, "eligible": 0, "needs_review": 2},
+            "summary": {"discovered": 4, "eligible": 0, "needs_review": 4},
             "models": [
-                {
-                    "provider": "openai",
-                    "model": "chat",
-                    "eligible": False,
-                    "reason": "incompatible_catalog_type",
-                    "catalog_type": "text-chat",
-                },
-                {
-                    "provider": "openai",
-                    "model": "img",
-                    "eligible": False,
-                    "reason": "incompatible_catalog_type",
-                    "catalog_type": "image",
-                },
+                entry("openai", "chat", "incompatible_catalog_type", "text-chat"),
+                entry("openai", "img", "incompatible_catalog_type", "image"),
+                entry("typesafe", "router", "catalog_evidence_required", "unknown"),
+                entry("mock", "jev-2", "incompatible_catalog_type", "text-chat"),
             ],
         },
         "configuration_warnings": [],
@@ -2711,11 +2711,17 @@ def test_dry_run_distinguishes_text_and_non_text_incompatible_entries():
         "stop_on": "none",
     }
 
-    output = cli._format_dry_run_plan(plan)
+    lines = cli._format_dry_run_plan(plan).splitlines()
 
-    assert "catalogued as text-chat; eligibility needs text-ready evidence" in output
-    assert "`catalog probe`" in output
-    assert "a live run refuses this catalogue type" in output
+    def line_for(model):
+        return next(line for line in lines if f"/{model}:" in line)
+
+    assert "`catalog prepare` will not write it" in line_for("chat")
+    assert "refuses this model" not in line_for("chat")
+    assert "a live run refuses this catalogue type" in line_for("img")
+    assert "a live run refuses this model" in line_for("router")
+    assert "a live run refuses this model" in line_for("jev-2")
+    assert not any("catalog probe" in line for line in lines)
 
 
 def test_dry_run_without_an_eligibility_block_prints_no_eligibility_lines():
@@ -3494,3 +3500,56 @@ def test_selecting_a_bundled_custom_prompt_runs_it_without_unknown_profiles():
     )
 
     assert completed.returncode == 3, completed.stderr
+
+
+def test_contract_check_prints_a_note_for_a_prompt_without_fixtures(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "name": "mix",
+                "repetitions": 1,
+                "warmups": 0,
+                "models": [
+                    {
+                        "name": "m",
+                        "provider": "mock",
+                        "model": "local",
+                        "response": "alpha",
+                    }
+                ],
+                "prompt": "say alpha",
+                "validation": {"contains": "alpha"},
+                "validation_fixtures": [
+                    {"name": "top-pass", "response": "alpha", "expect": "pass"},
+                    {"name": "top-fail", "response": "beta", "expect": "fail"},
+                ],
+                "prompts": [
+                    {
+                        "name": "p1",
+                        "prompt": "say beta",
+                        "validation": {"contains": "beta"},
+                        "validation_fixtures": [
+                            {"name": "p1-pass", "response": "beta", "expect": "pass"},
+                            {"name": "p1-fail", "response": "alpha", "expect": "fail"},
+                        ],
+                    },
+                    {
+                        "name": "p2",
+                        "prompt": "say gamma",
+                        "validation": {"regex": "^gamma$"},
+                    },
+                    {"name": "p3", "prompt": "say delta"},
+                ],
+            }
+        )
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--contract-check"])
+
+    cli.main()
+    output = capsys.readouterr().out
+
+    assert "- note: prompt p2 declares no fixtures" in output
+    assert "prompt p3" not in output

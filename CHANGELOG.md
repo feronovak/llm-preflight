@@ -12,14 +12,19 @@ All notable changes to this project are documented here.
   were never proven.
 - Reject `validation_fixtures` that have no `validation` at the same level
   instead of checking them against the implicit non-empty rule.
+- Scope `--prompt` to the selected prompt's own fixtures: a prompt with its own
+  `validation` no longer inherits top-level `validation_fixtures`, which were
+  checked against the wrong validator.
 
 ### Added
 
 - Dry-run plans list each non-eligible model with its reason and next step,
   and state that eligibility gates `catalog prepare`, does not block a
-  reviewed bounded run of text models, and that non-text catalogue types are
-  refused at run time.
+  reviewed bounded run of text models, and that a live run refuses the models
+  it lists as refused.
 - Accepted and rejected fixtures in the bundled custom-contract examples.
+- `--contract-check` reports prompts that declare a `validation` but no
+  fixtures (`unproven_prompts`) and prints a note for each.
 
 ### Changed
 

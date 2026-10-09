@@ -2,7 +2,11 @@ import hashlib
 
 import pytest
 
-from llm_preflight.contracts import check_contract
+from llm_preflight.contracts import (
+    check_contract,
+    contract_fixtures_declared,
+    validate_contract_config,
+)
 from llm_preflight.runner import run_benchmark, validate_config_validations
 
 
@@ -105,6 +109,7 @@ def test_contract_check_exercises_accept_and_reject_fixtures_without_a_provider_
             {"name": "accepted", "expected": "pass", "actual": "pass"},
             {"name": "missing status", "expected": "fail", "actual": "fail"},
         ],
+        "prompt_fixtures": [],
         "tools": [{"name": "lookup_order", "ok": True}],
     }
 
@@ -206,3 +211,149 @@ def test_result_has_secret_safe_provenance_fingerprints_for_contract_routes_and_
     for key in ("config_sha256", "contract_sha256", "routes_sha256", "evidence_sha256"):
         assert len(provenance[key]) == 64
     assert "mock.example" not in str(provenance)
+
+
+def test_contract_check_evaluates_per_prompt_fixtures_against_that_prompts_validator():
+    report = check_contract(
+        {
+            "prompts": [
+                {
+                    "name": "routing",
+                    "prompt": "Route this ticket.",
+                    "validation": {"exact": "billing"},
+                    "validation_fixtures": [
+                        {"name": "right queue", "response": "billing", "expect": "pass"},
+                        {"name": "wrong queue", "response": "technical", "expect": "fail"},
+                    ],
+                },
+                {
+                    "name": "extraction",
+                    "prompt": "Extract fields.",
+                    "validation": {"json_object": True},
+                    "validation_fixtures": [
+                        {"name": "object", "response": "{}", "expect": "pass"},
+                        {"name": "fenced", "response": "```json\n{}\n```", "expect": "fail"},
+                    ],
+                },
+            ],
+            "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+        }
+    )
+
+    assert report["ok"] is True
+    assert report["fixtures"] == []
+    assert report["tools"] == []
+    assert report["prompt_fixtures"] == [
+        {
+            "prompt": "routing",
+            "fixtures": [
+                {"name": "right queue", "expected": "pass", "actual": "pass"},
+                {"name": "wrong queue", "expected": "fail", "actual": "fail"},
+            ],
+        },
+        {
+            "prompt": "extraction",
+            "fixtures": [
+                {"name": "object", "expected": "pass", "actual": "pass"},
+                {"name": "fenced", "expected": "fail", "actual": "fail"},
+            ],
+        },
+    ]
+
+
+def test_contract_check_reports_a_per_prompt_fixture_the_validator_wrongly_accepts():
+    report = check_contract(
+        {
+            "prompts": [
+                {
+                    "name": "routing",
+                    "prompt": "Route this ticket.",
+                    "validation": {"contains": "ing"},
+                    "validation_fixtures": [
+                        {"name": "right queue", "response": "billing", "expect": "pass"},
+                        {"name": "wrong queue", "response": "shipping", "expect": "fail"},
+                    ],
+                }
+            ],
+            "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+        }
+    )
+
+    assert report["ok"] is False
+    assert report["prompt_fixtures"][0]["fixtures"][1] == {
+        "name": "wrong queue",
+        "expected": "fail",
+        "actual": "pass",
+        "error": "fixture expectation did not match validator result",
+    }
+
+
+def test_fixtures_without_a_validator_at_the_same_level_are_a_configuration_error():
+    with pytest.raises(
+        ValueError, match="validation_fixtures require a validation at the same level"
+    ):
+        validate_contract_config(
+            {
+                "prompts": [
+                    {"name": "routing", "prompt": "Route.", "validation": {"exact": "billing"}}
+                ],
+                "validation_fixtures": [
+                    {"name": "right queue", "response": "billing", "expect": "pass"},
+                    {"name": "wrong queue", "response": "technical", "expect": "fail"},
+                ],
+                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+            }
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r"prompt routing\.validation_fixtures require prompt routing\.validation",
+    ):
+        validate_contract_config(
+            {
+                "prompts": [
+                    {
+                        "name": "routing",
+                        "prompt": "Route.",
+                        "validation_fixtures": [
+                            {"name": "a", "response": "billing", "expect": "pass"},
+                            {"name": "b", "response": "technical", "expect": "fail"},
+                        ],
+                    }
+                ],
+                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+            }
+        )
+
+
+def test_contract_fixtures_declared_recognises_every_scope():
+    assert contract_fixtures_declared({"prompt": "x"}) is False
+    assert contract_fixtures_declared({"prompt": "x", "validation_fixtures": [{}]}) is True
+    assert contract_fixtures_declared({"tools": [{"name": "t"}]}) is True
+    assert (
+        contract_fixtures_declared(
+            {"prompts": [{"name": "a", "prompt": "x"}, {"name": "b", "prompt": "y",
+                                                         "validation_fixtures": [{}]}]}
+        )
+        is True
+    )
+
+
+def test_benchmark_refuses_a_failed_per_prompt_contract_fixture_before_requests():
+    with pytest.raises(ValueError, match="validation fixtures failed"):
+        run_benchmark(
+            {
+                "prompts": [
+                    {
+                        "name": "routing",
+                        "prompt": "Route.",
+                        "validation": {"contains": "ing"},
+                        "validation_fixtures": [
+                            {"name": "ok", "response": "billing", "expect": "pass"},
+                            {"name": "too weak", "response": "shipping", "expect": "fail"},
+                        ],
+                    }
+                ],
+                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+            }
+        )

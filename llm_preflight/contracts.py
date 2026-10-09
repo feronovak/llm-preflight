@@ -83,17 +83,36 @@ def validate_contract_config(config: dict[str, Any]) -> None:
     """Validate optional response fixtures and canonical tool definitions."""
     _validate_output_contract(config.get("validation"), "validation")
     _validate_fixtures(config.get("validation_fixtures"), "validation_fixtures")
+    if config.get("validation_fixtures") and "validation" not in config:
+        raise ValueError(
+            "validation_fixtures require a validation at the same level; "
+            "place fixtures for a custom prompt inside that prompt"
+        )
     for prompt in config.get("prompts", []):
         if isinstance(prompt, dict):
+            name = prompt.get("name", "<unnamed>")
             _validate_output_contract(
-                prompt.get("validation"),
-                f"prompt {prompt.get('name', '<unnamed>')}.validation",
+                prompt.get("validation"), f"prompt {name}.validation"
             )
             _validate_fixtures(
                 prompt.get("validation_fixtures"),
-                f"prompt {prompt.get('name', '<unnamed>')}.validation_fixtures",
+                f"prompt {name}.validation_fixtures",
             )
+            if prompt.get("validation_fixtures") and "validation" not in prompt:
+                raise ValueError(
+                    f"prompt {name}.validation_fixtures require prompt {name}.validation"
+                )
     _validate_tools(config.get("tools", []))
+
+
+def contract_fixtures_declared(config: dict[str, Any]) -> bool:
+    """Return whether any fixture or tool declaration exists for --contract-check."""
+    if config.get("validation_fixtures") or config.get("tools"):
+        return True
+    return any(
+        isinstance(prompt, dict) and prompt.get("validation_fixtures")
+        for prompt in config.get("prompts", [])
+    )
 
 
 def _validate_output_contract(validation: Any, location: str) -> None:
@@ -328,18 +347,37 @@ def _validate_tool_schema(schema: Any, location: str, *, root: bool = False) -> 
 def check_contract(config: dict[str, Any]) -> dict[str, Any]:
     """Run configured validation fixtures and tool linting without provider access."""
     validate_contract_config(config)
-    fixtures = config.get("validation_fixtures", [])
-    validation = config.get("validation", {})
-    evaluator = validation_evaluator(validation)
-    fixture_results = [_check_fixture(fixture, evaluator) for fixture in fixtures]
+    evaluator = validation_evaluator(config.get("validation", {}))
+    fixture_results = [
+        _check_fixture(fixture, evaluator)
+        for fixture in config.get("validation_fixtures", [])
+    ]
+    prompt_results = []
+    for prompt in config.get("prompts", []):
+        if not isinstance(prompt, dict) or not prompt.get("validation_fixtures"):
+            continue
+        prompt_evaluator = validation_evaluator(prompt["validation"])
+        prompt_results.append(
+            {
+                "prompt": prompt["name"],
+                "fixtures": [
+                    _check_fixture(fixture, prompt_evaluator)
+                    for fixture in prompt["validation_fixtures"]
+                ],
+            }
+        )
     tool_results = [
         {"name": tool["name"], "ok": True} for tool in config.get("tools", [])
     ]
+    all_fixtures = fixture_results + [
+        item for entry in prompt_results for item in entry["fixtures"]
+    ]
     return {
         "ok": all(
-            item.get("actual") == item.get("expected") for item in fixture_results
+            item.get("actual") == item.get("expected") for item in all_fixtures
         ),
         "fixtures": fixture_results,
+        "prompt_fixtures": prompt_results,
         "tools": tool_results,
     }
 

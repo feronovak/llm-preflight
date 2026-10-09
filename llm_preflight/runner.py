@@ -17,6 +17,7 @@ from .catalog import resolve_models
 from .client import create_client
 from .contracts import (
     check_contract,
+    contract_fixtures_declared,
     provenance,
     validate_contract_config,
     validate_output_schema,
@@ -234,6 +235,7 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
         selected["validation"] = dict(prompt["validation"])
     if "validation_fixtures" in prompt:
         selected["validation_fixtures"] = list(prompt["validation_fixtures"])
+    selected.pop("prompts", None)
     return selected
 
 
@@ -771,7 +773,7 @@ def run_benchmark(
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     validate_config_validations(config)
-    if config.get("validation_fixtures") and not check_contract(config)["ok"]:
+    if contract_fixtures_declared(config) and not check_contract(config)["ok"]:
         raise ValueError(
             "validation fixtures failed; run --contract-check to inspect the contract"
         )

@@ -33,7 +33,7 @@ from .catalog_watch import (
 )
 from .change_plan import git_change_plan
 from .client import PROVIDER_DEFAULTS
-from .contracts import check_contract
+from .contracts import check_contract, contract_fixtures_declared
 from .eligibility import smoke_eligibility_report
 from .env import load_env_file, resolve_config_env_file
 from .features import (
@@ -281,6 +281,13 @@ def _format_contract_check(report: dict[str, Any]) -> str:
             f"- {status}: fixture {fixture['name']} expected {fixture['expected']}, "
             f"got {fixture['actual']}"
         )
+    for entry in report.get("prompt_fixtures", []):
+        for fixture in entry["fixtures"]:
+            status = "ok" if fixture["actual"] == fixture["expected"] else "fail"
+            lines.append(
+                f"- {status}: prompt {entry['prompt']} fixture {fixture['name']} "
+                f"expected {fixture['expected']}, got {fixture['actual']}"
+            )
     for tool in report["tools"]:
         lines.append(f"- ok: tool {tool['name']} schema")
     return "\n".join(lines) + "\n"
@@ -290,7 +297,7 @@ def _change_plan_commands(config: dict[str, Any], config_path: Path) -> list[str
     command = _display_command()
     quoted_path = shlex.quote(str(config_path))
     commands = [f"{command} {quoted_path} --doctor --json"]
-    if config.get("validation_fixtures") or config.get("tools"):
+    if contract_fixtures_declared(config):
         commands.append(f"{command} {quoted_path} --contract-check --json")
     commands.append(f"{command} {quoted_path} --dry-run --json")
     return commands
@@ -2425,9 +2432,9 @@ def main() -> None:
         if args.prompt_name and args.contract_check:
             config = select_custom_prompt(config, args.prompt_name)
         if args.contract_check:
-            if not config.get("validation_fixtures") and not config.get("tools"):
+            if not contract_fixtures_declared(config):
                 raise ValueError(
-                    "--contract-check requires validation_fixtures or tools in the configuration"
+                    "--contract-check requires validation_fixtures (top level or inside a custom prompt) or tools in the configuration"
                 )
             report_data = check_contract(config)
             print(

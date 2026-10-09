@@ -92,6 +92,7 @@ def test_contract_check_runs_validation_fixtures_and_tool_lint_without_a_benchma
             {"name": "object", "expected": "pass", "actual": "pass"},
             {"name": "array", "expected": "fail", "actual": "fail"},
         ],
+        "prompt_fixtures": [],
         "tools": [{"name": "lookup", "ok": True}],
     }
 
@@ -3295,3 +3296,61 @@ def test_cli_process_exit_codes_stop_modes_and_budget_enforcement(tmp_path):
         }
     )
     assert budget_failure.returncode == 2
+
+
+def test_contract_check_accepts_per_prompt_fixtures_and_lists_each_once(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompts":[{"name":"routing","prompt":"Route.",'
+        '"validation":{"exact":"billing"},'
+        '"validation_fixtures":[{"name":"right","response":"billing","expect":"pass"},'
+        '{"name":"wrong","response":"technical","expect":"fail"}]}],'
+        '"models":[{"provider":"mock","model":"local","response":"billing"}]}'
+    )
+    monkeypatch.setattr(
+        cli,
+        "run_benchmark",
+        lambda *_args, **_kwargs: pytest.fail("contract check must not benchmark"),
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--contract-check"])
+
+    cli.main()
+    output = capsys.readouterr().out
+
+    assert "Contract check: ok" in output
+    assert output.count("fixture right") == 1
+    assert "- ok: prompt routing fixture right expected pass, got pass" in output
+
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--prompt", "routing", "--contract-check"]
+    )
+    cli.main()
+    output = capsys.readouterr().out
+
+    assert "Contract check: ok" in output
+    assert output.count("fixture right") == 1
+
+
+def test_change_plan_recommends_contract_check_for_per_prompt_fixtures(
+    monkeypatch, tmp_path
+):
+    config = {
+        "prompts": [
+            {
+                "name": "routing",
+                "prompt": "Route.",
+                "validation": {"exact": "billing"},
+                "validation_fixtures": [
+                    {"name": "right", "response": "billing", "expect": "pass"},
+                    {"name": "wrong", "response": "technical", "expect": "fail"},
+                ],
+            }
+        ],
+        "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+    }
+
+    commands = cli._change_plan_commands(config, tmp_path / "benchmark.json")
+
+    assert any("--contract-check --json" in command for command in commands)

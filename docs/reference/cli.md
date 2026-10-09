@@ -55,7 +55,7 @@ claim savings. Strict pricing freshness checks every source description.
 | `--catalog` | off | Discover and print selected models; no generation. |
 | `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |
 | `--profiles LIST` | — | Compatibility alias for `--tests`. |
-| `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. |
+| `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. Non-eligible models are listed with a reason and next step; eligibility gates `catalog prepare` and does not block a reviewed bounded run. |
 | `--approval-receipt PATH` | — | With `--dry-run`, write an expiring private local receipt bound to that exact plan. Requires a review note and timezone-qualified expiry; never authorizes paid work. |
 | `--verify-approval-receipt PATH` | — | With `--dry-run`, verify a receipt’s plan hash and expiry. A valid receipt is recorded evidence, not authorization. |
 | `--no-env-file` | off | Do not load an env file. |

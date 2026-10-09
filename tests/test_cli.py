@@ -2623,6 +2623,79 @@ def test_dry_run_summarizes_smoke_eligibility():
     assert "Smoke eligibility: 1 eligible; 2 need review." in output
 
 
+
+def test_dry_run_explains_each_non_eligible_model_and_that_it_does_not_block():
+    plan = {
+        "benchmark": "triage",
+        "models": [
+            {"provider": "openai", "model": "gpt-5.4-mini"},
+            {"provider": "anthropic", "model": "claude-haiku-5-5"},
+        ],
+        "tests": ["config prompt"],
+        "requests": 2,
+        "possible_requests": 4,
+        "retry_max_attempts": 2,
+        "estimated_cost_usd": 0.0006,
+        "maximum_estimated_cost_usd": 0.0012,
+        "pricing_warnings": [],
+        "pricing_coverage": {"summary": {}},
+        "smoke_eligibility": {
+            "summary": {"discovered": 2, "eligible": 0, "needs_review": 2},
+            "models": [
+                {
+                    "provider": "openai",
+                    "model": "gpt-5.4-mini",
+                    "eligible": False,
+                    "reason": "catalog_evidence_required",
+                    "catalog_type": "unknown",
+                },
+                {
+                    "provider": "anthropic",
+                    "model": "claude-haiku-5-5",
+                    "eligible": False,
+                    "reason": "catalog_evidence_required",
+                    "catalog_type": "unknown",
+                },
+            ],
+        },
+        "configuration_warnings": [],
+        "save_responses": "failures",
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert "Smoke eligibility: 0 eligible; 2 need review." in output
+    assert (
+        "- openai/gpt-5.4-mini: catalog_evidence_required — declared by hand; "
+        in output
+    )
+    assert "Eligibility gates `catalog prepare`" in output
+    assert "does not block this bounded plan" in output
+
+
+def test_dry_run_without_an_eligibility_block_prints_no_eligibility_lines():
+    plan = {
+        "benchmark": "quick",
+        "models": [{"provider": "mock", "model": "local"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": None,
+        "maximum_estimated_cost_usd": None,
+        "pricing_warnings": [],
+        "pricing_coverage": {},
+        "configuration_warnings": [],
+        "save_responses": False,
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert "Smoke eligibility" not in output
+    assert "Eligibility gates" not in output
+
 def test_dry_run_summarizes_large_model_and_pricing_lists():
     plan = {
         "benchmark": "catalog",

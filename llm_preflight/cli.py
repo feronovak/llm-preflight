@@ -34,7 +34,7 @@ from .catalog_watch import (
 from .change_plan import git_change_plan
 from .client import PROVIDER_DEFAULTS
 from .contracts import check_contract, contract_fixtures_declared
-from .eligibility import smoke_eligibility_report
+from .eligibility import ELIGIBILITY_NEXT_STEPS, smoke_eligibility_report
 from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_environment,
@@ -454,7 +454,8 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             for entry in coverage.get("models", [])
             if entry.get("status") != "priced"
         )
-    eligibility = plan.get("smoke_eligibility", {}).get("summary", {})
+    eligibility_report = plan.get("smoke_eligibility", {})
+    eligibility = eligibility_report.get("summary", {})
     if eligibility:
         needs_review = eligibility.get("needs_review", 0)
         review_verb = "needs" if needs_review == 1 else "need"
@@ -463,6 +464,20 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{eligibility.get('eligible', 0)} eligible; "
             f"{needs_review} {review_verb} review."
         )
+        for entry in eligibility_report.get("models", []):
+            if entry.get("eligible"):
+                continue
+            reason = entry.get("reason", "unknown")
+            next_step = ELIGIBILITY_NEXT_STEPS.get(reason, "review the catalogue evidence")
+            lines.append(
+                f"- {entry.get('provider', 'openai_compatible')}/{entry.get('model')}: "
+                f"{reason} — {next_step}"
+            )
+        if needs_review:
+            lines.append(
+                "Eligibility gates `catalog prepare`; it does not block this bounded "
+                "plan. Review the reasons, then decide separately whether to run."
+            )
     return "\n".join(lines) + "\n"
 
 

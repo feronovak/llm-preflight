@@ -125,3 +125,38 @@ def test_tracked_approved_smoke_cohort_is_fully_eligible():
     report = smoke_eligibility_report(resolve_models(config), config)
 
     assert report["summary"] == {"discovered": 7, "needs_review": 0, "eligible": 7}
+
+
+def test_every_non_eligible_reason_has_a_next_step():
+    from llm_preflight.eligibility import ELIGIBILITY_NEXT_STEPS
+
+    report = smoke_eligibility_report(
+        [
+            {"provider": "openai", "model": "hand-declared"},
+            {"provider": "openai", "model": "probe", "catalog_type": "text-candidate"},
+            {"provider": "openai", "model": "image", "catalog_type": "image"},
+            {"provider": "openai", "model": "no-adapter", "catalog_type": "text-ready"},
+            {
+                "provider": "openai",
+                "model": "unpriced",
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+            },
+        ],
+        {},
+    )
+
+    for entry in report["models"]:
+        assert entry["eligible"] is False
+        assert entry["reason"] in ELIGIBILITY_NEXT_STEPS, entry["reason"]
+    assert set(ELIGIBILITY_NEXT_STEPS) >= {
+        "probe_required",
+        "catalog_evidence_required",
+        "incompatible_catalog_type",
+        "adapter_evidence_required",
+        "unknown_pricing",
+        "undated_pricing",
+        "stale_pricing",
+        "bounded_limits_required",
+    }
+    assert "eligible" not in ELIGIBILITY_NEXT_STEPS

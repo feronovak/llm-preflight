@@ -8,6 +8,29 @@ from .pricing import pricing_coverage_report
 
 _TEXT_SMOKE_TYPES = {"text-ready", "text-candidate", "text-chat", "unknown"}
 
+ELIGIBILITY_NEXT_STEPS: dict[str, str] = {
+    "probe_required": (
+        "run one minimal `catalog probe` request for this text candidate"
+    ),
+    "catalog_evidence_required": (
+        "declared by hand; discover it with `catalog refresh` or keep the "
+        "declared request and cost caps and review it yourself"
+    ),
+    "incompatible_catalog_type": (
+        "not a text model; keep it out of the generic text smoke"
+    ),
+    "adapter_evidence_required": (
+        "no compatible provider-adapter evidence is retained; do not guess a "
+        "request shape"
+    ),
+    "unknown_pricing": "add reviewed direct-provider pricing with an as_of date",
+    "undated_pricing": "add an as_of date to the reviewed pricing",
+    "stale_pricing": "refresh the reviewed pricing; it is older than the freshness limit",
+    "bounded_limits_required": (
+        "declare both max_requests and max_estimated_cost_usd"
+    ),
+}
+
 
 class IncompatibleCatalogTypeError(ValueError):
     """A model is not eligible for the generic text smoke adapter."""

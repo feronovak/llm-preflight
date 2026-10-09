@@ -124,7 +124,9 @@ current pricing, and both a request and cost bound. The stable reasons are:
 | `bounded_limits_required` | Declare both `max_requests` and `max_estimated_cost_usd`. |
 
 Do not change a reason by editing a result. Fix the evidence in the candidate
-configuration or local probe ledger, then preview again.
+configuration or local probe ledger, then preview again. A dry run prints the
+reason and next step for each model that needs review; eligibility gates
+`catalog prepare` and does not by itself block a bounded run you have reviewed.
 
 `catalog prepare` writes only rows that are already smoke-eligible; models
 needing a probe, price review, catalogue/adapter evidence, or bounds remain in

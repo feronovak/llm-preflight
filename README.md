@@ -64,6 +64,24 @@ adds a cheaper candidate that fails the contract and a compatible baseline
 comparison with latency and cost regressions. Every number is labeled
 synthetic; none is a live model claim.
 
+## Purpose
+
+**Mission:** help engineers catch LLM integration regressions before shipping a
+change.
+
+**Vision:** every LLM-related pull request carries reproducible evidence of
+compatibility, latency, and cost.
+
+**Positioning:** LLM Preflight is a local CLI and CI tool that checks an
+application's LLM contract and reports compatibility, latency, and estimated
+cost before a change ships.
+
+It is built for small engineering teams maintaining AI features. Coding agents
+can run the same checks, while engineers own the decision. Read the [north
+star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
+and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
+for the intended workflow and boundaries.
+
 ## Choose your path
 
 - **Set up a real project.** Adapt a representative contract, reuse an existing
@@ -109,62 +127,13 @@ no-spend validation and planning; a live provider run remains an explicit,
 bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
 or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
-Version **2.18.1** preserves official provider adapter evidence when OpenRouter
-enriches catalogue entries and forwards system instructions in OpenAI Responses
-contract checks. The [changelog](CHANGELOG.md) records the release details.
-
-Version **2.18.0** includes the evidence-integrity and output-validator
-corrections below. Native routes and release-reviewed official pricing snapshots
-are listed in [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
+Native routes and release-reviewed official pricing snapshots are listed in
+[current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
 That list is direct-provider price coverage, not a ranking or every discoverable ID.
-
-Version **2.19.0** adds `gpt-6.1-sol` to the priced OpenAI candidate
-set. Its official short-context rate is $2 input and $10 output per million
-tokens, with $0.10 cached input; the [snapshot table](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md)
-also records its long-context rates. As with any candidate, check access and
-run a bounded contract test before adopting it.
-
-The same version adds native Z.ai `glm-5.3` chat requests and official
-pricing. Use `provider: "zai"` with `ZAI_API_KEY`; the
-[bounded comparison example](examples/glm-5.3-comparison.json) reproduces
-the eight support-routing cases. OpenRouter discovery uses `z-ai/glm-5.3`
-and that route's live pricing.
-
-Version **2.19.1** adds native Claude Haiku 5.5
-pricing and request compatibility, and updates Sonnet 5.5 cache reads to
-$0.10 per million tokens. Haiku uses $0.10 input and $0.50 output per million
-tokens up to 100,000 total input tokens; above that boundary the full request
-uses rates five times higher. See [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md)
-for cache rates and limits. Anthropic cache usage includes reads and writes;
-complete write cost requires a reviewed TTL-specific rate.
-
-Missing or malformed provider usage keeps cost unavailable, with known spend
-shown as a subtotal. Strict pricing freshness applies to every source
-description. Unsupported output-schema constraints fail before provider work.
-Legacy results without request coverage show unverified cost evidence; unobserved
-retry usage also prevents a complete total. The output subset enforces boolean
-`additionalProperties` and inclusive finite numeric bounds, and records
-validator semantics in provenance.
+Release-by-release behaviour changes, including pricing updates and evidence
+corrections, are recorded in the [changelog](CHANGELOG.md).
 
 For earlier releases, see the [changelog](CHANGELOG.md).
-
-## Purpose
-
-**Mission:** help engineers catch LLM integration regressions before shipping a
-change.
-
-**Vision:** every LLM-related pull request carries reproducible evidence of
-compatibility, latency, and cost.
-
-**Positioning:** LLM Preflight is a local CLI and CI tool that checks an
-application's LLM contract and reports compatibility, latency, and estimated
-cost before a change ships.
-
-It is built for small engineering teams maintaining AI features. Coding agents
-can run the same checks, while engineers own the decision. Read the [north
-star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
-and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
-for the intended workflow and boundaries.
 
 ## Common jobs
 

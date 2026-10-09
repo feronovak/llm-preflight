@@ -169,7 +169,14 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
         < readme.index("## Choose your path")
         < readme.index("## Safety boundary")
     )
-    assert readme.index("## CLI, CI, and MCP") < readme.index("## Purpose")
+    assert (
+        readme.index("## See a contract change fail")
+        < readme.index("## Purpose")
+        < readme.index("## Choose your path")
+    )
+    assert readme.index("## Safety boundary") < readme.index("## CLI, CI, and MCP")
+    assert "Version **2." not in readme
+    assert readme.count("## Purpose") == 1
     assert readme.index("## What live evidence looks like") < readme.index(
         "## First live run"
     )

@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import pytest
 
+from llm_preflight.contracts import check_contract
 from llm_preflight.decision import build_decision
 from llm_preflight.features import estimate_budget
 from llm_preflight.runner import (
@@ -2716,3 +2717,41 @@ def test_executive_summary_handles_zero_latency_mock_results():
     }
 
     assert "- Best value: **instant**" in report(result)
+
+
+def test_selected_custom_prompt_keeps_every_configured_prompt_in_the_result():
+    config = {
+        "prompts": [
+            {"name": "p1", "prompt": "One.", "validation": {"exact": "ok"}},
+            {"name": "p2", "prompt": "Two.", "validation": {"exact": "ok"}},
+        ],
+        "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+
+    result = run_benchmark(select_custom_prompt(config, "p1"))
+
+    assert len(result["source_config"]["prompts"]) == 2
+
+
+def test_selected_prompt_validation_does_not_inherit_top_level_fixtures():
+    config = {
+        "prompt": "Top.",
+        "validation": {"exact": "alpha"},
+        "validation_fixtures": [
+            {"name": "ok", "response": "alpha", "expect": "pass"},
+            {"name": "bad", "response": "beta", "expect": "fail"},
+        ],
+        "prompts": [
+            {"name": "p2", "prompt": "Two.", "validation": {"regex": "^gamma$"}}
+        ],
+        "models": [{"provider": "mock", "model": "local", "response": "gamma"}],
+    }
+
+    selected = select_custom_prompt(config, "p2")
+
+    assert "validation_fixtures" not in selected
+    report = check_contract(selected)
+    assert report["ok"] is True
+    assert report["fixtures"] == []

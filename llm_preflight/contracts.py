@@ -356,6 +356,10 @@ def check_contract(config: dict[str, Any]) -> dict[str, Any]:
     for prompt in config.get("prompts", []):
         if not isinstance(prompt, dict) or not prompt.get("validation_fixtures"):
             continue
+        if prompt.get("validation_fixtures") == config.get(
+            "validation_fixtures"
+        ) and prompt.get("validation") == config.get("validation"):
+            continue
         prompt_evaluator = validation_evaluator(prompt["validation"])
         prompt_results.append(
             {

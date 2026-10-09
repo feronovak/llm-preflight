@@ -3429,3 +3429,23 @@ def test_change_plan_recommends_contract_check_for_per_prompt_fixtures(
     commands = cli._change_plan_commands(config, tmp_path / "benchmark.json")
 
     assert any("--contract-check --json" in command for command in commands)
+
+
+def test_selecting_a_bundled_custom_prompt_runs_it_without_unknown_profiles():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "llm_preflight",
+            "examples/custom-contracts/content-rule.json",
+            "--prompt",
+            "content-rule",
+            "--no-save",
+            "--json",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 3, completed.stderr

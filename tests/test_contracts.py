@@ -397,3 +397,72 @@ def test_benchmark_refuses_a_failed_per_prompt_contract_fixture_before_requests(
                 ],
             }
         )
+
+
+def test_selected_prompt_copy_is_not_evaluated_twice_but_other_prompts_are():
+    fixtures = [
+        {"name": "ok", "response": "billing", "expect": "pass"},
+        {"name": "bad", "response": "technical", "expect": "fail"},
+    ]
+    report = check_contract(
+        {
+            "prompt": "Route.",
+            "prompt_name": "routing",
+            "validation": {"exact": "billing"},
+            "validation_fixtures": fixtures,
+            "prompts": [
+                {
+                    "name": "routing",
+                    "prompt": "Route.",
+                    "validation": {"exact": "billing"},
+                    "validation_fixtures": fixtures,
+                },
+                {
+                    "name": "other",
+                    "prompt": "Other.",
+                    "validation": {"exact": "x"},
+                    "validation_fixtures": [
+                        {"name": "x", "response": "x", "expect": "pass"},
+                        {"name": "y", "response": "y", "expect": "fail"},
+                    ],
+                },
+            ],
+            "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+        }
+    )
+
+    assert report["ok"] is True
+    assert [entry["prompt"] for entry in report["prompt_fixtures"]] == ["other"]
+    assert len(report["fixtures"]) == 2
+
+
+def test_hand_set_prompt_name_cannot_turn_a_prompt_check_off():
+    report = check_contract(
+        {
+            "prompt": "Main.",
+            "prompt_name": "main",
+            "validation": {"exact": "ok"},
+            "validation_fixtures": [
+                {"name": "ok", "response": "ok", "expect": "pass"},
+                {"name": "no", "response": "no", "expect": "fail"},
+            ],
+            "prompts": [
+                {
+                    "name": "p1",
+                    "prompt": "One.",
+                    "validation": {"contains": "o"},
+                    "validation_fixtures": [
+                        {"name": "ok", "response": "ok", "expect": "pass"},
+                        {
+                            "name": "wrongly expected",
+                            "response": "no",
+                            "expect": "fail",
+                        },
+                    ],
+                }
+            ],
+            "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+        }
+    )
+
+    assert report["ok"] is False

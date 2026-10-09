@@ -233,9 +233,9 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
         selected["request"]["system_prompt"] = prompt["system_prompt"]
     if "validation" in prompt:
         selected["validation"] = dict(prompt["validation"])
+        selected.pop("validation_fixtures", None)
     if "validation_fixtures" in prompt:
         selected["validation_fixtures"] = list(prompt["validation_fixtures"])
-    selected.pop("prompts", None)
     return selected
 
 

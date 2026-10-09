@@ -373,9 +373,7 @@ def check_contract(config: dict[str, Any]) -> dict[str, Any]:
         item for entry in prompt_results for item in entry["fixtures"]
     ]
     return {
-        "ok": all(
-            item.get("actual") == item.get("expected") for item in all_fixtures
-        ),
+        "ok": all(item.get("actual") == item.get("expected") for item in all_fixtures),
         "fixtures": fixture_results,
         "prompt_fixtures": prompt_results,
         "tools": tool_results,

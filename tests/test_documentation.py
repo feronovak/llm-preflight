@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.19.1" in page
-    assert "Package version: **2.19.1**" in page
+    assert "**As of:** v2.19.2" in page
+    assert "Package version: **2.19.2**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -92,7 +92,9 @@ def test_homepage_model_list_matches_comparison_evidence():
         assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
         assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
         assert "password-reset" in page
-        assert "2.19.1" in page
+    for page in (readme, docs_index):
+        assert "2.19.2" in page
+    assert "2.19.1" in study
 
 
 def test_mcp_release_notes_and_security_boundary_are_current():
@@ -245,7 +247,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/guides/model-catalog.md",):
-        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.1" in page.read_text()
+        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
         assert "**Last reviewed:** 2026-09-30 · **As of:** v2.19.0" in page.read_text()
@@ -257,7 +259,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-09-24 · **As of:** v2.17.0"
+        "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
@@ -265,7 +267,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
-        assert "**Last reviewed:** 2026-09-22 · **As of:** v2.16.0" in page.read_text()
+        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
@@ -273,11 +275,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
+        "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
+        "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -424,7 +426,12 @@ def test_custom_contract_examples_prove_their_fixtures_without_a_provider():
                 check=False,
             )
             expected = 0 if flags == ["--contract-check"] else 3
-            assert result.returncode == expected, (name, flags, result.stderr, result.stdout)
+            assert result.returncode == expected, (
+                name,
+                flags,
+                result.stderr,
+                result.stdout,
+            )
 
 
 def test_project_integration_guide_keeps_the_user_register():

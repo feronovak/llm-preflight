@@ -222,8 +222,16 @@ def test_contract_check_evaluates_per_prompt_fixtures_against_that_prompts_valid
                     "prompt": "Route this ticket.",
                     "validation": {"exact": "billing"},
                     "validation_fixtures": [
-                        {"name": "right queue", "response": "billing", "expect": "pass"},
-                        {"name": "wrong queue", "response": "technical", "expect": "fail"},
+                        {
+                            "name": "right queue",
+                            "response": "billing",
+                            "expect": "pass",
+                        },
+                        {
+                            "name": "wrong queue",
+                            "response": "technical",
+                            "expect": "fail",
+                        },
                     ],
                 },
                 {
@@ -232,7 +240,11 @@ def test_contract_check_evaluates_per_prompt_fixtures_against_that_prompts_valid
                     "validation": {"json_object": True},
                     "validation_fixtures": [
                         {"name": "object", "response": "{}", "expect": "pass"},
-                        {"name": "fenced", "response": "```json\n{}\n```", "expect": "fail"},
+                        {
+                            "name": "fenced",
+                            "response": "```json\n{}\n```",
+                            "expect": "fail",
+                        },
                     ],
                 },
             ],
@@ -270,8 +282,16 @@ def test_contract_check_reports_a_per_prompt_fixture_the_validator_wrongly_accep
                     "prompt": "Route this ticket.",
                     "validation": {"contains": "ing"},
                     "validation_fixtures": [
-                        {"name": "right queue", "response": "billing", "expect": "pass"},
-                        {"name": "wrong queue", "response": "shipping", "expect": "fail"},
+                        {
+                            "name": "right queue",
+                            "response": "billing",
+                            "expect": "pass",
+                        },
+                        {
+                            "name": "wrong queue",
+                            "response": "shipping",
+                            "expect": "fail",
+                        },
                     ],
                 }
             ],
@@ -295,13 +315,19 @@ def test_fixtures_without_a_validator_at_the_same_level_are_a_configuration_erro
         validate_contract_config(
             {
                 "prompts": [
-                    {"name": "routing", "prompt": "Route.", "validation": {"exact": "billing"}}
+                    {
+                        "name": "routing",
+                        "prompt": "Route.",
+                        "validation": {"exact": "billing"},
+                    }
                 ],
                 "validation_fixtures": [
                     {"name": "right queue", "response": "billing", "expect": "pass"},
                     {"name": "wrong queue", "response": "technical", "expect": "fail"},
                 ],
-                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+                "models": [
+                    {"provider": "mock", "model": "local", "response": "billing"}
+                ],
             }
         )
 
@@ -321,19 +347,27 @@ def test_fixtures_without_a_validator_at_the_same_level_are_a_configuration_erro
                         ],
                     }
                 ],
-                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+                "models": [
+                    {"provider": "mock", "model": "local", "response": "billing"}
+                ],
             }
         )
 
 
 def test_contract_fixtures_declared_recognises_every_scope():
     assert contract_fixtures_declared({"prompt": "x"}) is False
-    assert contract_fixtures_declared({"prompt": "x", "validation_fixtures": [{}]}) is True
+    assert (
+        contract_fixtures_declared({"prompt": "x", "validation_fixtures": [{}]}) is True
+    )
     assert contract_fixtures_declared({"tools": [{"name": "t"}]}) is True
     assert (
         contract_fixtures_declared(
-            {"prompts": [{"name": "a", "prompt": "x"}, {"name": "b", "prompt": "y",
-                                                         "validation_fixtures": [{}]}]}
+            {
+                "prompts": [
+                    {"name": "a", "prompt": "x"},
+                    {"name": "b", "prompt": "y", "validation_fixtures": [{}]},
+                ]
+            }
         )
         is True
     )
@@ -350,10 +384,16 @@ def test_benchmark_refuses_a_failed_per_prompt_contract_fixture_before_requests(
                         "validation": {"contains": "ing"},
                         "validation_fixtures": [
                             {"name": "ok", "response": "billing", "expect": "pass"},
-                            {"name": "too weak", "response": "shipping", "expect": "fail"},
+                            {
+                                "name": "too weak",
+                                "response": "shipping",
+                                "expect": "fail",
+                            },
                         ],
                     }
                 ],
-                "models": [{"provider": "mock", "model": "local", "response": "billing"}],
+                "models": [
+                    {"provider": "mock", "model": "local", "response": "billing"}
+                ],
             }
         )

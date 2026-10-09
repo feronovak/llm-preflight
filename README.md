@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
+**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -130,8 +130,6 @@ or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/d
 Native routes and release-reviewed official pricing snapshots are listed in
 [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
 That list is direct-provider price coverage, not a ranking or every discoverable ID.
-Release-by-release behaviour changes, including pricing updates and evidence
-corrections, are recorded in the [changelog](CHANGELOG.md).
 
 For earlier releases, see the [changelog](CHANGELOG.md).
 

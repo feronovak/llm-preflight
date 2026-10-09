@@ -2,10 +2,28 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.19.2 - Unreleased
+
+### Fixed
+
+- Evaluate per-prompt `validation_fixtures` in `--contract-check`, in the
+  pre-run fixture guard and in change-plan recommendations. Previously only
+  top-level fixtures were checked, so a multi-prompt configuration's fixtures
+  were never proven.
+- Reject `validation_fixtures` that have no `validation` at the same level
+  instead of checking them against the implicit non-empty rule.
+
+### Added
+
+- Dry-run plans list each non-eligible model with its reason and next step,
+  and state that smoke eligibility does not block a reviewed bounded run.
+- Accepted and rejected fixtures in the bundled custom-contract examples.
 
 ### Changed
 
+- The README leads with the mission, the no-key demo and one failing
+  contract; release notes live in this changelog.
+- The configuration reference documents contract fixtures at both levels.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.19.1 package. The `v2.19.1` tag retains its 2.19.0 default;
   set `package-version` explicitly when using that tag.

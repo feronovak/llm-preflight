@@ -1,6 +1,6 @@
 # Set up a real project
 
-**Last reviewed:** 2026-09-30 · **As of:** v2.19.0
+**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
 
 Use one representative request from your application and a rule its consumer
 actually enforces. This example routes a known billing ticket and rejects the

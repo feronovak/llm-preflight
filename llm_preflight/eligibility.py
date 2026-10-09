@@ -26,9 +26,7 @@ ELIGIBILITY_NEXT_STEPS: dict[str, str] = {
     "unknown_pricing": "add reviewed direct-provider pricing with an as_of date",
     "undated_pricing": "add an as_of date to the reviewed pricing",
     "stale_pricing": "refresh the reviewed pricing; it is older than the freshness limit",
-    "bounded_limits_required": (
-        "declare both max_requests and max_estimated_cost_usd"
-    ),
+    "bounded_limits_required": ("declare both max_requests and max_estimated_cost_usd"),
 }
 
 

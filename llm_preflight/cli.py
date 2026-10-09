@@ -468,7 +468,9 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             if entry.get("eligible"):
                 continue
             reason = entry.get("reason", "unknown")
-            next_step = ELIGIBILITY_NEXT_STEPS.get(reason, "review the catalogue evidence")
+            next_step = ELIGIBILITY_NEXT_STEPS.get(
+                reason, "review the catalogue evidence"
+            )
             lines.append(
                 f"- {entry.get('provider', 'openai_compatible')}/{entry.get('model')}: "
                 f"{reason} — {next_step}"

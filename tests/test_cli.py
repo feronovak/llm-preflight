@@ -2623,7 +2623,6 @@ def test_dry_run_summarizes_smoke_eligibility():
     assert "Smoke eligibility: 1 eligible; 2 need review." in output
 
 
-
 def test_dry_run_explains_each_non_eligible_model_and_that_it_does_not_block():
     plan = {
         "benchmark": "triage",
@@ -2695,6 +2694,7 @@ def test_dry_run_without_an_eligibility_block_prints_no_eligibility_lines():
 
     assert "Smoke eligibility" not in output
     assert "Eligibility gates" not in output
+
 
 def test_dry_run_summarizes_large_model_and_pricing_lists():
     plan = {
@@ -3397,7 +3397,9 @@ def test_contract_check_accepts_per_prompt_fixtures_and_lists_each_once(
     assert "- ok: prompt routing fixture right expected pass, got pass" in output
 
     monkeypatch.setattr(
-        sys, "argv", ["llm-preflight", str(config), "--prompt", "routing", "--contract-check"]
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--prompt", "routing", "--contract-check"],
     )
     cli.main()
     output = capsys.readouterr().out

@@ -1,6 +1,6 @@
 # Configuration
 
-**Last reviewed:** 2026-09-22 · **As of:** v2.16.0
+**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
 
 ## Models and providers
 

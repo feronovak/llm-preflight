@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
+**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,

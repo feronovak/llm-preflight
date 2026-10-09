@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.19.1"
-    assert 'version = "2.19.1"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.19.2"
+    assert 'version = "2.19.2"' in Path("pyproject.toml").read_text()
 
 
 def test_shipped_image_to_text_examples_reference_a_real_local_fixture():

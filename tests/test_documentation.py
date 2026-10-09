@@ -400,3 +400,21 @@ def test_configuration_reference_documents_fixtures_at_both_levels():
     assert "inside that prompt" in configuration
     assert "inside the prompt" in contracts_guide
     assert "top level or inside a custom prompt" in cli_reference
+
+
+def test_custom_contract_examples_prove_their_fixtures_without_a_provider():
+    for name in ("ticket-extraction", "intent-routing", "content-rule"):
+        config = ROOT / f"examples/custom-contracts/{name}.json"
+        prompt = json.loads(config.read_text())["prompts"][0]
+        expectations = {fixture["expect"] for fixture in prompt["validation_fixtures"]}
+        assert expectations == {"pass", "fail"}, name
+        for flags in (["--contract-check"], ["--no-save"]):
+            result = subprocess.run(
+                [sys.executable, "-m", "llm_preflight", str(config), *flags],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            expected = 0 if flags == ["--contract-check"] else 3
+            assert result.returncode == expected, (name, flags, result.stderr, result.stdout)

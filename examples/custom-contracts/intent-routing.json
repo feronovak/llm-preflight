@@ -21,7 +21,12 @@
       "description": "Route a customer request to the exact downstream queue.",
       "system_prompt": "Return only one lowercase label: billing, technical, or account.",
       "prompt": "I was charged twice for the same subscription.",
-      "validation": {"regex": "^billing$"}
+      "validation": {"regex": "^billing$"},
+      "validation_fixtures": [
+        {"name": "exact label accepted", "response": "billing", "expect": "pass"},
+        {"name": "label with explanation rejected", "response": "billing - duplicate charge", "expect": "fail"},
+        {"name": "wrong queue rejected", "response": "technical", "expect": "fail"}
+      ]
     }
   ]
 }

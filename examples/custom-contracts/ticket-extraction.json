@@ -32,7 +32,13 @@
           }
         },
         "allow_fenced_json": true
-      }
+      },
+      "validation_fixtures": [
+        {"name": "fenced payload accepted by this consumer", "response": "```json\n{\"product\":\"Checkout\",\"priority\":\"high\"}\n```", "expect": "pass"},
+        {"name": "raw payload accepted", "response": "{\"product\":\"Checkout\",\"priority\":\"high\"}", "expect": "pass"},
+        {"name": "unknown priority rejected", "response": "{\"product\":\"Checkout\",\"priority\":\"urgent\"}", "expect": "fail"},
+        {"name": "missing product rejected", "response": "{\"priority\":\"high\"}", "expect": "fail"}
+      ]
     }
   ]
 }

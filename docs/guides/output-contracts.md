@@ -50,6 +50,13 @@ llm-preflight examples/custom-contracts/intent-routing.json --no-save
 llm-preflight examples/custom-contracts/content-rule.json --no-save
 ```
 
+Each example also carries accepted and rejected fixtures, so the contract
+check proves the rule without a provider:
+
+```bash
+llm-preflight examples/custom-contracts/ticket-extraction.json --contract-check
+```
+
 Then copy an example to your project, replace `local-example` with your current
 and candidate models, and replace the prompt and expected rule with a real case.
 

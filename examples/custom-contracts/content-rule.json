@@ -20,7 +20,11 @@
       "name": "content-rule",
       "description": "Ensure a required customer-facing term is retained.",
       "prompt": "Confirm that a customer's refund was processed in one sentence.",
-      "validation": {"contains": "refund"}
+      "validation": {"contains": "refund"},
+      "validation_fixtures": [
+        {"name": "required term present", "response": "Your refund was processed.", "expect": "pass"},
+        {"name": "required term missing", "response": "Your request was processed.", "expect": "fail"}
+      ]
     }
   ]
 }

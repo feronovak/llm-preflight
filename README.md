@@ -131,7 +131,7 @@ Native routes and release-reviewed official pricing snapshots are listed in
 [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
 That list is direct-provider price coverage, not a ranking or every discoverable ID.
 
-For earlier releases, see the [changelog](CHANGELOG.md).
+Release notes for every version are in the [changelog](CHANGELOG.md).
 
 ## Common jobs
 

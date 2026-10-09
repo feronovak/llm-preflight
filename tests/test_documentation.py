@@ -144,7 +144,10 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
 
     assert "## CLI, CI, and MCP" in readme
     assert "Works as a CLI, GitHub Action, and local MCP server" in readme
-    assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
+    assert (
+        "Release notes for every version are in the [changelog](CHANGELOG.md)."
+        in readme
+    )
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
     assert "## Safety boundary" in readme

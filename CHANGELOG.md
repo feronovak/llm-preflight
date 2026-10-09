@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 2.19.2 - Unreleased
+## Unreleased
 
 ### Fixed
 

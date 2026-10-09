@@ -457,7 +457,10 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert "## CLI, CI, and MCP" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
-    assert "For earlier releases, see the [changelog](CHANGELOG.md)." in readme
+    assert (
+        "Release notes for every version are in the [changelog](CHANGELOG.md)."
+        in readme
+    )
     assert "## Next release" not in readme
 
 

@@ -2669,8 +2669,53 @@ def test_dry_run_explains_each_non_eligible_model_and_that_it_does_not_block():
         "- openai/gpt-5.4-mini: catalog_evidence_required — declared by hand; "
         in output
     )
-    assert "Eligibility gates `catalog prepare`" in output
-    assert "does not block this bounded plan" in output
+    assert (
+        "Eligibility gates `catalog prepare`. It does not block a reviewed "
+        "bounded run of text models; a live run refuses non-text catalogue types."
+    ) in output
+
+
+def test_dry_run_distinguishes_text_and_non_text_incompatible_entries():
+    plan = {
+        "benchmark": "triage",
+        "models": [{"provider": "openai", "model": "chat"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": None,
+        "maximum_estimated_cost_usd": None,
+        "pricing_warnings": [],
+        "pricing_coverage": {},
+        "smoke_eligibility": {
+            "summary": {"discovered": 2, "eligible": 0, "needs_review": 2},
+            "models": [
+                {
+                    "provider": "openai",
+                    "model": "chat",
+                    "eligible": False,
+                    "reason": "incompatible_catalog_type",
+                    "catalog_type": "text-chat",
+                },
+                {
+                    "provider": "openai",
+                    "model": "img",
+                    "eligible": False,
+                    "reason": "incompatible_catalog_type",
+                    "catalog_type": "image",
+                },
+            ],
+        },
+        "configuration_warnings": [],
+        "save_responses": False,
+        "stop_on": "none",
+    }
+
+    output = cli._format_dry_run_plan(plan)
+
+    assert "catalogued as text-chat; eligibility needs text-ready evidence" in output
+    assert "`catalog probe`" in output
+    assert "a live run refuses this catalogue type" in output
 
 
 def test_dry_run_without_an_eligibility_block_prints_no_eligibility_lines():

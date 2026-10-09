@@ -17,7 +17,8 @@ ELIGIBILITY_NEXT_STEPS: dict[str, str] = {
         "declared request and cost caps and review it yourself"
     ),
     "incompatible_catalog_type": (
-        "not a text model; keep it out of the generic text smoke"
+        "not a text model; a live run refuses this catalogue type, remove it "
+        "from the plan"
     ),
     "adapter_evidence_required": (
         "no compatible provider-adapter evidence is retained; do not guess a "
@@ -26,8 +27,20 @@ ELIGIBILITY_NEXT_STEPS: dict[str, str] = {
     "unknown_pricing": "add reviewed direct-provider pricing with an as_of date",
     "undated_pricing": "add an as_of date to the reviewed pricing",
     "stale_pricing": "refresh the reviewed pricing; it is older than the freshness limit",
-    "bounded_limits_required": ("declare both max_requests and max_estimated_cost_usd"),
+    "bounded_limits_required": "declare both max_requests and max_estimated_cost_usd",
 }
+
+
+def eligibility_next_step(entry: dict[str, Any]) -> str:
+    """Return the next step for one non-eligible smoke-eligibility entry."""
+    reason = entry.get("reason", "unknown")
+    catalog_type = entry.get("catalog_type")
+    if reason == "incompatible_catalog_type" and catalog_type in _TEXT_SMOKE_TYPES:
+        return (
+            f"catalogued as {catalog_type}; eligibility needs text-ready evidence "
+            "from `catalog probe`; a reviewed bounded run may still proceed"
+        )
+    return ELIGIBILITY_NEXT_STEPS.get(reason, "review the catalogue evidence")
 
 
 class IncompatibleCatalogTypeError(ValueError):

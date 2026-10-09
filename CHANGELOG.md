@@ -16,7 +16,9 @@ All notable changes to this project are documented here.
 ### Added
 
 - Dry-run plans list each non-eligible model with its reason and next step,
-  and state that smoke eligibility does not block a reviewed bounded run.
+  and state that eligibility gates `catalog prepare`, does not block a
+  reviewed bounded run of text models, and that non-text catalogue types are
+  refused at run time.
 - Accepted and rejected fixtures in the bundled custom-contract examples.
 
 ### Changed

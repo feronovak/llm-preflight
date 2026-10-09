@@ -167,6 +167,37 @@ not both, and do not commit sensitive fixture data.
 For a migration-focused tutorial and runnable JSON, routing, and content-rule
 examples, see [Custom contract tests](../guides/output-contracts.md).
 
+## Contract fixtures
+
+`validation_fixtures` lists responses that the configured validator must accept
+or reject, so `--contract-check` can prove the rule locally before any paid
+request. Each fixture has exactly `name`, `response`, and `expect` (`pass` or
+`fail`), and a list needs at least one of each.
+
+Fixtures live at the same level as the `validation` they test. For a single
+top-level `prompt`, put them at the top level beside `validation`. For a custom
+prompt in `prompts`, put them inside that prompt beside its `validation`:
+
+```json
+{
+  "prompts": [{
+    "name": "routing",
+    "prompt": "I was charged twice for the same subscription.",
+    "validation": {"exact": "billing"},
+    "validation_fixtures": [
+      {"name": "expected queue", "response": "billing", "expect": "pass"},
+      {"name": "wrong queue", "response": "technical", "expect": "fail"}
+    ]
+  }]
+}
+```
+
+A fixture list without a `validation` at its own level is a configuration
+error, because there would be no rule to test. `--contract-check` reports
+top-level fixtures first and then each prompt's fixtures by prompt name. A
+benchmark refuses to start before provider work when any configured fixture
+disagrees with its validator.
+
 ## Presets, aliases, and environments
 
 Presets translate intent into provider-aware options. Available presets are

@@ -254,6 +254,11 @@ If the integration declares callable tools, add canonical `tools` entries with
 rejects names and JSON Schema features that are not portable in this local
 subset. It validates declarations only; it does not exercise a tool call.
 
+For a configuration with a `prompts` list, put the fixtures inside the prompt
+they test, beside that prompt's `validation`. Fixtures at the top level test
+only the top-level `validation`, and a fixture list with no validator at its
+own level is rejected.
+
 ## Keep generated contracts in sync
 
 When an application assembles prompts dynamically, keep the prompt builder and

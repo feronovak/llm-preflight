@@ -388,3 +388,15 @@ def test_local_markdown_links_resolve_after_docs_reorganization():
             if not target or "://" in target:
                 continue
             assert (page.parent / target).is_file(), f"{page}: {target}"
+
+
+def test_configuration_reference_documents_fixtures_at_both_levels():
+    configuration = (ROOT / "docs/reference/configuration.md").read_text()
+    contracts_guide = (ROOT / "docs/guides/output-contracts.md").read_text()
+    cli_reference = (ROOT / "docs/reference/cli.md").read_text()
+
+    assert "## Contract fixtures" in configuration
+    assert "same level as the `validation`" in configuration
+    assert "inside that prompt" in configuration
+    assert "inside the prompt" in contracts_guide
+    assert "top level or inside a custom prompt" in cli_reference

@@ -425,3 +425,10 @@ def test_custom_contract_examples_prove_their_fixtures_without_a_provider():
             )
             expected = 0 if flags == ["--contract-check"] else 3
             assert result.returncode == expected, (name, flags, result.stderr, result.stdout)
+
+
+def test_project_integration_guide_keeps_the_user_register():
+    guide = (ROOT / "docs/getting-started/project-integration.md").read_text()
+
+    for internal in ("pilot adoption", "team friction", "owner decision"):
+        assert internal not in guide

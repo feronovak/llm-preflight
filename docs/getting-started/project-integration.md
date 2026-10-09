@@ -161,6 +161,7 @@ parser execution or semantic answer quality. A generic allowed queue is also
 different from the expected queue for a particular ticket.
 
 For a live adaptation, use the application's reviewed route and price evidence
-and choose approved request/cost caps. The mock's zero rates are not live model
-prices. This prototype has deterministic verification, not pilot adoption
-evidence; scope further integration work from actual team friction.
+and choose approved request and cost caps. The mock's zero rates are not live
+model prices. Shared generation removes duplicate definitions; it does not
+prove production parser execution or semantic answer quality, so keep the
+application's parser tests as their own gate.

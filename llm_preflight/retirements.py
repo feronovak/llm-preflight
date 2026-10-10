@@ -246,6 +246,15 @@ def next_command(provider: str, model: str, replacement: str) -> str:
     )
 
 
+def unique_next_commands(verdicts: Iterable[dict[str, Any]]) -> list[str]:
+    """Each distinct next command in first-seen order, skipping verdicts without one."""
+    return list(
+        dict.fromkeys(
+            verdict["next_command"] for verdict in verdicts if "next_command" in verdict
+        )
+    )
+
+
 def _row_status(row: dict[str, Any] | None, today: date) -> str:
     """Status of a row ignoring freshness; used for the replacement look-up."""
     if row is None:
@@ -374,15 +383,10 @@ def retirement_report(
         status: sum(entry["status"] == status for entry in entries)
         for status in ("retired", "retiring", "stale", "active", "unknown")
     }
-    commands = list(
-        dict.fromkeys(
-            entry["next_command"] for entry in entries if "next_command" in entry
-        )
-    )
     return {
         "decision": worst_decision(entry["decision"] for entry in entries),
         "summary": summary,
         "models": entries,
-        "next_commands": commands,
+        "next_commands": unique_next_commands(entries),
         "snapshot": snapshot_summary(),
     }

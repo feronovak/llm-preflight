@@ -56,7 +56,7 @@ from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
 from .reporting import render_job_summary, render_report_html
-from .retirements import retirement_report, today_utc
+from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -608,13 +608,10 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
                 f"{next_step}"
             )
-        commands = list(
-            dict.fromkeys(
-                entry["next_command"]
-                for entry in flagged
-                if "next_command" in entry
-                and (entry["provider"], entry["replacement"]) not in selected
-            )
+        commands = unique_next_commands(
+            entry
+            for entry in flagged
+            if (entry["provider"], entry.get("replacement")) not in selected
         )
         lines.extend(
             _next_block(

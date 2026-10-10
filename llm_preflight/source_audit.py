@@ -10,6 +10,7 @@ from .retirements import (
     retirement_verdict,
     snapshot_summary,
     today_utc,
+    unique_next_commands,
     worst_decision,
 )
 
@@ -81,12 +82,8 @@ def _summary_fields(references: list[dict[str, Any]]) -> dict[str, Any]:
         "decision": worst_decision(
             item["retirement"]["decision"] for item in references
         ),
-        "next_commands": list(
-            dict.fromkeys(
-                item["retirement"]["next_command"]
-                for item in references
-                if "next_command" in item["retirement"]
-            )
+        "next_commands": unique_next_commands(
+            item["retirement"] for item in references
         ),
         "retirement_snapshot": snapshot_summary(),
         "confidence": _CONFIDENCE,

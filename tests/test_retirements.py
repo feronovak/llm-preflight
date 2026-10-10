@@ -12,6 +12,7 @@ from llm_preflight.retirements import (
     retirement_report,
     retirement_verdict,
     snapshot_summary,
+    unique_next_commands,
     worst_decision,
 )
 from llm_preflight.source_audit import _MODEL_PREFIX, _provider_for
@@ -218,6 +219,17 @@ def test_replacement_that_is_itself_retiring_is_named(table):
     assert verdict["replacement_status"] == "retiring"
     assert "gpt-going is itself retiring" in verdict["next_step"]
     assert "next_command" in verdict
+
+
+def test_unique_next_commands_keeps_first_seen_order_and_skips_verdicts_without_one():
+    verdicts = [
+        {"status": "retired", "next_command": "first"},
+        {"status": "active"},
+        {"status": "retiring", "next_command": "second"},
+        {"status": "retired", "next_command": "first"},
+    ]
+    assert unique_next_commands(verdicts) == ["first", "second"]
+    assert unique_next_commands([]) == []
 
 
 def test_routed_prefix_resolves_to_the_catalogue_id(table):

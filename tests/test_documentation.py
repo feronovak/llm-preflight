@@ -130,6 +130,15 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "## Release price review" in pricing_guide
 
 
+def test_mcp_guide_says_validate_config_does_not_evaluate_fixtures():
+    guide = " ".join((ROOT / "docs/automation/mcp.md").read_text().split())
+    row = guide.split("| `validate_config` |")[1].split("| `dry_run_plan` |")[0]
+
+    assert "does not evaluate `validation_fixtures`" in row
+    assert "CLI `--contract-check`" in row
+    assert "`run_preflight` refuses a config whose fixtures fail" in row
+
+
 def test_coding_agents_documents_the_inconclusive_exit_code():
     coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
 

@@ -153,7 +153,7 @@ remains a user-controlled workspace decision.
 
 | Tool | What it does | Provider access |
 |---|---|---|
-| `validate_config` | Validates one benchmark configuration. | Never contacts a provider or loads credentials. |
+| `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. | Never contacts a provider or loads credentials. |
 | `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |

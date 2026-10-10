@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from .pricing import PUBLIC_PRICING
+from .retirements import retirement_verdict, snapshot_summary, worst_decision
+
+_RETIREMENT_FINDINGS = {"retired", "retiring", "stale"}
+_CONFIDENCE = "limited_static_pricing_and_retirement"
+_NOTES = [
+    "Only literal model IDs are reported; dynamic model selection requires review.",
+    "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog verdict.",
+    "Retirement verdicts come from the bundled snapshot of the official anthropic and openai deprecation pages for text-generation models; unknown means no row and is not a verdict.",
+]
 
 _SOURCE_SUFFIXES = {
     ".py",
@@ -52,8 +62,36 @@ def _provider_for(model: str) -> str | None:
     return None
 
 
-def audit_source(path: Path) -> dict[str, Any]:
+def _is_finding(item: dict[str, Any]) -> bool:
+    return (
+        item["status"] != "pricing_known"
+        or item["retirement"]["status"] in _RETIREMENT_FINDINGS
+    )
+
+
+def _summary_fields(references: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "findings": [item for item in references if _is_finding(item)],
+        "ok": True,
+        "decision": worst_decision(
+            item["retirement"]["decision"] for item in references
+        ),
+        "next_commands": list(
+            dict.fromkeys(
+                item["retirement"]["next_command"]
+                for item in references
+                if "next_command" in item["retirement"]
+            )
+        ),
+        "retirement_snapshot": snapshot_summary(),
+        "confidence": _CONFIDENCE,
+        "notes": list(_NOTES),
+    }
+
+
+def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     """Find literal model IDs without importing project code or contacting providers."""
+    current = today or date.today()
     root = path.resolve()
     if not root.exists():
         raise ValueError(f"audit source path does not exist: {path}")
@@ -77,7 +115,9 @@ def audit_source(path: Path) -> dict[str, Any]:
         display_path = (
             str(file_path.relative_to(root)) if root.is_dir() else str(file_path)
         )
-        references.extend(_references_for_lines(lines, file_path.suffix, display_path))
+        references.extend(
+            _references_for_lines(lines, file_path.suffix, display_path, current)
+        )
     unique = list(
         dict.fromkeys(
             (item["path"], item["line"], item["model"]) for item in references
@@ -91,42 +131,33 @@ def audit_source(path: Path) -> dict[str, Any]:
         )
         for key in unique
     ]
-    findings = [item for item in references if item["status"] != "pricing_known"]
     return {
         "root": str(root),
         "network_accessed": False,
         "files_scanned": len(files),
         "references": references,
-        "findings": findings,
-        "ok": True,
-        "confidence": "limited_static_pricing",
-        "notes": [
-            "Only literal model IDs are reported; dynamic model selection requires review.",
-            "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog or retirement verdict.",
-        ],
+        **_summary_fields(references),
     }
 
 
-def audit_source_text(path: Path, text: str) -> dict[str, Any]:
+def audit_source_text(
+    path: Path, text: str, today: date | None = None
+) -> dict[str, Any]:
     """Find literal model IDs in supplied source text without writing it to disk."""
-    references = _references_for_lines(text.splitlines(), path.suffix, str(path))
+    references = _references_for_lines(
+        text.splitlines(), path.suffix, str(path), today or date.today()
+    )
     return {
         "root": str(path),
         "network_accessed": False,
         "files_scanned": 1,
         "references": references,
-        "findings": [item for item in references if item["status"] != "pricing_known"],
-        "ok": True,
-        "confidence": "limited_static_pricing",
-        "notes": [
-            "Only literal model IDs are reported; dynamic model selection requires review.",
-            "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog or retirement verdict.",
-        ],
+        **_summary_fields(references),
     }
 
 
 def _references_for_lines(
-    lines: list[str], suffix: str, display_path: str
+    lines: list[str], suffix: str, display_path: str, today: date
 ) -> list[dict[str, Any]]:
     references = []
     for line_number, line in enumerate(lines, 1):
@@ -151,6 +182,7 @@ def _references_for_lines(
                     "model": model,
                     "status": "pricing_known" if priced else "pricing_unknown",
                     "confidence": "official_snapshot" if priced else "unknown",
+                    "retirement": retirement_verdict(provider, model, today),
                 }
             )
     unique = list(

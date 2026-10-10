@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- Point the repository Action default, mock smoke workflow and CI examples at
+  the published 2.20.0 package. The `v2.20.0` tag retains its 2.19.2 default;
+  set `package-version` explicitly when using that tag. The Action's doctor
+  step now fails a configuration that approves a retired model.
+
 ## 2.20.0 - 2026-10-10
 
 ### Added

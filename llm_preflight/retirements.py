@@ -359,6 +359,8 @@ def retirement_verdict(
     return verdict
 
 
+# Bandit B105 misreads the "pass" key as a hard-coded password; without the
+# suppression, `make audit` fails.
 _DECISION_RANK = {"fail": 3, "inconclusive": 2, "pass": 1}  # nosec B105
 
 

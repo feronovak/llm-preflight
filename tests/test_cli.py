@@ -3657,3 +3657,52 @@ def test_audit_source_ci_passes_on_unknown_ids(
     )
     cli.main()
     assert "Decision: pass" in capsys.readouterr().out
+
+
+def _doctor_config(tmp_path, model):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps({"prompt": "hi", "models": [{"provider": "openai", "model": model}]})
+    )
+    return config
+
+
+def test_doctor_prints_a_retirement_warning_and_exits_zero(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-going")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]
+    )
+    cli.main()
+    out = capsys.readouterr().out
+    assert "Doctor: ok" in out
+    assert "- warning: gpt-going: retirement announced for 2027-04-01" in out
+
+
+def test_doctor_ci_exits_three_on_a_retiring_model(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-going")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--ci", "--no-env-file"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 3
+
+
+def test_doctor_exits_one_on_a_retired_model_with_or_without_ci(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-gone")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 1
+    assert "- fail: gpt-gone: retired on 2026-10-01" in capsys.readouterr().out

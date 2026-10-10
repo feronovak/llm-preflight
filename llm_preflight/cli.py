@@ -330,7 +330,12 @@ def _format_doctor(report: dict[str, Any]) -> str:
         f"Models: {report['models']}",
     ]
     for check in report["checks"]:
-        status = "ok" if check["ok"] else "fail"
+        if not check["ok"]:
+            status = "fail"
+        elif check.get("severity") == "warning":
+            status = "warning"
+        else:
+            status = "ok"
         model = f"{check.get('model')}: " if check.get("model") else ""
         lines.append(f"- {status}: {model}{check['message']}")
     return "\n".join(lines) + "\n"
@@ -2530,7 +2535,7 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.doctor:
-            report_data = doctor_report(config, environment)
+            report_data = doctor_report(config, environment, today=date.today())
             print(
                 json.dumps(report_data, indent=2)
                 if args.json
@@ -2538,6 +2543,7 @@ def main() -> None:
             )
             if not report_data["ok"]:
                 raise SystemExit(1)
+            _retirement_exit(report_data["retirement"]["decision"], args.ci)
             return
         if args.pricing_check:
             report_data = pricing_coverage_report(

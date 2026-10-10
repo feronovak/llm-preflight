@@ -820,3 +820,71 @@ def test_v1_result_fixture_remains_comparable_and_replayable():
     assert replay_config(fixture)["models"] == [
         {"provider": "mock", "model": "local", "name": "local"}
     ]
+
+
+from datetime import date as _date
+
+from llm_preflight import retirements as _retirements
+
+_R_URL = "https://example.test/deprecations"
+_R_TABLE = {
+    ("openai", "gpt-gone"): {
+        "status": "deprecated",
+        "retirement_date": "2026-10-01",
+        "replacement": "gpt-new",
+        "as_of": "2026-10-01",
+        "source_url": _R_URL,
+    },
+    ("openai", "gpt-going"): {
+        "status": "deprecated",
+        "retirement_date": "2027-04-01",
+        "replacement": "gpt-new",
+        "as_of": "2026-10-01",
+        "source_url": _R_URL,
+    },
+    ("openai", "gpt-new"): {
+        "status": "active",
+        "as_of": "2026-10-01",
+        "source_url": _R_URL,
+    },
+}
+_R_TODAY = _date(2026, 10, 9)
+
+
+def _doctor(monkeypatch, model):
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", _R_TABLE)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    return doctor_report(
+        {"prompt": "hi", "models": [{"provider": "openai", "model": model}]},
+        today=_R_TODAY,
+    )
+
+
+def test_doctor_fails_a_retired_model_with_date_replacement_and_source(monkeypatch):
+    report = _doctor(monkeypatch, "gpt-gone")
+    assert report["ok"] is False
+    failed = [c for c in report["checks"] if not c["ok"]]
+    assert len(failed) == 1
+    assert failed[0]["model"] == "gpt-gone"
+    assert "retired on 2026-10-01" in failed[0]["message"]
+    assert "gpt-new" in failed[0]["message"]
+    assert _R_URL in failed[0]["message"]
+    assert report["retirement"]["decision"] == "fail"
+
+
+def test_doctor_warns_on_a_retiring_model_and_stays_ok(monkeypatch):
+    report = _doctor(monkeypatch, "gpt-going")
+    assert report["ok"] is True
+    warnings = [c for c in report["checks"] if c.get("severity") == "warning"]
+    assert warnings and warnings[-1]["model"] == "gpt-going"
+    assert "2027-04-01" in warnings[-1]["message"]
+    assert report["retirement"]["decision"] == "inconclusive"
+    assert report["retirement"]["next_commands"] == [
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-going,openai:gpt-new --dry-run'
+    ]
+
+
+def test_doctor_reports_unknown_retirement_without_a_check(monkeypatch):
+    report = _doctor(monkeypatch, "gpt-new-unknown")
+    assert report["retirement"]["decision"] == "pass"
+    assert all("retire" not in c["message"] for c in report["checks"])

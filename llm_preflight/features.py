@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+from datetime import date
 from pathlib import Path
 from typing import Any, cast
 from unicodedata import east_asian_width
@@ -17,6 +18,7 @@ from .pricing import (
     pricing_coverage_report,
     resolve_pricing,
 )
+from .retirements import retirement_report
 from .runner import select_test_profiles
 
 
@@ -284,7 +286,9 @@ def check_budget(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def doctor_report(
-    config: dict[str, Any], environment: dict[str, Any] | None = None
+    config: dict[str, Any],
+    environment: dict[str, Any] | None = None,
+    today: date | None = None,
 ) -> dict[str, Any]:
     checks = []
     try:
@@ -362,11 +366,31 @@ def doctor_report(
                 "message": warning["message"],
             }
         )
+    retirement = retirement_report(models, today or date.today())
+    for entry in retirement["models"]:
+        if entry["status"] == "retired":
+            checks.append(
+                {
+                    "ok": False,
+                    "model": entry["model"],
+                    "message": f"{entry['reason']}; {entry['next_step']}",
+                }
+            )
+        elif entry["status"] in {"retiring", "stale"}:
+            checks.append(
+                {
+                    "ok": True,
+                    "severity": "warning",
+                    "model": entry["model"],
+                    "message": f"{entry['reason']}; {entry['next_step']}",
+                }
+            )
     report = {
         "ok": all(check["ok"] for check in checks),
         "models": len(models),
         "checks": checks,
         "pricing_coverage": pricing_coverage,
+        "retirement": retirement,
     }
     if environment is not None:
         report["environment"] = {

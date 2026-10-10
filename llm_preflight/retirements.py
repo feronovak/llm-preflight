@@ -126,7 +126,8 @@ _ANTHROPIC: dict[str, dict[str, Any]] = {
 # OpenAI: the official deprecations page lists announcements, not active
 # models, so no OpenAI row is "active"; an OpenAI ID absent here is unknown.
 # Only text-generation IDs the source scanner recognises are listed. A row
-# whose page entry names more than one replacement carries none.
+# whose page entry names more than one replacement, or a replacement that is
+# itself deprecated, carries none.
 _OPENAI: dict[str, dict[str, Any]] = {
     # 2026-10-01 announcement
     "gpt-5.3-codex": _openai("deprecated", "2027-04-01", "gpt-6-sol"),
@@ -161,7 +162,9 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "o1": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini-2025-01-31": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    # OWNER REVIEW: the page lists gpt-4-1106-preview twice (2025-09-26 batch, shutdown 2026-03-26, "gpt-5 or gpt-4.1*"; 2026-04-22 batch, shutdown 2026-10-23, gpt-5.6-sol). The later entry is kept as an extension; confirm against the page before release.
+    # The page lists gpt-4-1106-preview twice: the 2025-09-26 batch (shutdown
+    # 2026-03-26) and this 2026-04-22 batch. The later entry is an extension
+    # (maintainer decision, 2026-10-10).
     "gpt-4-1106-preview": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "gpt-4.1-nano": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
     "gpt-4.1-nano-2025-04-14": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
@@ -201,16 +204,18 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "gpt-4-turbo-preview-completions": _openai("deprecated", "2026-03-26"),
     # 2025-04-28 and earlier announcements
     "o1-preview": _openai("deprecated", "2025-07-28", "o3"),
-    "o1-mini": _openai("deprecated", "2025-10-27", "o4-mini"),
+    # The page names o4-mini, itself retiring on 2026-10-23; not recorded.
+    "o1-mini": _openai("deprecated", "2025-10-27"),
     "gpt-4.5-preview": _openai("deprecated", "2025-07-14", "gpt-4.1"),
     "gpt-4-32k": _openai("deprecated", "2025-06-06", "gpt-4o"),
     "gpt-4-32k-0613": _openai("deprecated", "2025-06-06", "gpt-4o"),
     "gpt-4-32k-0314": _openai("deprecated", "2025-06-06", "gpt-4o"),
     "gpt-4-vision-preview": _openai("deprecated", "2024-12-06", "gpt-4o"),
     "gpt-4-1106-vision-preview": _openai("deprecated", "2024-12-06", "gpt-4o"),
-    "gpt-3.5-turbo-0613": _openai("deprecated", "2024-09-13", "gpt-3.5-turbo"),
-    "gpt-3.5-turbo-16k-0613": _openai("deprecated", "2024-09-13", "gpt-3.5-turbo"),
-    "gpt-3.5-turbo-0301": _openai("deprecated", "2024-09-13", "gpt-3.5-turbo"),
+    # The page names gpt-3.5-turbo, itself retiring on 2026-10-23; not recorded.
+    "gpt-3.5-turbo-0613": _openai("deprecated", "2024-09-13"),
+    "gpt-3.5-turbo-16k-0613": _openai("deprecated", "2024-09-13"),
+    "gpt-3.5-turbo-0301": _openai("deprecated", "2024-09-13"),
 }
 
 PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {

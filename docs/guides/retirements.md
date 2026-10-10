@@ -81,8 +81,9 @@ from the ID.
   `unknown`, not `active`.
 - Text-generation models only. Audio, realtime, image, transcription,
   embedding and fine-tuning retirements are not in the snapshot.
-- A page entry that names more than one replacement, or a replacement that
-  needs a request setting such as a reasoning mode, is recorded without one.
+- A page entry that names more than one replacement, a replacement that
+  needs a request setting such as a reasoning mode, or a replacement that is
+  itself deprecated or retired, is recorded without one.
 
 ## Release retirement review
 

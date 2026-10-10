@@ -344,3 +344,16 @@ def test_today_utc_reads_the_utc_calendar_date_like_the_pricing_snapshot(
 
     assert retirements.today_utc() == date(2026, 10, 9)
     assert seen == [timezone.utc]
+
+
+def test_no_recorded_replacement_is_itself_deprecated_or_retired():
+    # A next command must never compare against a model that is going away;
+    # such rows are recorded without a replacement.
+    chained = sorted(
+        (provider, model, row["replacement"])
+        for (provider, model), row in PUBLIC_RETIREMENTS.items()
+        if "replacement" in row
+        and PUBLIC_RETIREMENTS.get((provider, row["replacement"]), {}).get("status")
+        in {"deprecated", "retired"}
+    )
+    assert chained == []

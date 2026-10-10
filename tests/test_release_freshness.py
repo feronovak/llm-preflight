@@ -1,6 +1,7 @@
 import importlib.util
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -76,3 +77,11 @@ def test_make_release_freshness_and_the_release_workflow_run_the_script():
     assert workflow.index("make release-freshness") < workflow.index("python -m build")
     for example in _script().EXAMPLES:
         assert (ROOT / "examples" / f"{example}.json").is_file()
+
+
+def test_release_freshness_without_today_uses_the_real_utc_date(monkeypatch, capsys):
+    script = _script()
+    monkeypatch.setattr(script, "today_utc", lambda: date(2026, 10, 29))
+
+    assert script.main([]) == 1
+    assert "Release freshness on 2026-10-29: fail" in capsys.readouterr().out

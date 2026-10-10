@@ -777,6 +777,8 @@ def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect
         assert (
             "`inconclusive` means one is retiring or its snapshot row is stale" in step
         )
+    for text in (mcp.SAFE_WORKFLOW, skill):
+        assert "`ok` does not reflect it." in " ".join(text.split())
     assert "`ok` stays `true` for a retired model" in " ".join(guide.split())
 
 

@@ -3721,7 +3721,13 @@ def test_doctor_exits_one_on_a_retired_model_with_or_without_ci(
     with pytest.raises(SystemExit) as exc_info:
         cli.main()
     assert exc_info.value.code == 1
-    assert "- fail: gpt-gone: retired on 2026-10-01" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "- fail: gpt-gone: retired on 2026-10-01" in out
+    assert "Next:" in out
+    assert (
+        '  llm-preflight --quick "<your prompt>" '
+        "--models openai:gpt-gone,openai:gpt-new --dry-run" in out
+    )
 
 
 def _dry_run_config(tmp_path, *models):
@@ -3771,7 +3777,11 @@ def test_dry_run_omits_a_next_command_whose_replacement_is_already_selected(
     )
     cli.main()
     out = capsys.readouterr().out
-    assert "- openai/gpt-gone: retired 2026-10-01" in out
+    assert (
+        "- openai/gpt-gone: retired 2026-10-01 — provider names gpt-new as the "
+        "replacement; it is already in this plan (" in out
+    )
+    assert "preview it with the next command" not in out
     assert "Next:" not in out
 
 

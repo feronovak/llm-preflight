@@ -590,14 +590,21 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{summary_counts.get('retiring', 0) + summary_counts.get('stale', 0)} "
             f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
         )
-        lines.extend(
-            f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
-            f"{entry['next_step']}"
-            for entry in flagged
-        )
         selected = {
             (m.get("provider", "openai_compatible"), m["model"]) for m in plan["models"]
         }
+        for entry in flagged:
+            next_step = entry["next_step"]
+            replacement = entry.get("replacement")
+            if replacement and (entry["provider"], replacement) in selected:
+                next_step = (
+                    f"provider names {replacement} as the replacement; it is already "
+                    f"in this plan ({entry['source_url']})"
+                )
+            lines.append(
+                f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
+                f"{next_step}"
+            )
         commands = list(
             dict.fromkeys(
                 entry["next_command"]

@@ -189,7 +189,11 @@ See [Agent decision contract](../reference/decision.md).
    prompt and response contract. Prove its fixtures with `--contract-check`.
 2. Ask the agent to run `validate_config` after an LLM-related change.
 3. Ask it to run `dry_run_plan` and report models, request count, estimated
-   cost, and every non-eligible `smoke_eligibility` reason.
+   cost, every non-eligible `smoke_eligibility` reason, and the `retirements`
+   decision: `fail` means a selected model is retired, `inconclusive` means one
+   is retiring or its snapshot row is stale. The tool's `ok` stays `true` for a
+   retired model; it only says the plan was built, so read
+   `retirements.decision` instead.
 4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
 5. Use `run_preflight`, then retain the returned evidence or compare it with a

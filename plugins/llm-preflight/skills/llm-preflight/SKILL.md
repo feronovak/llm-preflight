@@ -13,7 +13,9 @@ to create one; MCP tools read an existing config and do not create it.
 
 1. Use `validate_config` after the change.
 2. Use `dry_run_plan`; report the request bound, estimated cost, pricing
-   coverage, and every non-eligible smoke reason.
+   coverage, every non-eligible smoke reason, and the `retirements` decision:
+   `fail` means a selected model is retired, `inconclusive` means one is
+   retiring or its snapshot row is stale. `ok` does not reflect it.
 3. Stop before live provider traffic. You must not infer approval from a
    configuration, a dry-run, a tool call, or a previous result.
 4. Run a live preflight only after an explicit user instruction and only with

@@ -41,7 +41,9 @@ accepted and rejected response fixtures locally before a live run.
    provider call.
 2. Call `dry_run_plan` and report the request bound, estimated cost (which is
    intentionally unavailable for image inputs), pricing
-   coverage, and every non-eligible smoke reason.
+   coverage, every non-eligible smoke reason, and the `retirements` decision:
+   `fail` means a selected model is retired, `inconclusive` means one is
+   retiring or its snapshot row is stale. `ok` does not reflect it.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the

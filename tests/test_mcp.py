@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from datetime import date
+from pathlib import Path
 
 from llm_preflight import mcp, retirements
 from llm_preflight.retirements import retirement_report
@@ -696,3 +697,18 @@ def test_stdio_server_negotiates_any_version_then_handles_discovery(tmp_path):
     process.wait(timeout=5)
     assert first["result"]["protocolVersion"] == "2025-06-18"
     assert second["result"]["supportedVersions"] == ["2026-07-28"]
+
+
+def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect():
+    root = Path(__file__).parent.parent
+    skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    guide = (root / "docs/automation/mcp.md").read_text()
+
+    for text in (mcp.SAFE_WORKFLOW, skill, guide):
+        step = " ".join(text.split())
+        assert "`retirements` decision" in step
+        assert "`fail` means a selected model is retired" in step
+        assert (
+            "`inconclusive` means one is retiring or its snapshot row is stale" in step
+        )
+    assert "`ok` stays `true` for a retired model" in " ".join(guide.split())

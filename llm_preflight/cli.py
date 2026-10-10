@@ -451,15 +451,22 @@ def _test_breakdown(
     ]
 
 
-def _dry_run_plan(
+def dry_run_plan(
     config: dict[str, Any],
-    profile_selector: str | None,
+    profile_selector: str | None = None,
     today: date | None = None,
+    *,
+    pricing_evidence: bool = False,
 ) -> dict[str, Any]:
+    """The no-spend plan shared by `--dry-run` and the MCP `dry_run_plan` tool.
+
+    `pricing_evidence` adds the resolved pricing ledger and its fingerprint.
+    The CLI leaves them out so an approval receipt keeps hashing the same plan.
+    """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
     models = resolve_models(config)
-    return {
+    plan = {
         "benchmark": config.get("name", "llm-benchmark"),
         "models": catalog_output(models),
         "tests": _selected_test_names(config, profile_selector),
@@ -486,6 +493,10 @@ def _dry_run_plan(
         "save_responses": config.get("save_responses", False),
         "stop_on": config.get("stop_on", "none"),
     }
+    if pricing_evidence:
+        plan["pricing_ledger"] = budget["pricing_ledger"]
+        plan["pricing_fingerprint"] = budget["pricing_fingerprint"]
+    return plan
 
 
 def _format_dry_run_plan(plan: dict[str, Any]) -> str:
@@ -1472,7 +1483,7 @@ def _watch_new_main(argv: list[str]) -> None:
         config = apply_smoke_mode(config)
         config.setdefault("save_responses", "failures")
     if args.dry_run:
-        plan = _dry_run_plan(config, args.tests)
+        plan = dry_run_plan(config, args.tests)
         plan["catalog_candidates"] = catalog_output(candidates)
         print(json.dumps(plan, indent=2) if args.json else _format_dry_run_plan(plan))
         return
@@ -2649,7 +2660,7 @@ def main() -> None:
                 return
             config, profile_selector = selection
         if args.dry_run:
-            plan = _dry_run_plan(config, profile_selector, today=today_utc())
+            plan = dry_run_plan(config, profile_selector, today=today_utc())
             payload: dict[str, Any] = plan
             verification = None
             if args.approval_receipt:

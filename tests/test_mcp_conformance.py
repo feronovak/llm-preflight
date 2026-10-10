@@ -220,6 +220,15 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
             }
         )
     )
+    (tmp_path / "presets.json").write_text(
+        json.dumps(
+            {
+                "prompt": "Reply with ok.",
+                "presets": ["json"],
+                "models": [{"provider": "anthropic", "model": "claude-test"}],
+            }
+        )
+    )
     (tmp_path / "discovery.json").write_text(
         json.dumps(
             {"prompt": "Reply with ok.", "discovery": [{"provider": "openrouter"}]}
@@ -240,6 +249,7 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
         "dry_run_plan": [
             ({"config": "mock.json"}, False),
             ({"config": "retired.json"}, False),
+            ({"config": "presets.json"}, False),
             ({"config": "discovery.json"}, True),
         ],
         "run_preflight": [
@@ -265,3 +275,5 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     retired = _call(tmp_path, "dry_run_plan", {"config": "retired.json"})
     assert retired["structuredContent"]["retirements"]["decision"] == "fail"
     assert retired["structuredContent"]["pricing_warnings"]
+    presets = _call(tmp_path, "dry_run_plan", {"config": "presets.json"})
+    assert presets["structuredContent"]["configuration_warnings"]

@@ -168,6 +168,14 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "pricing_coverage",
         "smoke_eligibility",
         "retirements",
+        "benchmark",
+        "tests",
+        "test_breakdown",
+        "configuration_warnings",
+        "presets",
+        "request",
+        "save_responses",
+        "stop_on",
     ]
     assert by_name["run_preflight"]["outputSchema"]["oneOf"][1]["required"] == [
         "decision",
@@ -712,3 +720,61 @@ def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect
             "`inconclusive` means one is retiring or its snapshot row is stale" in step
         )
     assert "`ok` stays `true` for a retired model" in " ".join(guide.split())
+
+
+def test_dry_run_plan_returns_the_cli_dry_run_plan_for_the_same_config(
+    tmp_path, monkeypatch, capsys
+):
+    from llm_preflight import cli
+
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 10, 9))
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "name": "parity",
+                "prompt": "Reply with ok.",
+                "presets": ["json"],
+                "request": {"max_output_tokens": 64},
+                "save_responses": "failures",
+                "stop_on": "any-fail",
+                "models": [
+                    {"provider": "mock", "model": "local", "response": "ok"},
+                    {"provider": "anthropic", "model": "claude-3-haiku-20240307"},
+                    {
+                        "provider": "openai_compatible",
+                        "model": "router",
+                        "base_url": "https://router.example.test/v1",
+                        "headers": {"X-Title": "parity"},
+                    },
+                ],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--json", "--no-env-file"],
+    )
+    cli.main()
+    cli_plan = json.loads(capsys.readouterr().out)
+
+    content = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )["result"]["structuredContent"]
+
+    mcp_only = {"ok", "pricing_ledger", "pricing_fingerprint"}
+    assert set(content) - set(cli_plan) == mcp_only
+    assert {key: content[key] for key in cli_plan} == cli_plan
+    assert cli_plan["configuration_warnings"]
+    assert cli_plan["retirements"]["decision"] == "fail"

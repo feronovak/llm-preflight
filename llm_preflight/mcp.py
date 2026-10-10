@@ -11,19 +11,16 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .catalog import resolve_models
-from .eligibility import smoke_eligibility_report
+from .cli import dry_run_plan
 from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_model_aliases,
     apply_provider_presets,
     check_budget,
     compare_results,
-    estimate_budget,
 )
-from .pricing import pricing_coverage_report, pricing_freshness_report
 from .redaction import redact_secrets
-from .retirements import retirement_report, today_utc
+from .retirements import today_utc
 from .runner import load_config, run_benchmark, validate_config_validations
 
 PROTOCOL_VERSION = "2026-07-28"
@@ -226,6 +223,14 @@ def _tools() -> list[dict[str, Any]]:
             "pricing_coverage": {"type": "object"},
             "smoke_eligibility": {"type": "object"},
             "retirements": {"type": "object"},
+            "benchmark": {"description": "Configured benchmark name."},
+            "tests": {"type": "array", "items": {"type": "string"}},
+            "test_breakdown": {"type": "array", "items": {"type": "object"}},
+            "configuration_warnings": {"type": "array", "items": {"type": "object"}},
+            "presets": {"type": "array", "items": {"type": "string"}},
+            "request": {"type": "object"},
+            "save_responses": {"description": "Configured response retention."},
+            "stop_on": {"description": "Configured stop condition."},
         },
         [
             "ok",
@@ -241,8 +246,16 @@ def _tools() -> list[dict[str, Any]]:
             "pricing_coverage",
             "smoke_eligibility",
             "retirements",
+            "benchmark",
+            "tests",
+            "test_breakdown",
+            "configuration_warnings",
+            "presets",
+            "request",
+            "save_responses",
+            "stop_on",
         ],
-        "No-spend plan with resolved models, request bound, cost estimate, pricing evidence, and retirement verdicts.",
+        "The CLI --dry-run plan with the pricing ledger: resolved models, request bound, cost estimate, pricing evidence, and retirement verdicts.",
     )
     error_or_run = _output_schema(
         {
@@ -379,28 +392,8 @@ def _call(
         )
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
-        models = resolve_models(config)
-        budget = estimate_budget(config, models)
-        return _tool_result(
-            {
-                "ok": True,
-                "models": models,
-                **budget,
-                "pricing_warnings": pricing_freshness_report(
-                    models,
-                    enforce_override_freshness=bool(
-                        config.get("require_current_pricing")
-                    ),
-                )["warnings"],
-                "pricing_coverage": pricing_coverage_report(
-                    models,
-                    require_current_pricing=bool(config.get("require_current_pricing")),
-                ),
-                "smoke_eligibility": smoke_eligibility_report(models, config),
-                "retirements": retirement_report(models, today_utc()),
-            },
-            standard=standard,
-        )
+        plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
+        return _tool_result({"ok": True, **plan}, standard=standard)
     if name == "diff_baseline":
         baseline = json.loads(_path(arguments["baseline"], workspace).read_text())
         current = json.loads(_path(arguments["current"], workspace).read_text())

@@ -7,6 +7,7 @@ verdict; it is reported as unknown.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date
 from typing import Any
 
@@ -338,3 +339,43 @@ def retirement_verdict(
         }
     )
     return verdict
+
+
+_DECISION_RANK = {"fail": 2, "inconclusive": 1, "pass": 0, "none": 0}
+
+
+def worst_decision(decisions: Iterable[str]) -> str:
+    worst = "pass"
+    for decision in decisions:
+        if _DECISION_RANK.get(decision, 0) > _DECISION_RANK[worst]:
+            worst = "fail" if decision == "fail" else "inconclusive"
+    return worst
+
+
+def retirement_report(
+    models: list[dict[str, Any]],
+    today: date,
+    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
+) -> dict[str, Any]:
+    """Verdicts for a selected model list, for the doctor and the dry-run."""
+    entries = []
+    for model in models:
+        provider = model.get("provider", "openai_compatible")
+        verdict = retirement_verdict(provider, model["model"], today, max_age_days)
+        entries.append({"provider": provider, "model": model["model"], **verdict})
+    summary = {
+        status: sum(entry["status"] == status for entry in entries)
+        for status in ("retired", "retiring", "stale", "active", "unknown")
+    }
+    commands = list(
+        dict.fromkeys(
+            entry["next_command"] for entry in entries if "next_command" in entry
+        )
+    )
+    return {
+        "decision": worst_decision(entry["decision"] for entry in entries),
+        "summary": summary,
+        "models": entries,
+        "next_commands": commands,
+        "snapshot": snapshot_summary(),
+    }

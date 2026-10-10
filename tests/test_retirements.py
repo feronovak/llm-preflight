@@ -9,8 +9,10 @@ from llm_preflight.retirements import (
     OPENAI_DEPRECATIONS_URL,
     PUBLIC_RETIREMENTS,
     RETIREMENT_PROVIDERS,
+    retirement_report,
     retirement_verdict,
     snapshot_summary,
+    worst_decision,
 )
 from llm_preflight.source_audit import _MODEL_PREFIX, _provider_for
 
@@ -250,3 +252,56 @@ def test_snapshot_summary_reports_coverage_and_dates():
     assert summary["rows"] == len(PUBLIC_RETIREMENTS)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
+
+
+def test_worst_decision_orders_fail_over_inconclusive_over_pass():
+    assert worst_decision(["pass", "inconclusive", "fail"]) == "fail"
+    assert worst_decision(["pass", "none", "inconclusive"]) == "inconclusive"
+    assert worst_decision(["none", "pass"]) == "pass"
+    assert worst_decision([]) == "pass"
+
+
+def test_retirement_report_summarises_a_model_list(table):
+    report = retirement_report(
+        [
+            {"provider": "openai", "model": "gpt-gone"},
+            {"provider": "openai", "model": "gpt-going"},
+            {"provider": "openai", "model": "gpt-gone"},
+            {"provider": "mock", "model": "local"},
+            {"provider": "openai", "model": "old-active"},
+        ],
+        TODAY,
+    )
+    assert report["decision"] == "fail"
+    assert report["summary"] == {
+        "retired": 2,
+        "retiring": 1,
+        "stale": 0,
+        "active": 1,
+        "unknown": 1,
+    }
+    assert [m["model"] for m in report["models"]] == [
+        "gpt-gone",
+        "gpt-going",
+        "gpt-gone",
+        "local",
+        "old-active",
+    ]
+    assert report["models"][0]["status"] == "retired"
+    assert report["models"][3]["status"] == "unknown"
+    assert report["next_commands"] == [
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run',
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-going,openai:gpt-new --dry-run',
+    ]
+    assert report["snapshot"]["providers"] == ["anthropic", "openai"]
+
+
+def test_retirement_report_is_inconclusive_without_a_retired_model(table):
+    report = retirement_report([{"provider": "openai", "model": "gpt-going"}], TODAY)
+    assert report["decision"] == "inconclusive"
+
+
+def test_retirement_report_passes_on_unknown_only(table):
+    report = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
+    assert report["decision"] == "pass"
+    assert report["next_commands"] == []

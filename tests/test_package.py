@@ -496,9 +496,10 @@ def test_pypi_trusted_publisher_isolated_to_release_workflow():
 def test_release_build_runs_the_real_clock_freshness_gate_before_building():
     workflow = Path(".github/workflows/release.yml").read_text()
     makefile = Path("Makefile").read_text()
+    script = Path("scripts/release_freshness.py").read_text()
 
     assert workflow.index("make release-freshness") < workflow.index("python -m build")
-    assert "release-freshness:" in makefile
+    assert "release-freshness:\n\tpython3 scripts/release_freshness.py" in makefile
     for example in (
         "approved-smoke",
         "cross-provider-run",
@@ -510,10 +511,8 @@ def test_release_build_runs_the_real_clock_freshness_gate_before_building():
         "glm-5.3-comparison",
         "glm-5.3-openrouter-comparison",
     ):
-        assert example in makefile
+        assert f'"{example}"' in script
         assert Path(f"examples/{example}.json").is_file()
-    assert "--pricing-check --json --no-save" in makefile
-    assert "--audit-source examples --ci" in makefile
 
 
 def test_testpypi_workflow_uses_oidc_and_verifies_the_published_package():

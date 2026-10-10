@@ -1,8 +1,5 @@
 VERSION := $(shell python3 -c "from llm_preflight import __version__; print(__version__)")
 DIST_FILES := dist/llm_preflight-$(VERSION)*
-FRESHNESS_EXAMPLES := approved-smoke cross-provider-run frontier-candidates \
-	flagship-comparison gpt-6.1-sol-comparison anthropic-5.5-comparison \
-	anthropic-5.5-checks glm-5.3-comparison glm-5.3-openrouter-comparison
 
 .PHONY: audit check-dist coverage package publish-test release-freshness test test-one
 
@@ -34,11 +31,7 @@ audit:
 # Real-clock check that the bundled examples are still priced and retirement-
 # current; the unit suite pins the date so it cannot catch snapshot expiry.
 release-freshness:
-	@for example in $(FRESHNESS_EXAMPLES); do \
-		echo "pricing-check examples/$$example.json"; \
-		python3 -m llm_preflight examples/$$example.json --pricing-check --json --no-save > /dev/null || exit 1; \
-	done
-	python3 -m llm_preflight --audit-source examples --ci
+	python3 scripts/release_freshness.py
 
 test-one:
 	@test -n "$(TEST)" || (echo "Usage: make test-one TEST=path::test_name" && exit 2)

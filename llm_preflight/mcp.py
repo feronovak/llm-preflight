@@ -178,6 +178,7 @@ def _output_schema(
 ) -> dict[str, Any]:
     """Describe stable response fields while allowing benchmark extensions."""
     return {
+        "type": "object",
         "oneOf": [
             {
                 "type": "object",
@@ -192,7 +193,7 @@ def _output_schema(
                 "required": success_required,
                 "additionalProperties": True,
             },
-        ]
+        ],
     }
 
 
@@ -219,7 +220,7 @@ def _tools() -> list[dict[str, Any]]:
             "maximum_estimated_cost_usd": optional_number_schema,
             "pricing_ledger": {"type": "array", "items": {"type": "object"}},
             "pricing_fingerprint": {"type": "string"},
-            "pricing_warnings": {"type": "array", "items": {"type": "string"}},
+            "pricing_warnings": {"type": "array", "items": {"type": "object"}},
             "pricing_coverage": {"type": "object"},
             "smoke_eligibility": {"type": "object"},
             "retirements": {"type": "object"},

@@ -30,9 +30,11 @@ All notable changes to this project are documented here.
   retirement entry, or a configuration with a `profiles` key, now verify as
   `mismatch` (exit 1) because the plan they hash changed shape; run the
   dry-run again and re-approve them. Receipts for other plans still verify.
-- The MCP safe-workflow resource, the plugin skill, the MCP and coding-agent
-  guides and the `init --agent-instructions` block tell agents to report the dry-run `retirements` decision: `fail` for a retired
-  model, `inconclusive` for a retiring model or a stale snapshot row. The
+- The MCP safe-workflow resource and `initialize` instructions, the plugin
+  skill, the MCP, coding-agent and AI implementation testing guides and the
+  `init --agent-instructions` block tell agents to report the dry-run
+  `retirements` decision: `fail` for a retired model, `inconclusive` for a
+  retiring model or a stale snapshot row. The
   guide states that `ok` stays `true` for a retired model, and that
   `validate_config` checks structure without evaluating validation fixtures.
 - `o1-preview` no longer records `o3` as its replacement: o3's only dated

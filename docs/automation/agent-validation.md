@@ -36,6 +36,11 @@ llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json
 llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
 ```
 
+Report the dry-run `retirements` decision with the plan: `fail` means a
+selected model is retired, `inconclusive` means one is retiring or its
+snapshot row is stale. Neither is approval, and the agent must not choose a
+replacement the provider did not name.
+
 Each `--audit-source` reference carries a `retirement` object (status, date, provider-stated replacement, next step) and the payload a `decision` and `next_commands`. An agent may run the printed `--dry-run` commands; it must not treat `unknown` as approval or choose a replacement the provider did not name.
 
 Use `--migration-check` for a small current-versus-candidate compatibility
@@ -49,8 +54,9 @@ An agent may:
 
 - run `--audit-source` automatically to report literal model references;
 - run `--doctor`, `--pricing-check`, and `--dry-run` automatically;
-- report missing credentials, unknown pricing, invalid configuration, and
-  failed validation with the command output; and
+- report missing credentials, unknown pricing, invalid configuration, the
+  dry-run `retirements` decision, and failed validation with the command
+  output; and
 - prepare a proposed benchmark or CI change for review.
 
 An agent must not:

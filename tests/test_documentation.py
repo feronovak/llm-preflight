@@ -487,6 +487,13 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0" in feature_map
     assert "retirement snapshot" in feature_map
     assert "`retirement`" in agent_validation
+    validation_text = " ".join(agent_validation.split())
+    assert "Report the dry-run `retirements` decision" in validation_text
+    assert "`fail` means a selected model is retired" in validation_text
+    assert (
+        "`inconclusive` means one is retiring or its snapshot row is stale"
+        in validation_text
+    )
     assert "## 2.20.1" in changelog
     assert "retirement" in changelog.split("## 2.19.1")[0]
 

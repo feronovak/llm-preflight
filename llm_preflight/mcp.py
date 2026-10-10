@@ -479,7 +479,10 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                 "capabilities": {"tools": {}, "resources": {}},
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
                 "instructions": (
-                    "Use validate_config and dry_run_plan before a live run. "
+                    "Use validate_config and dry_run_plan before a live run, and "
+                    "report the dry_run_plan `retirements` decision: `fail` for a "
+                    "retired model, `inconclusive` for a retiring model or a "
+                    "stale snapshot row. "
                     "Only call run_preflight for a paid config when the user "
                     "explicitly authorizes it and confirm_paid_run is true."
                 ),

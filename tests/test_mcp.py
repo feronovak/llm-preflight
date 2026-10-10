@@ -81,6 +81,10 @@ def test_standard_mcp_clients_negotiate_any_initialize_version_and_discover_tool
 
     assert initialized["result"]["protocolVersion"] == "2025-06-18"
     assert initialized_with_2026_metadata["result"]["protocolVersion"] == "2025-06-18"
+    instructions = initialized["result"]["instructions"]
+    assert "report the dry_run_plan `retirements` decision" in instructions
+    assert "`fail` for a retired model" in instructions
+    assert "`inconclusive` for a retiring model or a stale snapshot row" in instructions
     assert [tool["name"] for tool in listed["result"]["tools"]] == [
         "validate_config",
         "dry_run_plan",

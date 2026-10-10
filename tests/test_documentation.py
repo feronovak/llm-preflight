@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**As of:** v2.20.0" in page
-    assert "Package version: **2.20.0**" in page
+    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in page
+    assert "Package version: **2.20.1**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:

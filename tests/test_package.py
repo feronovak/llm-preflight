@@ -543,3 +543,23 @@ def test_no_legacy_package_surfaces_remain():
         Path("docs/migrating-to-llm-preflight.md"),
     ):
         assert not path.exists()
+
+
+def test_every_workflow_action_is_pinned_to_a_full_commit_sha():
+    files = sorted(Path(".github/workflows").glob("*.yml")) + [Path("action.yml")]
+    references = [
+        (path, match)
+        for path in files
+        for match in re.findall(
+            r"^\s*(?:-\s+)?uses:\s*(\S+)", path.read_text(), re.MULTILINE
+        )
+    ]
+
+    assert len(references) > len(files)
+    for path, reference in references:
+        if reference.startswith("./"):
+            continue
+        assert re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", reference), (
+            path,
+            reference,
+        )

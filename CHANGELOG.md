@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- Point the repository Action default, mock smoke workflow and CI examples at
+  the published 2.19.2 package. The `v2.19.2` tag retains its 2.19.1 default;
+  set `package-version` explicitly when using that tag.
+
 ## 2.19.2 - 2026-10-10
 
 ### Fixed

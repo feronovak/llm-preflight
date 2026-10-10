@@ -476,3 +476,23 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "`retirement`" in agent_validation
     assert "## 2.20.0" in changelog or "## Unreleased" in changelog
     assert "retirement" in changelog.split("## 2.19.1")[0]
+
+
+def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
+    guide = " ".join((ROOT / "docs/guides/retirements.md").read_text().split())
+    changelog = " ".join((ROOT / "CHANGELOG.md").read_text().split())
+
+    assert "returns 3 for every non-retired model in the snapshot" in guide
+    assert "retired stays 1" in guide
+    assert "returns 3 for every non-retired model in the snapshot" in changelog
+    assert "2026-11-09" in changelog
+
+
+def test_readme_links_the_retirement_guide_by_absolute_url():
+    readme = (ROOT / "README.md").read_text()
+
+    assert (
+        "(https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md)"
+        in readme
+    )
+    assert "(docs/guides/retirements.md)" not in readme

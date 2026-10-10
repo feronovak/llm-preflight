@@ -481,7 +481,8 @@ def test_pypi_trusted_publisher_isolated_to_release_workflow():
     assert "id-token: write" in workflow
     assert "actions/upload-artifact" in workflow
     assert "actions/download-artifact" in workflow
-    assert "pypa/gh-action-pypi-publish@release/v1" in workflow
+    assert re.search(r"pypa/gh-action-pypi-publish@[0-9a-f]{40} # release/v1", workflow)
+    assert "pypa/gh-action-pypi-publish@release/v1" not in workflow
     assert "PYPI_API_TOKEN" not in workflow
 
 
@@ -510,6 +511,8 @@ def test_release_build_runs_the_real_clock_freshness_gate_before_building():
 
 def test_testpypi_workflow_uses_oidc_and_verifies_the_published_package():
     workflow = Path(".github/workflows/testpypi.yml").read_text()
+
+    assert re.search(r"pypa/gh-action-pypi-publish@[0-9a-f]{40} # release/v1", workflow)
 
     assert "workflow_dispatch:" in workflow
     assert "environment:" in workflow

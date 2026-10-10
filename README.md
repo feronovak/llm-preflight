@@ -25,7 +25,7 @@ llm-preflight --audit-source .
 ```
 
 Retired IDs print their date and the provider-stated replacement with a
-ready `--dry-run` command; see [model retirements](docs/guides/retirements.md).
+ready `--dry-run` command; see [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
 Then create and run a deterministic local benchmark—no API key or network request:
 
 ```bash

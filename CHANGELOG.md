@@ -38,8 +38,9 @@ All notable changes to this project are documented here.
   step once pins move to this version. Many OpenAI rows in the bundled
   snapshot retire on 2026-10-23.
 - Snapshot rows go stale 30 days after their review date (`as_of`, 2026-10-09
-  in this release); from then `--ci` returns 3 for every model in the snapshot
-  until the package is updated. Models with no row are unaffected.
+  in this release, so stale from 2026-11-09); from then `--ci` returns 3 for
+  every non-retired model in the snapshot (retired stays 1) until the package
+  is updated. Models with no row are unaffected.
 - Scans whose references are all outside the snapshot report `decision: none`,
   not pass.
 - Point the repository Action default, mock smoke workflow and CI examples at

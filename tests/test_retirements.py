@@ -307,6 +307,8 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
+    # o3's only dated snapshot retires 2026-12-11, so it is not a replacement.
+    assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-preview")]
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 36

@@ -203,7 +203,9 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "gpt-4-turbo-preview": _openai("deprecated", "2026-03-26"),
     "gpt-4-turbo-preview-completions": _openai("deprecated", "2026-03-26"),
     # 2025-04-28 and earlier announcements
-    "o1-preview": _openai("deprecated", "2025-07-28", "o3"),
+    # The page names o3, whose only dated snapshot retires on 2026-12-11; not
+    # recorded.
+    "o1-preview": _openai("deprecated", "2025-07-28"),
     # The page names o4-mini, itself retiring on 2026-10-23; not recorded.
     "o1-mini": _openai("deprecated", "2025-10-27"),
     "gpt-4.5-preview": _openai("deprecated", "2025-07-14", "gpt-4.1"),

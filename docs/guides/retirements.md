@@ -44,9 +44,10 @@ in all three commands.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
-stale 30 days after their review date, after which `--ci` returns 3 for every
-model in the snapshot until the package is updated; models with no row stay at
-0.
+stale 30 days after their review date (rows reviewed 2026-10-09 are stale from
+2026-11-09), after which `--ci` returns 3 for every non-retired model in the
+snapshot (retired stays 1) until the package is updated; models with no row
+stay at 0.
 
 ## Next steps
 

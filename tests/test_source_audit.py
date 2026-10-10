@@ -149,7 +149,7 @@ def test_source_audit_findings_exclude_priced_models_with_unknown_retirement(
 
     assert report["references"][0]["status"] == "pricing_known"
     assert report["findings"] == []
-    assert report["decision"] == "pass"
+    assert report["decision"] == "none"
 
 
 def test_source_audit_is_inconclusive_when_only_retiring_ids_are_found(
@@ -174,4 +174,9 @@ def test_source_audit_text_carries_the_same_fields(tmp_path, monkeypatch):
 
 def test_source_audit_defaults_today_to_the_current_date(tmp_path):
     (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
-    assert audit_source(tmp_path)["decision"] in {"pass", "inconclusive", "fail"}
+    assert audit_source(tmp_path)["decision"] in {
+        "none",
+        "pass",
+        "inconclusive",
+        "fail",
+    }

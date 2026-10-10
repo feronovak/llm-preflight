@@ -886,5 +886,5 @@ def test_doctor_warns_on_a_retiring_model_and_stays_ok(monkeypatch):
 
 def test_doctor_reports_unknown_retirement_without_a_check(monkeypatch):
     report = _doctor(monkeypatch, "gpt-new-unknown")
-    assert report["retirement"]["decision"] == "pass"
+    assert report["retirement"]["decision"] == "none"
     assert all("retire" not in c["message"] for c in report["checks"])

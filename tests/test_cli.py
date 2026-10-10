@@ -3603,7 +3603,10 @@ def test_audit_source_prints_retirement_findings_and_next_commands(
     cli.main()
     out = capsys.readouterr().out
 
-    assert "Audited 1 files; 2 model references; 1 retired; 1 retiring or stale." in out
+    assert (
+        "Audited 1 files; 2 model references; 1 retired; 1 retiring or stale; "
+        "0 unknown." in out
+    )
     assert (
         "app.py:1: gpt-gone — pricing_unknown; retired 2026-10-01, replacement gpt-new"
         in out
@@ -3656,7 +3659,18 @@ def test_audit_source_ci_passes_on_unknown_ids(
         sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
     )
     cli.main()
-    assert "Decision: pass" in capsys.readouterr().out
+    assert "Decision: none" in capsys.readouterr().out
+
+
+def test_audit_source_reports_none_when_no_reference_is_in_the_snapshot(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+    cli.main()
+    out = capsys.readouterr().out
+    assert "Decision: none (no reference is in the retirement snapshot)" in out
+    assert "; 1 unknown." in out
 
 
 def _doctor_config(tmp_path, model):
@@ -3679,6 +3693,8 @@ def test_doctor_prints_a_retirement_warning_and_exits_zero(
     out = capsys.readouterr().out
     assert "Doctor: ok" in out
     assert "- warning: gpt-going: retirement announced for 2027-04-01" in out
+    assert "Next:" in out
+    assert f"  gpt-going: no replacement announced; see {_RETIREMENT_URL}" in out
 
 
 def test_doctor_ci_exits_three_on_a_retiring_model(
@@ -3733,14 +3749,30 @@ def test_dry_run_lists_retirements_after_eligibility(
     cli.main()
     out = capsys.readouterr().out
     assert "Retirements: 1 retired; 1 retiring or stale; 1 unknown." in out
-    assert "- openai/gpt-gone: retired 2026-10-01, replacement gpt-new — " in out
-    assert "- openai/gpt-going: retiring 2027-04-01, no replacement announced — " in out
+    assert (
+        "- openai/gpt-gone: retired 2026-10-01 — provider names gpt-new as the replacement"
+        in out
+    )
+    assert "- openai/gpt-going: retiring 2027-04-01 — no replacement announced" in out
     assert "openai/gpt-5.4-mini" not in out.split("Retirements:")[1]
     assert (
         '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
         in out
     )
     assert out.index("Smoke eligibility:") < out.index("Retirements:")
+
+
+def test_dry_run_omits_a_next_command_whose_replacement_is_already_selected(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-gone", "gpt-new")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    out = capsys.readouterr().out
+    assert "- openai/gpt-gone: retired 2026-10-01" in out
+    assert "Next:" not in out
 
 
 def test_dry_run_json_carries_the_retirement_report(

@@ -138,8 +138,9 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "gpt-5-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
     "gpt-5-mini-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-terra"),
     "gpt-5-nano-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-luna"),
-    "gpt-5-pro-2025-10-06": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
-    "o3-pro-2025-06-10": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
+    # The page names gpt-5.6-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
+    "gpt-5-pro-2025-10-06": _openai("deprecated", "2026-12-11"),
+    "o3-pro-2025-06-10": _openai("deprecated", "2026-12-11"),
     "o3-2025-04-16": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
     # 2026-05-08 announcement
     "gpt-5.2-chat-latest": _openai("deprecated", "2026-08-10", "gpt-5.6-sol"),
@@ -160,10 +161,13 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "o1": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini-2025-01-31": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
+    # OWNER REVIEW: the page lists gpt-4-1106-preview twice (2025-09-26 batch, shutdown 2026-03-26, "gpt-5 or gpt-4.1*"; 2026-04-22 batch, shutdown 2026-10-23, gpt-5.6-sol). The later entry is kept as an extension; confirm against the page before release.
+    "gpt-4-1106-preview": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "gpt-4.1-nano": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
     "gpt-4.1-nano-2025-04-14": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
-    "o1-pro-2025-03-19": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "o1-pro": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
+    # The page names gpt-5.6-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
+    "o1-pro-2025-03-19": _openai("deprecated", "2026-10-23"),
+    "o1-pro": _openai("deprecated", "2026-10-23"),
     "o4-mini-2025-04-16": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
     "o4-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
     # 2026-04-22 announcement, shutdown 2026-07-23
@@ -192,10 +196,6 @@ _OPENAI: dict[str, dict[str, Any]] = {
     # 2025-09-26 announcement; the page names "gpt-5 or gpt-4.1*", so no
     # single replacement is recorded.
     "gpt-4-0314": _openai("deprecated", "2026-03-26"),
-    # OWNER REVIEW: the page lists gpt-4-1106-preview twice (2025-09-26 with
-    # a 2026-03-26 shutdown and 2026-04-22 with a 2026-10-23 shutdown). The
-    # earlier date is kept; confirm against the page.
-    "gpt-4-1106-preview": _openai("deprecated", "2026-03-26"),
     "gpt-4-0125-preview": _openai("deprecated", "2026-03-26"),
     "gpt-4-turbo-preview": _openai("deprecated", "2026-03-26"),
     "gpt-4-turbo-preview-completions": _openai("deprecated", "2026-03-26"),
@@ -285,7 +285,10 @@ def retirement_verdict(
     as_of = row["as_of"]
     age_days = (today - date.fromisoformat(as_of)).days
     stale = age_days > max_age_days
-    stale_note = f"; snapshot row is {age_days} days old, review {source_url}"
+    stale_note = (
+        f"; snapshot row reviewed {as_of} is older than {max_age_days} days, "
+        f"review {source_url}"
+    )
     replacement = row.get("replacement")
     if replacement:
         verdict["replacement_status"] = _row_status(
@@ -301,10 +304,7 @@ def retirement_verdict(
         ) + (stale_note if stale else "")
     elif stale:
         status, decision = "stale", "inconclusive"
-        reason = (
-            f"snapshot row reviewed {as_of} is {age_days} days old, "
-            f"older than {max_age_days} days"
-        )
+        reason = f"snapshot row reviewed {as_of} is older than {max_age_days} days"
     elif base_status == "retiring":
         status, decision = "retiring", "inconclusive"
         reason = (
@@ -341,15 +341,15 @@ def retirement_verdict(
     return verdict
 
 
-_DECISION_RANK = {"fail": 2, "inconclusive": 1, "pass": 0, "none": 0}
+_DECISION_RANK = {"fail": 3, "inconclusive": 2, "pass": 1}
 
 
 def worst_decision(decisions: Iterable[str]) -> str:
-    worst = "pass"
-    for decision in decisions:
-        if _DECISION_RANK.get(decision, 0) > _DECISION_RANK[worst]:
-            worst = "fail" if decision == "fail" else "inconclusive"
-    return worst
+    """Worst of fail > inconclusive > pass; "none" when nothing was verified."""
+    ranked = [decision for decision in decisions if decision in _DECISION_RANK]
+    if not ranked:
+        return "none"
+    return max(ranked, key=_DECISION_RANK.__getitem__)
 
 
 def retirement_report(

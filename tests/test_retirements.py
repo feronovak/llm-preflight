@@ -159,7 +159,17 @@ def test_stale_row_with_a_past_date_is_still_retired(table):
     verdict = retirement_verdict("openai", "gpt-old-row-retired", TODAY)
     assert verdict["status"] == "retired"
     assert verdict["decision"] == "fail"
-    assert "days old" in verdict["reason"]
+    assert "older than 30 days" in verdict["reason"]
+
+
+def test_stale_reasons_do_not_change_from_one_day_to_the_next(table):
+    models = [
+        {"provider": "openai", "model": "gpt-old-row"},
+        {"provider": "openai", "model": "gpt-old-row-retired"},
+    ]
+    assert retirement_report(models, date(2026, 11, 20)) == retirement_report(
+        models, date(2026, 11, 21)
+    )
 
 
 def test_window_is_configurable(table):
@@ -190,10 +200,13 @@ def test_every_snapshot_row_is_well_formed():
         assert _MODEL_PREFIX.match(model), model
         assert row["status"] in {"active", "deprecated", "retired"}, model
         date.fromisoformat(row["as_of"])
-        assert row["source_url"] in {
-            ANTHROPIC_DEPRECATIONS_URL,
-            OPENAI_DEPRECATIONS_URL,
-        }
+        assert (
+            row["source_url"]
+            == {
+                "anthropic": ANTHROPIC_DEPRECATIONS_URL,
+                "openai": OPENAI_DEPRECATIONS_URL,
+            }[provider]
+        ), model
         assert set(row) <= {
             "status",
             "retirement_date",
@@ -240,6 +253,14 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "as_of": "2026-10-09",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
+    assert PUBLIC_RETIREMENTS[("openai", "gpt-4-1106-preview")] == {
+        "status": "deprecated",
+        "retirement_date": "2026-10-23",
+        "replacement": "gpt-5.6-sol",
+        "as_of": "2026-10-09",
+        "source_url": OPENAI_DEPRECATIONS_URL,
+    }
+    assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 36
@@ -258,7 +279,8 @@ def test_worst_decision_orders_fail_over_inconclusive_over_pass():
     assert worst_decision(["pass", "inconclusive", "fail"]) == "fail"
     assert worst_decision(["pass", "none", "inconclusive"]) == "inconclusive"
     assert worst_decision(["none", "pass"]) == "pass"
-    assert worst_decision([]) == "pass"
+    assert worst_decision([]) == "none"
+    assert worst_decision(["none"]) == "none"
 
 
 def test_retirement_report_summarises_a_model_list(table):
@@ -301,7 +323,7 @@ def test_retirement_report_is_inconclusive_without_a_retired_model(table):
     assert report["decision"] == "inconclusive"
 
 
-def test_retirement_report_passes_on_unknown_only(table):
+def test_retirement_report_reports_none_on_unknown_only(table):
     report = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
-    assert report["decision"] == "pass"
+    assert report["decision"] == "none"
     assert report["next_commands"] == []

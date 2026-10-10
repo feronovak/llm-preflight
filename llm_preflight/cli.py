@@ -284,6 +284,11 @@ def _retirement_phrase(verdict: dict[str, Any]) -> str:
     return status
 
 
+def _retirement_brief(entry: dict[str, Any]) -> str:
+    when = entry.get("retirement_date")
+    return f"{entry['status']} {when}" if when else entry["status"]
+
+
 def _next_block(payload: dict[str, Any], entries: list[dict[str, Any]]) -> list[str]:
     """Commands plus one line per model that retires without a replacement."""
     commands = payload.get("next_commands", [])
@@ -309,10 +314,12 @@ def _format_audit_source(audit: dict[str, Any]) -> str:
     statuses = [item["retirement"]["status"] for item in audit["references"]]
     retired = statuses.count("retired")
     retiring = statuses.count("retiring") + statuses.count("stale")
+    unknown = statuses.count("unknown")
     lines = [
         (
             f"Audited {audit['files_scanned']} files; {len(audit['references'])} "
-            f"model references; {retired} retired; {retiring} retiring or stale."
+            f"model references; {retired} retired; {retiring} retiring or stale; "
+            f"{unknown} unknown."
         )
     ]
     for finding in audit["findings"]:
@@ -321,7 +328,10 @@ def _format_audit_source(audit: dict[str, Any]) -> str:
             f"{finding['status']}; {_retirement_phrase(finding['retirement'])}"
         )
     lines.extend(_next_block(audit, audit["references"]))
-    lines.append(f"Decision: {audit['decision']}")
+    if audit["decision"] == "none":
+        lines.append("Decision: none (no reference is in the retirement snapshot)")
+    else:
+        lines.append(f"Decision: {audit['decision']}")
     return "\n".join(lines) + "\n"
 
 
@@ -339,6 +349,17 @@ def _format_doctor(report: dict[str, Any]) -> str:
             status = "ok"
         model = f"{check.get('model')}: " if check.get("model") else ""
         lines.append(f"- {status}: {model}{check['message']}")
+    if "retirement" in report:
+        lines.extend(
+            _next_block(
+                report["retirement"],
+                [
+                    {"model": e["model"], "retirement": e}
+                    for e in report["retirement"]["models"]
+                    if e["status"] in {"retired", "retiring"}
+                ],
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -570,13 +591,24 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
         )
         lines.extend(
-            f"- {entry['provider']}/{entry['model']}: {_retirement_phrase(entry)} — "
+            f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
             f"{entry['next_step']}"
             for entry in flagged
         )
+        selected = {
+            (m.get("provider", "openai_compatible"), m["model"]) for m in plan["models"]
+        }
+        commands = list(
+            dict.fromkeys(
+                entry["next_command"]
+                for entry in flagged
+                if "next_command" in entry
+                and (entry["provider"], entry["replacement"]) not in selected
+            )
+        )
         lines.extend(
             _next_block(
-                retirements,
+                {**retirements, "next_commands": commands},
                 [{"model": e["model"], "retirement": e} for e in flagged],
             )
         )

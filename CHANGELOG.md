@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.20.0 - Unreleased
 
 ### Added
 
@@ -14,8 +14,8 @@ All notable changes to this project are documented here.
   `decision` and ready `--quick --dry-run` `next_commands`, prints a `Next:`
   block, and exits 1 or 3 under `--ci`.
 - `--doctor` fails a retired model and warns on a retiring or stale one;
-  `--dry-run` lists retirement verdicts after eligibility. Both exit 3 under
-  `--ci` for a retiring or stale model.
+  `--dry-run` lists retirement verdicts after eligibility. Under `--ci` both
+  exit 1 for a retired model and 3 for a retiring or stale one.
 - Guide: `docs/guides/retirements.md`, including the release retirement
   review.
 
@@ -24,6 +24,15 @@ All notable changes to this project are documented here.
 - Doctor output prints `warning:` instead of `ok:` for warning-severity
   checks, including pricing warnings.
 - `--audit-source` confidence is `limited_static_pricing_and_retirement`.
+- `--doctor` now fails, without `--ci`, a configuration that approves a model
+  whose retirement date has passed; this includes the bundled Action's doctor
+  step once pins move to this version. Many OpenAI rows in the bundled
+  snapshot retire on 2026-10-23.
+- Snapshot rows go stale 30 days after their review date (`as_of`, 2026-10-09
+  in this release); from then `--ci` returns 3 for every model in the snapshot
+  until the package is updated. Models with no row are unaffected.
+- Scans whose references are all outside the snapshot report `decision: none`,
+  not pass.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.19.2 package. The `v2.19.2` tag retains its 2.19.1 default;
   set `package-version` explicitly when using that tag.

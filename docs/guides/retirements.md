@@ -31,12 +31,22 @@ A stale row with a past retirement date is still `retired`; a date does not
 age. Unknown is never a verdict: it covers every provider without a bundled
 snapshot and every ID the pages do not list.
 
+When no model is in the snapshot the aggregate decision is `none` and the exit
+is 0; the scan prints `Decision: none` rather than pass, because nothing was
+verified.
+
 ## Exit codes
 
 Without `--ci` the scan and the dry-run exit 0 whatever they find, and the
 doctor fails only on a `retired` model, as it does for any failed check. With
 `--ci`, a `retired` model exits 1 and a `retiring` or `stale` model exits 3
 in all three commands.
+
+The doctor fails a retired model without `--ci`, as it fails any configuration
+check; pipelines running `--doctor` turn red on the retirement date. Rows go
+stale 30 days after their review date, after which `--ci` returns 3 for every
+model in the snapshot until the package is updated; models with no row stay at
+0.
 
 ## Next steps
 
@@ -54,6 +64,11 @@ named replacement is itself retiring or retired, the next step says that too.
 The replacement is always the provider's own recommendation; llm-preflight
 never chooses one for you.
 
+The doctor, the dry-run and the scan all print the `Next:` block. The doctor
+and the dry-run judge each model under the provider the configuration names, so
+a routed ID under `openrouter` is unknown there; the scan infers the provider
+from the ID.
+
 ## What the snapshot covers
 
 - Anthropic: the model status table on the
@@ -66,7 +81,8 @@ never chooses one for you.
   `unknown`, not `active`.
 - Text-generation models only. Audio, realtime, image, transcription,
   embedding and fine-tuning retirements are not in the snapshot.
-- A page entry that names more than one replacement is recorded without one.
+- A page entry that names more than one replacement, or a replacement that
+  needs a request setting such as a reasoning mode, is recorded without one.
 
 ## Release retirement review
 

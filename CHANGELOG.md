@@ -13,8 +13,8 @@ All notable changes to this project are documented here.
 - Retirement docs and the 2.20.0 changelog state that snapshot rows reviewed
   2026-10-09 go stale from 2026-11-09 and that `--ci` then returns 3 for every
   non-retired model in the snapshot; retired models still return 1.
-- The README links the retirement guide by its absolute GitHub URL so the PyPI
-  page renders it.
+- Every README link, including the retirement guide, the license badge and
+  the changelog, uses an absolute URL so the links work on the PyPI page.
 
 ### Changed
 

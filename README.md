@@ -6,7 +6,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
-[![License](https://img.shields.io/github/license/feronovak/llm-preflight)](LICENSE)
+[![License](https://img.shields.io/github/license/feronovak/llm-preflight)](https://github.com/feronovak/llm-preflight/blob/main/LICENSE)
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
@@ -140,7 +140,7 @@ Native routes and release-reviewed official pricing snapshots are listed in
 [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
 That list is direct-provider price coverage, not a ranking or every discoverable ID.
 
-Release notes for every version are in the [changelog](CHANGELOG.md).
+Release notes for every version are in the [changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md).
 
 ## Common jobs
 

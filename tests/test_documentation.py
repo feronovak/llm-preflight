@@ -145,8 +145,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## CLI, CI, and MCP" in readme
     assert "Works as a CLI, GitHub Action, and local MCP server" in readme
     assert (
-        "Release notes for every version are in the [changelog](CHANGELOG.md)."
-        in readme
+        "Release notes for every version are in the [changelog]"
+        "(https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)." in readme
     )
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
@@ -497,6 +497,19 @@ def test_readme_links_the_retirement_guide_by_absolute_url():
         in readme
     )
     assert "(docs/guides/retirements.md)" not in readme
+
+
+def test_readme_links_only_absolute_urls_or_anchors_for_the_pypi_page():
+    readme = (ROOT / "README.md").read_text()
+    targets = re.findall(r"\]\(([^)\s]+)", readme)
+    targets += re.findall(r"^\[[^\]]+\]:\s*(\S+)", readme, re.MULTILINE)
+    targets += re.findall(r"(?:href|src)=[\"']([^\"']+)", readme)
+
+    assert len(targets) > 40
+    relative = [
+        target for target in targets if not target.startswith(("https://", "#"))
+    ]
+    assert relative == []
 
 
 def test_build_rating_requires_an_independent_rater_and_named_probes():

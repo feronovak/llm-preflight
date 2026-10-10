@@ -1,9 +1,18 @@
+import re
 from datetime import date
 
 import pytest
 
 from llm_preflight import retirements
-from llm_preflight.retirements import retirement_verdict
+from llm_preflight.retirements import (
+    ANTHROPIC_DEPRECATIONS_URL,
+    OPENAI_DEPRECATIONS_URL,
+    PUBLIC_RETIREMENTS,
+    RETIREMENT_PROVIDERS,
+    retirement_verdict,
+    snapshot_summary,
+)
+from llm_preflight.source_audit import _MODEL_PREFIX, _provider_for
 
 URL = "https://example.test/deprecations"
 TABLE = {
@@ -169,3 +178,75 @@ def test_routed_prefix_resolves_to_the_catalogue_id(table):
     verdict = retirement_verdict("openai", "openai/gpt-gone", TODAY)
     assert verdict["status"] == "retired"
     assert "--models openai:gpt-gone,openai:gpt-new" in verdict["next_command"]
+
+
+def test_every_snapshot_row_is_well_formed():
+    assert PUBLIC_RETIREMENTS, "snapshot must not be empty"
+    for (provider, model), row in PUBLIC_RETIREMENTS.items():
+        assert provider in RETIREMENT_PROVIDERS, model
+        assert _provider_for(model) == provider, model
+        assert _MODEL_PREFIX.match(model), model
+        assert row["status"] in {"active", "deprecated", "retired"}, model
+        date.fromisoformat(row["as_of"])
+        assert row["source_url"] in {
+            ANTHROPIC_DEPRECATIONS_URL,
+            OPENAI_DEPRECATIONS_URL,
+        }
+        assert set(row) <= {
+            "status",
+            "retirement_date",
+            "replacement",
+            "as_of",
+            "source_url",
+        }
+        if row["status"] == "retired":
+            assert "retirement_date" in row, model
+        if "retirement_date" in row:
+            date.fromisoformat(row["retirement_date"])
+            assert row["status"] != "active", model
+        if "replacement" in row:
+            replacement = row["replacement"]
+            assert _MODEL_PREFIX.match(replacement), model
+            assert _provider_for(replacement) == provider, model
+            assert replacement != model, model
+
+
+def test_snapshot_pins_reviewed_rows_for_this_release():
+    assert PUBLIC_RETIREMENTS[("anthropic", "claude-sonnet-4-5-20250929")] == {
+        "status": "deprecated",
+        "retirement_date": "2026-11-30",
+        "replacement": "claude-sonnet-5-5",
+        "as_of": "2026-10-09",
+        "source_url": ANTHROPIC_DEPRECATIONS_URL,
+    }
+    assert PUBLIC_RETIREMENTS[("anthropic", "claude-mythos-preview")] == {
+        "status": "deprecated",
+        "as_of": "2026-10-09",
+        "source_url": ANTHROPIC_DEPRECATIONS_URL,
+    }
+    assert PUBLIC_RETIREMENTS[("anthropic", "claude-sonnet-5-5")]["status"] == "active"
+    assert PUBLIC_RETIREMENTS[("openai", "gpt-5.4-cyber")] == {
+        "status": "deprecated",
+        "retirement_date": "2026-10-01",
+        "as_of": "2026-10-09",
+        "source_url": OPENAI_DEPRECATIONS_URL,
+    }
+    assert PUBLIC_RETIREMENTS[("openai", "gpt-5.1")] == {
+        "status": "deprecated",
+        "retirement_date": "2027-04-01",
+        "replacement": "gpt-6-sol",
+        "as_of": "2026-10-09",
+        "source_url": OPENAI_DEPRECATIONS_URL,
+    }
+    providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
+    assert providers == {"anthropic", "openai"}
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 36
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 64
+
+
+def test_snapshot_summary_reports_coverage_and_dates():
+    summary = snapshot_summary()
+    assert summary["providers"] == ["anthropic", "openai"]
+    assert summary["rows"] == len(PUBLIC_RETIREMENTS)
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
+    assert summary["oldest_as_of"] <= summary["newest_as_of"]

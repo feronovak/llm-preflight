@@ -56,6 +56,7 @@ from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
 from .reporting import render_job_summary, render_report_html
+from .retirements import retirement_report
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -427,7 +428,9 @@ def _test_breakdown(
 
 
 def _dry_run_plan(
-    config: dict[str, Any], profile_selector: str | None
+    config: dict[str, Any],
+    profile_selector: str | None,
+    today: date | None = None,
 ) -> dict[str, Any]:
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
@@ -450,6 +453,7 @@ def _dry_run_plan(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
         "smoke_eligibility": smoke_eligibility_report(models, config),
+        "retirements": retirement_report(models, today or date.today()),
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -551,6 +555,31 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 "bounded run of text models; a live run refuses models it lists "
                 "as refused."
             )
+    retirements = plan.get("retirements", {})
+    summary_counts = retirements.get("summary", {})
+    flagged = [
+        entry
+        for entry in retirements.get("models", [])
+        if entry["status"] in {"retired", "retiring", "stale"}
+    ]
+    if flagged:
+        lines.append(
+            "Retirements: "
+            f"{summary_counts.get('retired', 0)} retired; "
+            f"{summary_counts.get('retiring', 0) + summary_counts.get('stale', 0)} "
+            f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
+        )
+        lines.extend(
+            f"- {entry['provider']}/{entry['model']}: {_retirement_phrase(entry)} — "
+            f"{entry['next_step']}"
+            for entry in flagged
+        )
+        lines.extend(
+            _next_block(
+                retirements,
+                [{"model": e["model"], "retirement": e} for e in flagged],
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -2581,7 +2610,7 @@ def main() -> None:
                 return
             config, profile_selector = selection
         if args.dry_run:
-            plan = _dry_run_plan(config, profile_selector)
+            plan = _dry_run_plan(config, profile_selector, today=date.today())
             payload: dict[str, Any] = plan
             verification = None
             if args.approval_receipt:
@@ -2615,6 +2644,7 @@ def main() -> None:
             )
             if verification is not None and not verification["ok"]:
                 raise SystemExit(1)
+            _retirement_exit(plan["retirements"]["decision"], args.ci)
             return
         check_budget(_budget_config(config, profile_selector))
         use_color = sys.stdout.isatty()

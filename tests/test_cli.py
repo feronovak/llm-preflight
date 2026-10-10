@@ -3706,3 +3706,89 @@ def test_doctor_exits_one_on_a_retired_model_with_or_without_ci(
         cli.main()
     assert exc_info.value.code == 1
     assert "- fail: gpt-gone: retired on 2026-10-01" in capsys.readouterr().out
+
+
+def _dry_run_config(tmp_path, *models):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 1,
+                "warmups": 0,
+                "models": [{"provider": "openai", "model": m} for m in models],
+            }
+        )
+    )
+    return config
+
+
+def test_dry_run_lists_retirements_after_eligibility(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-gone", "gpt-going", "gpt-5.4-mini")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    out = capsys.readouterr().out
+    assert "Retirements: 1 retired; 1 retiring or stale; 1 unknown." in out
+    assert "- openai/gpt-gone: retired 2026-10-01, replacement gpt-new — " in out
+    assert "- openai/gpt-going: retiring 2027-04-01, no replacement announced — " in out
+    assert "openai/gpt-5.4-mini" not in out.split("Retirements:")[1]
+    assert (
+        '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
+        in out
+    )
+    assert out.index("Smoke eligibility:") < out.index("Retirements:")
+
+
+def test_dry_run_json_carries_the_retirement_report(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-going")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--json", "--no-env-file"],
+    )
+    cli.main()
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["retirements"]["decision"] == "inconclusive"
+    assert plan["retirements"]["models"][0]["status"] == "retiring"
+
+
+@pytest.mark.parametrize(("model", "code"), [("gpt-gone", 1), ("gpt-going", 3)])
+def test_dry_run_ci_exits_on_the_retirement_verdict(
+    monkeypatch, tmp_path, capsys, retirement_table, model, code
+):
+    config = _dry_run_config(tmp_path, model)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--ci", "--no-env-file"],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == code
+
+
+def test_dry_run_without_ci_exits_zero_on_a_retired_model(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-gone")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+
+
+def test_dry_run_prints_no_retirement_block_when_all_unknown(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-5.4-mini")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    assert "Retirements:" not in capsys.readouterr().out

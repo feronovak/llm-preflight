@@ -462,7 +462,9 @@ def dry_run_plan(
     """The no-spend plan shared by `--dry-run` and the MCP `dry_run_plan` tool.
 
     `pricing_evidence` adds the resolved pricing ledger and its fingerprint.
-    The CLI leaves them out so an approval receipt keeps hashing the same plan.
+    The CLI leaves them out of the plan an approval receipt hashes. A receipt
+    hashes the whole plan, so a change to the plan's shape makes receipts
+    written for the old shape verify as `mismatch`.
     """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)

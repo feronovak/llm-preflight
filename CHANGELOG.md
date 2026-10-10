@@ -19,9 +19,17 @@ All notable changes to this project are documented here.
   entries match the CLI, without the redacted `headers` map. The plan carries
   the same `retirements` report as the CLI, using the UTC date. `ok` is
   unchanged.
-- The JSON dry-run plan and the MCP plan no longer list a retirement next
-  command whose replacement is already in the plan; the text plan already
-  left it out.
+- For a retiring or retired model whose provider-named replacement is also in
+  the plan, the JSON dry-run plan and the MCP plan now carry the "already in
+  this plan" next step on that retirement entry, give it no `next_command`
+  and leave it out of `next_commands`; the text plan prints the same step.
+- The dry-run plan's `tests` and `test_breakdown` now follow a `profiles` key
+  in the configuration; they reported the config prompt, one request per
+  model, while `requests` already counted the profiles.
+- Approval receipts written by an earlier version for a plan with such a
+  retirement entry, or a configuration with a `profiles` key, now verify as
+  `mismatch` (exit 1) because the plan they hash changed shape; run the
+  dry-run again and re-approve them. Receipts for other plans still verify.
 - The MCP safe-workflow resource, the plugin skill, the MCP and coding-agent
   guides and the `init --agent-instructions` block tell agents to report the dry-run `retirements` decision: `fail` for a retired
   model, `inconclusive` for a retiring model or a stale snapshot row. The

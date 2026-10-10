@@ -533,3 +533,16 @@ def test_build_rating_requires_an_independent_rater_and_named_probes():
     assert "**Name the probe.**" in rubric
     assert "make release-freshness" in rubric
     assert "#independent-probe-based-build-ratings" in rubric
+
+
+def test_changelog_names_the_receipts_a_changed_plan_shape_invalidates():
+    changelog = " ".join((ROOT / "CHANGELOG.md").read_text().split())
+    section = changelog.split("## 2.20.1")[1].split("## 2.20.0")[0]
+
+    assert "now verify as `mismatch` (exit 1)" in section
+    assert "re-approve" in section
+    assert "`profiles` key" in section
+    assert "give it no `next_command`" in section
+    assert (
+        "keeps hashing the same plan" not in (ROOT / "llm_preflight/cli.py").read_text()
+    )

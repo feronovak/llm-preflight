@@ -466,6 +466,7 @@ def dry_run_plan(
     """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
+    profile_selector = profile_selector or budget_config.get("profiles")
     models = resolve_models(config)
     selected = {
         (model.get("provider", "openai_compatible"), model["model"]) for model in models

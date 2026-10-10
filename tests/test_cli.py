@@ -3785,6 +3785,29 @@ def _dry_run_config(tmp_path, *models):
     return config
 
 
+def test_dry_run_plan_breaks_down_the_profiles_the_config_selects():
+    config = {
+        "prompt": "hi",
+        "models": [{"provider": "openai", "model": "gpt-5.4-mini"}],
+        "profiles": "support-classification,strict-json-extraction",
+    }
+    selected = cli.dry_run_plan(
+        {k: v for k, v in config.items() if k != "profiles"},
+        "support-classification,strict-json-extraction",
+    )
+
+    plan = cli.dry_run_plan(config)
+
+    assert (
+        plan["tests"]
+        == selected["tests"]
+        == ["strict-json-extraction", "support-classification"]
+    )
+    assert plan["test_breakdown"] == selected["test_breakdown"]
+    assert plan["requests"] == selected["requests"]
+    assert [item["name"] for item in plan["test_breakdown"]] == plan["tests"]
+
+
 def test_dry_run_lists_retirements_after_eligibility(
     monkeypatch, tmp_path, capsys, retirement_table
 ):

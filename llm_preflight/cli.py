@@ -9,7 +9,7 @@ import sys
 import tempfile
 from collections import Counter
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -259,6 +259,69 @@ def _models_from_cli(value: str) -> list[dict[str, Any]]:
     if not models:
         raise ValueError("--models must name at least one model")
     return models
+
+
+_RETIREMENT_EXIT = {"fail": 1, "inconclusive": 3}
+
+
+def _retirement_exit(decision: str, ci: bool) -> None:
+    if ci and decision in _RETIREMENT_EXIT:
+        raise SystemExit(_RETIREMENT_EXIT[decision])
+
+
+def _retirement_phrase(verdict: dict[str, Any]) -> str:
+    status = verdict["status"]
+    if status in {"retired", "retiring"}:
+        when = verdict.get("retirement_date", "date to be announced")
+        replacement = verdict.get("replacement")
+        tail = (
+            f"replacement {replacement}" if replacement else "no replacement announced"
+        )
+        return f"{status} {when}, {tail}"
+    if status == "stale":
+        return f"snapshot stale ({verdict['reason']})"
+    return status
+
+
+def _next_block(payload: dict[str, Any], entries: list[dict[str, Any]]) -> list[str]:
+    """Commands plus one line per model that retires without a replacement."""
+    commands = payload.get("next_commands", [])
+    missing = list(
+        dict.fromkeys(
+            (entry["model"], entry["retirement"]["source_url"])
+            for entry in entries
+            if entry["retirement"]["status"] in {"retired", "retiring"}
+            and "replacement" not in entry["retirement"]
+        )
+    )
+    if not commands and not missing:
+        return []
+    lines = ["Next:"]
+    lines.extend(f"  {command}" for command in commands)
+    lines.extend(
+        f"  {model}: no replacement announced; see {url}" for model, url in missing
+    )
+    return lines
+
+
+def _format_audit_source(audit: dict[str, Any]) -> str:
+    statuses = [item["retirement"]["status"] for item in audit["references"]]
+    retired = statuses.count("retired")
+    retiring = statuses.count("retiring") + statuses.count("stale")
+    lines = [
+        (
+            f"Audited {audit['files_scanned']} files; {len(audit['references'])} "
+            f"model references; {retired} retired; {retiring} retiring or stale."
+        )
+    ]
+    for finding in audit["findings"]:
+        lines.append(
+            f"{finding['path']}:{finding['line']}: {finding['model']} — "
+            f"{finding['status']}; {_retirement_phrase(finding['retirement'])}"
+        )
+    lines.extend(_next_block(audit, audit["references"]))
+    lines.append(f"Decision: {audit['decision']}")
+    return "\n".join(lines) + "\n"
 
 
 def _format_doctor(report: dict[str, Any]) -> str:
@@ -2168,7 +2231,12 @@ def main() -> None:
         help="compare this run with a previous result; --json embeds baseline_diff",
     )
     parser.add_argument(
-        "--ci", action="store_true", help="fail when baseline thresholds regress"
+        "--ci",
+        action="store_true",
+        help=(
+            "non-zero exit for baseline regressions and, with --audit-source, "
+            "--doctor or --dry-run, for retirement verdicts (1 retired, 3 retiring or stale)"
+        ),
     )
     parser.add_argument(
         "--matrix", action="store_true", help="print model-by-profile quality matrix"
@@ -2338,18 +2406,14 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.audit_source:
-            audit = audit_source(args.audit_source)
-            if args.json:
-                print(json.dumps(audit, indent=2))
-            else:
-                print(
-                    f"Audited {audit['files_scanned']} files; {len(audit['references'])} model references."
-                )
-                for finding in audit["findings"]:
-                    print(
-                        f"{finding['path']}:{finding['line']}: {finding['model']} — "
-                        f"{finding['status']}"
-                    )
+            audit = audit_source(args.audit_source, today=date.today())
+            print(
+                json.dumps(audit, indent=2)
+                if args.json
+                else _format_audit_source(audit),
+                end="\n" if args.json else "",
+            )
+            _retirement_exit(audit["decision"], args.ci)
             return
         if args.migration_check and args.quick:
             parser.error("--migration-check requires a benchmark configuration")

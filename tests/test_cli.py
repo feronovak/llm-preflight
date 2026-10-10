@@ -3553,3 +3553,107 @@ def test_contract_check_prints_a_note_for_a_prompt_without_fixtures(
 
     assert "- note: prompt p2 declares no fixtures" in output
     assert "prompt p3" not in output
+
+
+from datetime import date as _date
+
+from llm_preflight import retirements as _retirements
+
+_RETIREMENT_URL = "https://example.test/deprecations"
+_RETIREMENT_TABLE = {
+    ("openai", "gpt-gone"): {
+        "status": "deprecated",
+        "retirement_date": "2026-10-01",
+        "replacement": "gpt-new",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-going"): {
+        "status": "deprecated",
+        "retirement_date": "2027-04-01",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-new"): {
+        "status": "active",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+}
+
+
+@pytest.fixture
+def retirement_table(monkeypatch):
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", _RETIREMENT_TABLE)
+
+    class _Today(_date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 10, 9)
+
+    monkeypatch.setattr(cli, "date", _Today)
+
+
+def test_audit_source_prints_retirement_findings_and_next_commands(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text('a = "gpt-gone"\nb = "gpt-going"\n')
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+
+    cli.main()
+    out = capsys.readouterr().out
+
+    assert "Audited 1 files; 2 model references; 1 retired; 1 retiring or stale." in out
+    assert (
+        "app.py:1: gpt-gone — pricing_unknown; retired 2026-10-01, replacement gpt-new"
+        in out
+    )
+    assert (
+        "app.py:2: gpt-going — pricing_unknown; retiring 2027-04-01, no replacement announced"
+        in out
+    )
+    assert "Next:" in out
+    assert (
+        '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
+        in out
+    )
+    assert f"  gpt-going: no replacement announced; see {_RETIREMENT_URL}" in out
+    assert "Decision: fail" in out
+
+
+def test_audit_source_exit_is_zero_without_ci(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text('a = "gpt-gone"\n')
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+    cli.main()  # no SystemExit
+
+
+@pytest.mark.parametrize(
+    ("source", "code"),
+    [('a = "gpt-gone"\n', 1), ('a = "gpt-going"\n', 3)],
+)
+def test_audit_source_ci_exits_on_the_verdict(
+    monkeypatch, tmp_path, capsys, retirement_table, source, code
+):
+    (tmp_path / "app.py").write_text(source)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "--audit-source", str(tmp_path), "--ci", "--json"],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == code
+    assert json.loads(capsys.readouterr().out)["decision"] in {"fail", "inconclusive"}
+
+
+def test_audit_source_ci_passes_on_unknown_ids(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    cli.main()
+    assert "Decision: pass" in capsys.readouterr().out

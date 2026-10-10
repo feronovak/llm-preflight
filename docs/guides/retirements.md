@@ -58,11 +58,11 @@ Next:
   llm-preflight --quick "<your prompt>" --models openai:gpt-5.1,openai:gpt-6-sol --dry-run
 ```
 
-Replace the prompt with the one your application sends. When the provider
-names no replacement, the output says so and points at the page. When the
-named replacement is itself retiring or retired, the next step says that too.
-The replacement is always the provider's own recommendation; llm-preflight
-never chooses one for you.
+Replace the prompt with the one your application sends. The replacement is
+always the provider's own recommendation; llm-preflight never chooses one for
+you. When the provider names none, names several, or names a model that is
+itself being retired, no single replacement is recorded: the output says so
+and points at the page instead of printing a command.
 
 The doctor, the dry-run and the scan all print the `Next:` block. The doctor
 and the dry-run judge each model under the provider the configuration names, so

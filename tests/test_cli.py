@@ -3607,7 +3607,7 @@ def test_audit_source_prints_retirement_findings_and_next_commands(
         in out
     )
     assert (
-        "app.py:2: gpt-going — pricing_unknown; retiring 2027-04-01, no replacement announced"
+        "app.py:2: gpt-going — pricing_unknown; retiring 2027-04-01, no single replacement recorded"
         in out
     )
     assert "Next:" in out
@@ -3615,7 +3615,7 @@ def test_audit_source_prints_retirement_findings_and_next_commands(
         '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
         in out
     )
-    assert f"  gpt-going: no replacement announced; see {_RETIREMENT_URL}" in out
+    assert f"  gpt-going: no single replacement recorded; see {_RETIREMENT_URL}" in out
     assert "Decision: fail" in out
 
 
@@ -3689,7 +3689,7 @@ def test_doctor_prints_a_retirement_warning_and_exits_zero(
     assert "Doctor: ok" in out
     assert "- warning: gpt-going: retirement announced for 2027-04-01" in out
     assert "Next:" in out
-    assert f"  gpt-going: no replacement announced; see {_RETIREMENT_URL}" in out
+    assert f"  gpt-going: no single replacement recorded; see {_RETIREMENT_URL}" in out
 
 
 def test_doctor_ci_exits_three_on_a_retiring_model(
@@ -3754,7 +3754,10 @@ def test_dry_run_lists_retirements_after_eligibility(
         "- openai/gpt-gone: retired 2026-10-01 — provider names gpt-new as the replacement"
         in out
     )
-    assert "- openai/gpt-going: retiring 2027-04-01 — no replacement announced" in out
+    assert (
+        "- openai/gpt-going: retiring 2027-04-01 — no single replacement recorded"
+        in out
+    )
     assert "openai/gpt-5.4-mini" not in out.split("Retirements:")[1]
     assert (
         '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'

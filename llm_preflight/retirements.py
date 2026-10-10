@@ -334,9 +334,7 @@ def retirement_verdict(
         if verdict["replacement_status"] in {"retired", "retiring"}:
             next_step += f"; {replacement} is itself {verdict['replacement_status']}"
     elif status in {"retired", "retiring"}:
-        next_step = (
-            f"no replacement announced; choose one and preflight it ({source_url})"
-        )
+        next_step = f"no single replacement recorded; read the page, choose one and preflight it ({source_url})"
     else:
         next_step = f"listed active as of {as_of} ({source_url})"
     verdict.update(

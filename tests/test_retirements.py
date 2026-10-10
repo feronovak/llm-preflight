@@ -134,7 +134,7 @@ def test_deprecated_without_a_date_is_retiring(table):
     assert verdict["status"] == "retiring"
     assert verdict["decision"] == "inconclusive"
     assert "to be announced" in verdict["reason"]
-    assert "no replacement announced" in verdict["next_step"]
+    assert "no single replacement recorded" in verdict["next_step"]
 
 
 def test_retired_row_without_replacement_says_so(table):
@@ -142,7 +142,8 @@ def test_retired_row_without_replacement_says_so(table):
     assert verdict["status"] == "retired"
     assert "replacement" not in verdict
     assert (
-        "no replacement announced; choose one and preflight it" in verdict["next_step"]
+        "no single replacement recorded; read the page, choose one and preflight it"
+        in verdict["next_step"]
     )
     assert "next_command" not in verdict
 

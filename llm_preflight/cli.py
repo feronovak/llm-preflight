@@ -276,7 +276,9 @@ def _retirement_phrase(verdict: dict[str, Any]) -> str:
         when = verdict.get("retirement_date", "date to be announced")
         replacement = verdict.get("replacement")
         tail = (
-            f"replacement {replacement}" if replacement else "no replacement announced"
+            f"replacement {replacement}"
+            if replacement
+            else "no single replacement recorded"
         )
         return f"{status} {when}, {tail}"
     if status == "stale":
@@ -305,7 +307,8 @@ def _next_block(payload: dict[str, Any], entries: list[dict[str, Any]]) -> list[
     lines = ["Next:"]
     lines.extend(f"  {command}" for command in commands)
     lines.extend(
-        f"  {model}: no replacement announced; see {url}" for model, url in missing
+        f"  {model}: no single replacement recorded; see {url}"
+        for model, url in missing
     )
     return lines
 

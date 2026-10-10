@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-08 · **As of:** v2.19.2
+**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
@@ -8,7 +8,7 @@ direct-provider price snapshots bundled in **2.19.1**. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
 
-Package version: **2.19.2**.
+Package version: **2.20.0**.
 
 Version 2.19.1 adds Haiku 5.5 and updates Sonnet 5.5 cache pricing; the
 Anthropic section below records the rates, request behavior and limits.

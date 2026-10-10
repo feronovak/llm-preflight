@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -18,6 +18,7 @@ Results stay local unless you decide to attach or publish them.
 - [Official snapshots](guides/current-snapshots.md) — native routes and the
   direct-provider prices this package version re-read; also the gaps (Gemini 4,
   Kimi native, Z.ai native discovery, Jev).
+- [Model retirements](guides/retirements.md) — bundled retirement snapshot, the three-state verdict, and the next command.
 - [A new model appeared](guides/model-catalog.md) — refresh provider metadata,
   then deliberately probe, benchmark, and approve a small candidate set.
 - [Model change](guides/model-change.md) — compare an approved model and a

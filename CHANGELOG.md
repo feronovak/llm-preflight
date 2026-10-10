@@ -4,8 +4,26 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Bundled model retirement snapshot of the official Anthropic and OpenAI
+  deprecation pages (`llm_preflight/retirements.py`) with a three-state
+  verdict: retired fails, retiring or a stale row is inconclusive, unknown
+  stays unknown. Replacements are provider-stated only.
+- `--audit-source` attaches a `retirement` verdict to every reference, adds
+  `decision` and ready `--quick --dry-run` `next_commands`, prints a `Next:`
+  block, and exits 1 or 3 under `--ci`.
+- `--doctor` fails a retired model and warns on a retiring or stale one;
+  `--dry-run` lists retirement verdicts after eligibility. Both exit 3 under
+  `--ci` for a retiring or stale model.
+- Guide: `docs/guides/retirements.md`, including the release retirement
+  review.
+
 ### Changed
 
+- Doctor output prints `warning:` instead of `ok:` for warning-severity
+  checks, including pricing warnings.
+- `--audit-source` confidence is `limited_static_pricing_and_retirement`.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.19.2 package. The `v2.19.2` tag retains its 2.19.1 default;
   set `package-version` explicitly when using that tag.

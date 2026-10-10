@@ -36,6 +36,8 @@ llm-preflight benchmark.json --tests agent-smoke --smoke --dry-run --json
 llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
 ```
 
+Each `--audit-source` reference carries a `retirement` object (status, date, provider-stated replacement, next step) and the payload a `decision` and `next_commands`. An agent may run the printed `--dry-run` commands; it must not treat `unknown` as approval or choose a replacement the provider did not name.
+
 Use `--migration-check` for a small current-versus-candidate compatibility
 check, then run the task-specific contract tests that represent the affected
 feature. `--smoke` is a low-cost compatibility signal, not a stable performance

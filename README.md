@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -16,10 +16,19 @@ latency, usage, and price evidence.
 
 ## Try it in 60 seconds
 
-Create and run a deterministic local benchmark—no API key or network request:
+Find out, with no configuration and no request, which model IDs in a
+repository the provider has retired or scheduled for retirement:
 
 ```bash
 python3 -m pip install llm-preflight
+llm-preflight --audit-source .
+```
+
+Retired IDs print their date and the provider-stated replacement with a
+ready `--dry-run` command; see [model retirements](docs/guides/retirements.md).
+Then create and run a deterministic local benchmark—no API key or network request:
+
+```bash
 llm-preflight init
 llm-preflight benchmark.json --no-save
 ```

@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -36,14 +36,14 @@ claim savings. Strict pricing freshness checks every source description.
 | `--env NAME` | — | Apply a named configuration overlay. |
 | `--smoke` | off | Set one repetition, no warmups, and concurrency one. It still makes paid requests; use `--dry-run` first. |
 | `--migration-check` | off | Run the three-case `quick-migration-check` response-contract preflight once per selected model. |
-| `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory and identify confidence; they are not catalog or retirement verdicts. |
+| `--audit-source PATH` | — | Statically find literal model IDs in a repository, with no provider request or application-code execution. Pricing findings are advisory. Each ID also gets a retirement verdict from the bundled snapshot of official deprecation pages, with date, provider-stated replacement and a ready `--quick --dry-run` command; `unknown` is not a verdict. Exit 0 unless `--ci`. |
 | `--change-plan [REF]` | `HEAD` | Inspect local Git changes against `REF`, including staged and untracked files, for literal model IDs and likely contract surfaces. It recommends no-spend commands; it never loads credentials, contacts a provider, or authorizes paid work. |
 | `--contract-check` | off | Run configured accepted/rejected response fixtures, local image-fixture safety checks, and canonical tool-schema linting. It needs `validation_fixtures` (top level or inside a custom prompt) or `tools`; it never loads credentials or contacts a provider. |
-| `--doctor` | off | Validate configuration, keys, model resolution, redacted credential provenance, and selected-model pricing coverage; no generation. It does not by itself block a benchmark. |
+| `--doctor` | off | Validate configuration, keys, model resolution, redacted credential provenance, and selected-model pricing coverage; no generation. It does not by itself block a benchmark. Reports each approved model's retirement status: a retired model is a failed check; retiring or stale is a warning. |
 | `--pricing-check` | off | Report selected direct models and OpenRouter routes with priced, undated, stale, or unknown pricing plus remediation; no generation. Its `pricing_coverage.ok` is false for stale or unknown prices; `pricing_coverage.enforcement_ok` is the exit/gate verdict and additionally fails undated pricing with `require_current_pricing: true`. |
 | `pricing-refresh CONFIG [--write] [--offline] [--max-age-days DAYS] [--json]` | off | Propose or atomically write refreshed OpenRouter catalog prices and return full selected-model coverage; no generation. |
 | `--baseline PATH` | — | Compare a completed run with a saved result. With `--json`, embeds `baseline_diff` in one JSON document. Results with different output-contract evidence are incompatible; legacy artifacts without provenance are labelled `unknown`. |
-| `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. |
+| `--ci` | off | Return exit code 1 if a requested baseline/diff regression fails. With `--audit-source`, `--doctor` or `--dry-run`: 1 for a retired model, 3 retiring or stale. |
 | `--matrix` | off | Print model-by-test quality matrix instead of the normal report. |
 | `--quick TEXT` | — | Run one ad hoc prompt; requires `--models`. |
 | `--init [PATH]` | `benchmark.json` | Create a no-key mock config without overwriting a file. |
@@ -55,7 +55,7 @@ claim savings. Strict pricing freshness checks every source description.
 | `--catalog` | off | Discover and print selected models; no generation. |
 | `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |
 | `--profiles LIST` | — | Compatibility alias for `--tests`. |
-| `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. Non-eligible models are listed with a reason and next step; eligibility gates `catalog prepare`, does not block a reviewed bounded run of text models, and a live run refuses the models it lists as refused. |
+| `--dry-run` | off | Safe preview: print resolved work, cost estimate, and `smoke_eligibility`; no generation. A model is eligible only with compatible catalogue type, adapter evidence, current pricing, and declared request/cost limits. Non-eligible models are listed with a reason and next step; eligibility gates `catalog prepare`, does not block a reviewed bounded run of text models, and a live run refuses the models it lists as refused. Lists retirement verdicts and next commands after eligibility. |
 | `--approval-receipt PATH` | — | With `--dry-run`, write an expiring private local receipt bound to that exact plan. Requires a review note and timezone-qualified expiry; never authorizes paid work. |
 | `--verify-approval-receipt PATH` | — | With `--dry-run`, verify a receipt’s plan hash and expiry. A valid receipt is recorded evidence, not authorization. |
 | `--no-env-file` | off | Do not load an env file. |

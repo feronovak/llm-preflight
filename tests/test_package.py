@@ -132,7 +132,7 @@ def test_example_does_not_present_unknown_model_pricing_as_free():
     assert '"output_cost_per_million": 0' not in example
 
 
-def test_cross_provider_example_is_a_currently_priced_smoke_plan():
+def test_cross_provider_example_is_a_currently_priced_smoke_plan(snapshot_review_day):
     from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
 
     example = json.loads(Path("examples/cross-provider-run.json").read_text())
@@ -145,7 +145,7 @@ def test_cross_provider_example_is_a_currently_priced_smoke_plan():
     assert report["enforcement_ok"] is True
 
 
-def test_current_comparison_examples_include_priced_gpt_6_1_sol():
+def test_current_comparison_examples_include_priced_gpt_6_1_sol(snapshot_review_day):
     from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
 
     for path in (
@@ -161,7 +161,9 @@ def test_current_comparison_examples_include_priced_gpt_6_1_sol():
         )["enforcement_ok"], path
 
 
-def test_gpt_6_1_comparison_reproduces_eight_cases_with_bounded_spend():
+def test_gpt_6_1_comparison_reproduces_eight_cases_with_bounded_spend(
+    snapshot_review_day,
+):
     from llm_preflight.features import check_budget
 
     config = load_config(Path("examples/gpt-6.1-sol-comparison.json"))
@@ -178,7 +180,9 @@ def test_gpt_6_1_comparison_reproduces_eight_cases_with_bounded_spend():
     assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.08473)
 
 
-def test_anthropic_5_5_examples_preserve_cases_and_bound_full_and_smoke_runs():
+def test_anthropic_5_5_examples_preserve_cases_and_bound_full_and_smoke_runs(
+    snapshot_review_day,
+):
     from llm_preflight.features import apply_smoke_mode, check_budget
 
     comparison = load_config(Path("examples/anthropic-5.5-comparison.json"))
@@ -203,7 +207,9 @@ def test_anthropic_5_5_examples_preserve_cases_and_bound_full_and_smoke_runs():
         assert config["request"]["retry"]["max_attempts"] == 1
 
 
-def test_frontier_candidates_include_current_flagships_and_are_priced():
+def test_frontier_candidates_include_current_flagships_and_are_priced(
+    snapshot_review_day,
+):
     from collections import Counter
 
     from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
@@ -247,7 +253,9 @@ def test_frontier_candidates_include_current_flagships_and_are_priced():
     assert report["enforcement_ok"] is True
 
 
-def test_glm_5_3_examples_have_native_route_current_prices_and_bounded_comparison():
+def test_glm_5_3_examples_have_native_route_current_prices_and_bounded_comparison(
+    snapshot_review_day,
+):
     from llm_preflight.features import check_budget
     from llm_preflight.pricing import pricing_coverage_report, resolve_pricing
 
@@ -275,7 +283,9 @@ def test_glm_5_3_examples_have_native_route_current_prices_and_bounded_compariso
             )
 
 
-def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests():
+def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests(
+    snapshot_review_day,
+):
     from llm_preflight.features import check_budget
 
     config = load_config(Path("examples/glm-5.3-openrouter-comparison.json"))
@@ -473,6 +483,29 @@ def test_pypi_trusted_publisher_isolated_to_release_workflow():
     assert "actions/download-artifact" in workflow
     assert "pypa/gh-action-pypi-publish@release/v1" in workflow
     assert "PYPI_API_TOKEN" not in workflow
+
+
+def test_release_build_runs_the_real_clock_freshness_gate_before_building():
+    workflow = Path(".github/workflows/release.yml").read_text()
+    makefile = Path("Makefile").read_text()
+
+    assert workflow.index("make release-freshness") < workflow.index("python -m build")
+    assert "release-freshness:" in makefile
+    for example in (
+        "approved-smoke",
+        "cross-provider-run",
+        "frontier-candidates",
+        "flagship-comparison",
+        "gpt-6.1-sol-comparison",
+        "anthropic-5.5-comparison",
+        "anthropic-5.5-checks",
+        "glm-5.3-comparison",
+        "glm-5.3-openrouter-comparison",
+    ):
+        assert example in makefile
+        assert Path(f"examples/{example}.json").is_file()
+    assert "--pricing-check --json --no-save" in makefile
+    assert "--audit-source examples --ci" in makefile
 
 
 def test_testpypi_workflow_uses_oidc_and_verifies_the_published_package():

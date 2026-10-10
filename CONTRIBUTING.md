@@ -56,3 +56,6 @@ cannot override a failed correctness or artifact gate.
 - Update public pricing with an official source and an `as_of` date.
 - Run `make audit` with the `audit` optional dependencies before submitting
   security-sensitive changes.
+- Before a release, run `make release-freshness`. The unit suite pins its clock
+  to the snapshot review day, so only this target checks on the real date that
+  the bundled examples are still priced and free of retired models.

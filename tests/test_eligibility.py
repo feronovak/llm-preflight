@@ -119,7 +119,7 @@ def test_smoke_eligibility_requires_bounded_limits_after_other_evidence(
     assert report["models"][0]["reason"] == "bounded_limits_required"
 
 
-def test_tracked_approved_smoke_cohort_is_fully_eligible():
+def test_tracked_approved_smoke_cohort_is_fully_eligible(snapshot_review_day):
     config = json.loads(Path("examples/approved-smoke.json").read_text())
 
     report = smoke_eligibility_report(resolve_models(config), config)

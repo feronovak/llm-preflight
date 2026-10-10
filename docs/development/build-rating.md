@@ -221,7 +221,8 @@ or product alignment. Passing this rubric never authorizes publication or spend.
 1. Identify the source/artifacts and compare the diff with the baseline. Read
    the direction documents and affected user workflows before rating them.
 2. Record focused red/green results during implementation. Run `make test`,
-   `make coverage` and `make audit` for the completed source state.
+   `make coverage` and `make audit` for the completed source state. For a release
+   candidate also run `make release-freshness` on the real clock.
 3. Run `make package` and `make check-dist`. Inspect contents and dependency/
    entry-point metadata; test wheel and sdist independently outside the checkout.
 4. Exercise a project-specific no-spend contract, plan and mock result, plus MCP

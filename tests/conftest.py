@@ -1,6 +1,28 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
+
+# The day the bundled pricing and retirement snapshots were last reviewed
+# together; bump it in the same change that refreshes a snapshot.
+SNAPSHOT_REVIEW_DAY = date(2026, 10, 10)
+
+
+@pytest.fixture
+def snapshot_review_day(monkeypatch):
+    """Pin "today" to the snapshot review day so example pricing checks do not
+    expire as the wall clock moves; the real-date check is `make release-freshness`."""
+
+    class ReviewDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(
+                SNAPSHOT_REVIEW_DAY.year,
+                SNAPSHOT_REVIEW_DAY.month,
+                SNAPSHOT_REVIEW_DAY.day,
+                tzinfo=tz,
+            )
+
+    monkeypatch.setattr("llm_preflight.pricing.datetime", ReviewDatetime)
 
 
 @pytest.fixture

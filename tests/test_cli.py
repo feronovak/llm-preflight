@@ -3862,9 +3862,12 @@ def test_dry_run_json_omits_a_next_command_whose_replacement_is_already_selected
     )
     cli.main()
     retirements = json.loads(capsys.readouterr().out)["retirements"]
-    assert [entry.get("next_command") for entry in retirements["models"][:1]] == [
-        'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
-    ]
+    gone = retirements["models"][0]
+    assert gone["model"] == "gpt-gone"
+    assert gone["next_step"].startswith(
+        "provider names gpt-new as the replacement; it is already in this plan ("
+    )
+    assert "next_command" not in gone
     assert retirements["next_commands"] == []
 
 

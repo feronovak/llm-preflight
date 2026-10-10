@@ -391,6 +391,11 @@ def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected
 
     content = plan["result"]["structuredContent"]
     assert content["retirements"]["decision"] == "fail"
+    gone = content["retirements"]["models"][0]
+    assert gone["next_step"] == (
+        f"provider names gpt-new as the replacement; it is already in this plan ({url})"
+    )
+    assert "next_command" not in gone
     assert content["retirements"]["next_commands"] == []
 
 

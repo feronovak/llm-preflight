@@ -472,11 +472,15 @@ def dry_run_plan(
         (model.get("provider", "openai_compatible"), model["model"]) for model in models
     }
     retirements = retirement_report(models, today or today_utc())
-    retirements["next_commands"] = unique_next_commands(
-        entry
-        for entry in retirements["models"]
-        if (entry["provider"], entry.get("replacement")) not in selected
-    )
+    for entry in retirements["models"]:
+        replacement = entry.get("replacement")
+        if replacement and (entry["provider"], replacement) in selected:
+            entry["next_step"] = (
+                f"provider names {replacement} as the replacement; it is already "
+                f"in this plan ({entry['source_url']})"
+            )
+            entry.pop("next_command", None)
+    retirements["next_commands"] = unique_next_commands(retirements["models"])
     plan = {
         "benchmark": config.get("name", "llm-benchmark"),
         "models": catalog_output(models),
@@ -615,20 +619,10 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{summary_counts.get('retiring', 0) + summary_counts.get('stale', 0)} "
             f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
         )
-        selected = {
-            (m.get("provider", "openai_compatible"), m["model"]) for m in plan["models"]
-        }
         for entry in flagged:
-            next_step = entry["next_step"]
-            replacement = entry.get("replacement")
-            if replacement and (entry["provider"], replacement) in selected:
-                next_step = (
-                    f"provider names {replacement} as the replacement; it is already "
-                    f"in this plan ({entry['source_url']})"
-                )
             lines.append(
                 f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
-                f"{next_step}"
+                f"{entry['next_step']}"
             )
         lines.extend(
             _next_block(

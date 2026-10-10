@@ -69,15 +69,18 @@ rubric identifier; do not change it merely to improve a score.
    and security-reporting routes exist and lead to the intended material.
 2. **O2:** A fresh contributor can follow the documented development setup and
    run deterministic tests without provider keys or live calls. The suite is
-   green on the build day and with the clock shifted to the day after each
-   bundled snapshot expires and to one year later; a test that needs the real
-   date belongs in the release gate, not the suite.
+   green on the build day, on the day after each distinct expiry date of the
+   bundled snapshots (every `as_of` date counts, including example overrides)
+   and one year later; a test that needs the real date belongs in the release
+   gate, not the suite.
 3. **O3:** A clean wheel install and a separate clean sdist install expose the
    correct version and both console entry points, on the lowest and the
    highest declared Python version. A stranger's first run works: the README
    as rendered on PyPI, followed verbatim in a clean environment with no
    checkout, reaches a working result, and every next step it or the tool
-   prints is executable as written.
+   prints is executable as written. For an unpublished build, install the
+   candidate wheel where the README says `pip install`, and repeat the check
+   against PyPI after publication.
 4. **O4:** Runtime remains standard-library-only. Build/dev dependencies are
    declared and pinned through the established tooling; artifact metadata
    confirms no non-extra runtime dependency. Every third-party GitHub Action
@@ -96,8 +99,9 @@ rubric identifier; do not change it merely to improve a score.
 2. **C2:** The complete test suite passes for this source state. Provider
    changes use deterministic mocked protocol fixtures, including failures.
 3. **C3:** Formatting, lint, type, security and secret checks pass. Findings
-   are resolved or a tool false positive is documented narrowly and reviewed;
-   a suppression the tool reports as unused is removed.
+   are resolved or a tool false positive is documented narrowly and reviewed,
+   with a comment saying why; a suppression whose removal leaves the tool
+   green is removed.
 4. **C4:** Structure stays sound. Record the size and coverage change of the
    largest touched modules and justify growth; the same logic does not live
    in two places; data that ages (price or retirement snapshots) carries its
@@ -105,9 +109,10 @@ rubric identifier; do not change it merely to improve a score.
    is not enough when that pattern is the weakness. Record inspected files and
    conclusions.
 5. **C5:** Changed branches include meaningful boundary/failure coverage. For
-   every changed branch on a declared critical path, show at least one
-   boundary, branch or constant mutant that the suite kills, and list every
-   surviving mutant with a decision. Review coverage deltas and explain
+   every changed branch that produces a pass/fail/inconclusive verdict, an
+   exit code or a cost figure (the declared critical paths and any other such
+   code), show at least one boundary, branch or constant mutant that the suite
+   kills, and list every surviving mutant with a decision. Review coverage deltas and explain
    decreases. Coverage percentage or more tests alone does not prove
    correctness.
 
@@ -129,7 +134,9 @@ rubric identifier; do not change it merely to improve a score.
    inconclusive, exit semantics and degraded evidence. List every user surface
    (CLI, MCP, GitHub Action, plugin) for each changed capability as wired or
    not wired; an unwired surface needs a recorded owner decision and a
-   documented limitation. Validator provenance and legacy comparability are
+   documented limitation. A guidance surface (skill, workflow resource, agent
+   documentation) is wired when it tells the agent to read and report the new
+   result. Validator provenance and legacy comparability are
    explicit; unknown is never silently a pass.
 5. **I5:** Claims are traceable to retained evidence. Synthetic fixtures,
    captured-output replay and live observations are labelled separately.
@@ -234,7 +241,10 @@ Record each applicable gate separately as `pass`, `fail` or `unverified`:
    weakening was found by the probes listed for this gate. List those probes;
    a gate with no listed probes is `unverified`, not `pass`.
 3. Wheel/sdist build and metadata checks pass, followed by independent clean
-   installs and CLI/MCP smoke; evidence matches the actual rated artifacts.
+   installs and CLI smoke, and an MCP smoke through the official TypeScript
+   and Python SDK clients that lists the tools and calls each no-spend tool;
+   raw JSON-RPC alone is not enough. Evidence matches the actual rated
+   artifacts.
 4. Public contract/version compatibility is verified and material documentation
    claims agree with the build.
 5. **Before publication only:**

@@ -264,11 +264,14 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in (ROOT / "docs/reference/results.md",):
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
-    for page in (
-        ROOT / "docs/automation/coding-agents.md",
-        ROOT / "docs/automation/change-plans.md",
-    ):
+    for page in (ROOT / "docs/automation/change-plans.md",):
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+
+    coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
+    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in coding_agents
+    for step in coding_agents.split("## ")[1:]:
+        if "Run `--doctor`, `--pricing-check`, and `--dry-run`" in step:
+            assert "`retirements` decision" in step
 
     assert (
         "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0"

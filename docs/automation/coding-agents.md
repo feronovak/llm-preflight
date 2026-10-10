@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
+**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
@@ -16,6 +16,8 @@ It does not judge semantic quality or authorize a production rollout.
    `--contract-check` too; it is local and sends no provider request.
    They make no generation requests. For a candidate cohort, report every
    non-eligible `smoke_eligibility` reason before proposing paid work.
+   Report the dry-run `retirements` decision too: `fail` means a retired
+   model, `inconclusive` a retiring model or a stale snapshot row.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or add an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID. Use explicit
@@ -53,6 +55,7 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
    When the config declares response fixtures or tools, also run
    `--contract-check` without provider access.
+   Report the dry-run `retirements` decision with the plan.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.

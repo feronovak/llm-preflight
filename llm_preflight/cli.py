@@ -98,6 +98,7 @@ Before changing a model ID, provider call, prompt, parser, or tool definition:
 2. Run `--doctor`, `--pricing-check`, and `--dry-run` before any live benchmark.
    When the config declares response fixtures or tools, also run
    `--contract-check` without provider access.
+   Report the dry-run `retirements` decision with the plan.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or make an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID; use `provider:model`.

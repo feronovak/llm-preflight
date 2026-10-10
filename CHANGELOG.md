@@ -22,8 +22,8 @@ All notable changes to this project are documented here.
 - The JSON dry-run plan and the MCP plan no longer list a retirement next
   command whose replacement is already in the plan; the text plan already
   left it out.
-- The MCP safe-workflow resource, the plugin skill and the MCP guide tell
-  agents to report the dry-run `retirements` decision: `fail` for a retired
+- The MCP safe-workflow resource, the plugin skill, the MCP and coding-agent
+  guides and the `init --agent-instructions` block tell agents to report the dry-run `retirements` decision: `fail` for a retired
   model, `inconclusive` for a retiring model or a stale snapshot row. The
   guide states that `ok` stays `true` for a retired model, and that
   `validate_config` checks structure without evaluating validation fixtures.

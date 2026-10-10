@@ -7,7 +7,7 @@ keywords outside the documented subset are rejected recursively by validation,
 planning, and run tools. Strict pricing uses review dates for every billable
 source label.
 
-**Last reviewed:** 2026-09-28 · **As of:** v2.18.0
+**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is
@@ -154,7 +154,7 @@ remains a user-controlled workspace decision.
 | Tool | What it does | Provider access |
 |---|---|---|
 | `validate_config` | Validates one benchmark configuration. | Never contacts a provider or loads credentials. |
-| `dry_run_plan` | Resolves the redacted request, cost plan, and per-model `smoke_eligibility`. | Never contacts a provider or loads credentials. |
+| `dry_run_plan` | Resolves the redacted request, cost plan, per-model `smoke_eligibility`, and `retirements` (the same verdicts as the CLI `--dry-run`). | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 

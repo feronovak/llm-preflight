@@ -2,8 +2,10 @@ import json
 import os
 import subprocess
 import sys
+from datetime import date
 
-from llm_preflight import mcp
+from llm_preflight import mcp, retirements
+from llm_preflight.retirements import retirement_report
 
 META = {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}
 
@@ -164,6 +166,7 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "pricing_warnings",
         "pricing_coverage",
         "smoke_eligibility",
+        "retirements",
     ]
     assert by_name["run_preflight"]["outputSchema"]["oneOf"][1]["required"] == [
         "decision",
@@ -273,6 +276,60 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
         "eligible": 0,
         "needs_review": 1,
     }
+
+
+def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
+    tmp_path, monkeypatch
+):
+    url = "https://example.test/deprecations"
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-gone"): {
+                "status": "deprecated",
+                "retirement_date": "2026-10-01",
+                "replacement": "gpt-new",
+                "as_of": "2026-10-01",
+                "source_url": url,
+            },
+            ("openai", "gpt-new"): {
+                "status": "active",
+                "as_of": "2026-10-01",
+                "source_url": url,
+            },
+        },
+    )
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {"prompt": "hi", "models": [{"provider": "openai", "model": "gpt-gone"}]}
+        )
+    )
+
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+
+    content = plan["result"]["structuredContent"]
+    assert plan["result"]["isError"] is False
+    assert content["ok"] is True
+    assert content["retirements"] == retirement_report(
+        [{"provider": "openai", "model": "gpt-gone"}], date(2026, 10, 9)
+    )
+    assert content["retirements"]["decision"] == "fail"
+    assert content["retirements"]["next_commands"] == [
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
+    ]
 
 
 def test_live_run_requires_paid_confirmation(tmp_path):

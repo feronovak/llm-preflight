@@ -23,6 +23,7 @@ from .features import (
 )
 from .pricing import pricing_coverage_report, pricing_freshness_report
 from .redaction import redact_secrets
+from .retirements import retirement_report, today_utc
 from .runner import load_config, run_benchmark, validate_config_validations
 
 PROTOCOL_VERSION = "2026-07-28"
@@ -221,6 +222,7 @@ def _tools() -> list[dict[str, Any]]:
             "pricing_warnings": {"type": "array", "items": {"type": "string"}},
             "pricing_coverage": {"type": "object"},
             "smoke_eligibility": {"type": "object"},
+            "retirements": {"type": "object"},
         },
         [
             "ok",
@@ -235,8 +237,9 @@ def _tools() -> list[dict[str, Any]]:
             "pricing_warnings",
             "pricing_coverage",
             "smoke_eligibility",
+            "retirements",
         ],
-        "No-spend plan with resolved models, request bound, cost estimate, and pricing evidence.",
+        "No-spend plan with resolved models, request bound, cost estimate, pricing evidence, and retirement verdicts.",
     )
     error_or_run = _output_schema(
         {
@@ -391,6 +394,7 @@ def _call(
                     require_current_pricing=bool(config.get("require_current_pricing")),
                 ),
                 "smoke_eligibility": smoke_eligibility_report(models, config),
+                "retirements": retirement_report(models, today_utc()),
             },
             standard=standard,
         )

@@ -267,7 +267,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-09-28 · **As of:** v2.18.0" in page.read_text()
+        assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()

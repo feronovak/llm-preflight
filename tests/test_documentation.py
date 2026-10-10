@@ -542,6 +542,29 @@ def test_build_rating_requires_an_independent_rater_and_named_probes():
     assert "#independent-probe-based-build-ratings" in rubric
 
 
+def test_build_rating_defines_expiry_gate_five_and_the_verdict_split():
+    rubric = " ".join((ROOT / "docs/development/build-rating.md").read_text().split())
+
+    assert (
+        "on the day after each distinct expiry date of the bundled snapshots "
+        "(a snapshot row is stale once its age exceeds the 30-day window, i.e. "
+        "from the 31st day after its `as_of` date, and the release gate and docs "
+        "use that date;" in rubric
+    )
+    assert (
+        "For a build that is not the intended release tag, mark this gate "
+        "`not_due` and publication readiness `not_assessed`; for the intended "
+        "tag, assess it before tagging and again after publication." in rubric
+    )
+    assert "For an unpublished build, mark this gate" not in rubric
+    assert (
+        "Gates 1–4 decide the build verdict and gate 5 decides publication "
+        "readiness; a failed gate makes its verdict **blocked** regardless of "
+        "total, and an unverified required gate makes it **unverified**, not "
+        "ready." in rubric
+    )
+
+
 def test_changelog_names_the_receipts_a_changed_plan_shape_invalidates():
     changelog = " ".join((ROOT / "CHANGELOG.md").read_text().split())
     section = changelog.split("## 2.20.1")[1].split("## 2.20.0")[0]

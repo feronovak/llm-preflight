@@ -70,8 +70,10 @@ rubric identifier; do not change it merely to improve a score.
 2. **O2:** A fresh contributor can follow the documented development setup and
    run deterministic tests without provider keys or live calls. The suite is
    green on the build day, on the day after each distinct expiry date of the
-   bundled snapshots (every `as_of` date counts, including example overrides)
-   and one year later; a test that needs the real date belongs in the release
+   bundled snapshots (a snapshot row is stale once its age exceeds the 30-day
+   window, i.e. from the 31st day after its `as_of` date, and the release gate
+   and docs use that date; every `as_of` date counts, including example
+   overrides) and one year later; a test that needs the real date belongs in the release
    gate, not the suite.
 3. **O3:** A clean wheel install and a separate clean sdist install expose the
    correct version and both console entry points, on the lowest and the
@@ -267,11 +269,15 @@ Record each applicable gate separately as `pass`, `fail` or `unverified`:
      with the missing channels and an owner date. A version whose gate-2
      defect a later release fixed is marked in that later changelog.
 
-   For an unpublished build, mark this gate `not_due` and publication readiness
-   `not_assessed`; this does not earn a scoring point or imply release approval.
+   For a build that is not the intended release tag, mark this gate `not_due`
+   and publication readiness `not_assessed`; for the intended tag, assess it
+   before tagging and again after publication. This does not earn a scoring
+   point or imply release approval.
 
-A failed gate yields **blocked**, regardless of total. An unverified required
-gate yields **unverified**, not ready. With all applicable gates passing:
+Gates 1–4 decide the build verdict and gate 5 decides publication readiness; a
+failed gate makes its verdict **blocked** regardless of total, and an unverified
+required gate makes it **unverified**, not ready. With all applicable gates
+passing:
 
 | Total | Rating |
 |---|---|

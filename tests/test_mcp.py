@@ -341,6 +341,59 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     ]
 
 
+def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected(
+    tmp_path, monkeypatch
+):
+    url = "https://example.test/deprecations"
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-gone"): {
+                "status": "deprecated",
+                "retirement_date": "2026-10-01",
+                "replacement": "gpt-new",
+                "as_of": "2026-10-01",
+                "source_url": url,
+            },
+            ("openai", "gpt-new"): {
+                "status": "active",
+                "as_of": "2026-10-01",
+                "source_url": url,
+            },
+        },
+    )
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [
+                    {"provider": "openai", "model": "gpt-gone"},
+                    {"provider": "openai", "model": "gpt-new"},
+                ],
+            }
+        )
+    )
+
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+
+    content = plan["result"]["structuredContent"]
+    assert content["retirements"]["decision"] == "fail"
+    assert content["retirements"]["next_commands"] == []
+
+
 def test_live_run_requires_paid_confirmation(tmp_path):
     config = tmp_path / "benchmark.json"
     config.write_text(

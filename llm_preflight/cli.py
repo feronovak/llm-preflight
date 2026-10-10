@@ -466,6 +466,15 @@ def dry_run_plan(
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
     models = resolve_models(config)
+    selected = {
+        (model.get("provider", "openai_compatible"), model["model"]) for model in models
+    }
+    retirements = retirement_report(models, today or today_utc())
+    retirements["next_commands"] = unique_next_commands(
+        entry
+        for entry in retirements["models"]
+        if (entry["provider"], entry.get("replacement")) not in selected
+    )
     plan = {
         "benchmark": config.get("name", "llm-benchmark"),
         "models": catalog_output(models),
@@ -484,7 +493,7 @@ def dry_run_plan(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
         "smoke_eligibility": smoke_eligibility_report(models, config),
-        "retirements": retirement_report(models, today or today_utc()),
+        "retirements": retirements,
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -619,15 +628,9 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 f"- {entry['provider']}/{entry['model']}: {_retirement_brief(entry)} — "
                 f"{next_step}"
             )
-        commands = unique_next_commands(
-            entry
-            for entry in flagged
-            if (entry["provider"], entry.get("replacement")) not in selected
-        )
         lines.extend(
             _next_block(
-                {**retirements, "next_commands": commands},
-                [{"model": e["model"], "retirement": e} for e in flagged],
+                retirements, [{"model": e["model"], "retirement": e} for e in flagged]
             )
         )
     return "\n".join(lines) + "\n"

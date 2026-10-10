@@ -3828,6 +3828,62 @@ def test_dry_run_omits_a_next_command_whose_replacement_is_already_selected(
     assert "Next:" not in out
 
 
+def test_dry_run_json_omits_a_next_command_whose_replacement_is_already_selected(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    config = _dry_run_config(tmp_path, "gpt-gone", "gpt-new", "gpt-old-row")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--json", "--no-env-file"],
+    )
+    cli.main()
+    retirements = json.loads(capsys.readouterr().out)["retirements"]
+    assert [entry.get("next_command") for entry in retirements["models"][:1]] == [
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
+    ]
+    assert retirements["next_commands"] == []
+
+
+def test_dry_run_text_prints_the_next_commands_the_plan_carries():
+    command = (
+        'llm-preflight --quick "<your prompt>" --models openai:a,openai:b --dry-run'
+    )
+    entry = {
+        "provider": "openai",
+        "model": "a",
+        "status": "retired",
+        "retirement_date": "2026-10-01",
+        "replacement": "b",
+        "source_url": _RETIREMENT_URL,
+        "next_step": "provider names b as the replacement",
+        "next_command": command,
+    }
+    plan = {
+        "benchmark": "plan",
+        "models": [{"provider": "openai", "model": "a"}],
+        "tests": ["config prompt"],
+        "requests": 1,
+        "possible_requests": 1,
+        "retry_max_attempts": 1,
+        "estimated_cost_usd": None,
+        "maximum_estimated_cost_usd": None,
+        "pricing_warnings": [],
+        "configuration_warnings": [],
+        "save_responses": False,
+        "stop_on": "none",
+        "retirements": {
+            "summary": {"retired": 1},
+            "models": [entry],
+            "next_commands": [],
+        },
+    }
+
+    assert "Next:" not in cli._format_dry_run_plan(plan)
+    plan["retirements"]["next_commands"] = [command]
+    assert f"Next:\n  {command}" in cli._format_dry_run_plan(plan)
+
+
 def test_dry_run_json_carries_the_retirement_report(
     monkeypatch, tmp_path, capsys, retirement_table
 ):

@@ -3579,6 +3579,13 @@ _RETIREMENT_TABLE = {
         "as_of": "2026-10-01",
         "source_url": _RETIREMENT_URL,
     },
+    ("openai", "gpt-old-row"): {
+        "status": "deprecated",
+        "retirement_date": "2027-01-01",
+        "replacement": "gpt-new",
+        "as_of": "2026-01-01",
+        "source_url": _RETIREMENT_URL,
+    },
 }
 
 
@@ -3703,6 +3710,44 @@ def test_doctor_ci_exits_three_on_a_retiring_model(
     with pytest.raises(SystemExit) as exc_info:
         cli.main()
     assert exc_info.value.code == 3
+
+
+def test_doctor_prints_a_stale_row_warning_and_ci_exits_three(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-old-row")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]
+    )
+    cli.main()
+    out = capsys.readouterr().out
+    assert "Doctor: ok" in out
+    assert (
+        "- warning: gpt-old-row: snapshot row reviewed 2026-01-01 is older than "
+        "30 days" in out
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--ci", "--no-env-file"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 3
+
+
+def test_audit_source_terminal_output_shows_a_stale_reference(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text('a = "gpt-old-row"\n')
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+    cli.main()
+    out = capsys.readouterr().out
+    assert "0 retired; 1 retiring or stale; 0 unknown." in out
+    assert (
+        "app.py:1: gpt-old-row — pricing_unknown; snapshot stale (snapshot row "
+        "reviewed 2026-01-01 is older than 30 days)" in out
+    )
+    assert "Decision: inconclusive" in out
 
 
 def test_doctor_exits_one_on_a_retired_model_with_or_without_ci(

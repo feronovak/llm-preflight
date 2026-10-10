@@ -74,6 +74,23 @@ TABLE = {
         "as_of": "2026-10-01",
         "source_url": URL,
     },
+    ("openai", "gpt-aged-30"): {
+        "status": "active",
+        "as_of": "2026-09-09",
+        "source_url": URL,
+    },
+    ("openai", "gpt-aged-31"): {
+        "status": "active",
+        "as_of": "2026-09-08",
+        "source_url": URL,
+    },
+    ("openai", "gpt-unlisted-successor"): {
+        "status": "deprecated",
+        "retirement_date": "2027-04-01",
+        "replacement": "gpt-without-a-row",
+        "as_of": "2026-10-01",
+        "source_url": URL,
+    },
 }
 TODAY = date(2026, 10, 9)
 
@@ -154,6 +171,22 @@ def test_stale_row_is_inconclusive_and_points_at_the_page(table):
     assert verdict["decision"] == "inconclusive"
     assert "older than 30 days" in verdict["reason"]
     assert "update llm-preflight or review" in verdict["next_step"]
+
+
+def test_row_aged_exactly_the_window_is_not_stale_and_one_day_more_is(table):
+    assert (TODAY - date(2026, 9, 9)).days == 30
+    assert retirement_verdict("openai", "gpt-aged-30", TODAY)["status"] == "active"
+    assert (TODAY - date(2026, 9, 8)).days == 31
+    verdict = retirement_verdict("openai", "gpt-aged-31", TODAY)
+    assert verdict["status"] == "stale"
+    assert verdict["decision"] == "inconclusive"
+
+
+def test_replacement_without_a_row_of_its_own_is_unknown_not_active(table):
+    verdict = retirement_verdict("openai", "gpt-unlisted-successor", TODAY)
+    assert verdict["replacement"] == "gpt-without-a-row"
+    assert verdict["replacement_status"] == "unknown"
+    assert "is itself" not in verdict["next_step"]
 
 
 def test_stale_row_with_a_past_date_is_still_retired(table):

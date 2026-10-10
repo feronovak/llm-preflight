@@ -848,6 +848,13 @@ _R_TABLE = {
         "source_url": _R_URL,
     },
 }
+_R_TABLE[("openai", "gpt-old-row")] = {
+    "status": "deprecated",
+    "retirement_date": "2027-01-01",
+    "replacement": "gpt-new",
+    "as_of": "2026-01-01",
+    "source_url": _R_URL,
+}
 _R_TODAY = _date(2026, 10, 9)
 
 
@@ -882,6 +889,16 @@ def test_doctor_warns_on_a_retiring_model_and_stays_ok(monkeypatch):
     assert report["retirement"]["next_commands"] == [
         'llm-preflight --quick "<your prompt>" --models openai:gpt-going,openai:gpt-new --dry-run'
     ]
+
+
+def test_doctor_warns_on_a_stale_row_and_stays_ok(monkeypatch):
+    report = _doctor(monkeypatch, "gpt-old-row")
+    assert report["ok"] is True
+    warnings = [c for c in report["checks"] if c.get("severity") == "warning"]
+    assert warnings and warnings[-1]["model"] == "gpt-old-row"
+    assert warnings[-1]["ok"] is True
+    assert "older than 30 days" in warnings[-1]["message"]
+    assert report["retirement"]["decision"] == "inconclusive"
 
 
 def test_doctor_reports_unknown_retirement_without_a_check(monkeypatch):

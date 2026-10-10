@@ -18,7 +18,7 @@ from .pricing import (
     pricing_coverage_report,
     resolve_pricing,
 )
-from .retirements import retirement_report
+from .retirements import retirement_report, today_utc
 from .runner import select_test_profiles
 
 
@@ -366,7 +366,7 @@ def doctor_report(
                 "message": warning["message"],
             }
         )
-    retirement = retirement_report(models, today or date.today())
+    retirement = retirement_report(models, today or today_utc())
     for entry in retirement["models"]:
         if entry["status"] == "retired":
             checks.append(

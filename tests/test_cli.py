@@ -3586,12 +3586,7 @@ _RETIREMENT_TABLE = {
 def retirement_table(monkeypatch):
     monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", _RETIREMENT_TABLE)
 
-    class _Today(_date):
-        @classmethod
-        def today(cls):
-            return cls(2026, 10, 9)
-
-    monkeypatch.setattr(cli, "date", _Today)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
 
 
 def test_audit_source_prints_retirement_findings_and_next_commands(

@@ -21,9 +21,9 @@ configuration approves.
 
 | Status | Meaning | Decision |
 |---|---|---|
-| `retired` | The retirement date is today or earlier, or the page lists the model as retired. | fail |
+| `retired` | The retirement date is today (UTC) or earlier, or the page lists the model as retired. | fail |
 | `retiring` | A retirement is announced for a future date, or the model is deprecated with the date to be announced. | inconclusive |
-| `stale` | The snapshot row was reviewed more than 30 days ago. Update llm-preflight or read the official page. | inconclusive |
+| `stale` | The snapshot row was reviewed more than 30 days ago, counted in UTC days like the pricing snapshot. Update llm-preflight or read the official page. | inconclusive |
 | `active` | The official page lists the model as active and the row is fresh. | pass |
 | `unknown` | No snapshot row. Absence is not evidence. | none |
 

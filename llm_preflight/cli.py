@@ -56,7 +56,7 @@ from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
 from .reporting import render_job_summary, render_report_html
-from .retirements import retirement_report
+from .retirements import retirement_report, today_utc
 from .runner import (
     benchmark_run_lock,
     console_report,
@@ -474,7 +474,7 @@ def _dry_run_plan(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
         "smoke_eligibility": smoke_eligibility_report(models, config),
-        "retirements": retirement_report(models, today or date.today()),
+        "retirements": retirement_report(models, today or today_utc()),
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
         "request": redact_secrets(
@@ -2479,7 +2479,7 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.audit_source:
-            audit = audit_source(args.audit_source, today=date.today())
+            audit = audit_source(args.audit_source, today=today_utc())
             print(
                 json.dumps(audit, indent=2)
                 if args.json
@@ -2603,7 +2603,7 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.doctor:
-            report_data = doctor_report(config, environment, today=date.today())
+            report_data = doctor_report(config, environment, today=today_utc())
             print(
                 json.dumps(report_data, indent=2)
                 if args.json
@@ -2649,7 +2649,7 @@ def main() -> None:
                 return
             config, profile_selector = selection
         if args.dry_run:
-            plan = _dry_run_plan(config, profile_selector, today=date.today())
+            plan = _dry_run_plan(config, profile_selector, today=today_utc())
             payload: dict[str, Any] = plan
             verification = None
             if args.approval_receipt:

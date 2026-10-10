@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -327,3 +327,20 @@ def test_retirement_report_reports_none_on_unknown_only(table):
     report = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
     assert report["decision"] == "none"
     assert report["next_commands"] == []
+
+
+def test_today_utc_reads_the_utc_calendar_date_like_the_pricing_snapshot(
+    monkeypatch,
+):
+    seen = []
+
+    class _Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            seen.append(tz)
+            return datetime(2026, 10, 9, 23, 30, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(retirements, "datetime", _Clock)
+
+    assert retirements.today_utc() == date(2026, 10, 9)
+    assert seen == [timezone.utc]

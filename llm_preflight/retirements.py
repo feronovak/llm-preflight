@@ -8,7 +8,7 @@ verdict; it is reported as unknown.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
 
 ANTHROPIC_DEPRECATIONS_URL = (
@@ -255,6 +255,11 @@ def _row_status(row: dict[str, Any] | None, today: date) -> str:
     return "active"
 
 
+def today_utc() -> date:
+    """Return today's UTC calendar date, the clock the pricing snapshot uses."""
+    return datetime.now(timezone.utc).date()
+
+
 def retirement_verdict(
     provider: str | None,
     model: str,
@@ -264,7 +269,7 @@ def retirement_verdict(
     """Classify one model against the bundled snapshot for the given day."""
     catalog_model = _catalog_id(model)
     row = PUBLIC_RETIREMENTS.get((provider, catalog_model)) if provider else None
-    if row is None:
+    if provider is None or row is None:
         covered = ", ".join(RETIREMENT_PROVIDERS)
         return {
             "status": "unknown",
@@ -275,7 +280,6 @@ def retirement_verdict(
                 f"snapshot covers {covered} text-generation models"
             ),
         }
-    assert provider is not None
     verdict: dict[str, Any] = {
         key: row[key]
         for key in ("retirement_date", "replacement", "as_of", "source_url")
@@ -341,7 +345,7 @@ def retirement_verdict(
     return verdict
 
 
-_DECISION_RANK = {"fail": 3, "inconclusive": 2, "pass": 1}
+_DECISION_RANK = {"fail": 3, "inconclusive": 2, "pass": 1}  # nosec B105
 
 
 def worst_decision(decisions: Iterable[str]) -> str:

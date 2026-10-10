@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from .pricing import PUBLIC_PRICING
-from .retirements import retirement_verdict, snapshot_summary, worst_decision
+from .retirements import (
+    retirement_verdict,
+    snapshot_summary,
+    today_utc,
+    worst_decision,
+)
 
 _RETIREMENT_FINDINGS = {"retired", "retiring", "stale"}
 _CONFIDENCE = "limited_static_pricing_and_retirement"
@@ -91,7 +96,7 @@ def _summary_fields(references: list[dict[str, Any]]) -> dict[str, Any]:
 
 def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     """Find literal model IDs without importing project code or contacting providers."""
-    current = today or date.today()
+    current = today or today_utc()
     root = path.resolve()
     if not root.exists():
         raise ValueError(f"audit source path does not exist: {path}")
@@ -145,7 +150,7 @@ def audit_source_text(
 ) -> dict[str, Any]:
     """Find literal model IDs in supplied source text without writing it to disk."""
     references = _references_for_lines(
-        text.splitlines(), path.suffix, str(path), today or date.today()
+        text.splitlines(), path.suffix, str(path), today or today_utc()
     )
     return {
         "root": str(path),

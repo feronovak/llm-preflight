@@ -6,8 +6,27 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- The MCP `dry_run_plan` tool now returns the same `retirements` report as
-  the CLI `--dry-run` JSON, using the UTC date. `ok` is unchanged.
+- MCP clients built on the official SDKs could not list the tools since
+  2.10.0: the TypeScript SDK and Python SDK 2.x rejected every tool's output
+  schema because it lacked a top-level object type. The schemas now declare
+  it, and `dry_run_plan` declares its pricing warnings as objects, which
+  Python SDK 1.x clients rejected for any plan with a pricing warning, such as
+  one with a retired model.
+- The MCP `dry_run_plan` tool now returns the same plan as the CLI
+  `--dry-run --json`, plus `ok`, `pricing_ledger` and `pricing_fingerprint`.
+  It gains `benchmark`, `tests`, `test_breakdown`, `request`, `presets`,
+  `configuration_warnings`, `save_responses` and `stop_on`, and its `models`
+  entries match the CLI, without the redacted `headers` map. The plan carries
+  the same `retirements` report as the CLI, using the UTC date. `ok` is
+  unchanged.
+- The JSON dry-run plan and the MCP plan no longer list a retirement next
+  command whose replacement is already in the plan; the text plan already
+  left it out.
+- The MCP safe-workflow resource, the plugin skill and the MCP guide tell
+  agents to report the dry-run `retirements` decision: `fail` for a retired
+  model, `inconclusive` for a retiring model or a stale snapshot row. The
+  guide states that `ok` stays `true` for a retired model, and that
+  `validate_config` checks structure without evaluating validation fixtures.
 - `o1-preview` no longer records `o3` as its replacement: o3's only dated
   snapshot retires on 2026-12-11, so no replacement is recorded.
 - Retirement docs and the 2.20.0 changelog state that snapshot rows reviewed
@@ -21,9 +40,11 @@ All notable changes to this project are documented here.
 - The unit suite no longer depends on the wall clock: tests that check bundled
   example pricing pin the snapshot review day, and the new
   `make release-freshness` target, run by the release workflow before the
-  build, checks the same examples and the source audit on the real date.
-- The PyPI publish action in the release and TestPyPI workflows is pinned to
-  a commit SHA.
+  build, runs `scripts/release_freshness.py` to check the same examples and
+  the source audit on the real date. The script prints every failing example
+  with its reasons, and `--today YYYY-MM-DD` replays another day.
+- The PyPI publish action in the release and TestPyPI workflows and the
+  checkout action in the project-standard workflow are pinned to commit SHAs.
 - The contributor build rating is now `build-rating-2`: an independent rater,
   a named probe for every passing checkpoint, clock-shifted tests, mutants on
   critical paths, every user surface and every publication channel. The

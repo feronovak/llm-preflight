@@ -24,6 +24,10 @@ All notable changes to this project are documented here.
   build, checks the same examples and the source audit on the real date.
 - The PyPI publish action in the release and TestPyPI workflows is pinned to
   a commit SHA.
+- The contributor build rating is now `build-rating-2`: an independent rater,
+  a named probe for every passing checkpoint, clock-shifted tests, mutants on
+  critical paths, every user surface and every publication channel. The
+  reason is recorded in `docs/DECISIONS.md`.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.20.0 package. The `v2.20.0` tag retains its 2.19.2 default;
   set `package-version` explicitly when using that tag. The Action's doctor

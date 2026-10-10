@@ -1,6 +1,6 @@
 # Product decisions
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
 
 This is a short record of durable product boundaries. It explains the choices
 that shape the public contract; implementation details belong with the code.
@@ -69,3 +69,21 @@ satisfy.
 `incompatible_catalog_type` for generic text smoke. Native TypeSafe discovery
 remains opt-in through `catalog init`. Image, audio, and other non-text
 catalogue types already follow the same pattern.
+
+## Independent, probe-based build ratings
+
+**Decision:** Every tagged release is rated under the
+[build quality rating](development/build-rating.md) by a rater who did not
+author the change. Each passing checkpoint names the probe that could have
+failed it, integrity rules are probed again on every build, and publication
+counts as complete only when every declared channel serves the version.
+
+**Why:** A self-rated build can pass every checkpoint on evidence that could
+not have come out differently. Under the earlier rubric a release scored full
+marks while ignoring an accepted constraint, and its successor shipped a test
+suite that fails on a calendar date. A trust tool's own releases need the same
+evidence discipline it asks of its users.
+
+**Consequence:** Releases take longer and some builds are marked `self-rated`
+or `partial`. Scores under the current rubric are lower than earlier ones and
+are compared checkpoint by checkpoint, not by total.

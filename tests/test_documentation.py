@@ -367,13 +367,14 @@ def test_positioning_and_decisions_are_public_and_current():
         in north_star
     )
     assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
-    assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in decisions
+    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in decisions
     for decision in (
         "Local-first execution",
         "Standard-library runtime",
         "Three-state decisions",
         "Human approval for spend and promotion",
         "Typed-decision models stay out of text preflight",
+        "Independent, probe-based build ratings",
     ):
         assert decision in decisions
     assert (
@@ -496,3 +497,14 @@ def test_readme_links_the_retirement_guide_by_absolute_url():
         in readme
     )
     assert "(docs/guides/retirements.md)" not in readme
+
+
+def test_build_rating_requires_an_independent_rater_and_named_probes():
+    rubric = (ROOT / "docs/development/build-rating.md").read_text()
+
+    assert "Current rubric: `build-rating-2`" in rubric
+    assert "Rubric: build-rating-2" in rubric
+    assert "**Independent rater.**" in rubric
+    assert "**Name the probe.**" in rubric
+    assert "make release-freshness" in rubric
+    assert "#independent-probe-based-build-ratings" in rubric

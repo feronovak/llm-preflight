@@ -14,7 +14,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`AGENTS.md`](../AGENTS.md) | Development Contract | unstamped | — | — |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | unstamped | — | — |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
-| [`README.md`](../README.md) | LLM Preflight | stamped | 2026-10-10 | v2.20.0 |
+| [`README.md`](../README.md) | LLM Preflight | stamped | 2026-10-11 | v2.20.1 |
 | [`SECURITY.md`](../SECURITY.md) | Security policy | unstamped | — | — |
 | [`docs/DECISIONS.md`](DECISIONS.md) | Product decisions | stamped | 2026-08-30 | v2.7.5 |
 | [`docs/FEATURE_MAP.md`](FEATURE_MAP.md) | Product map | stamped | 2026-10-10 | v2.20.0 |
@@ -26,7 +26,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-10-10 | v2.20.0 |
 | [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-09-04 | v2.12.0 |
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-10-10 | v2.20.0 |
-| [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-09-28 | v2.18.0 |
+| [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-10-11 | v2.20.1 |
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-09-09 | v2.14.0 |
@@ -38,7 +38,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-10-08 | v2.19.1 |
 | [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-09-24 | v2.17.0 |
-| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-10 | v2.20.0 |
+| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-11 | v2.20.1 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-10 | v2.20.0 |
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |

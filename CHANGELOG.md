@@ -2,10 +2,28 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.20.1 - Unreleased
+
+### Fixed
+
+- The MCP `dry_run_plan` tool now returns the same `retirements` report as
+  the CLI `--dry-run` JSON, using the UTC date. `ok` is unchanged.
+- `o1-preview` no longer records `o3` as its replacement: o3's only dated
+  snapshot retires on 2026-12-11, so no replacement is recorded.
+- Retirement docs and the 2.20.0 changelog state that snapshot rows reviewed
+  2026-10-09 go stale from 2026-11-09 and that `--ci` then returns 3 for every
+  non-retired model in the snapshot; retired models still return 1.
+- The README links the retirement guide by its absolute GitHub URL so the PyPI
+  page renders it.
 
 ### Changed
 
+- The unit suite no longer depends on the wall clock: tests that check bundled
+  example pricing pin the snapshot review day, and the new
+  `make release-freshness` target, run by the release workflow before the
+  build, checks the same examples and the source audit on the real date.
+- The PyPI publish action in the release and TestPyPI workflows is pinned to
+  a commit SHA.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.20.0 package. The `v2.20.0` tag retains its 2.19.2 default;
   set `package-version` explicitly when using that tag. The Action's doctor

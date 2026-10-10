@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
+**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic and OpenAI deprecation pages

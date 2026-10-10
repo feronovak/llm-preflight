@@ -92,8 +92,8 @@ def test_homepage_model_list_matches_comparison_evidence():
         assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
         assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
         assert "password-reset" in page
-    for page in (readme, docs_index):
-        assert "2.20.0" in page
+    assert "2.20.1" in readme
+    assert "2.20.0" in docs_index
     assert "2.19.1" in study
 
 
@@ -282,7 +282,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0"
+        "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -453,7 +453,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0" in guide
+    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in guide
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide
@@ -474,7 +474,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0" in feature_map
     assert "retirement snapshot" in feature_map
     assert "`retirement`" in agent_validation
-    assert "## 2.20.0" in changelog or "## Unreleased" in changelog
+    assert "## 2.20.1" in changelog
     assert "retirement" in changelog.split("## 2.19.1")[0]
 
 

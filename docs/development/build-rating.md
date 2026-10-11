@@ -343,7 +343,7 @@ Niche fit | ... | 10 | ... | ...
 Documentation | ... | 10 | ... | ...
 
 Total: .../100
-Hard gates: [each status + evidence; gate 2 lists its probes; publication gate not_due if unpublished]
+Hard gates: [each status + evidence; gate 2 lists its probes; publication gate not_due unless this is the intended release tag]
 Snapshot ages and expiry dates on release day:
 Channels serving the version (publication only):
 Rollback (publication only):

@@ -454,7 +454,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.20.0",
+        "llm-preflight==2.20.1",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",

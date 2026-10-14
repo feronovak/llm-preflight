@@ -202,7 +202,10 @@ def _tools() -> list[dict[str, Any]]:
     error_or_validate = _output_schema(
         {
             "ok": {"const": True},
-            "name": {"type": ["string", "null"]},
+            "name": {
+                "type": ["string", "null", "number", "boolean", "object", "array"],
+                "description": "Configured label, preserved as accepted JSON metadata.",
+            },
             "models": {"type": "integer", "minimum": 0},
         },
         ["ok", "name", "models"],

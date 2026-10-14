@@ -2,6 +2,38 @@
 
 All notable changes to this project are documented here.
 
+## 2.21.1 - 2026-10-14
+
+### Fixed
+
+- In 2.21.0, official MCP SDK clients could reject `validate_config` results
+  for numeric, boolean, object or array configuration names because the
+  advertised schema allowed only strings and null. The schema now matches all
+  accepted JSON label types, preserving configured names and secret redaction.
+- TestPyPI installation tolerates publication propagation with up to 40
+  attempts and 39 waits of 15 seconds (585 seconds); success stops immediately
+  and exhaustion still fails.
+- Add regression coverage preserving the direct-provider replacement command
+  when the same model ID is selected through a provider-less proxy, and pin
+  the agent-guidance list item that requires reporting retirement decisions.
+- Verify release freshness against the actual CLI pricing and source-audit
+  commands at snapshot expiry and scheduled-price boundaries, including strict
+  versus optional freshness for owner price overrides.
+- Correct checkout pin comments to the exact v4.3.1 release; pinned commits
+  and read-only workflow permissions are unchanged.
+
+### Changed
+
+- Record the clarified build-rating-3 rubric and its revision reason, including
+  separate build and publication verdicts and the PyPI UI yank procedure.
+  Weights and the 40-checkpoint set are unchanged; historical reports retain
+  their original rubric identifiers.
+- Review all 114 retirement rows against official sources on October 14 UTC.
+  Statuses, dates and replacements are unchanged. Non-retired rows become
+  stale on 2026-11-14 (`--ci` exit 3); retired rows still fail (exit 1).
+  Existing approval receipts mismatch because the retirement review date is
+  part of the plan hash, including mock plans. Preview and approve again.
+
 ## 2.21.0 - 2026-10-14
 
 ### Added

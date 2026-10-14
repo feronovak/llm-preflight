@@ -4,7 +4,7 @@ Use this rubric for every reviewable build and for every tagged release. It
 serves maintainers and contributors; it rates this project's implementation
 and evidence, not model performance or market popularity.
 
-Current rubric: `build-rating-2` (see [Rubric identifier](#rubric-identifier)).
+Current rubric: `build-rating-3` (see [Rubric identifier](#rubric-identifier)).
 
 ## Scope and identity
 
@@ -261,7 +261,7 @@ Record each applicable gate separately as `pass`, `fail` or `unverified`:
    - publication runs through trusted publishing behind a protected
      environment that requires the owner's approval and accepts only release
      tags;
-   - the rollback is named: the yank command, the previous good version and
+   - the rollback is named: the PyPI yank procedure, the previous good version and
      the pin revert;
    - after publication, every declared channel (PyPI, GitHub release, Action
      pins, MCP Registry, agent plugin manifests) serves the version, the PyPI
@@ -322,7 +322,7 @@ authorizes publication or spend.
 ## Per-build report template
 
 ```text
-Rubric: build-rating-2
+Rubric: build-rating-3
 Build/version/date:
 Commit + dirty state + source SHA-256:
 Wheel SHA-256 / sdist SHA-256:
@@ -358,7 +358,20 @@ Optional adoption observations: [known/unknown; no invented project counts]
 
 ## Rubric identifier
 
-The current identifier is `build-rating-2`. It replaced `build-rating-1`,
+The current identifier is `build-rating-3`. It records the revisions made to
+`build-rating-2` on October 11: explicit expiry boundaries, independent installed
+and SDK probes, guidance-surface coverage, and separate build verdict and
+publication readiness. The weights and checkpoint set are unchanged; the
+evidence and gate definitions are more precise. Gate 5 now calls for a PyPI
+yank procedure, which uses the release-management UI, rather than assuming a
+CLI command. The revision is recorded in
+[Product decisions](../DECISIONS.md#build-rating-revision-3).
+
+Historical reports retain their original identifier and verdict. Compare
+`build-rating-2` and `build-rating-3` checkpoint by checkpoint, accounting for
+the text of the rubric used by each report; do not silently relabel old scores.
+
+`build-rating-2` replaced `build-rating-1`,
 under which a build could score 100/100 while ignoring an accepted constraint:
 that rubric checked the change rather than the rule, let the builder rate its
 own work, accepted any artifact as evidence, and had no checkpoint for

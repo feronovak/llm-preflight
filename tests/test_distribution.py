@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import textwrap
 from pathlib import Path
 
 from llm_preflight import __version__
@@ -110,3 +113,48 @@ def test_testpypi_clean_install_exercises_the_mcp_no_spend_handshake():
     assert '"method":"resources/read"' in workflow
     assert "safe-workflow" in workflow
     assert "confirm_paid_run" not in workflow
+
+
+def test_testpypi_install_wait_tolerates_propagation_and_stops_at_its_bound(tmp_path):
+    workflow = (ROOT / ".github/workflows/testpypi.yml").read_text()
+    install = workflow.split(
+        "name: Wait for TestPyPI and install the published package", 1
+    )[1]
+    script = textwrap.dedent(
+        install.split("run: |\n", 1)[1].split("      - name:", 1)[0]
+    )
+    bin_dir = tmp_path / ".testpypi-venv/bin"
+    bin_dir.mkdir(parents=True)
+    pip = bin_dir / "pip"
+    pip.write_text(
+        "#!/bin/bash\n"
+        'count=0; test ! -f "$COUNTER" || read -r count < "$COUNTER"\n'
+        'count=$((count + 1)); echo "$count" > "$COUNTER"\n'
+        'test "$count" -eq "$SUCCEED_ON"\n'
+    )
+    pip.chmod(0o755)
+    sleep = bin_dir / "sleep"
+    sleep.write_text('#!/bin/bash\necho "$1" >> "$SLEEPS"\n')
+    sleep.chmod(0o755)
+    for success_on, attempts, expected in ((1, 1, 0), (36, 36, 0), (0, 40, 1)):
+        counter = tmp_path / f"count-{success_on}"
+        sleeps = tmp_path / f"sleeps-{success_on}"
+        result = subprocess.run(
+            ["bash", "-e", "-c", script],
+            cwd=tmp_path,
+            capture_output=True,
+            env={
+                **os.environ,
+                "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                "COUNTER": str(counter),
+                "SLEEPS": str(sleeps),
+                "SUCCEED_ON": str(success_on),
+                "VERSION": "2.21.1",
+            },
+            timeout=5,
+            check=False,
+        )
+        assert result.returncode == expected, result.stderr
+        assert int(counter.read_text()) == attempts
+        waits = sleeps.read_text().splitlines() if sleeps.exists() else []
+        assert waits == ["15"] * (attempts - 1)

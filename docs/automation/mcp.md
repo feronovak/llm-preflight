@@ -7,7 +7,7 @@ keywords outside the documented subset are rejected recursively by validation,
 planning, and run tools. Strict pricing uses review dates for every billable
 source label.
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is
@@ -37,6 +37,11 @@ that contains the benchmark configuration:
 The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
+
+In 2.21.1, `validate_config` advertises every JSON type accepted for the optional
+configuration `name`, including numbers, booleans, objects and arrays. It
+preserves the configured label and applies the existing secret redaction; the
+other response fields retain their types. Prefer a string for a readable label.
 
 ## Start with a project contract
 

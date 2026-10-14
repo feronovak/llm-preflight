@@ -1,6 +1,6 @@
 # Product decisions
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
 
 This is a short record of durable product boundaries. It explains the choices
 that shape the public contract; implementation details belong with the code.
@@ -87,3 +87,20 @@ evidence discipline it asks of its users.
 **Consequence:** Releases take longer and some builds are marked `self-rated`
 or `partial`. Scores under the current rubric are lower than earlier ones and
 are compared checkpoint by checkpoint, not by total.
+
+## Build rating revision 3
+
+**Decision:** Use `build-rating-3` from 2.21.1, retaining the eight dimensions,
+40 checkpoints and weights. Record future rubric revisions with a new
+identifier and a dated reason; retain historical reports under their original
+rubric and verdict.
+
+**Why:** Changes made to `build-rating-2` on October 11 clarified expiry
+boundaries, independent artifact and SDK checks, guidance surfaces, and the
+separation of build verdict from publication readiness without assigning a new
+identifier. Revision 3 records those changes and corrects the rollback wording
+to describe the PyPI UI yank procedure.
+
+**Consequence:** Reviewers compare checkpoint evidence against the rubric text
+used for that build. Earlier reports and scores are not rewritten, and release
+authorization remains separate from a numeric rating.

@@ -22,7 +22,7 @@ GEMINI_MODEL_REDIRECTS = {
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
-_REVIEWED = "2026-10-13"
+_REVIEWED = "2026-10-14"
 
 
 def _row(

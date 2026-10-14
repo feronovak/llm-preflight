@@ -5,6 +5,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from llm_preflight import mcp, retirements
 from llm_preflight.retirements import retirement_report
 
@@ -842,3 +844,49 @@ def test_dry_run_plan_returns_the_cli_dry_run_plan_for_the_same_config(
     assert {key: content[key] for key in cli_plan} == cli_plan
     assert cli_plan["configuration_warnings"]
     assert cli_plan["retirements"]["decision"] == "fail"
+
+
+@pytest.mark.parametrize(
+    ("name", "json_type"),
+    [
+        ("review", "string"),
+        (None, "null"),
+        (7, "number"),
+        (1.5, "number"),
+        (False, "boolean"),
+        ({"team": "review"}, "object"),
+        (["review"], "array"),
+    ],
+)
+def test_validate_config_name_schema_accepts_every_preserved_json_name(
+    tmp_path, name, json_type
+):
+    config = {
+        "name": name,
+        "prompt": "Reply with ok.",
+        "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+    }
+    (tmp_path / "benchmark.json").write_text(json.dumps(config))
+    tools = mcp._response({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, tmp_path)
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "validate_config",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+
+    result = response["result"]
+    assert result["isError"] is False
+    assert result["structuredContent"] == {"ok": True, "name": name, "models": 1}
+    schema = next(
+        tool["outputSchema"]
+        for tool in tools["result"]["tools"]
+        if tool["name"] == "validate_config"
+    )
+    assert json_type in schema["oneOf"][1]["properties"]["name"]["type"]

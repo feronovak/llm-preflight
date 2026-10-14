@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -45,8 +45,8 @@ in all three commands.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
-stale 30 days after their review date (rows reviewed 2026-10-13 are stale from
-2026-11-13), after which `--ci` returns 3 for every non-retired model in the
+stale 30 days after their review date (rows reviewed 2026-10-14 are stale from
+2026-11-14), after which `--ci` returns 3 for every non-retired model in the
 snapshot (retired stays 1) until the package is updated; models with no row
 stay at 0.
 

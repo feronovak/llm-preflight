@@ -1,8 +1,13 @@
 import importlib.util
+import json
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+
+import pytest
+
+from llm_preflight import cli, pricing
 
 ROOT = Path(__file__).parent.parent
 SCRIPT = ROOT / "scripts/release_freshness.py"
@@ -48,7 +53,7 @@ def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys)
     script = _script()
     script.EXAMPLES = ()
 
-    assert script.main(["--today", "2026-11-13"]) == 1
+    assert script.main(["--today", "2026-11-14"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL audit-source examples: inconclusive" in output
@@ -85,3 +90,136 @@ def test_release_freshness_without_today_uses_the_real_utc_date(monkeypatch, cap
 
     assert script.main([]) == 1
     assert "Release freshness on 2026-10-29: fail" in capsys.readouterr().out
+
+
+def _cli_json(monkeypatch, capsys, arguments):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *arguments])
+    try:
+        cli.main()
+    except SystemExit as exc:
+        status = exc.code
+    else:
+        status = 0
+    return status, json.loads(capsys.readouterr().out)
+
+
+def _pin_cli_day(monkeypatch, today):
+    class PinnedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(today.year, today.month, today.day, tzinfo=tz)
+
+    monkeypatch.setattr(pricing, "datetime", PinnedDatetime)
+    monkeypatch.setattr(cli, "today_utc", lambda: today)
+
+
+@pytest.mark.parametrize(
+    "today",
+    [
+        date.fromisoformat(value)
+        for value in (
+            "2026-10-13",
+            "2026-10-14",
+            "2026-10-28",
+            "2026-10-29",
+            "2026-11-12",
+            "2026-11-13",
+            "2026-11-14",
+            "2026-12-01",
+            "2027-01-01",
+        )
+    ],
+)
+def test_release_freshness_agrees_with_cli_at_snapshot_boundaries(
+    monkeypatch, capsys, today
+):
+    script = _script()
+    _pin_cli_day(monkeypatch, today)
+    for example in script.EXAMPLES:
+        path = ROOT / "examples" / f"{example}.json"
+        status, report = _cli_json(
+            monkeypatch, capsys, [str(path), "--pricing-check", "--no-env-file"]
+        )
+        reasons = script.pricing_reasons(path, today)
+        assert bool(reasons) == (status != 0), (today, example, reasons, report)
+        if reasons:
+            assert reasons == [
+                f"{row['provider']}/{row['model']}: {row['message']}"
+                for row in report["warnings"]
+            ]
+
+    status, report = _cli_json(
+        monkeypatch,
+        capsys,
+        ["--audit-source", str(ROOT / "examples"), "--ci", "--json"],
+    )
+    decision, reasons = script.retirement_reasons(ROOT / "examples", today)
+    assert decision == report["decision"]
+    assert status == {"pass": 0, "none": 0, "fail": 1, "inconclusive": 3}[decision]
+    assert reasons == [
+        f"{row['path']}:{row['line']}: {row['model']} — "
+        f"{row['retirement']['status']}: {row['retirement']['reason']}"
+        for row in report["references"]
+        if row["retirement"]["status"] in {"retired", "retiring", "stale"}
+    ]
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_release_freshness_matches_cli_for_optional_stale_override(
+    monkeypatch, tmp_path, capsys, strict
+):
+    today = date(2026, 10, 14)
+    _pin_cli_day(monkeypatch, today)
+    path = tmp_path / "benchmark.json"
+    path.write_text(
+        json.dumps(
+            {
+                "prompt": "Reply with ok.",
+                "require_current_pricing": strict,
+                "models": [
+                    {
+                        "provider": "openai_compatible",
+                        "model": "local",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 2,
+                        "pricing_metadata": {
+                            "as_of": "2026-01-01",
+                            "source": "owner",
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    status, report = _cli_json(
+        monkeypatch, capsys, [str(path), "--pricing-check", "--no-env-file"]
+    )
+    assert report["summary"]["stale"] == int(strict)
+    assert report["models"][0]["as_of"] == "2026-01-01"
+    assert status == int(strict)
+    assert bool(_script().pricing_reasons(path, today)) == strict
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_decision", "expected_status", "flagged"),
+    [
+        ("gpt-4-32k", "fail", 1, True),
+        ("gpt-4o", "inconclusive", 3, True),
+        ("claude-sonnet-5-5", "pass", 0, False),
+        ("gpt-99-future", "none", 0, False),
+    ],
+)
+def test_release_retirement_gate_matches_cli_for_each_decision(
+    monkeypatch, tmp_path, capsys, model, expected_decision, expected_status, flagged
+):
+    today = date(2026, 10, 14)
+    _pin_cli_day(monkeypatch, today)
+    source = tmp_path / "app.py"
+    source.write_text(f'model = "{model}"\n')
+    status, report = _cli_json(
+        monkeypatch, capsys, ["--audit-source", str(source), "--ci", "--json"]
+    )
+    decision, reasons = _script().retirement_reasons(source, today)
+    assert decision == report["decision"] == expected_decision
+    assert status == expected_status
+    assert bool(reasons) == flagged

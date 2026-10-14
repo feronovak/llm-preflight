@@ -3963,3 +3963,29 @@ def test_dry_run_prints_no_retirement_block_when_all_unknown(
     )
     cli.main()
     assert "Retirements:" not in capsys.readouterr().out
+
+
+def test_dry_run_keeps_direct_replacement_command_for_providerless_proxy(
+    retirement_table,
+):
+    config = {
+        "prompt": "hi",
+        "repetitions": 1,
+        "warmups": 0,
+        "models": [
+            {"provider": "openai", "model": "gpt-gone"},
+            {"model": "gpt-new", "base_url": "https://proxy.example/v1"},
+        ],
+    }
+
+    plan = cli.dry_run_plan(config, today=_date(2026, 10, 9))
+
+    retired = plan["retirements"]["models"][0]
+    command = (
+        'llm-preflight --quick "<your prompt>" '
+        "--models openai:gpt-gone,openai:gpt-new --dry-run"
+    )
+    assert retired["next_command"] == command
+    assert plan["retirements"]["next_commands"] == [command]
+    assert "already in this plan" not in retired["next_step"]
+    assert command in cli._format_dry_run_plan(plan)

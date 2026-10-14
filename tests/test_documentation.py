@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in page
-    assert "Package version: **2.21.0**" in page
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in page
+    assert "Package version: **2.21.1**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -279,7 +279,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in page.read_text()
+        assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
@@ -294,7 +294,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
+        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -379,7 +379,7 @@ def test_positioning_and_decisions_are_public_and_current():
         in north_star
     )
     assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
-    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in decisions
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in decisions
     for decision in (
         "Local-first execution",
         "Standard-library runtime",
@@ -466,7 +466,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in guide
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in guide
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide
@@ -534,8 +534,8 @@ def test_readme_links_only_absolute_urls_or_anchors_for_the_pypi_page():
 def test_build_rating_requires_an_independent_rater_and_named_probes():
     rubric = (ROOT / "docs/development/build-rating.md").read_text()
 
-    assert "Current rubric: `build-rating-2`" in rubric
-    assert "Rubric: build-rating-2" in rubric
+    assert "Current rubric: `build-rating-3`" in rubric
+    assert "Rubric: build-rating-3" in rubric
     assert "**Independent rater.**" in rubric
     assert "**Name the probe.**" in rubric
     assert "make release-freshness" in rubric
@@ -576,3 +576,23 @@ def test_changelog_names_the_receipts_a_changed_plan_shape_invalidates():
     assert (
         "keeps hashing the same plan" not in (ROOT / "llm_preflight/cli.py").read_text()
     )
+
+
+def test_agent_validation_report_list_includes_the_retirement_decision():
+    guide = (ROOT / "docs/automation/agent-validation.md").read_text()
+    allowed = " ".join(
+        guide.split("An agent may:")[1].split("An agent must not:")[0].split()
+    )
+
+    assert "dry-run `retirements` decision" in allowed
+
+
+def test_build_rating_revision_is_recorded_with_its_reason():
+    rubric = " ".join((ROOT / "docs/development/build-rating.md").read_text().split())
+    decisions = " ".join((ROOT / "docs/DECISIONS.md").read_text().split())
+
+    assert "build-rating-3" in decisions
+    assert "expiry boundaries" in decisions
+    assert "publication readiness" in decisions
+    assert "build-rating-2" in rubric
+    assert "weights and checkpoint set are unchanged" in rubric

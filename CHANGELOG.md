@@ -24,6 +24,9 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Point current repository Action and CI defaults at published 2.21.1. The
+  immutable `v2.21.1` tag retains its 2.21.0 package default; set
+  `package-version: "2.21.1"` explicitly when using it.
 - Record the clarified build-rating-3 rubric and its revision reason, including
   separate build and publication verdicts and the PyPI UI yank procedure.
   Weights and the 40-checkpoint set are unchanged; historical reports retain

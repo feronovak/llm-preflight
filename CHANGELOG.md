@@ -6,8 +6,8 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- Claude Code and other strict MCP clients rejected the tool list on protocol
-  `2026-07-28` because required cache metadata was missing. `tools/list`,
+- In 2.21.1, Claude Code and other strict MCP clients rejected the tool list
+  on protocol `2026-07-28` because required cache metadata was missing. `tools/list`,
   `resources/list`, `resources/read` and `server/discover` now return
   `ttlMs: 0`, `cacheScope: "private"` and the complete-result marker. Legacy
   list/read responses keep their existing shape; no client configuration

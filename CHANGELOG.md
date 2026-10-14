@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here.
 
+## 2.21.2 - 2026-10-14
+
+### Fixed
+
+- Claude Code and other strict MCP clients rejected the tool list on protocol
+  `2026-07-28` because required cache metadata was missing. `tools/list`,
+  `resources/list`, `resources/read` and `server/discover` now return
+  `ttlMs: 0`, `cacheScope: "private"` and the complete-result marker. Legacy
+  list/read responses keep their existing shape; no client configuration
+  change is needed.
+
+### Changed
+
+- Replace homepage release-history prose with current workflows and a dated
+  flagship/budget model table, including Opus 5.5, Haiku 5.5, GLM, DeepSeek
+  and Qwen. Preserve recorded failures and identify Argon and other unmeasured
+  candidates without transferring another model's result.
+- Make the first-live-run instructions work from an installed CLI, with
+  explicit accepted/rejected local fixtures before contract validation.
+
 ## 2.21.1 - 2026-10-14
 
 ### Fixed

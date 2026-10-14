@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.2
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -42,24 +42,55 @@ Results stay local unless you decide to attach or publish them.
 - [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing
   confidence, retries, response retention, and sensitive-data handling.
 
-## Latest measured comparison
+## Current model shortlist
 
-On **2026-10-07**, the source checkout before the **2.19.1** release ran the original
-support-routing questions, all built-in checks, and a separate agent smoke
-against two native Anthropic models:
+Our current shortlist covers flagship and budget options across OpenAI,
+Anthropic, Gemini, GLM, DeepSeek and Qwen. Start a balanced-model review with
+**Sonnet 5.5 or GPT-6.1 Sol**; include **Opus 5.5** for a higher-cost candidate.
+For a budget review, compare **GPT-6 Luna, Haiku 5.5, Qwen 3.8 Flash and
+DeepSeek V4.1 Flash** against your own contract. Gemini 3.8 Flash and Qwen
+3.8 Max are also measured alternatives. These are review candidates;
+production promotion requires your application's evidence and approval.
 
-| Exact API model ID | Original questions / 16 | Full checks / 53 | Smoke / 6 | Estimated cost / 75 |
-|---|---:|---:|---:|---:|
-| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |
-| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |
+The table shows the latest retained run of the same eight example routing and
+JSON cases, twice per model. **Not run** means there is no live measurement;
+it contributes no success, latency or cost claim. Model availability and
+request support were reviewed on **2026-10-14**.
 
-All 150 API requests succeeded; 149 outputs passed. Haiku's password-reset
-smoke response selected "technical" where the check required "account".
-The [comparison page](guides/observed-model-comparison.md#anthropic-55-live-checks)
-records the cases, concurrency levels, costs and evidence limits. Version
-**2.19.1** includes Haiku 5.5 pricing and request compatibility, the Sonnet
-cache-price update and corrected Anthropic cache-usage accounting.
-See [official snapshots](guides/current-snapshots.md).
+| Provider route | Exact API model ID | Observed date | Valid / 16 | Mean latency | Estimated cost / 16 |
+|---|---|---|---:|---:|---:|
+| Anthropic | `claude-opus-5-5` | 2026-09-28 | 16 | 2.041s | $0.012120 |
+| Anthropic | `claude-sonnet-5-5` | 2026-10-07 | 16 | 1.390s | $0.005740 |
+| Anthropic | `claude-haiku-5-5` | 2026-10-07 | 16 | 1.090s | $0.000481 |
+| OpenAI | `gpt-6.1-sol` | 2026-09-30 | 16 | 2.071s | $0.004802 |
+| OpenAI | `gpt-6-luna` | 2026-09-28 | 16 | 1.361s | $0.000350 |
+| Gemini | `gemini-4-argon` | Not run | — | — | — |
+| Gemini | `gemini-3.8-flash` | 2026-09-28 | 16 | 2.363s | $0.014768 |
+| OpenRouter / Relace | `z-ai/glm-5.3` | 2026-09-30 | 14 | 0.948s | $0.001190 |
+| OpenRouter | `z-ai/glm-5.3-flash` | Not run | — | — | — |
+| OpenRouter | `deepseek/deepseek-v4.1-flash` | 2026-09-28 | 16 | 0.963s | $0.001863 |
+| OpenRouter | `qwen/qwen3.8-max-0902` | 2026-09-28 | 16 | 4.186s | $0.012932 |
+| OpenRouter | `qwen/qwen3.8-flash` | 2026-09-28 | 16 | 1.459s | $0.000274 |
+
+**Known limits:** Haiku passed these 16 cases and 53/53 additional checks, but
+its separate password-reset smoke was **5/6**. Sonnet's smoke was **6/6**.
+GLM's **14/16** result includes an empty JSON answer and a wrong routing label;
+it is a candidate to investigate, not a passing recommendation. The native
+Z.ai, DeepSeek and Qwen routes have no measurements in this study.
+
+Each cost is a token-based estimate for those 16 requests, not an invoice or
+a current per-task price. September OpenAI estimates predate cache-write
+accounting and can omit those charges. Settings and reasoning differ across
+routes; calls ran in sequential blocks from one host. This small example does
+not establish a stable quality, speed or cost ranking.
+
+The [observed comparison](guides/observed-model-comparison.md)
+retains all **27 measured** IDs, request settings and failure analysis.
+Current availability also includes [GLM 5.3 Flash/FlashX](https://docs.z.ai/guides/vlm/glm-5.3-flash),
+`z-ai/glm-5.3-flashx`, [GLM 5.3 Prime](https://openrouter.ai/z-ai/glm-5.3-prime),
+`z-ai/glm-5.3-prime`, and [Qwen 3.8 Max Prime](https://openrouter.ai/qwen/qwen3.8-max-prime),
+`qwen/qwen3.8-max-prime`. These variants are **unmeasured** here; their
+availability does not transfer another row's result.
 
 ## Automate with confidence
 

@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in page
-    assert "Package version: **2.21.1**" in page
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in page
+    assert "Package version: **2.21.2**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -52,14 +52,12 @@ def test_homepage_model_list_matches_comparison_evidence():
     homepage_section = homepage_section.split("\n## ", 1)[0]
     study_section = study.split("## Comparison results", 1)[1]
     study_section = study_section.split("\n## ", 1)[0]
-    homepage_ids = set(re.findall(r"`([\w./-]+)`", homepage_section))
     study_ids = set(re.findall(r"\| `([\w./-]+)` \|", study_section))
 
     assert len(study_ids) == 27
     assert "claude-haiku-5-5" in study_ids
     assert "gpt-6.1-sol" in study_ids
     assert "z-ai/glm-5.3" in study_ids
-    assert homepage_ids == study_ids
 
     rows = re.findall(
         r"^\| [^|]+ \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
@@ -88,12 +86,56 @@ def test_homepage_model_list_matches_comparison_evidence():
     for model in ("claude-haiku-5-5", "claude-sonnet-5-5"):
         row = next(row for row in rows if row[0] == model)
         assert row[1:3] == ("2026-10-07", "16")
-    for page in (readme, docs_index, study):
+    for page in (study,):
         assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
         assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
+    selected = {
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-5-5",
+        "gpt-6.1-sol",
+        "gpt-6-luna",
+        "gemini-3.8-flash",
+        "z-ai/glm-5.3",
+        "deepseek/deepseek-v4.1-flash",
+        "qwen/qwen3.8-max-0902",
+        "qwen/qwen3.8-flash",
+    }
+    unmeasured = {"gemini-4-argon", "z-ai/glm-5.3-flash"}
+    row_pattern = (
+        r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$"
+    )
+    homepage_rows = re.findall(row_pattern, homepage_section, re.MULTILINE)
+    assert {row[1] for row in homepage_rows} == selected | unmeasured
+    assert len(homepage_rows) == len(selected | unmeasured)
+    study_rows = {row[0]: row[1:] for row in rows}
+    for provider, model, observed_on, valid, latency, cost in homepage_rows:
+        if model in unmeasured:
+            assert (observed_on, valid, latency, cost) == ("Not run", "—", "—", "—")
+        else:
+            assert (observed_on, valid, latency, cost) == study_rows[model]
+            if model in {
+                "z-ai/glm-5.3",
+                "qwen/qwen3.8-max-0902",
+                "qwen/qwen3.8-flash",
+                "deepseek/deepseek-v4.1-flash",
+            }:
+                assert provider.startswith("OpenRouter")
+    assert re.findall(row_pattern, docs_index, re.MULTILINE) == homepage_rows
+    for page in (readme, docs_index):
         assert "password-reset" in page
-    assert "2.21.0" in readme
-    assert "2.21.0" in docs_index
+        assert "5/6" in page
+        assert "14/16" in page
+        assert "cache-write" in page
+        assert "Not run" in page
+        assert "Version 2." not in page
+        assert "before the **2." not in page
+        for variant in (
+            "z-ai/glm-5.3-prime",
+            "z-ai/glm-5.3-flashx",
+            "qwen/qwen3.8-max-prime",
+        ):
+            assert f"`{variant}`" in page
     assert "2.19.1" in study
 
 
@@ -194,6 +236,64 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert readme.index("## What live evidence looks like") < readme.index(
         "## First live run"
     )
+    live_section = readme.split("## First live run", 1)[1].split("\n## ", 1)[0]
+    assert "llm-preflight init live.json --template provider" in live_section
+    assert "cp benchmark.example.json" not in live_section
+    assert live_section.index("--pricing-check") < live_section.index("--dry-run")
+    assert "six requests per model" in readme
+    assert "Version 2." not in readme
+
+
+def test_readme_provider_starter_has_runnable_local_contract_fixtures(tmp_path):
+    readme = (ROOT / "README.md").read_text()
+    section = readme.split("## First live run", 1)[1].split("\n## ", 1)[0]
+    fixture_block = re.search(r"```json\n(.*?)\n```", section, re.DOTALL)
+    assert fixture_block is not None, (
+        "Starter contract-check needs explicit local fixtures"
+    )
+    config = tmp_path / "live.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "llm_preflight",
+            "init",
+            str(config),
+            "--template",
+            "provider",
+            "--provider",
+            "openai",
+            "--model",
+            "gpt-6.1-sol",
+            "--api-key-env",
+            "OPENAI_API_KEY",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    data = json.loads(config.read_text())
+    data.update(json.loads(fixture_block.group(1)))
+    config.write_text(json.dumps(data))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "llm_preflight",
+            str(config),
+            "--contract-check",
+            "--no-env-file",
+            "--json",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert {f["expect"] for f in data["validation_fixtures"]} == {"pass", "fail"}
 
 
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
@@ -279,7 +379,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in page.read_text()
+        assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
@@ -290,11 +390,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
+        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1"
+        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
         in (ROOT / "README.md").read_text()
     )
     assert (

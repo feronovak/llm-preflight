@@ -534,6 +534,13 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                 "id": request_id,
                 "error": {"code": -32601, "message": "method not found"},
             }
+        if not standard and method in {
+            "server/discover",
+            "tools/list",
+            "resources/list",
+            "resources/read",
+        }:
+            result.update(resultType="complete", ttlMs=0, cacheScope="private")
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
     except ProtocolError as exc:
         error: dict[str, Any] = {"code": exc.code, "message": str(exc)}

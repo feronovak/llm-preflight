@@ -1,13 +1,13 @@
 # MCP server for coding agents
 
-In 2.18.0, `run_preflight` preserves missing usage as unavailable cost and
+`run_preflight` preserves missing usage as unavailable cost and
 reports a passing contract with incomplete cost as inconclusive. Read its
 decision and coverage fields; do not turn null totals into zero. Output-schema
 keywords outside the documented subset are rejected recursively by validation,
 planning, and run tools. Strict pricing uses review dates for every billable
 source label.
 
-**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.2
 
 `validate_config` and `dry_run_plan` also inspect configured local image inputs
 without reading credentials or calling a provider. Their pre-run image cost is
@@ -38,10 +38,18 @@ The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
 
-In 2.21.1, `validate_config` advertises every JSON type accepted for the optional
+`validate_config` advertises every JSON type accepted for the optional
 configuration `name`, including numbers, booleans, objects and arrays. It
 preserves the configured label and applies the existing secret redaction; the
 other response fields retain their types. Prefer a string for a readable label.
+
+For `2026-07-28` requests, `server/discover`, `tools/list`, `resources/list`
+and `resources/read` return `resultType: "complete"`, `ttlMs: 0` and
+`cacheScope: "private"`. This follows the protocol's conservative cache policy:
+results are immediately stale and never shared across authorization contexts.
+The required fields let Claude Code and other strict clients validate the
+responses. Standard `2025-06-18` list/read responses retain their legacy shape.
+See the [MCP cache-field migration guide](https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28#cache-fields-and-cache-hints).
 
 ## Start with a project contract
 

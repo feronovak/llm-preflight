@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
+**Last reviewed:** 2026-10-14 · **As of:** v2.21.2
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -117,7 +117,7 @@ flowchart LR
     A[Integration change] --> B[No-spend validation\ndoctor, pricing, dry run]
     B --> C{Human reviews\nevidence and cost bound}
     C -->|Explicit approval| D[Bounded paid smoke]
-    C -->|No approval or missing evidence| E[Inconclusive: fix or stop]
+    C -->|No approval or missing evidence| E[Resolve evidence or stop]
     D --> F[Local evidence for\nproduction approval]
 ```
 
@@ -201,45 +201,58 @@ time—not a universal model ranking. For a complete interactive example, see
 
 ## Model comparison
 
-The comparison lists **27 exact API IDs: 27 measured**.
-On 2026-09-28, we ran eight example support-routing and JSON cases twice each
-against 24 IDs. On 2026-09-30, the same cases were run against GPT-6.1 Sol
-and GLM-5.3 through OpenRouter / Relace: **16/16** and **14/16** valid outputs,
-respectively. On **2026-10-07**, Haiku 5.5 and Sonnet 5.5 both passed **16/16**
-on those cases, plus **53/53** built-in checks each. The separate smoke caught
-one Haiku password-reset routing mismatch. GLM's result covers the routed
-endpoint; all results apply to their dated example contracts.
+Our current shortlist covers flagship and budget options across OpenAI,
+Anthropic, Gemini, GLM, DeepSeek and Qwen. Start a balanced-model review with
+**Sonnet 5.5 or GPT-6.1 Sol**; include **Opus 5.5** for a higher-cost candidate.
+For a budget review, compare **GPT-6 Luna, Haiku 5.5, Qwen 3.8 Flash and
+DeepSeek V4.1 Flash** against your own contract. Gemini 3.8 Flash and Qwen
+3.8 Max are also measured alternatives. These are review candidates;
+production promotion requires your application's evidence and approval.
+
+The table shows the latest retained run of the same eight example routing and
+JSON cases, twice per model. **Not run** means there is no live measurement;
+it contributes no success, latency or cost claim. Model availability and
+request support were reviewed on **2026-10-14**.
+
+| Provider route | Exact API model ID | Observed date | Valid / 16 | Mean latency | Estimated cost / 16 |
+|---|---|---|---:|---:|---:|
+| Anthropic | `claude-opus-5-5` | 2026-09-28 | 16 | 2.041s | $0.012120 |
+| Anthropic | `claude-sonnet-5-5` | 2026-10-07 | 16 | 1.390s | $0.005740 |
+| Anthropic | `claude-haiku-5-5` | 2026-10-07 | 16 | 1.090s | $0.000481 |
+| OpenAI | `gpt-6.1-sol` | 2026-09-30 | 16 | 2.071s | $0.004802 |
+| OpenAI | `gpt-6-luna` | 2026-09-28 | 16 | 1.361s | $0.000350 |
+| Gemini | `gemini-4-argon` | Not run | — | — | — |
+| Gemini | `gemini-3.8-flash` | 2026-09-28 | 16 | 2.363s | $0.014768 |
+| OpenRouter / Relace | `z-ai/glm-5.3` | 2026-09-30 | 14 | 0.948s | $0.001190 |
+| OpenRouter | `z-ai/glm-5.3-flash` | Not run | — | — | — |
+| OpenRouter | `deepseek/deepseek-v4.1-flash` | 2026-09-28 | 16 | 0.963s | $0.001863 |
+| OpenRouter | `qwen/qwen3.8-max-0902` | 2026-09-28 | 16 | 4.186s | $0.012932 |
+| OpenRouter | `qwen/qwen3.8-flash` | 2026-09-28 | 16 | 1.459s | $0.000274 |
+
+**Known limits:** Haiku passed these 16 cases and 53/53 additional checks, but
+its separate password-reset smoke was **5/6**. Sonnet's smoke was **6/6**.
+GLM's **14/16** result includes an empty JSON answer and a wrong routing label;
+it is a candidate to investigate, not a passing recommendation. The native
+Z.ai, DeepSeek and Qwen routes have no measurements in this study.
+
+Each cost is a token-based estimate for those 16 requests, not an invoice or
+a current per-task price. September OpenAI estimates predate cache-write
+accounting and can omit those charges. Settings and reasoning differ across
+routes; calls ran in sequential blocks from one host. This small example does
+not establish a stable quality, speed or cost ranking.
+
 The [observed comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
-has the full table, runnable examples, request settings, and failure analysis.
-
-Latest Anthropic run, using the source checkout before the **2.19.1** release:
-
-| Exact API model ID | Original questions / 16 | Full checks / 53 | Smoke / 6 | Estimated cost / 75 |
-|---|---:|---:|---:|---:|
-| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |
-| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |
-
-All 150 API requests completed successfully, with **149/150** valid outputs
-and **$0.0236142** total estimated cost from reported token usage. Haiku's
-password-reset smoke response selected "technical" where the check required
-"account". The original expectations were retained; this is scoped evidence
-for a model review.
-
-| Provider route | Model IDs | Evidence |
-|---|---|---|
-| Anthropic | `claude-haiku-5-5`, `claude-sonnet-5-5` | Measured 2026-10-07; 16/16 each on the original cases; separate checks above |
-| OpenAI | `gpt-6.1-sol` | Measured 2026-09-30; 16/16 valid |
-| OpenRouter / Relace | `z-ai/glm-5.3` | Measured 2026-09-30; 14/16 valid |
-| OpenAI | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` | Measured 2026-09-28 |
-| Anthropic | `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | Measured 2026-09-28 |
-| Gemini | `gemini-3.5-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview` | Measured 2026-09-28 |
-| xAI | `grok-4.7`, `grok-4.6` | Measured 2026-09-28 |
-| OpenRouter | `qwen/qwen3.8-max-0902`, `qwen/qwen3.8-flash`, `deepseek/deepseek-v4-pro-0813`, `deepseek/deepseek-v4.1-flash`, `moonshotai/kimi-k3`, `moonshotai/kimi-k2.6` | Measured 2026-09-28 |
+retains all **27 measured** IDs, request settings and failure analysis.
+Current availability also includes [GLM 5.3 Flash/FlashX](https://docs.z.ai/guides/vlm/glm-5.3-flash),
+`z-ai/glm-5.3-flashx`, [GLM 5.3 Prime](https://openrouter.ai/z-ai/glm-5.3-prime),
+`z-ai/glm-5.3-prime`, and [Qwen 3.8 Max Prime](https://openrouter.ai/qwen/qwen3.8-max-prime),
+`qwen/qwen3.8-max-prime`. These variants are **unmeasured** here; their
+availability does not transfer another row's result.
 
 ## Gemini 4 Argon
 
-Version 2.21.0 adds `gemini-4-argon` pricing and deterministic coverage of the
-native synchronous GenerateContent adapter. Gemini 4 has no live measurement
+`gemini-4-argon` has bundled pricing and deterministic protocol coverage of
+the native synchronous GenerateContent adapter. Gemini 4 has no live measurement
 in the comparison above. See the [current snapshots guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md#gemini-4-argon-and-flash-pricing-transitions)
 for thinking settings, token limits, caching and published price transitions.
 The [bounded example](https://github.com/feronovak/llm-preflight/blob/main/examples/gemini-4-argon.json)
@@ -255,38 +268,54 @@ use 3.8 directly. Their September results remain dated historical evidence.
 
 ## First live run
 
-Python 3.10+ is required. There are no third-party runtime dependencies:
-`pip install llm-preflight` installs this package and nothing else, and the
-CLI runs on the Python standard library alone. Development tools (pytest,
-ruff, mypy) are optional extras that never reach a production install.
+Python 3.10+ is required. The installed CLI and MCP server have no third-party
+runtime dependencies. Create a bounded provider starter from any directory:
 
 ```bash
-cp benchmark.example.json benchmark.json
-cp .env.example .env.production
-# Edit benchmark.json and add only the provider keys you use.
-python3 -m llm_preflight benchmark.json --dry-run
-python3 -m llm_preflight benchmark.json
+llm-preflight init live.json --template provider \
+  --provider openai --model gpt-6.1-sol --api-key-env OPENAI_API_KEY
 ```
 
-The CLI reads `.env.production` beside the config without overriding environment
-variables already set by your shell. Use `--no-env-file` or `--env-file PATH`
-when needed. Runs print a terminal report and, unless `--no-save` is used,
-write JSON and Markdown results under `results/`.
+Set `OPENAI_API_KEY` in your shell or in `.env.production` beside `live.json`.
+The starter expects exactly `ok`. Add the following top-level field to
+`live.json`, keeping its existing fields, to check that validator locally:
 
-Install the command globally in a virtual environment if preferred:
+```json
+{
+  "validation_fixtures": [
+    {"name": "accepted-label", "response": "ok", "expect": "pass"},
+    {"name": "rejected-label", "response": "not ok", "expect": "fail"}
+  ]
+}
+```
 
 ```bash
-python3 -m pip install llm-preflight
-llm-preflight --init
+# Review the prompt, validator, model, request limit and estimated-cost cap.
+llm-preflight live.json --contract-check
+llm-preflight live.json --doctor
+llm-preflight live.json --pricing-check
+llm-preflight live.json --dry-run
+
+# Paid request: run only after explicitly approving the displayed plan.
+llm-preflight live.json
 ```
 
-Run `--doctor` and `--dry-run` before the final command. They make no generation
-requests; the final command is the paid work.
+The starter uses one short exact-output check, a three-request limit and a
+$0.05 estimated-cost cap. Adapt it to a representative application contract
+before using its result to review a model. The checks above make no generation
+requests; the final command does.
+
+The CLI reads `.env.production` beside the config without overriding shell
+variables. Select an existing file with `--env-file PATH`, or use
+`--no-env-file`. Results are saved as JSON and Markdown under `results/`
+unless you use `--no-save`. See [project integration](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md)
+for an application example and a no-spend CI gate.
 
 ## Change a model safely
 
 This is the core workflow. Put your approved model and candidate model in one
-config, then run the small response-and-contract preflight:
+config, review the combined request and cost limits, then preview the small
+response-and-contract preflight:
 
 ```bash
 llm-preflight benchmark.json --migration-check --dry-run
@@ -307,8 +336,8 @@ own feature must preserve.
 ## Using a coding agent
 
 Give an agent the same evidence you would use yourself: a reviewed config, an
-explicit output contract, and a dry run before paid work. Start with the
-recommended five-check suite:
+explicit output contract, and a dry run before paid work. The `agent-smoke`
+alias selects five profiles; `--smoke` makes six requests per model:
 
 ```bash
 # No generation request: inspect credentials, model selection, and paid-work plan.
@@ -362,10 +391,10 @@ llm-preflight benchmark.json --smoke
 
 # Run a single ad hoc prompt.
 llm-preflight --quick "Return only valid JSON with a status field." \
-  --models openai:gpt-5.4-mini
+  --models openai:gpt-6-luna
 ```
 
-Version 2.21.0 adds a guided interactive preflight: select models
+The guided interactive preflight lets you select models
 and workload, review the shared plan and local fixtures, then preview, export,
 edit, or explicitly confirm execution. Try the offline example from a source
 checkout:

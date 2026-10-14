@@ -13,6 +13,42 @@ from llm_preflight.retirements import retirement_report
 META = {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}
 
 
+@pytest.mark.parametrize(
+    ("method", "payload_key"),
+    [
+        ("server/discover", "supportedVersions"),
+        ("tools/list", "tools"),
+        ("resources/list", "resources"),
+        ("resources/read", "contents"),
+    ],
+)
+def test_modern_cacheable_results_have_private_zero_ttl(tmp_path, method, payload_key):
+    params = {"_meta": META}
+    if method == "resources/read":
+        params["uri"] = mcp.SAFE_WORKFLOW_URI
+    response = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}, tmp_path
+    )
+
+    result = response["result"]
+    assert payload_key in result
+    assert type(result["ttlMs"]) is int
+    assert result["ttlMs"] == 0
+    assert result["cacheScope"] == "private"
+    assert result["resultType"] == "complete"
+
+
+@pytest.mark.parametrize("method", ["tools/list", "resources/list", "resources/read"])
+def test_standard_cacheable_results_keep_legacy_shape(tmp_path, method):
+    params = {"uri": mcp.SAFE_WORKFLOW_URI} if method == "resources/read" else {}
+    response = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}, tmp_path
+    )
+
+    assert "result" in response
+    assert {"ttlMs", "cacheScope", "resultType"}.isdisjoint(response["result"])
+
+
 def test_mcp_live_run_uses_a_workspace_contained_config_env_reference(tmp_path):
     config_path = tmp_path / "benchmark.json"
     config = {

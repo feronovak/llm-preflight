@@ -63,7 +63,7 @@ All notable changes to this project are documented here.
   plans. Preview and approve the current plan again; receipt semantics and
   paid-run authorization rules are unchanged.
 - Point the repository Action default, mock smoke workflow and CI examples at
-  the published 2.20.1 package. The `v2.20.1` tag retains its 2.20.0 default;
+  the published 2.21.0 package. The `v2.21.0` tag retains its 2.20.1 default;
   set `package-version` explicitly when using that tag.
 
 ## 2.20.1 - 2026-10-11

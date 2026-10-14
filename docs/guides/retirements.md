@@ -1,9 +1,10 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 Providers retire models on published schedules. llm-preflight bundles a
-hand-reviewed snapshot of the official Anthropic and OpenAI deprecation pages
+hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
+deprecation/model pages
 and reports, for every model ID it meets, whether that page lists it as
 retired or retiring, the retirement date, and the replacement the provider
 names. No network request is made; the snapshot ships with the package.
@@ -22,7 +23,7 @@ configuration approves.
 | Status | Meaning | Decision |
 |---|---|---|
 | `retired` | The retirement date is today (UTC) or earlier, or the page lists the model as retired. | fail |
-| `retiring` | A retirement is announced for a future date, or the model is deprecated with the date to be announced. | inconclusive |
+| `retiring` | A future retirement or deprecation is announced, including an alias redirected to another model without a shutdown date. | inconclusive |
 | `stale` | The snapshot row was reviewed more than 30 days ago, counted in UTC days like the pricing snapshot. Update llm-preflight or read the official page. | inconclusive |
 | `active` | The official page lists the model as active and the row is fresh. | pass |
 | `unknown` | No snapshot row. Absence is not evidence. | none |
@@ -44,8 +45,8 @@ in all three commands.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
-stale 30 days after their review date (rows reviewed 2026-10-09 are stale from
-2026-11-09), after which `--ci` returns 3 for every non-retired model in the
+stale 30 days after their review date (rows reviewed 2026-10-13 are stale from
+2026-11-13), after which `--ci` returns 3 for every non-retired model in the
 snapshot (retired stays 1) until the package is updated; models with no row
 stay at 0.
 
@@ -80,6 +81,14 @@ from the ID.
   [deprecations page](https://developers.openai.com/api/docs/deprecations).
   OpenAI publishes no active list, so an OpenAI ID absent from that page is
   `unknown`, not `active`.
+- Gemini: five targeted rows from Google's
+  [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations) and
+  [Gemini 4 Argon model page](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
+  Gemini 4 Argon, 3.6 Flash and 3.8 Flash are active. The October 8
+  [changelog](https://ai.google.dev/gemini-api/docs/changelog) confirms that
+  3.5 Flash redirects to 3.6 and 3.7 to 3.8; these endpoints are not shutting
+  down. The alias verdict explains the redirect and has no retirement date.
+  Other Gemini IDs remain unknown; this is partial coverage.
 - Text-generation models only. Audio, realtime, image, transcription,
   embedding and fine-tuning retirements are not in the snapshot.
 - A page entry that names more than one replacement, a replacement that
@@ -88,7 +97,14 @@ from the ID.
 
 ## Release retirement review
 
-Before a release, a maintainer reads both official pages against
+The current snapshot contains 114 rows: 36 Anthropic, 73 OpenAI and five Gemini.
+OpenAI's October 14 announcement adds five GPT-4 dated snapshots retiring on
+January 14, 2027, with `gpt-6-luna` as replacement. The corresponding four
+current aliases follow that schedule. The older `gpt-4o-2024-05-13` retains its
+October 23, 2026 retirement date. Older rows no longer recommend deprecated
+`gpt-4.1` or `gpt-4o` as successors.
+
+Before a release, a maintainer reads the official sources against
 `llm_preflight/retirements.py`, updates changed rows, sets each reviewed row's
 `as_of` to the review date, and updates the pinned rows and counts in
 `tests/test_retirements.py` in the same change. The 30-day window is shorter

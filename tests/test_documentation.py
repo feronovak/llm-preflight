@@ -12,8 +12,8 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in page
-    assert "Package version: **2.20.1**" in page
+    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in page
+    assert "Package version: **2.21.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     for provider, model_id in PUBLIC_PRICING:
@@ -92,8 +92,8 @@ def test_homepage_model_list_matches_comparison_evidence():
         assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
         assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
         assert "password-reset" in page
-    assert "2.20.1" in readme
-    assert "2.20.0" in docs_index
+    assert "2.21.0" in readme
+    assert "2.21.0" in docs_index
     assert "2.19.1" in study
 
 
@@ -113,7 +113,7 @@ def test_mcp_release_notes_and_security_boundary_are_current():
     assert "server requires `confirm_paid_run: true`" in mcp_guide
     assert "agent-supplied boolean" in mcp_guide
     assert "not proof of user approval" in mcp_guide
-    assert "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0" in feature_map
+    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in feature_map
     assert "current-price coverage gate" in feature_map
     assert "`--doctor` — validate config, keys, model resolution" in feature_map
     assert "Schema-versioned agent decision contract" in feature_map
@@ -268,13 +268,13 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
 
     coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
-    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in coding_agents
+    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in coding_agents
     for step in coding_agents.split("## ")[1:]:
         if "Run `--doctor`, `--pricing-check`, and `--dry-run`" in step:
             assert "`retirements` decision" in step
 
     assert (
-        "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0"
+        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
@@ -285,20 +285,20 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-08 · **As of:** v2.19.1"
+        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
         in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     )
 
     assert (
-        "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0"
+        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1"
+        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
         in (ROOT / "README.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0"
+        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
         in (ROOT / "docs/FEATURE_MAP.md").read_text()
     )
 
@@ -466,7 +466,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-11 · **As of:** v2.20.1" in guide
+    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in guide
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide
@@ -484,7 +484,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "3 retiring or stale" in cli_reference.split("| `--ci` |")[1].split("\n")[0]
     assert "retirement" in cli_reference.split("| `--doctor` |")[1].split("\n")[0]
     assert "retirement" in cli_reference.split("| `--dry-run` |")[1].split("\n")[0]
-    assert "**Last reviewed:** 2026-10-10 · **As of:** v2.20.0" in feature_map
+    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in feature_map
     assert "retirement snapshot" in feature_map
     assert "`retirement`" in agent_validation
     validation_text = " ".join(agent_validation.split())

@@ -166,7 +166,7 @@ def test_sonnet_5_5_refreshes_persisted_cache_pricing_without_overwriting_user_r
     assert apply_public_pricing(override) == override
 
 
-def test_observed_direct_provider_routes_have_bundled_prices():
+def test_observed_direct_provider_routes_have_bundled_prices_or_reviewed_redirects():
     from llm_preflight.pricing import PUBLIC_PRICING
 
     study = Path("docs/guides/observed-model-comparison.md").read_text()
@@ -183,9 +183,16 @@ def test_observed_direct_provider_routes_have_bundled_prices():
     )
 
     assert direct_rows
-    assert {
-        (providers[provider], model) for provider, model in direct_rows
-    } <= PUBLIC_PRICING.keys()
+    from llm_preflight.retirements import GEMINI_MODEL_REDIRECTS
+
+    historical = {(providers[provider], model) for provider, model in direct_rows}
+    redirects = {("gemini", model) for model in GEMINI_MODEL_REDIRECTS}
+    assert historical - PUBLIC_PRICING.keys() == {("gemini", "gemini-3.5-flash")}
+    assert historical <= PUBLIC_PRICING.keys() | redirects
+    assert all(
+        ("gemini", target) in PUBLIC_PRICING
+        for target in GEMINI_MODEL_REDIRECTS.values()
+    )
 
 
 def test_gemini_3_1_pricing_has_cache_and_long_context_tiers():
@@ -219,6 +226,7 @@ def test_gpt_5_6_pricing_has_cache_and_long_context_tiers(
         "input_cost_per_million": long_input,
         "output_cost_per_million": long_output,
         "cached_input_cost_per_million": long_cached,
+        "cache_write_input_cost_per_million": long_input * 1.25,
     }
 
 
@@ -348,8 +356,9 @@ def test_gpt_6_astra_pricing_has_cache_and_long_context_tiers():
         "input_cost_per_million": 20.0,
         "output_cost_per_million": 75.0,
         "cached_input_cost_per_million": 2.0,
+        "cache_write_input_cost_per_million": 25.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
     assert model["pricing_metadata"]["source_url"] == (
         "https://developers.openai.com/api/docs/models/gpt-6-astra"
     )
@@ -366,6 +375,7 @@ def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
         "input_cost_per_million": 4.0,
         "output_cost_per_million": 15.0,
         "cached_input_cost_per_million": 0.4,
+        "cache_write_input_cost_per_million": 5.0,
     }
     assert luna["input_cost_per_million"] == 0.1
     assert luna["output_cost_per_million"] == 0.5
@@ -374,8 +384,9 @@ def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
         "input_cost_per_million": 0.2,
         "output_cost_per_million": 0.75,
         "cached_input_cost_per_million": 0.02,
+        "cache_write_input_cost_per_million": 0.25,
     }
-    assert sol["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert sol["pricing_metadata"]["as_of"] == "2026-10-13"
 
 
 @pytest.mark.parametrize(
@@ -501,13 +512,13 @@ def test_glm_5_3_uses_official_native_rates_and_cache_discount():
     ) == pytest.approx(0.000928)
 
 
-def test_gemini_3_8_flash_uses_the_current_introductory_rate():
+def test_gemini_3_8_flash_uses_the_current_introductory_rate(snapshot_review_day):
     model = apply_public_pricing({"provider": "gemini", "model": "gemini-3.8-flash"})
 
     assert model["input_cost_per_million"] == 0.75
     assert model["output_cost_per_million"] == 3.75
     assert model["cached_input_cost_per_million"] == 0.075
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
     assert model["pricing_metadata"]["source_url"] == (
         "https://ai.google.dev/gemini-api/docs/pricing"
     )
@@ -634,24 +645,24 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
     from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
 
     assert PUBLIC_PRICING == {
-        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-09-28"),
-        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-09-28"),
-        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-09-28"),
+        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-13"),
+        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-13"),
+        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-13"),
         ("openai", "gpt-5.5"): (5.0, 30.0, "2026-09-28"),
         ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-09-28"),
         ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-09-28"),
         ("openai", "gpt-4.1"): (2.0, 8.0, "2026-09-28"),
         ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
         ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
-        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-13"),
         ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-09-30"),
-        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
-        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
+        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-13"),
+        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-13"),
         ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
         ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-09-28"),
-        ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-09-28"),
-        ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
-        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
+        ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-13"),
+        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-13"),
+        ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-13"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
         ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-07"),
         ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-07"),
@@ -686,12 +697,12 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
     )
 
 
-def test_approved_smoke_cohort_has_complete_current_pricing():
+def test_approved_smoke_cohort_has_complete_current_pricing(snapshot_review_day):
     approved = json.loads(Path("examples/approved-smoke.json").read_text())
 
     report = pricing_coverage_report(
         resolve_pricing(approved["models"])["models"],
-        today=date(2026, 9, 28),
+        today=date(2026, 10, 13),
         require_current_pricing=True,
     )
 

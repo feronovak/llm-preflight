@@ -6,37 +6,40 @@ import math
 from datetime import date, datetime, timezone
 from typing import Any, TypeGuard, cast
 
+from .retirements import GEMINI_MODEL_REDIRECTS
+
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
 # do not consistently return prices, so these public rates fill that gap.
 # OpenRouter prices remain dynamic and take precedence when its catalog returns
-# them. Gemini 3.1 Pro uses the <=200k-input tier. Gemini 3.7 Flash and Gemini
-# 3.8 Flash use the introductory rate through 2026-12-31; review the
-# $1.50/$7.50 standard rate before the next 2027 release. Gemini 4 has no
-# public API model ID or price table as of 2026-09-22, so it is omitted.
+# them. Gemini 3.1 Pro uses the <=200k-input tier. Gemini 3.6 Flash and Gemini
+# 3.8 Flash use introductory rates through 2026-12-31. Argon uses introductory
+# rates through 2026-11-30. Published date changes are applied below; snapshot
+# freshness still requires a new review. Redirected Gemini aliases have no
+# reviewed effective-route price and are deliberately omitted.
 # DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
 # snapshots use QwenCloud USD list rates. TypeSafe Jev bills input only.
 # Snapshot rows were reviewed against their primary official sources on
 # their recorded dates. Qwen rows retain USD list rates, excluding temporary
 # discounts.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
-    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-09-28"),
-    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-09-28"),
-    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-09-28"),
+    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-13"),
+    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-13"),
+    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-13"),
     ("openai", "gpt-5.5"): (5.0, 30.0, "2026-09-28"),
     ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-09-28"),
     ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-09-28"),
     ("openai", "gpt-4.1"): (2.0, 8.0, "2026-09-28"),
     ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
     ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
-    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-09-28"),
+    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-13"),
     ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-09-30"),
-    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-09-28"),
-    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-09-28"),
+    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-13"),
+    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-13"),
     ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
     ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-09-28"),
-    ("gemini", "gemini-3.5-flash"): (1.5, 9.0, "2026-09-28"),
-    ("gemini", "gemini-3.7-flash"): (0.75, 3.75, "2026-09-28"),
-    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-09-28"),
+    ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-13"),
+    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-13"),
+    ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-13"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
     ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-07"),
     ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-07"),
@@ -105,6 +108,13 @@ PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
     for key in PUBLIC_PRICING
 }
 
+# Known future standard rates do not refresh the source's review date.
+PUBLIC_PRICING_CHANGES = {
+    ("gemini", "gemini-4-argon"): (date(2026, 12, 1), 4.0, 20.0, 0.2),
+    ("gemini", "gemini-3.6-flash"): (date(2027, 1, 1), 1.5, 7.5, 0.15),
+    ("gemini", "gemini-3.8-flash"): (date(2027, 1, 1), 1.5, 7.5, 0.15),
+}
+
 PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     ("zai", "glm-5.3"): {"cached_input_cost_per_million": 0.26},
     ("openai", "gpt-5.5"): {
@@ -125,65 +135,77 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("openai", "gpt-5.6-luna"): {
         "cached_input_cost_per_million": 0.02,
+        "cache_write_input_cost_per_million": 0.25,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 0.2,
                 "output_cost_per_million": 1.2,
                 "cached_input_cost_per_million": 0.02,
+                "cache_write_input_cost_per_million": 0.25,
             },
             {
                 "input_cost_per_million": 0.4,
                 "output_cost_per_million": 1.8,
                 "cached_input_cost_per_million": 0.04,
+                "cache_write_input_cost_per_million": 0.5,
             },
         ],
     },
     ("openai", "gpt-5.6-terra"): {
         "cached_input_cost_per_million": 0.2,
+        "cache_write_input_cost_per_million": 2.5,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 2.0,
                 "output_cost_per_million": 12.0,
                 "cached_input_cost_per_million": 0.2,
+                "cache_write_input_cost_per_million": 2.5,
             },
             {
                 "input_cost_per_million": 4.0,
                 "output_cost_per_million": 18.0,
                 "cached_input_cost_per_million": 0.4,
+                "cache_write_input_cost_per_million": 5.0,
             },
         ],
     },
     ("openai", "gpt-5.6-sol"): {
         "cached_input_cost_per_million": 0.4,
+        "cache_write_input_cost_per_million": 5.0,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 4.0,
                 "output_cost_per_million": 20.0,
                 "cached_input_cost_per_million": 0.4,
+                "cache_write_input_cost_per_million": 5.0,
             },
             {
                 "input_cost_per_million": 8.0,
                 "output_cost_per_million": 30.0,
                 "cached_input_cost_per_million": 0.8,
+                "cache_write_input_cost_per_million": 10.0,
             },
         ],
     },
     ("openai", "gpt-6-astra"): {
         "cached_input_cost_per_million": 1.0,
+        "cache_write_input_cost_per_million": 12.5,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 10.0,
                 "output_cost_per_million": 50.0,
                 "cached_input_cost_per_million": 1.0,
+                "cache_write_input_cost_per_million": 12.5,
             },
             {
                 "input_cost_per_million": 20.0,
                 "output_cost_per_million": 75.0,
                 "cached_input_cost_per_million": 2.0,
+                "cache_write_input_cost_per_million": 25.0,
             },
         ],
     },
@@ -208,44 +230,53 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("openai", "gpt-6-sol"): {
         "cached_input_cost_per_million": 0.2,
+        "cache_write_input_cost_per_million": 2.5,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 2.0,
                 "output_cost_per_million": 10.0,
                 "cached_input_cost_per_million": 0.2,
+                "cache_write_input_cost_per_million": 2.5,
             },
             {
                 "input_cost_per_million": 4.0,
                 "output_cost_per_million": 15.0,
                 "cached_input_cost_per_million": 0.4,
+                "cache_write_input_cost_per_million": 5.0,
             },
         ],
     },
     ("openai", "gpt-6-luna"): {
         "cached_input_cost_per_million": 0.01,
+        "cache_write_input_cost_per_million": 0.125,
         "pricing_tiers": [
             {
                 "up_to_input_tokens": 272_000,
                 "input_cost_per_million": 0.1,
                 "output_cost_per_million": 0.5,
                 "cached_input_cost_per_million": 0.01,
+                "cache_write_input_cost_per_million": 0.125,
             },
             {
                 "input_cost_per_million": 0.2,
                 "output_cost_per_million": 0.75,
                 "cached_input_cost_per_million": 0.02,
+                "cache_write_input_cost_per_million": 0.25,
             },
         ],
     },
     ("gemini", "gemini-3.1-flash-lite"): {
         "cached_input_cost_per_million": 0.025,
     },
-    ("gemini", "gemini-3.7-flash"): {
+    ("gemini", "gemini-3.6-flash"): {
         "cached_input_cost_per_million": 0.075,
     },
     ("gemini", "gemini-3.8-flash"): {
         "cached_input_cost_per_million": 0.075,
+    },
+    ("gemini", "gemini-4-argon"): {
+        "cached_input_cost_per_million": 0.1,
     },
     ("deepseek", "deepseek-flash"): {
         "cached_input_cost_per_million": 0.006,
@@ -486,13 +517,37 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
     key = (model.get("provider", "openai_compatible"), model["model"])
     pricing = PUBLIC_PRICING.get(key)
     if pricing is None:
+        if key[0] == "gemini" and key[1] in GEMINI_MODEL_REDIRECTS:
+            # Clear persisted package rates, while the override guard above
+            # preserves an owner's explicitly reviewed effective-route price.
+            return {
+                **{
+                    k: v
+                    for k, v in model.items()
+                    if k
+                    not in {
+                        "input_cost_per_million",
+                        "output_cost_per_million",
+                        "cached_input_cost_per_million",
+                        "cache_write_input_cost_per_million",
+                        "pricing_tiers",
+                        "pricing_metadata",
+                    }
+                },
+                "pricing_metadata": {"source": "unknown"},
+            }
         return model
     input_price, output_price, as_of = pricing
+    details = PUBLIC_PRICING_DETAILS.get(key, {})
+    change = PUBLIC_PRICING_CHANGES.get(key)
+    if change and datetime.now(timezone.utc).date() >= change[0]:
+        _, input_price, output_price, cache_price = change
+        details = {**details, "cached_input_cost_per_million": cache_price}
     return {
         **model,
         "input_cost_per_million": input_price,
         "output_cost_per_million": output_price,
-        **PUBLIC_PRICING_DETAILS.get(key, {}),
+        **details,
         "pricing_metadata": {
             "source": "official snapshot",
             "confidence": "official",

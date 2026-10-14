@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -236,6 +236,23 @@ for a model review.
 | xAI | `grok-4.7`, `grok-4.6` | Measured 2026-09-28 |
 | OpenRouter | `qwen/qwen3.8-max-0902`, `qwen/qwen3.8-flash`, `deepseek/deepseek-v4-pro-0813`, `deepseek/deepseek-v4.1-flash`, `moonshotai/kimi-k3`, `moonshotai/kimi-k2.6` | Measured 2026-09-28 |
 
+## Gemini 4 Argon
+
+Version 2.21.0 adds `gemini-4-argon` pricing and deterministic coverage of the
+native synchronous GenerateContent adapter. Gemini 4 has no live measurement
+in the comparison above. See the [current snapshots guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md#gemini-4-argon-and-flash-pricing-transitions)
+for thinking settings, token limits, caching and published price transitions.
+The [bounded example](https://github.com/feronovak/llm-preflight/blob/main/examples/gemini-4-argon.json)
+includes local contract fixtures and an explicit one-request budget:
+
+```bash
+llm-preflight examples/gemini-4-argon.json --contract-check --json
+llm-preflight examples/gemini-4-argon.json --dry-run --json
+```
+
+Google's deprecated 3.5/3.7 Flash aliases redirect to 3.6/3.8; current examples
+use 3.8 directly. Their September results remain dated historical evidence.
+
 ## First live run
 
 Python 3.10+ is required. There are no third-party runtime dependencies:
@@ -347,6 +364,18 @@ llm-preflight benchmark.json --smoke
 llm-preflight --quick "Return only valid JSON with a status field." \
   --models openai:gpt-5.4-mini
 ```
+
+Version 2.21.0 adds a guided interactive preflight: select models
+and workload, review the shared plan and local fixtures, then preview, export,
+edit, or explicitly confirm execution. Try the offline example from a source
+checkout:
+
+```bash
+llm-preflight examples/interactive-contract.json --interactive --dry-run --no-env-file
+```
+
+See [interactive runs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md)
+for the prompts, exports and scripted equivalents.
 
 For advanced discovery, interactive runs, CI, baselines, replay, and stop
 modes, see [workflows](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md). For models, environment files,

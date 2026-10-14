@@ -39,7 +39,11 @@ def test_source_audit_reports_literal_model_ids_without_network(tmp_path):
     assert report["references"][0]["retirement"]["status"] == "unknown"
     assert report["ok"] is True
     assert report["confidence"] == "limited_static_pricing_and_retirement"
-    assert report["retirement_snapshot"]["providers"] == ["anthropic", "openai"]
+    assert report["retirement_snapshot"]["providers"] == [
+        "anthropic",
+        "gemini",
+        "openai",
+    ]
     assert any("not a verdict" in note for note in report["notes"])
 
 

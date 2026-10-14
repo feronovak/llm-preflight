@@ -9,6 +9,7 @@ import sys
 import tempfile
 from collections import Counter
 from collections.abc import Callable
+from contextlib import nullcontext, redirect_stdout
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -51,6 +52,7 @@ from .features import (
     matrix_report,
     replay_config,
 )
+from .interactive import InteractiveServices, select_interactively
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
@@ -548,7 +550,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{plan['possible_requests']} with {plan['retry_max_attempts']} attempts"
         ),
         f"Cost: {cost}",
-        f"Stop on: {plan['stop_on']}",
+        f"Stop on: {plan['stop_on'] if plan['stop_on'] not in (None, 'none') else 'never'}",
         f"Saved responses: {plan['save_responses']}",
     ]
     coverage = plan.get("pricing_coverage", {})
@@ -1322,6 +1324,12 @@ def _watch_new_main(argv: list[str]) -> None:
     if (args.test or args.interactive or args.write_config) and not args.against:
         parser.error("--test, --interactive, and --write-config require --against")
 
+    def ui_output(message: str) -> None:
+        print(redact_secrets(message), file=sys.stderr if args.json else sys.stdout)
+
+    def ui_input(prompt: str) -> str:
+        return _interactive_input(redact_secrets(prompt), json_output=args.json)
+
     _load_config_env_file(args.config, args)
     watch_config = apply_provider_presets(apply_model_aliases(load_config(args.config)))
     missing_keys = _missing_discovery_keys(watch_config)
@@ -1437,34 +1445,44 @@ def _watch_new_main(argv: list[str]) -> None:
             if (model.get("provider", "openai_compatible"), model["model"])
             not in approved_keys
         ]
-        print(
+        ui_output(
             f"Catalog refreshed: {len(models)} discovered; "
             f"{len(approved_keys)} approved; {len(candidates)} available for review."
         )
         if not candidates:
-            print("Every discovered model is already approved.")
+            ui_output("Every discovered model is already approved.")
             return
         selection = interactive_watch_selection(
             watch_config,
             approved_config,
             candidates,
+            input_fn=ui_input,
+            output_fn=ui_output,
         )
         if selection is None:
             return
         config, args.tests, smoke = selection
+        config["_source_config_path"] = str(args.config.resolve())
+        config["_config_dir"] = str(args.config.resolve().parent)
         if smoke:
             config = apply_smoke_mode(config)
             config.setdefault("save_responses", "failures")
         final_selection = interactive_selection(
             config,
-            color=sys.stdout.isatty(),
-            clear_fn=_clear_screen,
+            input_fn=ui_input,
+            output_fn=ui_output,
+            color=sys.stdout.isatty() and not args.json,
+            clear_fn=_clear_screen if sys.stdout.isatty() and not args.json else None,
             selected_models=config["models"],
             selected_profile_selector=args.tests if args.tests is not None else "",
+            prepare_only=args.dry_run,
+            workflow=True,
         )
         if final_selection is None:
             return
         config, args.tests = final_selection
+        if config.pop("_interactive_action", None) == "preview":
+            args.dry_run = True
     else:
         candidate_keys = {
             (item.get("provider", "openai_compatible"), item["model"])
@@ -1511,27 +1529,28 @@ def _watch_new_main(argv: list[str]) -> None:
             and not model_failed(model)
         ]
         if passing:
-            print("Passing candidates:")
+            ui_output("Passing candidates:")
             for index, model in enumerate(passing, 1):
-                print(f"  {index}. {model['provider']}:{model['model']}")
-            answer = input("Approve a candidate number, or Enter to skip: ").strip()
+                ui_output(f"  {index}. {model['provider']}:{model['model']}")
+            answer = ui_input("Approve a candidate number, or Enter to skip: ").strip()
             if answer.isdigit() and 1 <= int(answer) <= len(passing):
                 model = passing[int(answer) - 1]
                 answer = (
-                    input(f"Approve {model['provider']}:{model['model']}? [y/N]: ")
+                    ui_input(f"Approve {model['provider']}:{model['model']}? [y/N]: ")
                     .strip()
                     .casefold()
                 )
                 if answer in {"y", "yes"}:
-                    _approve_model_main(
-                        [
-                            f"{model['provider']}:{model['model']}",
-                            "--from",
-                            str(path),
-                            "--approved",
-                            str(args.against),
-                        ]
-                    )
+                    with redirect_stdout(sys.stderr) if args.json else nullcontext():
+                        _approve_model_main(
+                            [
+                                f"{model['provider']}:{model['model']}",
+                                "--from",
+                                str(path),
+                                "--approved",
+                                str(args.against),
+                            ]
+                        )
     if exit_code := _result_exit_code(result):
         raise SystemExit(exit_code)
 
@@ -1929,6 +1948,13 @@ def _clear_screen() -> None:
     print("\x1b[2J\x1b[H", end="")
 
 
+def _interactive_input(prompt: str, *, json_output: bool = False) -> str:
+    if json_output:
+        print(redact_secrets(prompt), end="", file=sys.stderr, flush=True)
+        return input("")
+    return input(prompt)
+
+
 def interactive_selection(
     config: dict[str, Any],
     input_fn: Callable[[str], str] = input,
@@ -1937,216 +1963,33 @@ def interactive_selection(
     clear_fn: Callable[[], None] | None = None,
     selected_models: list[dict[str, Any]] | None = None,
     selected_profile_selector: str | None = None,
+    prepare_only: bool = False,
+    workflow: bool = False,
 ) -> tuple[dict[str, Any], str | None] | None:
-    if clear_fn:
-        clear_fn()
-    if selected_models is None:
-        models = resolve_models(config)
-        if not models:
-            raise ValueError("model discovery returned no models")
-
-        output_fn(_stage_heading("Models", "36", color))
-        for index, model in enumerate(models, 1):
-            provider = model.get("provider", "openai_compatible")
-            output_fn(
-                f"  {_style(str(index) + '.', '1;33', color)} "
-                f"{_style(provider, '36', color)}: {model['model']}"
-            )
-        model_answer = input_fn(
-            "Select models (numbers, provider, provider/family, or all): "
-        ).strip()
-        if not model_answer or model_answer.casefold() == "all":
-            selected_models = models
-        else:
-            selected_indexes: set[int] = set()
-            selectors = [
-                item.strip() for item in model_answer.split(",") if item.strip()
-            ]
-            for selector in selectors:
-                if selector.isdigit():
-                    selected_indexes.update(_selected_numbers(selector, len(models)))
-                    continue
-                provider, separator, family = selector.casefold().partition("/")
-                provider_matches = {
-                    index
-                    for index, model in enumerate(models)
-                    if model.get("provider", "openai_compatible").casefold() == provider
-                }
-                exact_matches = {
-                    index
-                    for index in provider_matches
-                    if separator and models[index]["model"].casefold() == family
-                }
-                matches = exact_matches or {
-                    index
-                    for index in provider_matches
-                    if not separator
-                    or models[index]["model"].casefold().startswith(family + "/")
-                    or models[index]["model"].casefold().startswith(family + "-")
-                }
-                if not matches:
-                    raise ValueError(f"model selector {selector!r} matched no models")
-                selected_indexes.update(matches)
-            selected_models = [
-                model for index, model in enumerate(models) if index in selected_indexes
-            ]
-
-    if selected_profile_selector is None:
-        output_fn("")
-        output_fn(_stage_heading("Tests", "35", color))
-        output_fn(
-            "  Recommended: agent-smoke — five production-shaped functional checks; "
-            "excludes load."
-        )
-        tests: list[tuple[str, str, str]] = []
-        for profile in BUILTIN_PROFILES:
-            tests.append(("profile", profile["name"], profile["description"]))
-        custom_prompts = config.get("prompts", [])
-        for prompt in custom_prompts:
-            tests.append(
-                (
-                    "custom",
-                    prompt["name"],
-                    prompt.get("description", "Custom prompt test."),
-                )
-            )
-        for index, (_, name, description) in enumerate(tests, 1):
-            output_fn(
-                f"  {_style(str(index) + '.', '1;33', color)} "
-                f"{_style(name, '1', color)} — {description}"
-            )
-        profile_answer = input_fn(
-            "Select tests (numbers/names/agent-smoke/all) or Enter for the config "
-            "prompt: "
-        ).strip()
-        if profile_answer.casefold() == "all":
-            profile_selector = ",".join(
-                profile["name"]
-                for profile in BUILTIN_PROFILES
-                if "concurrency_levels" not in profile
-            )
-            profile_selector = ",".join(
-                [profile_selector] + [prompt["name"] for prompt in custom_prompts]
-            )
-        elif profile_answer:
-            selected_names: list[str] = []
-            for item in [
-                part.strip() for part in profile_answer.split(",") if part.strip()
-            ]:
-                if item.isdigit():
-                    selected_names.extend(
-                        tests[index][1] for index in _selected_numbers(item, len(tests))
-                    )
-                else:
-                    selected_names.append(item)
-            profile_selector = ",".join(selected_names)
-        else:
-            if "prompt" not in config:
-                raise ValueError("select a custom prompt name or built-in profile")
-            profile_selector = None
-    else:
-        profile_selector = selected_profile_selector
-
-    default_repetitions = int(
-        config.get(
-            "suite_repetitions" if profile_selector else "repetitions",
-            1 if profile_selector else 5,
-        )
+    services = InteractiveServices(
+        resolve_models=resolve_models,
+        make_plan=dry_run_plan,
+        format_plan=_format_dry_run_plan,
+        format_contract=_format_contract_check,
+        confirm_budget=confirm_interactive_budget,
+        selected_numbers=_selected_numbers,
+        heading=_stage_heading,
+        style=_style,
+        write_json=_write_starter_config,
+        command=_display_command(),
     )
-    output_fn("")
-    output_fn(_stage_heading("Repetitions", "34", color))
-    repetitions_answer = input_fn(
-        f"Repetitions per test [{default_repetitions}]: "
-    ).strip()
-    repetitions = int(repetitions_answer) if repetitions_answer else default_repetitions
-    if repetitions < 1:
-        raise ValueError("repetitions must be positive")
-
-    output_fn("")
-    output_fn(_stage_heading("Stop Mode", "31", color))
-    output_fn("  1. any-fail — stop after API error or TEST FAIL")
-    output_fn("  2. api-error — stop only if the provider/request breaks")
-    output_fn("  3. test-fail — stop on model output failure, ignore API-ok passes")
-    output_fn("  4. never — run every selected model")
-    stop_answer = input_fn("Stop on [1]: ").strip().casefold()
-    if stop_answer in {"", "1", "any-fail"}:
-        stop_on = "any-fail"
-    elif stop_answer in {"2", "api-error"}:
-        stop_on = "api-error"
-    elif stop_answer in {"3", "test-fail"}:
-        stop_on = "test-fail"
-    elif stop_answer in {"4", "never", "none"}:
-        stop_on = None
-    elif stop_answer in {"y", "yes", "n", "no"}:
-        # A familiar confirmation answer here must never authorize spending.
-        # Keep the safe default and still ask the separate paid-run question.
-        stop_on = "any-fail"
-    else:
-        raise ValueError(
-            "stop mode must be 1, 2, 3, 4, any-fail, api-error, test-fail, or never"
-        )
-
-    selected_config = dict(config)
-    selected_config["models"] = selected_models
-    selected_config["discovery"] = []
-    selected_config["repetitions"] = repetitions
-    selected_config["suite_repetitions"] = repetitions
-    if profile_selector:
-        selected_config["profiles"] = profile_selector
-    if stop_on:
-        selected_config["stop_on"] = stop_on
-    selected_config.setdefault("save_responses", "failures")
-    budget = estimate_budget(selected_config)
-    estimated_cost = budget["estimated_cost_usd"]
-    maximum_cost = budget["maximum_estimated_cost_usd"]
-    profile_label = profile_selector or selected_config.get(
-        "prompt_name", "config prompt"
-    )
-    output_fn("")
-    output_fn(_stage_heading("Run Plan", "36", color))
-    output_fn(f"  {_style('Models:', '1;36', color)} {len(selected_models)} selected")
-    output_fn(f"  {_style('Tests:', '1;35', color)} {profile_label}")
-    output_fn(f"  {_style('Repetitions:', '1;34', color)} {repetitions}")
-    output_fn(f"  {_style('Stop on:', '1;31', color)} {stop_on or 'never'}")
-    output_fn(
-        f"  {_style('Estimate:', '1;33', color)} "
-        f"{budget['requests']} nominal requests, up to "
-        f"{budget['possible_requests']} with retries; "
-        f"{'cost unavailable' if estimated_cost is None else f'${estimated_cost:.6f} nominal'}"
-        f"{' ' if maximum_cost is None else f' (up to ${maximum_cost:.6f} with retries)'}."
-    )
-    output_fn(
-        "  "
-        + _style("Status:", "1;36", color)
-        + " API OK means the provider returned a response; "
-        + "TEST OK/FAIL means the evaluator accepted or rejected it."
-    )
-    output_fn(
-        f"  {_style('Saved output:', '1;36', color)} "
-        f"{selected_config['save_responses']}"
-    )
-    if profile_selector:
-        output_fn("")
-        output_fn("Request breakdown per model:")
-        for breakdown_item in _test_breakdown(selected_config, profile_selector):
-            output_fn(
-                f"  {breakdown_item['name']}: "
-                f"{breakdown_item['requests_per_model']} ({breakdown_item['details']})"
-            )
-        output_fn("")
-    if not confirm_interactive_budget(
-        selected_config,
-        profile_selector,
+    return select_interactively(
+        config,
+        services,
         input_fn=input_fn,
         output_fn=output_fn,
         color=color,
-    ):
-        return None
-    confirmation_answer = input_fn("Run paid benchmark? [y/N]: ").strip().casefold()
-    if confirmation_answer not in {"y", "yes"}:
-        output_fn(_style("Cancelled.", "1;33", color))
-        return None
-    return selected_config, profile_selector
+        clear_fn=clear_fn,
+        selected_models=selected_models,
+        selected_profile_selector=selected_profile_selector,
+        prepare_only=prepare_only,
+        workflow=workflow,
+    )
 
 
 def _report_main(argv: list[str]) -> None:
@@ -2446,6 +2289,7 @@ def main() -> None:
     args = parser.parse_args()
     path: Path | None = None
     environment: dict[str, Any] | None = None
+    deferred_env_path: Path | None = None
     try:
         if args.init is not None:
             if args.config is not None:
@@ -2505,7 +2349,8 @@ def main() -> None:
         if args.quick:
             if not args.models:
                 parser.error("--quick requires --models")
-            _load_quick_env_file(args)
+            if not args.interactive:
+                _load_quick_env_file(args)
             config = {
                 "name": "quick",
                 "prompt": args.quick,
@@ -2523,17 +2368,21 @@ def main() -> None:
                         "--replay with input_images requires the recorded source config path"
                     )
                 config["_config_dir"] = str(Path(source_config_path).parent.resolve())
-            environment = _load_config_env_file(
-                Path(source_config_path) if source_config_path else args.replay,
-                args,
-                config,
+            replay_env_path = (
+                Path(source_config_path) if source_config_path else args.replay
             )
+            if args.interactive:
+                deferred_env_path = replay_env_path
+            else:
+                environment = _load_config_env_file(replay_env_path, args, config)
         else:
             if args.config is None:
                 parser.error(
                     "config is required unless --quick, --diff, or --replay is used"
                 )
-            if not args.contract_check and not args.change_plan:
+            if args.interactive:
+                deferred_env_path = args.config
+            elif not args.contract_check and not args.change_plan:
                 environment = _load_config_env_file(args.config, args)
             config = load_config(args.config)
             config["_source_config_path"] = str(args.config.resolve())
@@ -2541,6 +2390,9 @@ def main() -> None:
         config = apply_model_aliases(config)
         config = apply_provider_presets(config)
         validate_config_validations(config)
+        if deferred_env_path is not None and (config.get("discovery") or args.doctor):
+            environment = _load_config_env_file(deferred_env_path, args, config)
+            deferred_env_path = None
         if args.change_plan:
             change_plan = git_change_plan(Path.cwd(), args.change_plan)
             change_payload = {
@@ -2654,12 +2506,31 @@ def main() -> None:
         if args.interactive:
             selection = interactive_selection(
                 config,
-                color=sys.stdout.isatty(),
-                clear_fn=_clear_screen,
+                input_fn=lambda prompt: _interactive_input(
+                    prompt, json_output=args.json
+                ),
+                output_fn=lambda message: print(
+                    message, file=sys.stderr if args.json else sys.stdout
+                ),
+                color=sys.stdout.isatty() and not args.json,
+                clear_fn=_clear_screen
+                if sys.stdout.isatty() and not args.json
+                else None,
+                prepare_only=args.dry_run,
+                workflow=True,
             )
             if selection is None:
                 return
             config, profile_selector = selection
+            if config.pop("_interactive_action", None) == "preview":
+                args.dry_run = True
+            if not args.dry_run and any(
+                model.get("provider") != "mock" for model in config["models"]
+            ):
+                if deferred_env_path is not None:
+                    environment = _load_config_env_file(deferred_env_path, args, config)
+                elif args.quick:
+                    _load_quick_env_file(args)
         if args.dry_run:
             plan = dry_run_plan(config, profile_selector, today=today_utc())
             payload: dict[str, Any] = plan
@@ -2706,7 +2577,13 @@ def main() -> None:
                 progress=(
                     (
                         lambda event: print(
-                            format_progress_event(event, color=use_color), flush=True
+                            redact_secrets(
+                                format_progress_event(
+                                    event, color=use_color and not args.json
+                                )
+                            ),
+                            file=sys.stderr if args.json else sys.stdout,
+                            flush=True,
                         )
                     )
                     if args.interactive
@@ -2717,7 +2594,12 @@ def main() -> None:
         if not args.no_save:
             path = save_result(result, args.output_dir)
     except (KeyboardInterrupt, EOFError):
-        print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
+        print(
+            "Benchmark cancelled; saved exports were kept."
+            if args.interactive
+            else "Benchmark cancelled; no artifacts saved.",
+            file=sys.stderr,
+        )
         raise SystemExit(130) from None
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(redact_secrets(str(exc))))
@@ -2739,6 +2621,17 @@ def main() -> None:
         print(_format_diff(baseline_diff))
     if path is not None:
         print(f"Saved raw result to {path}", file=sys.stderr)
+        if args.interactive:
+            print(f"Saved report to {path.with_suffix('.md')}", file=sys.stderr)
+            print(
+                f"Saved decision summary to {path.with_suffix('.summary.md')}",
+                file=sys.stderr,
+            )
+            print(
+                f"Offline HTML: {_display_command()} report {shlex.quote(str(path))} "
+                f"--output {shlex.quote(str(path.with_suffix('.html')))}",
+                file=sys.stderr,
+            )
     if ci_failed:
         raise SystemExit(1)
     if exit_code := _result_exit_code(result):

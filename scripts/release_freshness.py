@@ -28,6 +28,7 @@ from llm_preflight.source_audit import audit_source
 
 EXAMPLES = (
     "approved-smoke",
+    "gemini-4-argon",
     "cross-provider-run",
     "frontier-candidates",
     "flagship-comparison",

@@ -4,7 +4,7 @@ import pytest
 
 # The day the bundled pricing and retirement snapshots were last reviewed
 # together; bump it in the same change that refreshes a snapshot.
-SNAPSHOT_REVIEW_DAY = date(2026, 10, 10)
+SNAPSHOT_REVIEW_DAY = date(2026, 10, 13)
 
 
 @pytest.fixture

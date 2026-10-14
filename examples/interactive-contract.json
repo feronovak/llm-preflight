@@ -1,0 +1,15 @@
+{
+  "name": "synthetic-interactive-routing-contract",
+  "prompt": "Classify a request about an incorrect invoice. Reply with billing or shipping.",
+  "validation": {"exact": "billing"},
+  "validation_fixtures": [
+    {"name": "invoice", "response": "billing", "expect": "pass"},
+    {"name": "wrong-route", "response": "shipping", "expect": "fail"}
+  ],
+  "models": [{"provider": "mock", "model": "local-routing", "response": "billing"}],
+  "repetitions": 1,
+  "warmups": 0,
+  "max_requests": 2,
+  "request": {"max_output_tokens": 32, "retry": {"max_attempts": 1}},
+  "save_responses": "failures"
+}

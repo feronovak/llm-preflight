@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
@@ -105,9 +105,13 @@ Interactive mode provides the same safeguards in the terminal:
 llm-preflight benchmark.json --interactive
 ```
 
-Select `agent-smoke` at the test prompt unless a different reviewed contract is
-needed. The run-plan screen and its separate `y` confirmation are the point at
-which a paid request becomes authorized.
+Use the project's reviewed prompt or custom tests when checking its consumer
+contract; `agent-smoke` is an explicit additional compatibility suite. The
+interactive screen shows the same plan as CLI/MCP
+and checks local fixtures. Preview/export/edit do not authorize generation.
+The run action, any explicit retry-risk acceptance, and separate paid `y`
+confirmation are required for paid work. `--interactive --dry-run` stops at the
+plan without asking for execution consent.
 
 ## Change plans and approval receipts
 

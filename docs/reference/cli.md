@@ -1,6 +1,6 @@
 # CLI reference
 
-**Last reviewed:** 2026-10-10 · **As of:** v2.20.0
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
@@ -63,7 +63,7 @@ claim savings. Strict pricing freshness checks every source description.
 | `--stop-on MODE` | — | Stop after `api-error`, `test-fail`, or `any-fail`. |
 | `--fail-fast` | off | Compatibility alias for `--stop-on any-fail`. |
 | `--prompt NAME` | — | Run one named custom prompt from the config. |
-| `--interactive` | off | Select models, tests, repetitions, and stop mode in the terminal. |
+| `--interactive` | off | Guided selection and shared plan/fixture preview. Choose preview (default), save config, export plan, edit, or run; execution requires separate confirmation. With `--dry-run`, skip execution/acceptance prompts. |
 | `--approve-to PATH` | — | After an interactive saved run, offer passing models for explicit approval into this file. |
 
 ## Compatible combinations
@@ -97,8 +97,18 @@ claim savings. Strict pricing freshness checks every source description.
 - `--no-env-file` and `--env-file` are mutually exclusive.
 - `--approve-to` requires `--interactive` and cannot be combined with `--no-save`.
 
-Omit `--stop-on` to run every selected model. The interactive menu calls that
-choice `never`; it is not a command-line value.
+With no saved stop rule, omit `--stop-on` to run every selected model. The
+interactive menu calls that choice `never` and removes any saved stop rule;
+it is not a command-line value.
+
+The interactive flow accepts `q` to cancel and `back` to
+revisit a selection; invalid choices can be corrected in place. With `--json`,
+menus, prompts and progress go to stderr and stdout contains the final JSON.
+For configured models, preview and mock execution do not load environment files;
+provider discovery may need credentials before selection. Exports never replace
+files, remove runtime fields and redact credentials/headers. Save a selected
+config beside its source to preserve relative file references. See
+[interactive runs](../guides/interactive-runs.md) for the action menu.
 
 ## Exit codes and agent decisions
 

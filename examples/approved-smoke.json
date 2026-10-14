@@ -50,7 +50,7 @@
     },
     {
       "provider": "gemini",
-      "model": "gemini-3.5-flash",
+      "model": "gemini-3.8-flash",
       "catalog_type": "text-ready",
       "capabilities": {"adapter": "gemini_generate_content"}
     }

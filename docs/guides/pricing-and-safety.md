@@ -1,6 +1,6 @@
 # Tests, pricing, and safety
 
-**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 ## Built-in tests and validation
 
@@ -59,21 +59,26 @@ through OpenRouter. Selected direct OpenAI, Gemini, Anthropic, xAI, DeepSeek,
 Qwen, and TypeSafe prices are maintained as timestamped `official snapshot`
 records. The IDs and headline rates in this package are listed in
 [current snapshots](current-snapshots.md). DeepSeek snapshots use peak
-cache-miss rates; off-peak is half. Gemini 4 is omitted until Google publishes
-an API ID and price table.
+cache-miss rates; off-peak is half. Gemini 4 Argon and Gemini 3.6/3.8 Flash
+use the published introductory rates and their scheduled UTC price changes.
+These transitions do not refresh snapshot review dates. Redirected Gemini
+3.5/3.7 aliases have unknown effective prices; saved official rates are removed,
+while explicit owner overrides are preserved.
 Unknown prices stay
 unknown; the tool never silently treats an OpenRouter route as a direct-provider
 price.
 Explicit per-model prices override the registry. When a provider reports cache-hit
 tokens, the estimate applies the model's cached-input rate. Gemini 3.1 Pro
 Preview also uses its published per-request 200k-input tier, including thinking
-tokens in output usage. GPT-6.1 Sol also prices reported cache writes at
+tokens in output usage. GPT-5.6 Luna/Terra/Sol and GPT-6 Astra/Sol/Luna price cache writes at 1.25
+times the applicable input rate, with the full-request 272k band applied.
+GPT-6.1 Sol also prices reported cache writes at
 $2.50 per million input tokens, or $5.00 above 272k total input tokens; its
 cache reads cost $0.10 or $0.20 respectively. Plans include the possible write
 premium. Reported writes without a reviewed write rate make cost unavailable;
 configure `cache_write_input_cost_per_million` when that rate is not bundled.
 
-**Unreleased source-checkout update:** Claude Haiku 5.5 uses $0.10 input,
+**Since 2.19.1:** Claude Haiku 5.5 uses $0.10 input,
 $0.01 cache reads and $0.50 output per million tokens for prompts up to
 100,000 total input tokens; above that boundary all three rates are five
 times higher. Claude Sonnet 5.5 cache reads use the October 7 rate of $0.10

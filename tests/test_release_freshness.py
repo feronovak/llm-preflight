@@ -17,11 +17,11 @@ def _script():
 
 
 def test_release_freshness_passes_on_the_snapshot_review_day(capsys):
-    assert _script().main(["--today", "2026-10-10"]) == 0
+    assert _script().main(["--today", "2026-10-13"]) == 0
 
     output = capsys.readouterr().out
     assert "FAIL" not in output
-    assert "Release freshness on 2026-10-10: pass" in output
+    assert "Release freshness on 2026-10-13: pass" in output
 
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
@@ -48,7 +48,7 @@ def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys)
     script = _script()
     script.EXAMPLES = ()
 
-    assert script.main(["--today", "2026-11-09"]) == 1
+    assert script.main(["--today", "2026-11-13"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL audit-source examples: inconclusive" in output

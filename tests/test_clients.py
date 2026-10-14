@@ -1384,3 +1384,260 @@ def test_transient_socket_errors_are_retried_by_exception_type(monkeypatch):
 
     assert calls == 2
     assert sample["retry_reasons"] == ["network"]
+
+
+@pytest.mark.parametrize("model", ["gemini-3.8-flash", "gemini-4-argon"])
+def test_gemini_provider_options_cannot_bypass_the_planned_output_budget(model):
+    client = create_client({"provider": "gemini", "model": model}, 10)
+    with pytest.raises(ValueError, match="request.max_output_tokens"):
+        client.body(
+            "hello",
+            {
+                "max_output_tokens": 42,
+                "provider_options": {
+                    "gemini": {"generationConfig": {"maxOutputTokens": 32768}}
+                },
+            },
+        )
+    assert (
+        client.body(
+            "hello",
+            {
+                "max_output_tokens": 42,
+                "provider_options": {
+                    "gemini": {"generationConfig": {"maxOutputTokens": 42}}
+                },
+            },
+        )["generationConfig"]["maxOutputTokens"]
+        == 42
+    )
+
+
+@pytest.mark.parametrize("limit", [256, 32768, 65536])
+def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(limit):
+    client = create_client(
+        {
+            "provider": "gemini",
+            "model": "gemini-4-argon",
+            "capabilities": {"temperature": True},
+        },
+        10,
+    )
+    body = client.body(
+        "hello",
+        {
+            "temperature": 0,
+            "max_output_tokens": limit,
+            "provider_options": {
+                "gemini": {
+                    "generationConfig": {
+                        "temperature": 0.5,
+                        "topP": 0.8,
+                        "topK": 8,
+                        "thinkingConfig": {"thinkingLevel": "LOW"},
+                    }
+                }
+            },
+        },
+    )
+    assert body["generationConfig"] == {
+        "maxOutputTokens": limit,
+        "thinkingConfig": {"thinkingLevel": "LOW"},
+    }
+    assert client.body("hello", {})["generationConfig"] == {"maxOutputTokens": 256}
+
+
+@pytest.mark.parametrize(
+    "provider_options,limit,message",
+    [
+        ({"cachedContent": "cachedContents/example"}, 32768, "implicit caching"),
+        ({}, 65537, "65536"),
+        (
+            {"generationConfig": {"thinkingConfig": {"thinkingLevel": "MINIMAL"}}},
+            32768,
+            "LOW, MEDIUM, HIGH",
+        ),
+    ],
+)
+def test_gemini_4_unsupported_options_fail_before_transport(
+    monkeypatch, provider_options, limit, message
+):
+    def unexpected_transport(*args, **kwargs):
+        pytest.fail("unsupported request must fail before network transport")
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", unexpected_transport)
+    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+        "hello",
+        {
+            "max_output_tokens": limit,
+            "provider_options": {"gemini": provider_options},
+            "retry": {"max_attempts": 1},
+        },
+    )
+    assert sample["ok"] is False
+    assert message in sample["error"]
+
+
+@pytest.mark.parametrize("level", ["LOW", "MEDIUM", "HIGH"])
+def test_gemini_4_generate_content_protocol_and_cost(
+    monkeypatch, snapshot_review_day, level
+):
+    from llm_preflight.pricing import apply_public_pricing, estimate_sample_cost
+
+    captured = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            event = {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": "private thought", "thought": True},
+                                {"text": "ready"},
+                            ]
+                        },
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {
+                    "promptTokenCount": 1000,
+                    "cachedContentTokenCount": 800,
+                    "candidatesTokenCount": 20,
+                    "thoughtsTokenCount": 80,
+                },
+            }
+            return iter([f"data: {json.dumps(event)}\n".encode()])
+
+    def transport(request, timeout):
+        captured.append((request.full_url, json.loads(request.data)))
+        return Response()
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4-argon"})
+    sample = create_client(model, 10).run(
+        "Reply with ready.",
+        {
+            "system_prompt": "Return only the requested label.",
+            "temperature": 0,
+            "max_output_tokens": 32768,
+            "retry": {"max_attempts": 1},
+            "provider_options": {
+                "gemini": {
+                    "generationConfig": {"thinkingConfig": {"thinkingLevel": level}}
+                }
+            },
+        },
+    )
+    assert sample["ok"] is True
+    assert sample["response"] == "ready"
+    assert sample["input_tokens"] == 1000
+    assert sample["cached_input_tokens"] == 800
+    assert sample["output_tokens"] == 100
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.00148)
+    assert captured == [
+        (
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse",
+            {
+                "contents": [
+                    {"role": "user", "parts": [{"text": "Reply with ready."}]}
+                ],
+                "systemInstruction": {
+                    "parts": [{"text": "Return only the requested label."}]
+                },
+                "generationConfig": {
+                    "maxOutputTokens": 32768,
+                    "thinkingConfig": {"thinkingLevel": level},
+                },
+            },
+        )
+    ]
+
+
+@pytest.mark.parametrize("thinking", [None, [], "LOW"])
+def test_gemini_4_malformed_thinking_config_is_a_normal_pretransport_failure(
+    monkeypatch, thinking
+):
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+        "hello",
+        {
+            "max_output_tokens": 32768,
+            "retry": {"max_attempts": 1},
+            "provider_options": {
+                "gemini": {"generationConfig": {"thinkingConfig": thinking}}
+            },
+        },
+    )
+    assert sample["ok"] is False
+    assert "thinkingConfig must be an object" in sample["error"]
+
+
+def test_gemini_4_http_error_remains_a_provider_failure(monkeypatch):
+    def transport(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url,
+            400,
+            "invalid request",
+            {},
+            io.BytesIO(b'{"error":{"message":"unsupported option"}}'),
+        )
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+        "hello", {"max_output_tokens": 32768, "retry": {"max_attempts": 1}}
+    )
+    assert sample["ok"] is False
+    assert sample["failure_category"] == "provider_error"
+    assert sample["output_tokens"] is None
+    assert "HTTP 400" in sample["error"]
+
+
+def test_gemini_4_thinking_only_truncation_cannot_pass_the_contract(monkeypatch):
+    from llm_preflight.profiles import evaluate_response
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            event = {
+                "candidates": [
+                    {
+                        "finishReason": "MAX_TOKENS",
+                        "content": {"parts": [{"text": "ready", "thought": True}]},
+                    }
+                ],
+                "usageMetadata": {
+                    "promptTokenCount": 10,
+                    "candidatesTokenCount": 0,
+                    "thoughtsTokenCount": 256,
+                },
+            }
+            return iter([f"data: {json.dumps(event)}\n".encode()])
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: Response())
+    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+        "Reply with ready", {}
+    )
+    assert sample["response"] == ""
+    assert sample["output_tokens"] == 256
+    assert (
+        evaluate_response(sample["response"], {"type": "exact", "expected": "ready"})[
+            "valid"
+        ]
+        is False
+    )

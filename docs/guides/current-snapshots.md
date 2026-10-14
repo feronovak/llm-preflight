@@ -1,14 +1,17 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-11 · **As of:** v2.20.1
+**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
-direct-provider price snapshots bundled in **2.19.1**. The
+direct-provider price snapshots bundled in **2.21.0**. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
 
-Package version: **2.20.1**.
+Package version: **2.21.0**. Each pricing row retains its recorded UTC review
+date. This version adds Gemini 4 Argon and Gemini 3.6 Flash, refreshes 3.8
+Flash, and removes prices for redirected 3.5/3.7 aliases. Gemini 4 has
+deterministic protocol coverage; no live Gemini 4 result has been measured.
 
 Version 2.19.1 adds Haiku 5.5 and updates Sonnet 5.5 cache pricing; the
 Anthropic section below records the rates, request behavior and limits.
@@ -40,13 +43,13 @@ hours live in code; this table is the headline input/output pair.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
-| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-09-28 |
+| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-13 |
 | `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-09-30 |
-| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-09-28 |
-| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-09-28 |
-| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-09-28 |
-| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-09-28 |
-| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-09-28 |
+| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-13 |
+| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-13 |
+| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-13 |
+| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-13 |
+| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-13 |
 | `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-09-28 |
 | `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-09-28 |
 | `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-09-28 |
@@ -62,9 +65,9 @@ hours live in code; this table is the headline input/output pair.
 | `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-07 |
 | `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-07 |
 | `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-09-28 |
-| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-09-28 |
-| `gemini` | `gemini-3.7-flash` | 0.75 | 3.75 | 2026-09-28 |
-| `gemini` | `gemini-3.5-flash` | 1.50 | 9.00 | 2026-09-28 |
+| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-13 |
+| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-13 |
+| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-13 |
 | `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-09-28 |
 | `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-09-28 |
 | `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-09-28 |
@@ -89,6 +92,57 @@ has a $0.10 cached-input rate for up to 272k input tokens and $0.20 above
 that threshold. See
 [`pricing.py`](../../llm_preflight/pricing.py) and
 [pricing and safety](pricing-and-safety.md).
+
+### Gemini 4 Argon and Flash pricing transitions
+
+Google's [October changelog](https://ai.google.dev/gemini-api/docs/changelog)
+announces GA of `gemini-4-argon` on October 13. The
+[migration guide](https://ai.google.dev/gemini-api/docs/latest-model) and
+[pricing page](https://ai.google.dev/gemini-api/docs/pricing) document these
+standard synchronous USD rates per million tokens, checked October 13 UTC:
+
+| Model | Period | Input | Cached input | Output, including thinking |
+|---|---|---:|---:|---:|
+| `gemini-4-argon` | Through 2026-11-30 | 2.00 | 0.10 | 10.00 |
+| `gemini-4-argon` | From 2026-12-01 | 4.00 | 0.20 | 20.00 |
+| `gemini-3.6-flash`, `gemini-3.8-flash` | Through 2026-12-31 | 0.75 | 0.075 | 3.75 |
+| `gemini-3.6-flash`, `gemini-3.8-flash` | From 2027-01-01 | 1.50 | 0.15 | 7.50 |
+
+The tool selects these published rates using the current UTC date. A scheduled
+price change does not renew snapshot freshness: strict pricing checks still
+require a recent review. Explicit owner prices retain precedence.
+
+Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8;
+requests redirect to 3.6 and 3.8 respectively. Their endpoints are not shutting
+down. The tool reports these aliases as retiring/inconclusive without a
+shutdown date and leaves their effective price unknown, including saved
+official prices. Use the direct replacement or supply an explicitly reviewed
+owner rate. The September comparison remains historical evidence.
+
+Argon shares a 1,048,576-token window across input, thinking and output.
+The native GenerateContent adapter supports synchronous requests capped at
+65,536 thinking-plus-output tokens. It omits ignored sampling parameters,
+accepts `thinkingConfig.thinkingLevel` values `LOW`, `MEDIUM`, `HIGH`, and
+rejects explicit `cachedContent` because only implicit caching is supported.
+Provider options cannot override the output cap used in the plan. Background
+long decode and server-managed conversation state are outside this adapter.
+
+The tool keeps its existing 256-token default and any explicit output cap.
+Google recommends at least 32,768 for existing applications with smaller caps;
+review that increase against your own budget. The bounded
+[`gemini-4-argon.json`](../../examples/gemini-4-argon.json) example explicitly
+chooses 32,768 tokens, `LOW` thinking, one request, no retries and a $0.35
+estimated-cost ceiling. Preview and check its local fixtures without spending:
+
+```bash
+llm-preflight examples/gemini-4-argon.json --contract-check --json
+llm-preflight examples/gemini-4-argon.json --dry-run --json
+```
+
+The example's ceiling covers the introductory output allowance. After the
+published increase it blocks execution until the owner reviews the limits;
+the pricing freshness gate may block it earlier. Implicit cache discounts
+are applied only when usage reports a cache hit.
 
 ### Anthropic pricing and request updates in 2.19.1
 
@@ -120,6 +174,29 @@ No Anthropic cache-write rate is bundled: five-minute and one-hour writes
 have different prices. Supply a reviewed `cache_write_input_cost_per_million`
 matching the configured cache lifetime, including any applicable input tiers,
 or reported writes make the cost estimate unavailable.
+
+### OpenAI cache-write pricing correction
+
+Rechecked October 13 UTC against each model's official page. Version 2.21.0
+adds the published cache-write rate for these six models; their cache-read
+rates and long-context input/output tiers were already bundled. Standard USD
+write rates per million tokens:
+
+| Model | Up to 272,000 total input tokens | Above 272,000 total input tokens |
+|---|---:|---:|
+| [`gpt-5.6-luna`](https://developers.openai.com/api/docs/models/gpt-5.6-luna) | 0.25 | 0.50 |
+| [`gpt-5.6-terra`](https://developers.openai.com/api/docs/models/gpt-5.6-terra) | 2.50 | 5.00 |
+| [`gpt-5.6-sol`](https://developers.openai.com/api/docs/models/gpt-5.6-sol) | 5.00 | 10.00 |
+| [`gpt-6-astra`](https://developers.openai.com/api/docs/models/gpt-6-astra) | 12.50 | 25.00 |
+| [`gpt-6-sol`](https://developers.openai.com/api/docs/models/gpt-6-sol) | 2.50 | 5.00 |
+| [`gpt-6-luna`](https://developers.openai.com/api/docs/models/gpt-6-luna) | 0.125 | 0.25 |
+
+The adapter already retains reported cache-write counts. Cost accounting now
+prices those counts and the no-spend budget includes the possible write
+premium, 1.25 times the applicable input rate. Cache writes count toward the
+full request's 272k threshold. GPT-6.1 Sol's write rates remain as below.
+GPT-5.6 Sol's current offer lasts at least through November 21; no later
+rate is published, so no later transition is invented.
 
 ### GPT-6.1 Sol pricing and request limits
 
@@ -175,9 +252,8 @@ route prices. A successful discovery is not an access or compatibility probe.
 These IDs are **not** in the snapshot table because they are not public
 first-party routes we can price honestly:
 
-| Gap | Status as of 2.19.1 |
+| Gap | Status as of 2.21.0 |
 |---|---|
-| Gemini 4 | No public API model ID or price table. Public Gemini remains 3.x. |
 | Kimi (Moonshot) native provider | Call via OpenRouter or `openai_compatible`. |
 | Z.ai native catalogue | Native `glm-5.3` chat is supported; discovery uses OpenRouter or explicit model entries. |
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
@@ -185,7 +261,7 @@ first-party routes we can price honestly:
 The [GitHub Marketplace Action guide](../automation/github-action.md) shows
 how to use a published package with its release-tag Action. Pages
 with an older **As of** stamp still describe their stated version; they were
-not all re-reviewed for 2.19.1.
+not all re-reviewed for 2.21.0.
 
 See the [model catalogue](model-catalog.md) for discover → probe → smoke, and
 [`examples/frontier-candidates.json`](../../examples/frontier-candidates.json)

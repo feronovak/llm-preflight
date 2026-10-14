@@ -15,9 +15,14 @@ ANTHROPIC_DEPRECATIONS_URL = (
     "https://platform.claude.com/docs/en/about-claude/model-deprecations"
 )
 OPENAI_DEPRECATIONS_URL = "https://developers.openai.com/api/docs/deprecations"
-RETIREMENT_PROVIDERS: tuple[str, ...] = ("anthropic", "openai")
+GEMINI_DEPRECATIONS_URL = "https://ai.google.dev/gemini-api/docs/deprecations"
+RETIREMENT_PROVIDERS: tuple[str, ...] = ("anthropic", "gemini", "openai")
+GEMINI_MODEL_REDIRECTS = {
+    "gemini-3.5-flash": "gemini-3.6-flash",
+    "gemini-3.7-flash": "gemini-3.8-flash",
+}
 DEFAULT_MAX_AGE_DAYS = 30
-_REVIEWED = "2026-10-09"
+_REVIEWED = "2026-10-13"
 
 
 def _row(
@@ -129,6 +134,17 @@ _ANTHROPIC: dict[str, dict[str, Any]] = {
 # whose page entry names more than one replacement, or a replacement that is
 # itself deprecated, carries none.
 _OPENAI: dict[str, dict[str, Any]] = {
+    # 2026-10-14 announcement; aliases map to these dated snapshots on the
+    # official model pages. The older gpt-4o-2024-05-13 keeps its October date.
+    "gpt-4o": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4o-2024-08-06": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4o-2024-11-20": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4o-mini": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4o-mini-2024-07-18": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4.1": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4.1-2025-04-14": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4.1-mini": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
+    "gpt-4.1-mini-2025-04-14": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
     # 2026-10-01 announcement
     "gpt-5.3-codex": _openai("deprecated", "2027-04-01", "gpt-6-sol"),
     "gpt-5.4-nano": _openai("deprecated", "2027-04-01", "gpt-6-luna"),
@@ -208,21 +224,45 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "o1-preview": _openai("deprecated", "2025-07-28"),
     # The page names o4-mini, itself retiring on 2026-10-23; not recorded.
     "o1-mini": _openai("deprecated", "2025-10-27"),
-    "gpt-4.5-preview": _openai("deprecated", "2025-07-14", "gpt-4.1"),
-    "gpt-4-32k": _openai("deprecated", "2025-06-06", "gpt-4o"),
-    "gpt-4-32k-0613": _openai("deprecated", "2025-06-06", "gpt-4o"),
-    "gpt-4-32k-0314": _openai("deprecated", "2025-06-06", "gpt-4o"),
-    "gpt-4-vision-preview": _openai("deprecated", "2024-12-06", "gpt-4o"),
-    "gpt-4-1106-vision-preview": _openai("deprecated", "2024-12-06", "gpt-4o"),
+    # The page names gpt-4.1/gpt-4o, now deprecated themselves; not recorded.
+    "gpt-4.5-preview": _openai("deprecated", "2025-07-14"),
+    "gpt-4-32k": _openai("deprecated", "2025-06-06"),
+    "gpt-4-32k-0613": _openai("deprecated", "2025-06-06"),
+    "gpt-4-32k-0314": _openai("deprecated", "2025-06-06"),
+    "gpt-4-vision-preview": _openai("deprecated", "2024-12-06"),
+    "gpt-4-1106-vision-preview": _openai("deprecated", "2024-12-06"),
     # The page names gpt-3.5-turbo, itself retiring on 2026-10-23; not recorded.
     "gpt-3.5-turbo-0613": _openai("deprecated", "2024-09-13"),
     "gpt-3.5-turbo-16k-0613": _openai("deprecated", "2024-09-13"),
     "gpt-3.5-turbo-0301": _openai("deprecated", "2024-09-13"),
 }
 
+_GEMINI = {
+    **{
+        model: _row("active", source_url=GEMINI_DEPRECATIONS_URL)
+        for model in ("gemini-3.6-flash", "gemini-3.8-flash")
+    },
+    "gemini-4-argon": _row(
+        "active",
+        source_url="https://ai.google.dev/gemini-api/docs/models/gemini-4-argon",
+    ),
+    **{
+        model: {
+            **_row(
+                "deprecated",
+                source_url=GEMINI_DEPRECATIONS_URL,
+                replacement=replacement,
+            ),
+            "redirected": True,
+        }
+        for model, replacement in GEMINI_MODEL_REDIRECTS.items()
+    },
+}
+
 PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {
     **{("anthropic", model): row for model, row in _ANTHROPIC.items()},
     **{("openai", model): row for model, row in _OPENAI.items()},
+    **{("gemini", model): row for model, row in _GEMINI.items()},
 }
 
 
@@ -328,7 +368,10 @@ def retirement_verdict(
     elif base_status == "retiring":
         status, decision = "retiring", "inconclusive"
         reason = (
-            f"retirement announced for {retirement_date}"
+            f"deprecated alias; requests automatically route to {replacement}; "
+            "the endpoint is not shutting down"
+            if row.get("redirected")
+            else f"retirement announced for {retirement_date}"
             if retirement_date
             else "deprecated; retirement date to be announced"
         )

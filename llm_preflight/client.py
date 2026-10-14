@@ -640,7 +640,26 @@ class GeminiClient(ProviderClient):
             body["systemInstruction"] = {"parts": [{"text": options["system_prompt"]}]}
         provider_options = _provider_options(options, "gemini")
         provider_generation = provider_options.pop("generationConfig", {})
+        if provider_generation.get("maxOutputTokens", limit) != limit:
+            raise ValueError(
+                "set request.max_output_tokens instead of overriding "
+                "generationConfig.maxOutputTokens; it must match the planned budget"
+            )
         generation.update(provider_generation)
+        if self.model["model"] == "gemini-4-argon":
+            for parameter in ("temperature", "topP", "topK"):
+                generation.pop(parameter, None)
+            if limit > 65_536:
+                raise ValueError(
+                    "Gemini 4 synchronous output is limited to 65536 tokens"
+                )
+            if "cachedContent" in provider_options:
+                raise ValueError("Gemini 4 supports implicit caching only")
+            thinking = generation.get("thinkingConfig", {})
+            if not isinstance(thinking, dict):
+                raise ValueError("Gemini 4 thinkingConfig must be an object")
+            if thinking.get("thinkingLevel", "MEDIUM") not in ("LOW", "MEDIUM", "HIGH"):
+                raise ValueError("Gemini 4 thinkingLevel must be LOW, MEDIUM, HIGH")
         body.update(provider_options)
         return body
 

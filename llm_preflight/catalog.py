@@ -264,8 +264,13 @@ def _gemini(source: dict[str, Any]) -> list[dict[str, Any]]:
                 "capabilities": {
                     "reasoning": item.get("thinking"),
                     "methods": methods,
-                    "temperature": item.get("temperature") is not None,
-                    "max_temperature": item.get("maxTemperature"),
+                    "temperature": model_id != "gemini-4-argon"
+                    and item.get("temperature") is not None,
+                    "max_temperature": (
+                        item.get("maxTemperature")
+                        if model_id != "gemini-4-argon"
+                        else None
+                    ),
                     "text_generation": "candidate",
                     "adapter": "gemini_generate_content",
                 },

@@ -338,7 +338,7 @@ def test_interactive_all_selects_functional_tests_but_not_load(monkeypatch):
 
     assert selected is None
     assert any(
-        "Tests: quick-migration-check,exact-routing-check,structured-output-check,numeric-instruction-check"
+        "Tests: quick-migration-check, exact-routing-check, structured-output-check, numeric-instruction-check"
         in line
         for line in output
     )
@@ -1328,7 +1328,9 @@ def test_interactive_selection_shows_request_and_cost_estimate(monkeypatch):
         output_fn=output.append,
     )
 
-    assert any("2 nominal requests, up to 4 with retries" in line for line in output)
+    assert any(
+        "Requests: 2 nominal; up to 4 with 2 attempts" in line for line in output
+    )
     assert any("$0.000044" in line for line in output)
 
 
@@ -1348,7 +1350,9 @@ def test_interactive_selection_explains_functional_tests_request_breakdown(monke
 
     assert any("quick-migration-check: 3" in line for line in output)
     assert not any("concurrency-health-check:" in line for line in output)
-    assert any("18 nominal requests, up to 36 with retries" in line for line in output)
+    assert any(
+        "Requests: 18 nominal; up to 36 with 2 attempts" in line for line in output
+    )
     breakdown_index = output.index("Request breakdown per model:")
     assert output[breakdown_index - 1] == ""
 
@@ -2219,7 +2223,7 @@ def test_interactive_watch_reviews_unapproved_models_on_first_snapshot(
     monkeypatch.setattr(
         cli,
         "interactive_watch_selection",
-        lambda watch, approved, candidates: (
+        lambda watch, approved, candidates, **kwargs: (
             selected.append((watch, approved, candidates)) or None
         ),
     )
@@ -2595,7 +2599,7 @@ def test_main_dry_run_prints_human_readable_plan_by_default(
     assert "Tests: config prompt" in output
     assert "Requests: 5 nominal; up to 10 with 2 attempts" in output
     assert "Cost: unavailable" in output
-    assert "Stop on: none" in output
+    assert "Stop on: never" in output
     assert "Smoke eligibility: 0 eligible; 1 needs review." in output
 
 

@@ -2,10 +2,66 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.21.0 - 2026-10-14
+
+### Added
+
+- Add reviewed Gemini 4 Argon and Gemini 3.6 Flash prices, automatic published
+  price transitions on December 1 and January 1, and a bounded Argon example
+  with local contract fixtures. Native synchronous Argon requests have mocked
+  protocol coverage, including thinking usage and implicit cache pricing.
+- Add five targeted Gemini lifecycle rows and nine OpenAI GPT-4 dated/alias
+  rows with the published January 14, 2027 shutdown and `gpt-6-luna` replacement.
+- Guide interactive benchmark users through the shared CLI/MCP run plan and
+  local contract fixtures, with explicit preview, config save, plan export,
+  edit, mock-run and paid-run actions. Preview is the default; paid execution
+  still needs a separate confirmation and budget review.
+- Recover from invalid selections, search model lists with stable numbers,
+  show selected counts, and support back navigation and cancellation.
+- Export redacted selections without overwriting files, print a reproducible
+  preview command, and show saved report/decision paths plus the offline HTML
+  command after an interactive run.
+
+### Fixed
+
+- GPT-5.6 Luna/Terra/Sol and GPT-6 Astra/Sol/Luna now price reported cache
+  writes at the published rates, including the full-request band above 272k
+  input tokens. Plans include the possible write premium. Existing cache-read
+  and input/output tier rates are unchanged.
+- Gemini provider options cannot raise the output limit above the planned
+  cap. Argon omits ignored sampling parameters and rejects explicit caching,
+  unsupported thinking levels and synchronous caps above 65,536 before transport.
+- Choosing "never" now removes an inherited stop rule and legacy `fail_fast`
+  alias. Choosing the config prompt removes inherited profiles, so the preview
+  and execution agree.
+- `--interactive --dry-run` no longer asks to authorize execution or accept
+  retry risk. Failed contract fixtures block the run action before any
+  execution confirmation; missing fixtures remain explicitly unproven.
+- Mock-only confirmation describes a local run. Interactive JSON sends menus,
+  prompts and progress to stderr, and redirected output stays free of terminal
+  control sequences. Configured-model preview, cancellation and mock runs do
+  not load environment files; provider discovery may still need credentials.
+- Config exports preserve output/tool schema property names and refuse to
+  change validators or fixtures during redaction. Catalogue interactive review
+  sends menus and prompts to stderr with `--json` and saves configs beside
+  their source to preserve relative file references.
 
 ### Changed
 
+- Review the retirement snapshot against official sources on October 13 UTC;
+  it now has 114 rows across Anthropic, OpenAI and targeted Gemini models.
+  Remove deprecated OpenAI successors from older replacement recommendations.
+  Non-retired
+  rows now become stale on 2026-11-13, when their `--ci` verdict becomes
+  inconclusive (exit 3). Retired rows continue to fail (exit 1).
+- Gemini 3.5/3.7 aliases report their redirects without a shutdown date and
+  lose bundled/saved official prices; explicit owner prices retain precedence.
+  Current smoke examples use Gemini 3.8 directly. September measurements
+  remain historical; Gemini 4 has no live measurement in this release.
+- Existing approval receipts report `mismatch` (exit 1) because their plan
+  hashes include changed pricing and retirement snapshots, even for mock-only
+  plans. Preview and approve the current plan again; receipt semantics and
+  paid-run authorization rules are unchanged.
 - Point the repository Action default, mock smoke workflow and CI examples at
   the published 2.20.1 package. The `v2.20.1` tag retains its 2.20.0 default;
   set `package-version` explicitly when using that tag.

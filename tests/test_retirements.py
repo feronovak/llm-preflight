@@ -105,7 +105,7 @@ def test_unknown_model_is_not_a_verdict(table):
     verdict = retirement_verdict("openai", "gpt-nothing", TODAY)
     assert verdict["status"] == "unknown"
     assert verdict["decision"] == "none"
-    assert "anthropic, openai" in verdict["next_step"]
+    assert "anthropic, gemini, openai" in verdict["next_step"]
     assert "next_command" not in verdict
 
 
@@ -240,6 +240,8 @@ def test_routed_prefix_resolves_to_the_catalogue_id(table):
 
 def test_every_snapshot_row_is_well_formed():
     assert PUBLIC_RETIREMENTS, "snapshot must not be empty"
+    from llm_preflight.retirements import GEMINI_DEPRECATIONS_URL
+
     for (provider, model), row in PUBLIC_RETIREMENTS.items():
         assert provider in RETIREMENT_PROVIDERS, model
         assert _provider_for(model) == provider, model
@@ -248,9 +250,13 @@ def test_every_snapshot_row_is_well_formed():
         date.fromisoformat(row["as_of"])
         assert (
             row["source_url"]
-            == {
-                "anthropic": ANTHROPIC_DEPRECATIONS_URL,
-                "openai": OPENAI_DEPRECATIONS_URL,
+            in {
+                "anthropic": {ANTHROPIC_DEPRECATIONS_URL},
+                "openai": {OPENAI_DEPRECATIONS_URL},
+                "gemini": {
+                    GEMINI_DEPRECATIONS_URL,
+                    "https://ai.google.dev/gemini-api/docs/models/gemini-4-argon",
+                },
             }[provider]
         ), model
         assert set(row) <= {
@@ -259,6 +265,7 @@ def test_every_snapshot_row_is_well_formed():
             "replacement",
             "as_of",
             "source_url",
+            "redirected",
         }
         if row["status"] == "retired":
             assert "retirement_date" in row, model
@@ -277,47 +284,48 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "status": "deprecated",
         "retirement_date": "2026-11-30",
         "replacement": "claude-sonnet-5-5",
-        "as_of": "2026-10-09",
+        "as_of": "2026-10-13",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-mythos-preview")] == {
         "status": "deprecated",
-        "as_of": "2026-10-09",
+        "as_of": "2026-10-13",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-sonnet-5-5")]["status"] == "active"
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.4-cyber")] == {
         "status": "deprecated",
         "retirement_date": "2026-10-01",
-        "as_of": "2026-10-09",
+        "as_of": "2026-10-13",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.1")] == {
         "status": "deprecated",
         "retirement_date": "2027-04-01",
         "replacement": "gpt-6-sol",
-        "as_of": "2026-10-09",
+        "as_of": "2026-10-13",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-4-1106-preview")] == {
         "status": "deprecated",
         "retirement_date": "2026-10-23",
         "replacement": "gpt-5.6-sol",
-        "as_of": "2026-10-09",
+        "as_of": "2026-10-13",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
     # o3's only dated snapshot retires 2026-12-11, so it is not a replacement.
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-preview")]
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
-    assert providers == {"anthropic", "openai"}
+    assert providers == {"anthropic", "gemini", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 36
-    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 64
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 73
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 5
 
 
 def test_snapshot_summary_reports_coverage_and_dates():
     summary = snapshot_summary()
-    assert summary["providers"] == ["anthropic", "openai"]
+    assert summary["providers"] == ["anthropic", "gemini", "openai"]
     assert summary["rows"] == len(PUBLIC_RETIREMENTS)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
@@ -363,7 +371,7 @@ def test_retirement_report_summarises_a_model_list(table):
         'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run',
         'llm-preflight --quick "<your prompt>" --models openai:gpt-going,openai:gpt-new --dry-run',
     ]
-    assert report["snapshot"]["providers"] == ["anthropic", "openai"]
+    assert report["snapshot"]["providers"] == ["anthropic", "gemini", "openai"]
 
 
 def test_retirement_report_is_inconclusive_without_a_retired_model(table):

@@ -1,0 +1,25 @@
+{
+  "name": "gemini-4-argon-bounded-contract",
+  "prompt": "Reply with exactly: ready",
+  "validation": {"exact": "ready"},
+  "validation_fixtures": [
+    {"name": "accepted-label", "response": "ready", "expect": "pass"},
+    {"name": "rejected-label", "response": "not ready", "expect": "fail"}
+  ],
+  "models": [{"provider": "gemini", "model": "gemini-4-argon"}],
+  "repetitions": 1,
+  "warmups": 0,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "require_current_pricing": true,
+  "max_requests": 1,
+  "max_estimated_cost_usd": 0.35,
+  "save_responses": "failures",
+  "request": {
+    "max_output_tokens": 32768,
+    "retry": {"max_attempts": 1},
+    "provider_options": {
+      "gemini": {"generationConfig": {"thinkingConfig": {"thinkingLevel": "LOW"}}}
+    }
+  }
+}

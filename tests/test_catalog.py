@@ -452,12 +452,14 @@ def test_openrouter_does_not_promote_a_native_text_candidate_to_ready():
     assert models[0]["capabilities"]["adapter"] == "openai_compatible_chat"
 
 
-def test_resolve_adds_public_registry_pricing_and_preserves_overrides():
+def test_resolve_adds_public_registry_pricing_and_preserves_overrides(
+    snapshot_review_day,
+):
     models = resolve_models(
         {
             "models": [
                 {"provider": "openai", "model": "gpt-5.4-mini"},
-                {"provider": "gemini", "model": "gemini-3.5-flash"},
+                {"provider": "gemini", "model": "gemini-3.6-flash"},
                 {"provider": "anthropic", "model": "claude-opus-4-8"},
                 {
                     "provider": "openai",
@@ -470,8 +472,8 @@ def test_resolve_adds_public_registry_pricing_and_preserves_overrides():
     )
     assert models[0]["input_cost_per_million"] == 0.75
     assert models[0]["output_cost_per_million"] == 4.5
-    assert models[1]["input_cost_per_million"] == 1.5
-    assert models[1]["output_cost_per_million"] == 9
+    assert models[1]["input_cost_per_million"] == 0.75
+    assert models[1]["output_cost_per_million"] == 3.75
     assert models[2]["input_cost_per_million"] == 5
     assert models[2]["output_cost_per_million"] == 25
     assert models[3]["input_cost_per_million"] == 99
@@ -615,3 +617,35 @@ def test_typesafe_catalog_marks_jev_as_a_decision_model(monkeypatch):
     assert model["capabilities"].get("text_generation") is None
     assert model["input_cost_per_million"] == 0.042
     assert model["output_cost_per_million"] == 0.0
+
+
+def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
+    monkeypatch, snapshot_review_day
+):
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setattr(
+        "llm_preflight.catalog._get_json",
+        lambda *args, **kwargs: {
+            "models": [
+                {
+                    "name": "models/gemini-4-argon",
+                    "supportedGenerationMethods": ["generateContent"],
+                    "inputTokenLimit": 1048576,
+                    "outputTokenLimit": 65536,
+                    "thinking": True,
+                    "temperature": 1,
+                    "maxTemperature": 2,
+                }
+            ]
+        },
+    )
+    model = discover_models({"provider": "gemini", "limit": 1})[0]
+    assert model["model"] == "gemini-4-argon"
+    assert model["context_length"] == 1048576
+    assert model["max_output_tokens"] == 65536
+    assert model["capabilities"]["temperature"] is False
+    assert model["capabilities"]["max_temperature"] is None
+    assert model["capabilities"]["reasoning"] is True
+    assert model["capabilities"]["text_generation"] == "candidate"
+    assert model["capabilities"]["adapter"] == "gemini_generate_content"
+    assert model["pricing_metadata"]["source"] == "official snapshot"

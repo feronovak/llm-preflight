@@ -202,8 +202,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.21.1" in workflow
-    assert "starter workflow pins the latest published package, 2.21.1" in ci
+    assert "llm-preflight==2.21.2" in workflow
+    assert "starter workflow pins the latest published package, 2.21.2" in ci
     assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
 
 
@@ -299,7 +299,7 @@ def test_readme_provider_starter_has_runnable_local_contract_fixtures(tmp_path):
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.21.1"' in action
+    assert 'default: "2.21.2"' in action
     assert "GITHUB_STEP_SUMMARY" in action
     assert "No generation requests were made by the default checks." in action
     assert 'python -m llm_preflight report "$result_file" --format markdown' in action
@@ -354,7 +354,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1"
+        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
@@ -420,11 +420,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in action_guide
-    assert 'package-version: "2.21.1"' in action_guide
-    assert "source defaults to `2.21.1`" in action_guide
-    assert "`v2.21.1` release tag retains the `2.21.0`" in action_guide
-    assert "latest published package (`2.21.1`)" in action_guide
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in action_guide
+    assert 'package-version: "2.21.2"' in action_guide
+    assert "source defaults to `2.21.2`" in action_guide
+    assert "`v2.21.2` release tag retains the `2.21.1`" in action_guide
+    assert "latest published package (`2.21.2`)" in action_guide
     assert "under development" not in action_guide
 
 

@@ -54,6 +54,7 @@ Results stay local unless you decide to attach or publish them.
 | Claude Haiku 5.5 | 16/16 | 0.934s | $0.000479 | 2026-10-14 | Anthropic |
 | Gemini 4 Argon | 16/16 | 2.376s | $0.005546 | 2026-10-14 | Gemini |
 | Gemini 3.8 Flash | 16/16 | 2.255s | $0.005666 | 2026-10-14 | Gemini |
+| Gemini 3.1 Flash-Lite | 16/16 | 0.977s | $0.000588 | 2026-09-28 | Gemini |
 | GLM 5.3 | 11/16 | 1.221s | — | 2026-10-14 | OpenRouter / Relace |
 | GLM 5.3 Flash | 16/16 | 1.535s | $0.000178 | 2026-10-14 | OpenRouter / Relace |
 | DeepSeek V4.1 Flash | 16/16 | 2.342s | $0.000745 | 2026-10-14 | OpenRouter / Relace |

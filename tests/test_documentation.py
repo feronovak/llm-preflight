@@ -63,6 +63,7 @@ def test_homepage_model_list_matches_comparison_evidence():
         "claude-haiku-5-5": "Claude Haiku 5.5",
         "gemini-4-argon": "Gemini 4 Argon",
         "gemini-3.8-flash": "Gemini 3.8 Flash",
+        "gemini-3.1-flash-lite": "Gemini 3.1 Flash-Lite",
         "z-ai/glm-5.3": "GLM 5.3",
         "z-ai/glm-5.3-flash": "GLM 5.3 Flash",
         "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
@@ -82,10 +83,11 @@ def test_homepage_model_list_matches_comparison_evidence():
             row["observed_on"],
             row["route"],
         )
-    provider, model, date, valid, latency, cost = next(
-        row for row in historical_rows if row[1] == "gpt-6-astra"
-    )
-    expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
+    for historical_model in ("gpt-6-astra", "gemini-3.1-flash-lite"):
+        provider, model, date, valid, latency, cost = next(
+            row for row in historical_rows if row[1] == historical_model
+        )
+        expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
     sections = []
     for page in (readme, docs_index):
         section = page.split("## Tested models\n", 1)[1].split("\n## ", 1)[0]
@@ -97,10 +99,17 @@ def test_homepage_model_list_matches_comparison_evidence():
         rows = [
             tuple(cell.strip() for cell in line.split("|")[1:-1]) for line in table[2:]
         ]
-        assert len(rows) == len(expected) == 13
+        assert len(rows) == len(expected) == 14
         assert {row[0] for row in rows} == set(expected)
         for name, *values in rows:
             assert tuple(values) == expected[name], name
+        for provider in ("OpenAI", "Anthropic", "Gemini"):
+            assert sum(row[-1] == provider for row in rows) >= 3, provider
+        for row in rows:
+            if row[0].startswith(("GLM", "DeepSeek", "Qwen")):
+                assert row[-1].startswith("OpenRouter /"), row[0]
+        qwen_max = next(row for row in rows if row[0] == "Qwen 3.8 Max 0902")
+        assert qwen_max[1:4] == ("Request rejected", "—", "—")
         prose = [
             line
             for line in section.splitlines()
@@ -110,7 +119,7 @@ def test_homepage_model_list_matches_comparison_evidence():
         assert (
             "[Test details]" in prose[0] and "observed-model-comparison.md" in prose[0]
         )
-        assert len(section.splitlines()) <= 20
+        assert len(section.splitlines()) <= 21
         assert "Current passing shortlist" not in page
         assert "Earlier evidence stays visible" not in page
     assert sections[0].split("\n\n[", 1)[0] == sections[1].split("\n\n[", 1)[0]

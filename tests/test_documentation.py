@@ -43,112 +43,90 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
 def test_homepage_model_list_matches_comparison_evidence():
     readme = (ROOT / "README.md").read_text()
     docs_index = (ROOT / "docs/index.md").read_text()
-    study_path = ROOT / "docs/guides/observed-model-comparison.md"
-    study = study_path.read_text()
-
-    assert "docs/guides/observed-model-comparison.md" in readme
-    assert "guides/observed-model-comparison.md" in docs_index
-    assert "2026-09-28" in study
-
-    homepage_section = readme.split("## Model comparison", 1)[1]
-    homepage_section = homepage_section.split("\n## ", 1)[0]
-    study_section = study.split("## Comparison results", 1)[1]
-    study_section = study_section.split("\n## ", 1)[0]
-    study_ids = set(re.findall(r"\| `([\w./-]+)` \|", study_section))
-
-    assert len(study_ids) == 27
-    assert "claude-haiku-5-5" in study_ids
-    assert "gpt-6.1-sol" in study_ids
-    assert "z-ai/glm-5.3" in study_ids
-
-    rows = re.findall(
-        r"^\| [^|]+ \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
-        study_section,
-        re.MULTILINE,
-    )
-    assert len(rows) == len(study_ids)
-    measured = 0
-    for model, observed_on, valid, latency, cost in rows:
-        if observed_on == "Not run":
-            assert (valid, latency, cost) == ("—", "—", "—"), model
-        else:
-            assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", observed_on), model
-            assert 0 <= int(valid) <= 16
-            assert re.fullmatch(r"\d+\.\d+s", latency), model
-            assert re.fullmatch(r"\$\d+\.\d+", cost), model
-            measured += 1
-    assert f"{measured} measured" in readme
-    assert f"{measured} measured" in study
-    assert measured == 27
-    for model in ("gpt-6.1-sol", "z-ai/glm-5.3"):
-        row = next(row for row in rows if row[0] == model)
-        assert row[1] == "2026-09-30"
-    assert "OpenRouter / Relace" in study
-    assert "native Z.ai route was not tested" in study
-    for model in ("claude-haiku-5-5", "claude-sonnet-5-5"):
-        row = next(row for row in rows if row[0] == model)
-        assert row[1:3] == ("2026-10-07", "16")
-    for page in (study,):
-        assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in page
-        assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in page
-    selected = {
-        "claude-opus-5-5",
-        "claude-sonnet-5-5",
-        "claude-haiku-5-5",
-        "gpt-6.1-sol",
-        "gpt-6-luna",
-        "gemini-3.8-flash",
-        "z-ai/glm-5.3",
-        "deepseek/deepseek-v4.1-flash",
-        "qwen/qwen3.8-max-0902",
-        "qwen/qwen3.8-flash",
-        "gemini-4-argon",
-        "z-ai/glm-5.3-flash",
-    }
+    study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
     fresh = json.loads(
         (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
     )
-    row_pattern = (
-        r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$"
+    historical = study.split("## Comparison results", 1)[1].split("\n## ", 1)[0]
+    historical_rows = re.findall(
+        r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
+        historical,
+        re.MULTILINE,
     )
-    homepage_rows = re.findall(row_pattern, homepage_section, re.MULTILINE)
-    assert {row[1] for row in homepage_rows} == selected
-    assert len(homepage_rows) == len(selected)
-    fresh_rows = {row["model"]: row for row in fresh["rows"]}
-    for provider, model, observed_on, valid, latency, cost in homepage_rows:
-        row = fresh_rows[model]
-        assert observed_on == "2026-10-14"
-        assert provider == row["route"]
-        assert int(valid) == row["valid"]
-        assert latency == (
+    assert len(historical_rows) == 27
+    names = {
+        "gpt-6-astra": "GPT-6 Astra",
+        "gpt-6.1-sol": "GPT-6.1 Sol",
+        "gpt-6-luna": "GPT-6 Luna",
+        "claude-opus-5-5": "Claude Opus 5.5",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5",
+        "claude-haiku-5-5": "Claude Haiku 5.5",
+        "gemini-4-argon": "Gemini 4 Argon",
+        "gemini-3.8-flash": "Gemini 3.8 Flash",
+        "z-ai/glm-5.3": "GLM 5.3",
+        "z-ai/glm-5.3-flash": "GLM 5.3 Flash",
+        "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
+        "qwen/qwen3.8-max-0902": "Qwen 3.8 Max 0902",
+        "qwen/qwen3.8-flash": "Qwen 3.8 Flash",
+    }
+    expected = {}
+    for row in fresh["rows"]:
+        expected[names[row["model"]]] = (
+            f"{row['valid']}/16" if row["api_successful"] else "Request rejected",
             f"{row['mean_latency_seconds']:.3f}s"
             if row["mean_latency_seconds"] is not None
-            else "—"
-        )
-        assert cost == (
+            else "—",
             f"${row['estimated_cost_usd']:.6f}"
             if row["estimated_cost_usd"] is not None
-            else "—"
+            else "—",
+            row["observed_on"],
+            row["route"],
         )
-    assert re.findall(row_pattern, docs_index, re.MULTILINE) == homepage_rows
+    provider, model, date, valid, latency, cost = next(
+        row for row in historical_rows if row[1] == "gpt-6-astra"
+    )
+    expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
+    sections = []
     for page in (readme, docs_index):
-        assert "password-reset" in page
-        assert "5/6" in page
-        assert "14/16" in page
-        assert "cache-write" in page
-        assert "2026-10-14" in page
-        assert "32,768" in page
-        assert "512" in page
-        assert "unmeasured" in page
-        assert "Version 2." not in page
-        assert "before the **2." not in page
-        for variant in (
-            "z-ai/glm-5.3-prime",
-            "z-ai/glm-5.3-flashx",
-            "qwen/qwen3.8-max-prime",
-        ):
-            assert f"`{variant}`" in page
-    assert "2.19.1" in study
+        section = page.split("## Tested models\n", 1)[1].split("\n## ", 1)[0]
+        sections.append(section)
+        table = [line for line in section.splitlines() if line.startswith("|")]
+        assert table[0] == (
+            "| Model | Checks passed | Mean latency | Est. cost / 16 | Last tested | Connection |"
+        )
+        rows = [
+            tuple(cell.strip() for cell in line.split("|")[1:-1]) for line in table[2:]
+        ]
+        assert len(rows) == len(expected) == 13
+        assert {row[0] for row in rows} == set(expected)
+        for name, *values in rows:
+            assert tuple(values) == expected[name], name
+        prose = [
+            line
+            for line in section.splitlines()
+            if line.strip() and not line.startswith("|")
+        ]
+        assert len(prose) == 1
+        assert (
+            "[Test details]" in prose[0] and "observed-model-comparison.md" in prose[0]
+        )
+        assert len(section.splitlines()) <= 20
+        assert "Current passing shortlist" not in page
+        assert "Earlier evidence stays visible" not in page
+    assert sections[0].split("\n\n[", 1)[0] == sections[1].split("\n\n[", 1)[0]
+    for detail in (
+        "password-reset",
+        "5/6",
+        "14/16",
+        "cache-write",
+        "32,768",
+        "512",
+        "reasoning.enabled: false",
+        "passing response text was discarded",
+    ):
+        assert detail in study
+    assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in study
+    assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in study
 
 
 def test_current_comparison_aggregates_keep_the_approved_case_contract():

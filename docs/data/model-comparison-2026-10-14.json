@@ -1,0 +1,1255 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-14",
+  "reviewed_on": "2026-10-15",
+  "tool_version": "2.21.2",
+  "source_commit": "23845da5c627710410dc6e7d49c761b51f35274d",
+  "approved_maximum_requests": 192,
+  "approved_maximum_token_estimate_usd": 5.73,
+  "method": {
+    "case_source": "examples/anthropic-5.5-comparison.json",
+    "case_set_sha256": "aa4c488d62089bb8d6736d14872a1621afb92db2ae8062e7f28cc1f8c4529364",
+    "case_count": 8,
+    "suite_repetitions": 2,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "temperature": "omitted",
+    "response_retention": "failures only; passing text discarded, per-request evaluation flags retained",
+    "latency_scope": "successful API responses only, including contract failures",
+    "native_routes": "Anthropic, OpenAI, Gemini",
+    "openrouter_routes": "requested provider pin only, fallback disabled; native Z.ai/DeepSeek/Qwen not measured",
+    "sample_limit": "single host, sequential model blocks, 16 cases/model; reasoning and output caps differ"
+  },
+  "totals": {
+    "requests": 192,
+    "api_successful": 163,
+    "api_failures": 29,
+    "valid": 160,
+    "contract_failures": 3,
+    "retry_count": 0,
+    "estimated_cost_usd": null,
+    "known_cost_subtotal_usd": 0.038128803600000004,
+    "known_cost_requests": 163,
+    "missing_usage_requests": 29
+  },
+  "rows": [
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.9848866371976328,
+      "latency_p50_seconds": 1.3483878705301322,
+      "latency_p95_seconds": 4.552429035305977,
+      "mean_ttft_seconds": 1.7414572038760525,
+      "input_tokens": 1560,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 349,
+      "estimated_cost_usd": 0.01322,
+      "known_cost_subtotal_usd": 0.01322,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.168337,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "pricing": {
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "input_cost_per_million": 4.0,
+        "output_cost_per_million": 20.0,
+        "source": "official snapshot",
+        "as_of": "2026-09-28",
+        "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+        "cached_input_cost_per_million": 0.2
+      },
+      "configuration": {
+        "name": "homepage-claude-opus-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.168337
+      },
+      "config_sha256": "c8fa92c71db5c99606ded054b4dea3a65ed25aa42fac41a15f592a4b8f87da39",
+      "result_sha256": "3f8114c7359fe86503f97b296ce32408575a64f1caa693eaee8d7a0f3bc07b25"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.0948469051581924,
+      "latency_p50_seconds": 1.0269436905509792,
+      "latency_p95_seconds": 1.6177251362532843,
+      "mean_ttft_seconds": 0.9851139796664938,
+      "input_tokens": 1560,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 262,
+      "estimated_cost_usd": 0.00574,
+      "known_cost_subtotal_usd": 0.00574,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.08417,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "pricing": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5-5",
+        "input_cost_per_million": 2.0,
+        "output_cost_per_million": 10.0,
+        "source": "official snapshot",
+        "as_of": "2026-10-07",
+        "source_url": "https://www.anthropic.com/claude-haiku-5-5",
+        "cached_input_cost_per_million": 0.1
+      },
+      "configuration": {
+        "name": "homepage-claude-sonnet-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.08417
+      },
+      "config_sha256": "86c517ea5ae813d6bf10b552e0e77e6b4220033d179d7507af13915a05f52ebd",
+      "result_sha256": "6e670c8368823905fd4bd6611a66fedf89d37362826f6e84000124731684f321"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 0.93390321831248,
+      "latency_p50_seconds": 0.8752050304901786,
+      "latency_p95_seconds": 1.5025450899847783,
+      "mean_ttft_seconds": 0.856528410629835,
+      "input_tokens": 1560,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 646,
+      "estimated_cost_usd": 0.000479,
+      "known_cost_subtotal_usd": 0.000479,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.00421,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "pricing": {
+        "provider": "anthropic",
+        "model": "claude-haiku-5-5",
+        "input_cost_per_million": 0.1,
+        "output_cost_per_million": 0.5,
+        "source": "official snapshot",
+        "as_of": "2026-10-07",
+        "source_url": "https://platform.claude.com/docs/en/models/haiku-5-5/overview",
+        "cached_input_cost_per_million": 0.01,
+        "pricing_tiers": [
+          {
+            "up_to_input_tokens": 100000,
+            "input_cost_per_million": 0.1,
+            "output_cost_per_million": 0.5,
+            "cached_input_cost_per_million": 0.01
+          },
+          {
+            "input_cost_per_million": 0.5,
+            "output_cost_per_million": 2.5,
+            "cached_input_cost_per_million": 0.05
+          }
+        ]
+      },
+      "configuration": {
+        "name": "homepage-claude-haiku-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-haiku-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.00421
+      },
+      "config_sha256": "8885eaf361a80d3577556cc7750db11da7044b84ed798cdea31c0941252ee73c",
+      "result_sha256": "e7e264705dbe073d59e2833275417b75b4f2075b6a065f2dbb3ae2cd4798a780"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "route": "OpenAI",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.673588945865049,
+      "latency_p50_seconds": 1.5773121984675527,
+      "latency_p95_seconds": 2.296465406223433,
+      "mean_ttft_seconds": 1.5266851038613822,
+      "input_tokens": 1096,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 292,
+      "estimated_cost_usd": 0.005112,
+      "known_cost_subtotal_usd": 0.005112,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.084731,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "pricing": {
+        "provider": "openai",
+        "model": "gpt-6.1-sol",
+        "input_cost_per_million": 2.0,
+        "output_cost_per_million": 10.0,
+        "source": "official snapshot",
+        "as_of": "2026-09-30",
+        "source_url": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "cached_input_cost_per_million": 0.1,
+        "cache_write_input_cost_per_million": 2.5,
+        "pricing_tiers": [
+          {
+            "up_to_input_tokens": 272000,
+            "input_cost_per_million": 2.0,
+            "output_cost_per_million": 10.0,
+            "cached_input_cost_per_million": 0.1,
+            "cache_write_input_cost_per_million": 2.5
+          },
+          {
+            "input_cost_per_million": 4.0,
+            "output_cost_per_million": 15.0,
+            "cached_input_cost_per_million": 0.2,
+            "cache_write_input_cost_per_million": 5.0
+          }
+        ]
+      },
+      "configuration": {
+        "name": "homepage-gpt-6.1-sol",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6.1-sol"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.084731
+      },
+      "config_sha256": "1cc5baa8b5b2fbe555a0cc73f00fb14979e38d28af856e9b06888d3b2e56008e",
+      "result_sha256": "ec10a591a3c27a9671db4f50b40bc4f925725eda0a965b1cab6f24f441c8d369"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "route": "OpenAI",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.1497701730477274,
+      "latency_p50_seconds": 1.9044395535020158,
+      "latency_p95_seconds": 3.624362667731475,
+      "mean_ttft_seconds": 2.0582820946947322,
+      "input_tokens": 1096,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 487,
+      "estimated_cost_usd": 0.0003531,
+      "known_cost_subtotal_usd": 0.0003531,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004238,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "pricing": {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "input_cost_per_million": 0.1,
+        "output_cost_per_million": 0.5,
+        "source": "official snapshot",
+        "as_of": "2026-10-13",
+        "source_url": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "cached_input_cost_per_million": 0.01,
+        "cache_write_input_cost_per_million": 0.125,
+        "pricing_tiers": [
+          {
+            "up_to_input_tokens": 272000,
+            "input_cost_per_million": 0.1,
+            "output_cost_per_million": 0.5,
+            "cached_input_cost_per_million": 0.01,
+            "cache_write_input_cost_per_million": 0.125
+          },
+          {
+            "input_cost_per_million": 0.2,
+            "output_cost_per_million": 0.75,
+            "cached_input_cost_per_million": 0.02,
+            "cache_write_input_cost_per_million": 0.25
+          }
+        ]
+      },
+      "configuration": {
+        "name": "homepage-gpt-6-luna",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6-luna"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.004238
+      },
+      "config_sha256": "6dd67299ec84461d5332cd6c0729cc46102e189adc42eacfc3fe7624fa53ba4e",
+      "result_sha256": "b62b81e6ab68c3c1846896e6e4d1df97cf1f86fdf334251119929095312ada77"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-4-argon",
+      "route": "Gemini",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.3764690575771965,
+      "latency_p50_seconds": 2.091852686542552,
+      "latency_p95_seconds": 3.39624380422174,
+      "mean_ttft_seconds": 2.2538664763706038,
+      "input_tokens": 1518,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 251,
+      "estimated_cost_usd": 0.005546,
+      "known_cost_subtotal_usd": 0.005546,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 5.245129,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 32768,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "gemini",
+        "model": "gemini-4-argon",
+        "input_cost_per_million": 2.0,
+        "output_cost_per_million": 10.0,
+        "source": "official snapshot",
+        "as_of": "2026-10-13",
+        "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
+        "cached_input_cost_per_million": 0.1
+      },
+      "configuration": {
+        "name": "homepage-gemini-4-argon",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-4-argon"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 32768,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 5.245129
+      },
+      "config_sha256": "99a3345cef1f00ddaee09aaf71fa7c0d0726868893d6cf3e217eea70957c73e4",
+      "result_sha256": "09302cb8949a92e2c5b9f3cac1451a46db1cbafd17d567e1f59bbf7b728a3e20"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.8-flash",
+      "route": "Gemini",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.2546780266275164,
+      "latency_p50_seconds": 1.8360823289258406,
+      "latency_p95_seconds": 4.15341799199814,
+      "mean_ttft_seconds": 2.2208061921264743,
+      "input_tokens": 960,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1319,
+      "estimated_cost_usd": 0.00566625,
+      "known_cost_subtotal_usd": 0.00566625,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.031564,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "gemini",
+        "model": "gemini-3.8-flash",
+        "input_cost_per_million": 0.75,
+        "output_cost_per_million": 3.75,
+        "source": "official snapshot",
+        "as_of": "2026-10-13",
+        "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
+        "cached_input_cost_per_million": 0.075
+      },
+      "configuration": {
+        "name": "homepage-gemini-3.8-flash",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-3.8-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.031564
+      },
+      "config_sha256": "9ad5af5cdcddfb8a41ca9ca3aac9b64f7654ace367b57a84c0b5c718eebd9564",
+      "result_sha256": "5522b49b69fdde84ddf8b943fd2117f3d2afa01d956d65da90bfbfbc4266448a"
+    },
+    {
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3",
+      "route": "OpenRouter / Relace",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 13,
+      "api_failures": 3,
+      "valid": 11,
+      "contract_failures": 2,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.2214792173875209,
+      "latency_p50_seconds": 1.1899936910485849,
+      "latency_p95_seconds": 1.7511687840567902,
+      "mean_ttft_seconds": 1.1725839397852094,
+      "input_tokens": 958,
+      "cached_input_tokens": 384,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 219,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": 0.0010201952,
+      "cost_coverage": {
+        "known_requests": 13,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 3,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.036115,
+      "decision": "fail",
+      "reason_code": "api_failure",
+      "cli_exit_code": 1,
+      "api_failure_categories": {
+        "rate_limit": 3
+      },
+      "failed_contract_cases": [
+        {
+          "case": "invoice-request",
+          "reason": "queue must be one of: billing",
+          "count": 2
+        }
+      ],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 2,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openrouter": {
+            "provider": {
+              "only": [
+                "relace"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3",
+        "input_cost_per_million": 0.0608,
+        "output_cost_per_million": 4.4,
+        "source": "OpenRouter pinned endpoint pricing",
+        "as_of": "2026-10-14",
+        "source_url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints",
+        "cached_input_cost_per_million": 0.0565
+      },
+      "configuration": {
+        "name": "homepage-z-ai-glm-5.3",
+        "models": [
+          {
+            "provider": "openrouter",
+            "model": "z-ai/glm-5.3",
+            "input_cost_per_million": 0.0608,
+            "output_cost_per_million": 4.4,
+            "cached_input_cost_per_million": 0.0565,
+            "pricing_metadata": {
+              "source": "OpenRouter pinned endpoint pricing",
+              "source_url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints",
+              "as_of": "2026-10-14"
+            }
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openrouter": {
+              "provider": {
+                "only": [
+                  "relace"
+                ],
+                "allow_fallbacks": false
+              },
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.036115
+      },
+      "config_sha256": "53bb6cfcbc8bd1b6065b8b26d71f578466e80068ba4ab5ceccd830ee98fabde9",
+      "result_sha256": "7845344840be222255df6fb69e917a6bc3813f4eba46c8d2d7a6e4ad04cd3625"
+    },
+    {
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "route": "OpenRouter / Relace",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.5348408010031562,
+      "latency_p50_seconds": 1.5062446284573525,
+      "latency_p95_seconds": 2.275590282981284,
+      "mean_ttft_seconds": 1.3728108499344671,
+      "input_tokens": 1148,
+      "cached_input_tokens": 192,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 274,
+      "estimated_cost_usd": 0.00017764,
+      "known_cost_subtotal_usd": 0.00017764,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004142,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openrouter": {
+            "provider": {
+              "only": [
+                "relace"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3-flash",
+        "input_cost_per_million": 0.04,
+        "output_cost_per_million": 0.5,
+        "source": "OpenRouter pinned endpoint pricing",
+        "as_of": "2026-10-14",
+        "source_url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints",
+        "cached_input_cost_per_million": 0.012499999999999999
+      },
+      "configuration": {
+        "name": "homepage-z-ai-glm-5.3-flash",
+        "models": [
+          {
+            "provider": "openrouter",
+            "model": "z-ai/glm-5.3-flash",
+            "input_cost_per_million": 0.04,
+            "output_cost_per_million": 0.5,
+            "cached_input_cost_per_million": 0.012499999999999999,
+            "pricing_metadata": {
+              "source": "OpenRouter pinned endpoint pricing",
+              "source_url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3-flash/endpoints",
+              "as_of": "2026-10-14"
+            }
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openrouter": {
+              "provider": {
+                "only": [
+                  "relace"
+                ],
+                "allow_fallbacks": false
+              },
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.004142
+      },
+      "config_sha256": "ab9cf5121949b0f7d1054344c2a76cf3dfe8a75897d70ff7b9e34b48047db047",
+      "result_sha256": "6d0b386ad2a52f592cbebf56954005109c9daa343260f3475d9e85f17474a773"
+    },
+    {
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "route": "OpenRouter / Relace",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 16,
+      "api_failures": 0,
+      "valid": 16,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.3418890736356843,
+      "latency_p50_seconds": 1.8815855080028996,
+      "latency_p95_seconds": 4.786271842458518,
+      "mean_ttft_seconds": 2.294017616499332,
+      "input_tokens": 1434,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1200,
+      "estimated_cost_usd": 0.0007452384,
+      "known_cost_subtotal_usd": 0.0007452384,
+      "cost_coverage": {
+        "known_requests": 16,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004936,
+      "decision": "pass",
+      "reason_code": "benchmark_passed",
+      "cli_exit_code": 0,
+      "api_failure_categories": {},
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openrouter": {
+            "provider": {
+              "only": [
+                "relace"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "openrouter",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "input_cost_per_million": 0.017599999999999998,
+        "output_cost_per_million": 0.6,
+        "source": "OpenRouter pinned endpoint pricing",
+        "as_of": "2026-10-14",
+        "source_url": "https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints",
+        "cached_input_cost_per_million": 0.008
+      },
+      "configuration": {
+        "name": "homepage-deepseek-deepseek-v4.1-flash",
+        "models": [
+          {
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-v4.1-flash",
+            "input_cost_per_million": 0.017599999999999998,
+            "output_cost_per_million": 0.6,
+            "cached_input_cost_per_million": 0.008,
+            "pricing_metadata": {
+              "source": "OpenRouter pinned endpoint pricing",
+              "source_url": "https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash/endpoints",
+              "as_of": "2026-10-14"
+            }
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openrouter": {
+              "provider": {
+                "only": [
+                  "relace"
+                ],
+                "allow_fallbacks": false
+              },
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.004936
+      },
+      "config_sha256": "cfb7dca96b775bae660e18e15a9f093cc4ef5d06f2c2ffa96630bcd33dd2aa94",
+      "result_sha256": "bf40298d7f764fa8bdef685682dd81c03d6ced825c8667d2a22cfc9c64a6dd90"
+    },
+    {
+      "provider": "openrouter",
+      "model": "qwen/qwen3.8-max-0902",
+      "route": "OpenRouter / Alibaba US",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 0,
+      "api_failures": 16,
+      "valid": 0,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": null,
+      "latency_p50_seconds": null,
+      "latency_p95_seconds": null,
+      "mean_ttft_seconds": null,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": null,
+      "cost_coverage": {
+        "known_requests": 0,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 16,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.051401,
+      "decision": "fail",
+      "reason_code": "api_failure",
+      "cli_exit_code": 1,
+      "api_failure_categories": {
+        "provider_error": 16
+      },
+      "failed_contract_cases": [],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 0,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openrouter": {
+            "provider": {
+              "only": [
+                "alibaba/us-east-1"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "openrouter",
+        "model": "qwen/qwen3.8-max-0902",
+        "input_cost_per_million": 2.0,
+        "output_cost_per_million": 6.0,
+        "source": "OpenRouter pinned endpoint pricing",
+        "as_of": "2026-10-14",
+        "source_url": "https://openrouter.ai/api/v1/models/qwen/qwen3.8-max-0902/endpoints",
+        "cached_input_cost_per_million": 0.25
+      },
+      "configuration": {
+        "name": "homepage-qwen-qwen3.8-max-0902",
+        "models": [
+          {
+            "provider": "openrouter",
+            "model": "qwen/qwen3.8-max-0902",
+            "input_cost_per_million": 2.0,
+            "output_cost_per_million": 6.0,
+            "cached_input_cost_per_million": 0.25,
+            "pricing_metadata": {
+              "source": "OpenRouter pinned endpoint pricing",
+              "source_url": "https://openrouter.ai/api/v1/models/qwen/qwen3.8-max-0902/endpoints",
+              "as_of": "2026-10-14"
+            }
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openrouter": {
+              "provider": {
+                "only": [
+                  "alibaba/us-east-1"
+                ],
+                "allow_fallbacks": false
+              },
+              "reasoning": {
+                "enabled": false
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.051401
+      },
+      "config_sha256": "200708cb6136626bf7feb6349c08767afd1414400347a563bdcdae743df84b9a",
+      "result_sha256": "ee171f2921467d091de90d3f4268671fd3d6919d007448c8a4b5b0682482ea23"
+    },
+    {
+      "provider": "openrouter",
+      "model": "qwen/qwen3.8-flash",
+      "route": "OpenRouter / Alibaba US",
+      "observed_on": "2026-10-14",
+      "requests": 16,
+      "api_successful": 6,
+      "api_failures": 10,
+      "valid": 5,
+      "contract_failures": 1,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.0772964125111077,
+      "latency_p50_seconds": 1.0580053135054186,
+      "latency_p95_seconds": 1.2695367292617448,
+      "mean_ttft_seconds": 0.9362032011461755,
+      "input_tokens": 356,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 34,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": 6.938e-05,
+      "cost_coverage": {
+        "known_requests": 6,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 10,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.00402,
+      "decision": "fail",
+      "reason_code": "api_failure",
+      "cli_exit_code": 1,
+      "api_failure_categories": {
+        "rate_limit": 10
+      },
+      "failed_contract_cases": [
+        {
+          "case": "invoice-request",
+          "reason": "queue must be one of: billing",
+          "count": 1
+        }
+      ],
+      "passing_response_text_retained": 0,
+      "revalidated_failure_responses": 1,
+      "request": {
+        "max_output_tokens": 512,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openrouter": {
+            "provider": {
+              "only": [
+                "alibaba/us-east-1"
+              ],
+              "allow_fallbacks": false
+            },
+            "reasoning": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "provider": "openrouter",
+        "model": "qwen/qwen3.8-flash",
+        "input_cost_per_million": 0.15,
+        "output_cost_per_million": 0.47,
+        "source": "OpenRouter pinned endpoint pricing",
+        "as_of": "2026-10-14",
+        "source_url": "https://openrouter.ai/api/v1/models/qwen/qwen3.8-flash/endpoints",
+        "cached_input_cost_per_million": 0.016
+      },
+      "configuration": {
+        "name": "homepage-qwen-qwen3.8-flash",
+        "models": [
+          {
+            "provider": "openrouter",
+            "model": "qwen/qwen3.8-flash",
+            "input_cost_per_million": 0.15,
+            "output_cost_per_million": 0.47,
+            "cached_input_cost_per_million": 0.016,
+            "pricing_metadata": {
+              "source": "OpenRouter pinned endpoint pricing",
+              "source_url": "https://openrouter.ai/api/v1/models/qwen/qwen3.8-flash/endpoints",
+              "as_of": "2026-10-14"
+            }
+          }
+        ],
+        "request": {
+          "max_output_tokens": 512,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openrouter": {
+              "provider": {
+                "only": [
+                  "alibaba/us-east-1"
+                ],
+                "allow_fallbacks": false
+              },
+              "reasoning": {
+                "enabled": false
+              }
+            }
+          }
+        },
+        "suite_repetitions": 2,
+        "repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "require_current_pricing": true,
+        "save_responses": "failures",
+        "profiles": "billing-route,technical-route,account-route,ticket-extraction,duplicate-charge-injection,active-technical-outage,account-email-change,invoice-request",
+        "max_requests": 16,
+        "max_estimated_cost_usd": 0.00402
+      },
+      "config_sha256": "6124264d0b7ea90f8f00832152c74f417c70f8b1eed8fffd03f4ac4b4213bf70",
+      "result_sha256": "b773784c44950373490313ae4a7112acba3d0efb77f46e008b21b33fbb8666f1"
+    }
+  ]
+}

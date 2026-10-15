@@ -1,4 +1,6 @@
+import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -100,34 +102,44 @@ def test_homepage_model_list_matches_comparison_evidence():
         "deepseek/deepseek-v4.1-flash",
         "qwen/qwen3.8-max-0902",
         "qwen/qwen3.8-flash",
+        "gemini-4-argon",
+        "z-ai/glm-5.3-flash",
     }
-    unmeasured = {"gemini-4-argon", "z-ai/glm-5.3-flash"}
+    fresh = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
     row_pattern = (
         r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$"
     )
     homepage_rows = re.findall(row_pattern, homepage_section, re.MULTILINE)
-    assert {row[1] for row in homepage_rows} == selected | unmeasured
-    assert len(homepage_rows) == len(selected | unmeasured)
-    study_rows = {row[0]: row[1:] for row in rows}
+    assert {row[1] for row in homepage_rows} == selected
+    assert len(homepage_rows) == len(selected)
+    fresh_rows = {row["model"]: row for row in fresh["rows"]}
     for provider, model, observed_on, valid, latency, cost in homepage_rows:
-        if model in unmeasured:
-            assert (observed_on, valid, latency, cost) == ("Not run", "—", "—", "—")
-        else:
-            assert (observed_on, valid, latency, cost) == study_rows[model]
-            if model in {
-                "z-ai/glm-5.3",
-                "qwen/qwen3.8-max-0902",
-                "qwen/qwen3.8-flash",
-                "deepseek/deepseek-v4.1-flash",
-            }:
-                assert provider.startswith("OpenRouter")
+        row = fresh_rows[model]
+        assert observed_on == "2026-10-14"
+        assert provider == row["route"]
+        assert int(valid) == row["valid"]
+        assert latency == (
+            f"{row['mean_latency_seconds']:.3f}s"
+            if row["mean_latency_seconds"] is not None
+            else "—"
+        )
+        assert cost == (
+            f"${row['estimated_cost_usd']:.6f}"
+            if row["estimated_cost_usd"] is not None
+            else "—"
+        )
     assert re.findall(row_pattern, docs_index, re.MULTILINE) == homepage_rows
     for page in (readme, docs_index):
         assert "password-reset" in page
         assert "5/6" in page
         assert "14/16" in page
         assert "cache-write" in page
-        assert "Not run" in page
+        assert "2026-10-14" in page
+        assert "32,768" in page
+        assert "512" in page
+        assert "unmeasured" in page
         assert "Version 2." not in page
         assert "before the **2." not in page
         for variant in (
@@ -137,6 +149,121 @@ def test_homepage_model_list_matches_comparison_evidence():
         ):
             assert f"`{variant}`" in page
     assert "2.19.1" in study
+
+
+def test_current_comparison_aggregates_keep_the_approved_case_contract():
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-10-14.json").read_text())
+    study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+    current_method = study.split("## 2026-10-14 bounded comparison", 1)[1].split(
+        "## Historical method", 1
+    )[0]
+    assert "cache-hit rates" in current_method
+    assert "or cache discounts" not in current_method
+    for row in data["rows"]:
+        if row["cached_input_tokens"]:
+            assert str(row["cached_input_tokens"]) in current_method
+    original = json.loads((ROOT / "examples/anthropic-5.5-comparison.json").read_text())
+    case_hash = hashlib.sha256(
+        json.dumps(original["prompts"], sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert data["method"]["case_set_sha256"] == case_hash
+    assert data["method"]["case_source"] == "examples/anthropic-5.5-comparison.json"
+    assert data["method"]["suite_repetitions"] == 2
+    assert data["method"]["warmups"] == 0
+    assert data["method"]["concurrency"] == 1
+    assert len(data["rows"]) == 12
+    assert sum(row["requests"] for row in data["rows"]) == 192
+    assert sum(row["configured_cap_usd"] for row in data["rows"]) <= 5.73
+    for row in data["rows"]:
+        assert row["requests"] == 16
+        assert row["retry_count"] == 0
+        assert row["api_successful"] + row["api_failures"] == row["requests"]
+        assert row["valid"] + row["contract_failures"] == row["api_successful"]
+        if row["decision"] == "pass":
+            assert row["valid"] == 16 and row["cost_coverage"]["known_requests"] == 16
+        assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+        request = row["request"]
+        assert request["retry"]["max_attempts"] == 1
+        assert request["max_output_tokens"] == (
+            32768 if row["model"] == "gemini-4-argon" else 512
+        )
+        if row["provider"] == "openrouter":
+            route = request["provider_options"]["openrouter"]["provider"]
+            assert route["allow_fallbacks"] is False
+            assert route["only"] == (
+                ["alibaba/us-east-1"]
+                if row["model"].startswith("qwen/")
+                else ["relace"]
+            )
+    for key in (
+        "requests",
+        "api_successful",
+        "valid",
+        "api_failures",
+        "contract_failures",
+        "retry_count",
+    ):
+        assert data["totals"][key] == sum(row[key] for row in data["rows"])
+    if all(row["estimated_cost_usd"] is not None for row in data["rows"]):
+        assert math.isclose(
+            data["totals"]["estimated_cost_usd"],
+            sum(row["estimated_cost_usd"] for row in data["rows"]),
+        )
+    else:
+        assert data["totals"]["estimated_cost_usd"] is None
+    assert math.isclose(
+        data["totals"]["known_cost_subtotal_usd"],
+        sum(row["known_cost_subtotal_usd"] or 0 for row in data["rows"]),
+    )
+    for row in data["rows"]:
+        if row["api_successful"] == 0:
+            assert row["mean_latency_seconds"] is None
+            assert row["estimated_cost_usd"] is None
+    serialized = json.dumps(data)
+    for private_marker in (
+        "/home/",
+        "scratchpad/",
+        '"response":',
+        '"user_id":',
+        '"api_key":',
+    ):
+        assert private_marker not in serialized
+
+
+def test_comparison_reconstruction_preserves_an_existing_config(tmp_path):
+    guide = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+    snippet = re.search(r"python3 - <<'PYCODE'\n(.*?)\nPYCODE", guide, re.DOTALL)
+    assert snippet is not None
+    for relative in (
+        "docs/data/model-comparison-2026-10-14.json",
+        "examples/anthropic-5.5-comparison.json",
+    ):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / relative).read_bytes())
+    generated = subprocess.run(
+        [sys.executable, "-c", snippet.group(1)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert generated.returncode == 0, generated.stderr
+    config = tmp_path / "comparison.json"
+    assert json.loads(config.read_text())["models"] == [
+        {"provider": "gemini", "model": "gemini-4-argon"}
+    ]
+    config.write_text('{"name":"existing application contract"}\n')
+    repeated = subprocess.run(
+        [sys.executable, "-c", snippet.group(1)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert repeated.returncode != 0
+    assert "FileExistsError" in repeated.stderr
+    assert json.loads(config.read_text()) == {"name": "existing application contract"}
 
 
 def test_mcp_release_notes_and_security_boundary_are_current():
@@ -390,11 +517,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
+        "**Last reviewed:** 2026-10-15 · **As of:** v2.21.2"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
+        "**Last reviewed:** 2026-10-15 · **As of:** v2.21.2"
         in (ROOT / "README.md").read_text()
     )
     assert (

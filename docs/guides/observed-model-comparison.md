@@ -1,14 +1,11 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-10-08 · **As of:** v2.19.1
+**Last reviewed:** 2026-10-15 · **As of:** v2.21.2
 
-**Study dates:** 2026-09-28, 2026-09-30 and 2026-10-07 · **Scope:** 27 selected API model IDs, 16 support-routing requests per comparison row
-
-The comparison lists **27 IDs: 27 measured**. Haiku 5.5 was added and
-Sonnet 5.5 was remeasured on 2026-10-07. The other 23 original rows retain
-their 2026-09-28 measurements; GPT-6.1 Sol and routed GLM-5.3 were measured
-on 2026-09-30. Separate full-profile and smoke scores for the two new
-Anthropic runs appear below the main table.
+**Study dates:** 2026-09-28, 2026-09-30, 2026-10-07 and 2026-10-14.
+The latest run attempted 12 exact IDs; the earlier tables retain **27 measured**
+IDs. Nine candidates passed every selected case in the latest run. API rejection,
+rate limits and contract failures are separate observations.
 
 This is a dated example of using LLM Preflight to narrow a model shortlist. It
 does not certify these models, rank general intelligence, or approve a route for
@@ -19,7 +16,114 @@ and excluded from the public repository because failed responses and run
 metadata can contain sensitive information. This page publishes aggregates
 and the request method, not an independently auditable provider invoice.
 
-## Method
+## 2026-10-14 bounded comparison
+
+The owner-approved run used **2.21.2**, eight unchanged synthetic support-routing
+and JSON cases twice per model, concurrency one, no warmups, and one attempt per
+request. All **192** planned calls were attempted; **163** returned API responses,
+**160** passed their configured validator, and **three** responses failed it.
+The other **29** calls were API errors. No retries, alternative routes or extra
+paid probes were made.
+
+| Provider route | Exact API model ID | Observed date | Valid / 16 | Mean latency | Estimated cost / 16 |
+|---|---|---|---:|---:|---:|
+| Anthropic | `claude-opus-5-5` | 2026-10-14 | 16 | 1.985s | $0.013220 |
+| Anthropic | `claude-sonnet-5-5` | 2026-10-14 | 16 | 1.095s | $0.005740 |
+| Anthropic | `claude-haiku-5-5` | 2026-10-14 | 16 | 0.934s | $0.000479 |
+| OpenAI | `gpt-6.1-sol` | 2026-10-14 | 16 | 1.674s | $0.005112 |
+| OpenAI | `gpt-6-luna` | 2026-10-14 | 16 | 2.150s | $0.000353 |
+| Gemini | `gemini-4-argon` | 2026-10-14 | 16 | 2.376s | $0.005546 |
+| Gemini | `gemini-3.8-flash` | 2026-10-14 | 16 | 2.255s | $0.005666 |
+| OpenRouter / Relace | `z-ai/glm-5.3` | 2026-10-14 | 11 | 1.221s | — |
+| OpenRouter / Relace | `z-ai/glm-5.3-flash` | 2026-10-14 | 16 | 1.535s | $0.000178 |
+| OpenRouter / Relace | `deepseek/deepseek-v4.1-flash` | 2026-10-14 | 16 | 2.342s | $0.000745 |
+| OpenRouter / Alibaba US | `qwen/qwen3.8-max-0902` | 2026-10-14 | 0 | — | — |
+| OpenRouter / Alibaba US | `qwen/qwen3.8-flash` | 2026-10-14 | 5 | 1.077s | — |
+
+The [machine-readable aggregates](../data/model-comparison-2026-10-14.json)
+include exact request settings, price evidence, request and failure counts,
+latency percentiles, token usage, CLI exits and hashes of the privately retained
+configs/results. The known subtotal is **$0.0381288036** across **163** calls
+with usage. **Total cost is unknown:** the other 29 calls returned no token
+usage. Unknown amounts remain null; API errors are not assumed free. The
+approved maximum token-based estimate was **$5.73**, not an invoice guarantee.
+
+### Failures and interpretation
+
+- **Qwen 3.8 Max-0902, OpenRouter / Alibaba US:** all 16 requests returned HTTP
+  400 because the prepared request set `reasoning.enabled: false` while the
+  endpoint requires reasoning. This configuration failed before model output;
+  the row provides no quality or latency result for Qwen Max.
+- **Qwen 3.8 Flash, OpenRouter / Alibaba US:** ten HTTP 429 responses identified
+  the upstream shared provider pool as rate-limited. Of the six API successes,
+  five passed. One invoice request selected `account`; the fixed contract
+  required `billing`.
+- **GLM 5.3, OpenRouter / Relace:** three HTTP 429 responses identified the
+  upstream shared pool as rate-limited. Of 13 API successes, 11 passed. Both
+  invoice-request repetitions selected `account` instead of `billing`.
+- **The other nine models:** all 16 API calls and validators passed for each.
+  This includes native Gemini 4 Argon and routed GLM 5.3 Flash. These are
+  passing candidates for this example, not production approval.
+
+All three retained invalid responses were reevaluated locally with the
+unchanged validators and failed again. The configured retention policy saved
+failure responses only: passing response text was discarded, so its verdicts
+cannot be independently replayed from the retained text. Per-request verdicts,
+usage, timings and method fingerprints remain available privately. The public
+aggregate file contains no responses, account identifiers, credentials or
+local paths.
+
+### Request settings and reproducibility
+
+- The eight cases match the [Anthropic comparison example](../../examples/anthropic-5.5-comparison.json).
+  A SHA-256 of the case set pins the prompts and validators.
+- Anthropic, OpenAI and Gemini used native routes. OpenRouter requests pinned
+  Relace for GLM/DeepSeek and `alibaba/us-east-1` for Qwen, with fallback disabled.
+  These are requested provider pins; no equivalent native Z.ai/DeepSeek/Qwen
+  route was measured.
+- Argon used `LOW` thinking with a **32,768**-token output/thinking cap; Gemini
+  3.8 Flash used `LOW` with **512**. Routed GLM/DeepSeek used low reasoning;
+  Qwen requested disabled reasoning, which Max rejected. Anthropic/OpenAI used
+  provider-default reasoning. Temperature was omitted throughout.
+- Every other output cap was 512. Mean latency includes only successful API
+  responses, including outputs that failed the validator. It excludes API
+  errors. Model blocks were sequential on one host; this small sample does not
+  establish stable quality, latency or cost rankings. It does not exercise
+  long context, complex agents, tools or multimodal inputs. Recorded usage
+  includes 384 cached input tokens for GLM 5.3 and 192 for GLM 5.3 Flash;
+  costs include their cached-input rates. However, cache-hit rates and savings
+  were not systematically tested.
+
+To reconstruct one row from the source checkout, combine the shared example
+with its aggregate configuration. This creates a local plan without generation:
+
+```bash
+python3 - <<'PYCODE'
+import json
+from pathlib import Path
+
+data = json.loads(Path("docs/data/model-comparison-2026-10-14.json").read_text())
+row = next(row for row in data["rows"] if row["model"] == "gemini-4-argon")
+config = json.loads(Path(data["method"]["case_source"]).read_text())
+config.update(row["configuration"])
+with Path("comparison.json").open("x") as output:
+    output.write(json.dumps(config, indent=2) + "\n")
+PYCODE
+llm-preflight comparison.json --doctor
+llm-preflight comparison.json --pricing-check
+llm-preflight comparison.json --dry-run
+```
+
+The snippet refuses to overwrite an existing `comparison.json`. Review the
+route, reasoning, current prices, output cap, retained response policy
+and explicit request/cost limits before approving paid execution. Reconstructing
+the Qwen Max row reproduces the rejected configuration; it is not a recommended
+request. The [OpenRouter model page](https://openrouter.ai/qwen/qwen3.8-max-0902)
+describes configurable reasoning effort; the recorded endpoint rejected
+reasoning-disabled requests. Do not infer a current endpoint's parameter support
+from a different model in the same family.
+
+## Historical method (September 28–October 7)
 
 - Eight support-routing and JSON cases were run twice per model, with no
   warmups, one attempt, concurrency one, and a 512-token output limit.
@@ -47,6 +151,9 @@ and the request method, not an independently auditable provider invoice.
   do not establish stable latency or quality rankings.
 
 ## Comparison results
+
+These historical rows retain the latest observation from September 28 through
+October 7. The October 14 run above is separate and does not erase failures.
 
 | Provider | Exact API model ID | Observed date | Valid / 16 | Mean latency | Estimated cost / 16 |
 |---|---|---|---:|---:|---:|

@@ -14,10 +14,18 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in page
+    assert "**Last reviewed:** 2026-10-15 · **As of:** unreleased source" in page
     assert "Package version: **2.21.2**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
+    assert "no live Gemini 4 result has been measured" not in page
+    assert "16/16" in page and "observed-model-comparison.md" in page
+    for model, rates in (
+        ("qwen3.8-max", "2.00 | 6.00"),
+        ("qwen3.8-flash", "0.15 | 0.47"),
+    ):
+        assert f"| `qwen` | `{model}` | {rates} | 2026-10-15 |" in page
+    assert "Model Studio" in page and "account console" in page
     for provider, model_id in PUBLIC_PRICING:
         assert f"`{provider}`" in page
         assert f"`{model_id}`" in page

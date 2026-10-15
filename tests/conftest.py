@@ -2,9 +2,9 @@ from datetime import date, datetime
 
 import pytest
 
-# The day the bundled pricing and retirement snapshots were last reviewed
-# together; bump it in the same change that refreshes a snapshot.
-SNAPSHOT_REVIEW_DAY = date(2026, 10, 13)
+# Deterministic clock at or after every bundled snapshot review date.
+# Bump it when a newly reviewed row would otherwise be in the future.
+SNAPSHOT_REVIEW_DAY = date(2026, 10, 15)
 
 
 @pytest.fixture

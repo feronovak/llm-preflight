@@ -1,17 +1,20 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-14 · **As of:** v2.21.2
+**Last reviewed:** 2026-10-15 · **As of:** unreleased source
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
-direct-provider price snapshots bundled in **2.21.2**. The
+direct-provider snapshots in the current source checkout, based on **2.21.2**.
+The native Qwen 3.8 price-source/cache corrections below are unreleased; an
+installed 2.21.2 still has the earlier QwenCloud-derived cache rates. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
 
 Package version: **2.21.2**. Each pricing row retains its recorded UTC review
 date. Version 2.21.0 adds Gemini 4 Argon and Gemini 3.6 Flash, refreshes 3.8
 Flash, and removes prices for redirected 3.5/3.7 aliases. Gemini 4 has
-deterministic protocol coverage; no live Gemini 4 result has been measured.
+deterministic protocol coverage and a native **16/16** observation on October
+14; see the [dated comparison](observed-model-comparison.md) for its scope.
 
 Version 2.19.1 adds Haiku 5.5 and updates Sonnet 5.5 cache pricing; the
 Anthropic section below records the rates, request behavior and limits.
@@ -76,8 +79,8 @@ hours live in code; this table is the headline input/output pair.
 | `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-09-28 |
 | `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-09-28 |
 | `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-09-28 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-09-28 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-09-28 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-15 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-15 |
 | `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-09-28 |
 | `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-09-30 |
 | `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-09-28 |
@@ -92,6 +95,24 @@ has a $0.10 cached-input rate for up to 272k input tokens and $0.20 above
 that threshold. See
 [`pricing.py`](../../llm_preflight/pricing.py) and
 [pricing and safety](pricing-and-safety.md).
+
+### Native Qwen 3.8 corrections in source
+
+The Max and Flash rows use Model Studio Singapore/International standard
+input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
+on October 15. Other regions and deployment scopes require their own reviewed
+overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
+must come from the account console. The source defaults their cache-hit rate
+to `null`, so reported cache hits leave cost unknown until an explicit reviewed
+override is supplied. QwenCloud cache prices are not substituted.
+
+The unreleased source also uses `max_completion_tokens` for native Qwen 3.8
+Max, Max-0902 and Flash, covering reasoning plus answer. Planner, doctor and
+transport reject token-limit fields in provider options. An explicit legacy
+`max_tokens` setting requires explicitly disabled thinking. The
+[native smoke guide](native-chinese-models.md) supplies an example usable with
+installed 2.21.2 by setting the combined-limit parameter and pricing override
+explicitly. These fixes do not change OpenRouter requests or prior results.
 
 ### Gemini 4 Argon and Flash pricing transitions
 

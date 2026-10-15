@@ -18,6 +18,11 @@ TokenUsage = dict[str, int | None]
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
+_QWEN_COMBINED_OUTPUT_MODELS = {
+    "qwen3.8-max",
+    "qwen3.8-max-0902",
+    "qwen3.8-flash",
+}
 
 
 PROVIDER_DEFAULTS = {
@@ -102,6 +107,42 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
         merged.update(configured.get(provider, {}))
         return merged
     return dict(configured)
+
+
+def validate_native_request_options(
+    model: dict[str, Any], options: dict[str, Any]
+) -> None:
+    """Keep native request identity and limits aligned with the shared plan."""
+    provider = model.get("provider")
+    if provider not in {"zai", "deepseek", "qwen"}:
+        return
+    provider_options = _provider_options(options, provider)
+    if {
+        "model",
+        "messages",
+        "stream",
+        "stream_options",
+        "max_tokens",
+        "max_completion_tokens",
+        "max_output_tokens",
+    } & provider_options.keys():
+        raise ValueError(
+            "native provider_options cannot override model, messages, streaming or "
+            "token limits; use models and request.max_output_tokens"
+        )
+    if provider != "qwen" or model.get("model") not in _QWEN_COMBINED_OUTPUT_MODELS:
+        return
+    parameter = model.get("max_tokens_parameter", "max_completion_tokens")
+    thinking_disabled = provider_options.get(
+        "enable_thinking"
+    ) is False and provider_options.get("reasoning_effort") in (None, "none")
+    if parameter != "max_completion_tokens" and not (
+        parameter == "max_tokens" and thinking_disabled
+    ):
+        raise ValueError(
+            "native Qwen reasoning requires max_tokens_parameter=max_completion_tokens; "
+            "max_tokens is safe only with explicitly disabled thinking"
+        )
 
 
 def _retry_config(options: dict[str, Any]) -> dict[str, Any]:
@@ -358,6 +399,7 @@ class OpenAICompatibleClient(ProviderClient):
         return {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        validate_native_request_options(self.model, options)
         messages = []
         if options.get("system_prompt"):
             messages.append({"role": "system", "content": options["system_prompt"]})
@@ -732,6 +774,9 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
     provider = model.get("provider", "openai_compatible")
     defaults = PROVIDER_DEFAULTS.get(provider, {})
     resolved = {**defaults, **model}
+    if provider == "qwen" and resolved.get("model") in _QWEN_COMBINED_OUTPUT_MODELS:
+        # Model Studio's max_tokens excludes reasoning on these models.
+        resolved.setdefault("max_tokens_parameter", "max_completion_tokens")
     if "base_url" not in resolved:
         raise ValueError(
             f"model {model.get('name', model.get('model'))!r} requires base_url "

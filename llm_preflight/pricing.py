@@ -17,7 +17,8 @@ from .retirements import GEMINI_MODEL_REDIRECTS
 # freshness still requires a new review. Redirected Gemini aliases have no
 # reviewed effective-route price and are deliberately omitted.
 # DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
-# snapshots use QwenCloud USD list rates. TypeSafe Jev bills input only.
+# Qwen 3.8 snapshots use Model Studio Singapore/International list rates;
+# its cache-hit price needs account-console evidence. TypeSafe Jev bills input only.
 # Snapshot rows were reviewed against their primary official sources on
 # their recorded dates. Qwen rows retain USD list rates, excluding temporary
 # discounts.
@@ -55,8 +56,8 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-28"),
     ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-28"),
     ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-28"),
-    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
-    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
+    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-15"),
+    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-15"),
     ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
     ("zai", "glm-5.3"): (1.4, 4.4, "2026-09-30"),
     ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
@@ -99,8 +100,14 @@ _MODEL_PRICING_PAGES = {
             "gpt-6-luna",
         )
     },
-    ("qwen", "qwen3.8-max"): "https://www.qwencloud.com/models/qwen3.8-max",
-    ("qwen", "qwen3.8-flash"): "https://www.qwencloud.com/models/qwen3.8-flash",
+    (
+        "qwen",
+        "qwen3.8-max",
+    ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+    (
+        "qwen",
+        "qwen3.8-flash",
+    ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
     ("qwen", "qwen3.7-plus"): "https://www.qwencloud.com/models/qwen3.7-plus",
 }
 PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
@@ -285,10 +292,10 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.044,
     },
     ("qwen", "qwen3.8-max"): {
-        "cached_input_cost_per_million": 0.25,
+        "cached_input_cost_per_million": None,
     },
     ("qwen", "qwen3.8-flash"): {
-        "cached_input_cost_per_million": 0.016,
+        "cached_input_cost_per_million": None,
     },
     ("qwen", "qwen3.7-plus"): {
         "cached_input_cost_per_million": 0.08,

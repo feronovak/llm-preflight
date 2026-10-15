@@ -41,6 +41,8 @@ Results stay local unless you decide to attach or publish them.
   the terminal, then review the paid-work plan.
 - [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing
   confidence, retries, response retention, and sensitive-data handling.
+- [Direct GLM, DeepSeek and Qwen checks](guides/native-chinese-models.md) —
+  native endpoints, credentials and a bounded three-model smoke.
 
 ## Tested models
 

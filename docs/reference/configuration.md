@@ -36,6 +36,8 @@ default endpoint is the international compatible-mode URL, which matches the
 bundled USD snapshots. A China Beijing endpoint remains valid by setting
 `base_url`; the checked-in Qwen-VL example does that. The existing
 `openai_compatible` plus `DASHSCOPE_API_KEY` form also remains valid.
+For account-specific Qwen endpoints, reasoning limits and a bounded native
+smoke, see [direct GLM, DeepSeek and Qwen checks](../guides/native-chinese-models.md).
 
 Use `zai` for GLM-5.3 on the standard Z.ai Chat Completion endpoint,
 `https://api.z.ai/api/paas/v4`. Its native price snapshot does not apply to

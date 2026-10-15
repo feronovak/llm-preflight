@@ -1,0 +1,75 @@
+{
+  "name": "native-chinese-smoke",
+  "prompt": "Reply with exactly: ok",
+  "validation": {
+    "exact": "ok"
+  },
+  "validation_fixtures": [
+    {
+      "name": "accepted-label",
+      "response": "ok",
+      "expect": "pass"
+    },
+    {
+      "name": "rejected-label",
+      "response": "not ok",
+      "expect": "fail"
+    }
+  ],
+  "models": [
+    {
+      "provider": "zai",
+      "model": "glm-5.3"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-max",
+      "max_tokens_parameter": "max_completion_tokens",
+      "input_cost_per_million": 2.0,
+      "output_cost_per_million": 6.0,
+      "cached_input_cost_per_million": null,
+      "pricing_metadata": {
+        "source": "user override",
+        "as_of": "2026-10-15",
+        "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "scope": "Singapore / International standard text API; cache-hit rate requires the account console"
+      }
+    }
+  ],
+  "request": {
+    "max_output_tokens": 4096,
+    "retry": {
+      "max_attempts": 1
+    },
+    "provider_options": {
+      "zai": {
+        "thinking": {
+          "type": "enabled"
+        },
+        "reasoning_effort": "low"
+      },
+      "deepseek": {
+        "thinking": {
+          "type": "enabled"
+        },
+        "reasoning_effort": "low"
+      },
+      "qwen": {
+        "enable_thinking": true,
+        "reasoning_effort": "low"
+      }
+    }
+  },
+  "repetitions": 1,
+  "warmups": 0,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "max_requests": 3,
+  "max_estimated_cost_usd": 0.1,
+  "require_current_pricing": true,
+  "save_responses": "failures"
+}

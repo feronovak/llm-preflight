@@ -9,7 +9,7 @@ from typing import Any, cast
 from unicodedata import east_asian_width
 
 from .catalog import resolve_models
-from .client import PROVIDER_DEFAULTS
+from .client import PROVIDER_DEFAULTS, validate_native_request_options
 from .decision import legacy_cost_evidence
 from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
@@ -169,6 +169,7 @@ def estimate_prompt_tokens(text: str) -> int:
 def _request_cost(
     model: dict[str, Any], prompt: str, options: dict[str, Any]
 ) -> float | None:
+    validate_native_request_options(model, options)
     if options.get("input_images"):
         # Providers meter image inputs differently; do not turn file dimensions
         # into a made-up token count for a spend gate.
@@ -305,6 +306,12 @@ def doctor_report(
     for model in models:
         provider = model.get("provider", "openai_compatible")
         resolved = {**PROVIDER_DEFAULTS.get(provider, {}), **model}
+        try:
+            for _, options in _budget_work(config):
+                validate_native_request_options(model, options)
+        except ValueError as exc:
+            checks.append({"ok": False, "model": model["model"], "message": str(exc)})
+            continue
         key_env = resolved.get("api_key_env")
         credential_source = None
         if key_env:

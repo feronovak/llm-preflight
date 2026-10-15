@@ -548,10 +548,10 @@ def test_qwen_3_8_max_official_snapshot_pricing():
 
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 6.0
-    assert model["cached_input_cost_per_million"] == 0.25
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["cached_input_cost_per_million"] is None
+    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
     assert model["pricing_metadata"]["source_url"] == (
-        "https://www.qwencloud.com/models/qwen3.8-max"
+        "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
 
 
@@ -560,9 +560,10 @@ def test_qwen_3_8_flash_official_snapshot_pricing():
 
     assert model["input_cost_per_million"] == 0.15
     assert model["output_cost_per_million"] == 0.47
-    assert model["cached_input_cost_per_million"] == 0.016
+    assert model["cached_input_cost_per_million"] is None
+    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
     assert model["pricing_metadata"]["source_url"] == (
-        "https://www.qwencloud.com/models/qwen3.8-flash"
+        "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
 
 
@@ -678,8 +679,8 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-28"),
         ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-28"),
         ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-28"),
-        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-09-28"),
-        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-09-28"),
+        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-15"),
+        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-15"),
         ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
         ("zai", "glm-5.3"): (1.4, 4.4, "2026-09-30"),
         ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
@@ -1114,3 +1115,25 @@ def test_public_snapshot_metadata_is_refreshed_after_a_package_upgrade(monkeypat
     assert refreshed["input_cost_per_million"] == 3
     assert refreshed["output_cost_per_million"] == 4
     assert refreshed["pricing_metadata"]["as_of"] == "2026-08-11"
+
+
+@pytest.mark.parametrize("model_id", ["qwen3.8-max", "qwen3.8-flash"])
+def test_native_model_studio_cache_price_needs_reviewed_account_evidence(model_id):
+    model = apply_public_pricing({"provider": "qwen", "model": model_id})
+    assert model["cached_input_cost_per_million"] is None
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+    )
+    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
+    cached = {"input_tokens": 100, "cached_input_tokens": 50, "output_tokens": 10}
+    assert estimate_sample_cost(cached, model) is None
+    uncached = {**cached, "cached_input_tokens": 0}
+    assert estimate_sample_cost(uncached, model) is not None
+    reviewed = {
+        **model,
+        "cached_input_cost_per_million": 0.25,
+        "pricing_metadata": {"source": "user override", "as_of": "2026-10-15"},
+    }
+    resolved = apply_public_pricing(reviewed)
+    assert resolved["cached_input_cost_per_million"] == 0.25
+    assert estimate_sample_cost(cached, resolved) is not None

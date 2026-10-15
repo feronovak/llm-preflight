@@ -345,6 +345,340 @@ def test_qwen_uses_the_model_studio_compatible_chat_adapter():
     assert client.model["api_key_env"] == "DASHSCOPE_API_KEY"
 
 
+@pytest.mark.parametrize("model", ["qwen3.8-max", "qwen3.8-max-0902", "qwen3.8-flash"])
+@pytest.mark.parametrize("limit", [None, 1, 4096])
+def test_native_qwen_3_8_caps_reasoning_and_answer_tokens_together(model, limit):
+    client = create_client({"provider": "qwen", "model": model}, 10)
+    options = {
+        "provider_options": {
+            "qwen": {"enable_thinking": True, "reasoning_effort": "low"}
+        }
+    }
+    if limit is not None:
+        options["max_output_tokens"] = limit
+
+    body = client.body("Reply with ok", options)
+
+    assert body["max_completion_tokens"] == (256 if limit is None else limit)
+    assert "max_tokens" not in body
+    assert body["enable_thinking"] is True
+    assert body["reasoning_effort"] == "low"
+
+
+@pytest.mark.parametrize(
+    "provider,model,key,endpoint,options,parameter,cached_price,cost",
+    [
+        (
+            "zai",
+            "glm-5.3",
+            "ZAI_API_KEY",
+            "https://api.z.ai/api/paas/v4/chat/completions",
+            {"thinking": {"type": "enabled"}, "reasoning_effort": "low"},
+            "max_tokens",
+            0.26,
+            0.001016,
+        ),
+        (
+            "deepseek",
+            "deepseek-flash",
+            "DEEPSEEK_API_KEY",
+            "https://api.deepseek.com/v1/chat/completions",
+            {"thinking": {"type": "enabled"}, "reasoning_effort": "low"},
+            "max_tokens",
+            0.006,
+            0.0002088,
+        ),
+        (
+            "qwen",
+            "qwen3.8-max",
+            "DASHSCOPE_API_KEY",
+            "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+            {"enable_thinking": True, "reasoning_effort": "low"},
+            "max_completion_tokens",
+            None,
+            None,
+        ),
+    ],
+)
+@pytest.mark.parametrize("reported_usage", [True, False])
+def test_native_chinese_models_stream_answer_and_usage_without_openrouter(
+    monkeypatch,
+    provider,
+    model,
+    key,
+    endpoint,
+    options,
+    parameter,
+    cached_price,
+    cost,
+    reported_usage,
+):
+    from llm_preflight.metrics import summarize
+    from llm_preflight.pricing import apply_public_pricing
+
+    captured = []
+    events = [
+        {
+            "choices": [
+                {"delta": {"reasoning_content": "private reasoning, not the answer"}}
+            ]
+        },
+        {"choices": [{"delta": {"content": '{"queue":'}}]},
+        {"choices": [{"delta": {"content": '"billing"}'}, "finish_reason": "stop"}]},
+    ]
+    if reported_usage:
+        usage = {
+            "prompt_tokens": 1000,
+            "completion_tokens": 120,
+            "prompt_tokens_details": {"cached_tokens": 800},
+            "completion_tokens_details": {"reasoning_tokens": 100},
+        }
+        if provider == "deepseek":
+            usage.update(prompt_cache_hit_tokens=800, prompt_cache_miss_tokens=200)
+        events.append({"choices": [], "usage": usage})
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def __iter__(self):
+            return iter(
+                [f"data: {json.dumps(event)}\n".encode() for event in events]
+                + [b"data: [DONE]\n"]
+            )
+
+    def transport(request, timeout):
+        captured.append(request)
+        return Response()
+
+    monkeypatch.setenv(key, "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    configured = {"provider": provider, "model": model}
+    if provider == "qwen":
+        # Model Studio's Qwen 3.8 cache-hit rate is account-console evidence,
+        # not the separately bundled QwenCloud rate.
+        configured.update(
+            input_cost_per_million=2.0,
+            output_cost_per_million=6.0,
+            cached_input_cost_per_million=None,
+            pricing_metadata={"source": "user override"},
+        )
+    client = create_client(configured, 10)
+    sample = client.run(
+        "Charged twice",
+        {
+            "system_prompt": "Return only the routing JSON",
+            "max_output_tokens": 4096,
+            "retry": {"max_attempts": 1},
+            "provider_options": {provider: options},
+        },
+    )
+
+    assert len(captured) == 1
+    request = captured[0]
+    assert request.full_url == endpoint
+    assert "openrouter" not in request.full_url
+    assert request.get_header("Authorization") == "Bearer test"
+    body = json.loads(request.data)
+    assert body["model"] == model and body[parameter] == 4096
+    assert body["stream"] is True
+    assert body["messages"] == [
+        {"role": "system", "content": "Return only the routing JSON"},
+        {"role": "user", "content": "Charged twice"},
+    ]
+    for name, value in options.items():
+        assert body[name] == value
+    assert "temperature" not in body
+    assert ("stream_options" in body) is (provider != "zai")
+    if provider != "zai":
+        assert body["stream_options"] == {"include_usage": True}
+    assert sample["ok"] is True and sample["retry_count"] == 0
+    assert sample["response"] == '{"queue":"billing"}'
+    assert sample["input_tokens"] == (1000 if reported_usage else None)
+    assert sample["cached_input_tokens"] == (800 if reported_usage else None)
+    assert sample["output_tokens"] == (120 if reported_usage else None)
+    pricing = apply_public_pricing(client.model)
+    assert pricing["cached_input_cost_per_million"] == cached_price
+    actual = summarize([sample], pricing)["estimated_cost_usd"]
+    if reported_usage and cost is not None:
+        assert actual == pytest.approx(cost)
+    else:
+        assert actual is None
+
+
+@pytest.mark.parametrize(
+    "provider,model,key",
+    [
+        ("zai", "glm-5.3", "ZAI_API_KEY"),
+        ("deepseek", "deepseek-flash", "DEEPSEEK_API_KEY"),
+        ("qwen", "qwen3.8-max", "DASHSCOPE_API_KEY"),
+    ],
+)
+def test_native_chinese_models_retain_native_auth_failures_without_fallback(
+    monkeypatch, provider, model, key
+):
+    captured = []
+
+    def transport(request, timeout):
+        captured.append(request.full_url)
+        raise urllib.error.HTTPError(
+            request.full_url,
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(b'{"error":{"message":"invalid native credential"}}'),
+        )
+
+    monkeypatch.setenv(key, "test")
+    monkeypatch.setattr("urllib.request.urlopen", transport)
+    client = create_client({"provider": provider, "model": model}, 10)
+    sample = client.run("ok", {"retry": {"max_attempts": 1}})
+
+    assert captured == [client.endpoint()]
+    assert "openrouter" not in captured[0]
+    assert sample["ok"] is False and sample["failure_category"] == "credentials"
+    assert sample["retry_count"] == 0
+    assert sample["input_tokens"] is None and sample["output_tokens"] is None
+    assert "HTTP 401" in sample["error"]
+
+
+@pytest.mark.parametrize(
+    "provider,model",
+    [
+        ("qwen", "qwen3-vl-plus"),
+        ("qwen", "qwen3.8-max-unreviewed"),
+        ("openrouter", "qwen/qwen3.8-max-0902"),
+        ("openai_compatible", "qwen3.8-max"),
+    ],
+)
+def test_native_qwen_cap_change_keeps_other_protocols_unchanged(provider, model):
+    configured = {"provider": provider, "model": model}
+    if provider == "openai_compatible":
+        configured["base_url"] = "https://custom.example/v1"
+    body = create_client(configured, 10).body("ok", {"max_output_tokens": 42})
+    assert body["max_tokens"] == 42 and "max_completion_tokens" not in body
+
+
+@pytest.mark.parametrize("parameter", ["max_tokens", "max_completion_tokens"])
+def test_native_qwen_preserves_an_explicit_model_token_parameter(parameter):
+    client = create_client(
+        {"provider": "qwen", "model": "qwen3.8-max", "max_tokens_parameter": parameter},
+        10,
+    )
+    body = client.body(
+        "ok",
+        {
+            "max_output_tokens": 42,
+            "provider_options": {"qwen": {"enable_thinking": False}},
+        },
+    )
+    assert client.model["max_tokens_parameter"] == parameter
+    assert body[parameter] == 42
+    other = (
+        "max_tokens"
+        if parameter == "max_completion_tokens"
+        else "max_completion_tokens"
+    )
+    assert other not in body
+
+
+@pytest.mark.parametrize(
+    "provider,model,key",
+    [
+        ("qwen", "qwen3.8-max", "DASHSCOPE_API_KEY"),
+        ("deepseek", "deepseek-flash", "DEEPSEEK_API_KEY"),
+        ("zai", "glm-5.3", "ZAI_API_KEY"),
+    ],
+)
+@pytest.mark.parametrize("scope", ["flat", "provider", "all"])
+@pytest.mark.parametrize(
+    "parameter",
+    [
+        "max_tokens",
+        "max_completion_tokens",
+        "max_output_tokens",
+        "model",
+        "messages",
+        "stream",
+        "stream_options",
+    ],
+)
+@pytest.mark.parametrize("surface", ["wire", "budget", "doctor"])
+def test_native_overrides_cannot_change_the_planned_request(
+    monkeypatch, provider, model, key, scope, parameter, surface
+):
+    from llm_preflight.features import check_budget, doctor_report
+
+    raw = {parameter: 4096}
+    overrides = (
+        raw if scope == "flat" else {provider if scope == "provider" else scope: raw}
+    )
+    config = {
+        "prompt": "ok",
+        "models": [{"provider": provider, "model": model}],
+        "repetitions": 1,
+        "warmups": 0,
+        "max_requests": 1,
+        "max_estimated_cost_usd": 0.0001,
+        "request": {
+            "max_output_tokens": 1,
+            "retry": {"max_attempts": 1},
+            "provider_options": overrides,
+        },
+    }
+    monkeypatch.setenv(key, "test")
+    if surface == "doctor":
+        report = doctor_report(config)
+        assert report["ok"] is False
+        assert any(
+            "request.max_output_tokens" in check["message"]
+            for check in report["checks"]
+        )
+    else:
+        with pytest.raises(ValueError, match="request.max_output_tokens"):
+            if surface == "budget":
+                check_budget(config)
+            else:
+                create_client(config["models"][0], 10).body("ok", config["request"])
+
+
+@pytest.mark.parametrize("surface", ["wire", "budget", "doctor"])
+def test_native_qwen_legacy_answer_limit_cannot_leave_reasoning_unbounded(
+    monkeypatch, surface
+):
+    from llm_preflight.features import check_budget, doctor_report
+
+    model = {
+        "provider": "qwen",
+        "model": "qwen3.8-max",
+        "max_tokens_parameter": "max_tokens",
+    }
+    config = {
+        "models": [model],
+        "prompt": "ok",
+        "repetitions": 1,
+        "warmups": 0,
+        "request": {"max_output_tokens": 1},
+        "max_estimated_cost_usd": 0.0001,
+    }
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test")
+    if surface == "doctor":
+        report = doctor_report(config)
+        assert report["ok"] is False
+        assert any(
+            "max_completion_tokens" in check["message"] for check in report["checks"]
+        )
+    else:
+        with pytest.raises(ValueError, match="max_completion_tokens"):
+            if surface == "budget":
+                check_budget(config)
+            else:
+                create_client(model, 10).body("ok", config["request"])
+
+
 def test_typesafe_rejects_the_text_smoke_adapter():
     with pytest.raises(ValueError, match="text smoke adapter"):
         create_client({"provider": "typesafe", "model": "jev-latest"}, 10)

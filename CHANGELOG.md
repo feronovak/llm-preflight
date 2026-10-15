@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Native Qwen 3.8 Max, Max-0902 and Flash use `max_completion_tokens` by
+  default so the output limit includes reasoning and the visible answer.
+  An explicit legacy `max_tokens` model setting requires
+  explicitly disabled thinking. OpenRouter requests are unchanged.
+- Native Z.ai, DeepSeek and Qwen provider options cannot override the model,
+  messages, streaming settings or token limits used by the planner. Doctor,
+  budget estimation and transport reject these conflicting fields.
+- Native Model Studio Qwen 3.8 Max/Flash cache-hit prices remain unknown
+  until a reviewed account-specific override is supplied; QwenCloud cache
+  rates are no longer substituted. Standard Singapore input/output prices
+  were checked on October 15.
+
+### Added
+
+- A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
+  Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
+  checks. Native live results still require separate credentials and execution.
+
 ## 2.21.2 - 2026-10-14
 
 ### Fixed

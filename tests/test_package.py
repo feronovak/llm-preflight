@@ -562,3 +562,44 @@ def test_every_workflow_action_is_pinned_to_a_full_commit_sha():
             path,
             reference,
         )
+
+
+def test_native_chinese_smoke_has_three_direct_routes_and_bounded_reasoning():
+    from llm_preflight.client import create_client
+    from llm_preflight.features import check_budget
+    from llm_preflight.pricing import estimate_sample_cost, resolve_pricing
+
+    config = load_config(Path("examples/native-chinese-smoke.json"))
+    assert [(m["provider"], m["model"]) for m in config["models"]] == [
+        ("zai", "glm-5.3"),
+        ("deepseek", "deepseek-flash"),
+        ("qwen", "qwen3.8-max"),
+    ]
+    assert config["max_requests"] == 3
+    assert config["repetitions"] == 1 and config["warmups"] == 0
+    assert config["request"]["retry"]["max_attempts"] == 1
+    assert config["request"]["max_output_tokens"] == 4096
+    budget = check_budget(config)
+    assert budget["requests"] == budget["possible_requests"] == 3
+    assert (
+        budget["maximum_estimated_cost_usd"] < config["max_estimated_cost_usd"] == 0.1
+    )
+    for model in config["models"]:
+        client = create_client(model, 10)
+        assert "openrouter" not in client.endpoint()
+        body = client.body(config["prompt"], config["request"])
+        assert body["reasoning_effort"] == "low"
+        if model["provider"] == "qwen":
+            assert body["max_completion_tokens"] == 4096
+            assert "max_tokens" not in body
+    qwen = resolve_pricing(config["models"])["models"][2]
+    assert qwen["cached_input_cost_per_million"] is None
+    assert (
+        estimate_sample_cost(
+            {"input_tokens": 100, "cached_input_tokens": 50, "output_tokens": 10}, qwen
+        )
+        is None
+    )
+    assert estimate_sample_cost(
+        {"input_tokens": 100, "cached_input_tokens": 0, "output_tokens": 10}, qwen
+    ) == pytest.approx(0.00026)

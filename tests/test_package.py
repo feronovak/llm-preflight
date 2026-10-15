@@ -564,7 +564,9 @@ def test_every_workflow_action_is_pinned_to_a_full_commit_sha():
         )
 
 
-def test_native_chinese_smoke_has_three_direct_routes_and_bounded_reasoning():
+def test_native_chinese_smoke_has_three_direct_routes_and_bounded_reasoning(
+    snapshot_review_day,
+):
     from llm_preflight.client import create_client
     from llm_preflight.features import check_budget
     from llm_preflight.pricing import estimate_sample_cost, resolve_pricing

@@ -272,9 +272,13 @@ The [routed comparison example](../../examples/glm-5.3-openrouter-comparison.jso
 reproduces the observed OpenRouter / Relace run: eight cases twice, `low`
 reasoning, 512 output tokens, no retries or warmups, and fallback disabled.
 The 16 requests had a $0.10 estimated-cost cap and a maximum estimate of
-$0.03290288. Reviewed Relace rates were $0.12 input, $0.12 cache reads,
-and $4.00 output per million tokens, checked against the
+$0.03290288. Relace rates reviewed for that run were $0.12 input, $0.12 cache
+reads, and $4.00 output per million tokens, checked against the
 [endpoint catalogue](https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints).
+The example's route prices were re-reviewed on 2026-10-16 at $0.0608 input,
+$0.0565 cache reads and $4.40 output per million tokens, which raises its
+maximum estimate to $0.0361131392; past measurements used the prices of their
+day.
 
 All requests completed successfully; 14 outputs passed the configured
 contract. Reported usage was 1,148 input tokens (448 cached) and 263 output

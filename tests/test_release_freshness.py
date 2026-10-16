@@ -30,7 +30,7 @@ def test_release_freshness_passes_on_the_snapshot_review_day(capsys):
 
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
-    assert _script().main(["--today", "2026-10-31"]) == 1
+    assert _script().main(["--today", "2026-11-16"]) == 1
 
     output = capsys.readouterr().out
     failed = [
@@ -38,10 +38,10 @@ def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
         for line in output.splitlines()
         if line.startswith("FAIL pricing-check")
     ]
-    assert failed == ["examples/glm-5.3-openrouter-comparison.json"]
+    assert "examples/glm-5.3-openrouter-comparison.json" in failed
     assert "OpenRouter Relace endpoint pricing pricing is stale by 31 days" in output
-    assert "ok pricing-check examples/approved-smoke.json" in output
-    assert "Release freshness on 2026-10-31: fail" in output
+    assert "FAIL pricing-check examples/approved-smoke.json" in output
+    assert "Release freshness on 2026-11-16: fail" in output
 
 
 def test_official_snapshots_stay_fresh_through_november_15(capsys):

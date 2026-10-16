@@ -20,6 +20,10 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- The OpenRouter GLM 5.3 comparison example carries the Relace route prices
+  re-reviewed on 2026-10-16: $0.0608 input, $0.0565 cache reads and $4.40
+  output per million tokens (previously $0.12, $0.12 and $4.00). Its maximum
+  estimate is now $0.0361131392. Past measured costs are unchanged.
 - `provenance.prompts` lists exactly the prompts a run sent, each once.
   Under `--prompt` it lists only the selected prompt; 2.21.x listed it twice,
   plus the configured prompts that did not run. A run of a configuration with

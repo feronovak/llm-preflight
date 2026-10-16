@@ -303,11 +303,17 @@ def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests(
     assert options["reasoning"] == {"effort": "low"}
     budget = check_budget(config)
     assert budget["requests"] == budget["possible_requests"] == 16
-    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.03290288)
+    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.0361131392)
     assert config["max_estimated_cost_usd"] == 0.1
     assert model["pricing_metadata"]["source_url"] == (
         "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints"
     )
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
+    assert (
+        model["input_cost_per_million"],
+        model["cached_input_cost_per_million"],
+        model["output_cost_per_million"],
+    ) == (0.0608, 0.0565, 4.4)
 
 
 def test_custom_contract_examples_are_parseable_and_documented():

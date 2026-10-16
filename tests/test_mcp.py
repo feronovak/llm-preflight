@@ -1150,4 +1150,46 @@ def test_agent_guidance_starts_a_repository_without_a_config_with_audit_source(
         step = " ".join(text.split())
         assert "audit_source" in step
         assert "no benchmark config" in step
+        assert "`pass`" in step
+        assert "only literal model IDs" in step
     assert "| `audit_source` |" in guide
+
+
+def test_audit_source_result_is_utf8_text_for_a_name_that_is_not(
+    tmp_path, audit_snapshot, non_utf8_file_names
+):
+    (tmp_path / os.fsdecode(b"bad\xff.py")).write_text('q = "gpt-gone"\n')
+
+    response = _audit(tmp_path, {})
+
+    result = response["result"]
+    assert result["isError"] is False
+    assert result["structuredContent"]["decision"] == "fail"
+    assert result["structuredContent"]["references"][0]["path"] == "bad\\xff.py"
+    # A lone surrogate cannot be encoded, so this fails on any escaped byte.
+    json.dumps(response, ensure_ascii=False).encode("utf-8")
+
+
+def test_audit_source_redacts_secret_like_paths_that_the_cli_json_keeps(
+    tmp_path, audit_snapshot, monkeypatch, capsys
+):
+    from llm_preflight import cli
+
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "sk-demo").mkdir()
+    (tmp_path / "sk-demo" / "app.py").write_text('a = "gpt-gone"\n')
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--json"]
+    )
+    cli.main()
+    cli_json = json.loads(capsys.readouterr().out)
+
+    content = _audit(tmp_path, {})["result"]["structuredContent"]
+
+    assert cli_json["references"][0]["path"] == "sk-demo/app.py"
+    assert content["references"][0]["path"] == "[REDACTED]/app.py"
+    for text in (
+        (Path(__file__).parent.parent / "docs/automation/mcp.md").read_text(),
+        (Path(__file__).parent.parent / "CHANGELOG.md").read_text(),
+    ):
+        assert "with secret-like strings redacted" in " ".join(text.split())

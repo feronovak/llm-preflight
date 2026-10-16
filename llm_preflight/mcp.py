@@ -33,8 +33,10 @@ In a repository with no benchmark config, call `audit_source` first. It
 reports the literal model IDs in workspace source files with retirement and
 pricing verdicts, without a config, credentials, or provider requests. Report
 its `decision`: `fail` means a referenced model is retired, `inconclusive`
-means one is retiring, its snapshot row is stale, or no file was read, and
-`none` means no reference is in the retirement snapshot.
+means one is retiring, its snapshot row is stale, or no file was read, `pass`
+means every referenced model the snapshot lists is active, and `none` means
+no reference is in the retirement snapshot. It covers only literal model IDs;
+a model chosen at run time needs review.
 
 Start a preflight with a benchmark config that reflects the application's
 prompt and response contract. The other MCP tools use an existing
@@ -617,7 +619,9 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
                 "instructions": (
                     "In a repository with no benchmark config, call audit_source "
-                    "first and report its decision. "
+                    "first and report its decision; `pass` means every "
+                    "referenced model the retirement snapshot lists is active. "
+                    "It covers only literal model IDs. "
                     "Use validate_config and dry_run_plan before a live run, and "
                     "report the dry_run_plan `retirements` decision: `fail` for a "
                     "retired model, `inconclusive` for a retiring model or a "

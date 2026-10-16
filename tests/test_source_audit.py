@@ -1,3 +1,5 @@
+import json
+import os
 import shutil
 import subprocess
 import time
@@ -647,3 +649,69 @@ def test_source_audit_counts_only_files_it_could_read(tmp_path, monkeypatch):
     assert mixed["files_scanned"] == 1
     assert mixed["files_unreadable"] == 1
     assert [item["path"] for item in mixed["references"]] == ["app.py"]
+
+
+def test_source_audit_reports_a_name_that_is_not_utf8_as_utf8_text(
+    tmp_path, monkeypatch, non_utf8_file_names
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    project = tmp_path / os.fsdecode(b"pro\xfeject")
+    project.mkdir()
+    (project / os.fsdecode(b"bad\xff.py")).write_text('q = "gpt-4o"\n')
+
+    report = audit_source(project, today=TODAY)
+
+    assert report["root"].endswith("pro\\xfeject")
+    assert [item["path"] for item in report["references"]] == ["bad\\xff.py"]
+    # A lone surrogate cannot be encoded, so this fails on any escaped byte.
+    json.dumps(report, ensure_ascii=False).encode("utf-8")
+
+
+@requires_git
+def test_source_audit_applies_gitignore_beside_a_name_that_is_not_utf8(
+    tmp_path, non_utf8_file_names
+):
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitignore").write_text("data/\n")
+    (repo / "data").mkdir()
+    (repo / "data" / "ignored.py").write_text('m = "gpt-3.5-turbo-0301"\n')
+    (repo / os.fsdecode(b"n\xffame.txt")).write_text("notes\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    (repo / os.fsdecode(b"n\xfeew.py")).write_text('m = "gpt-5.5"\n')
+
+    report = audit_source(repo, today=TODAY)
+
+    assert report["file_selection"] == "git"
+    assert report["file_selection_reason"] is None
+    assert [item["path"] for item in report["references"]] == ["n\\xfeew.py"]
+    assert report["decision"] == "none"
+
+
+def test_source_audit_counts_a_file_it_may_not_read_and_audits_the_rest(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    locked = tmp_path / "locked.py"
+    locked.write_text('a = "gpt-gone"\n')
+    locked.chmod(0)
+    try:
+        try:
+            locked.read_bytes()
+        except PermissionError:
+            pass
+        else:
+            pytest.skip("file permissions do not block reads here, as for root")
+        only_locked = audit_source(tmp_path, today=TODAY)
+        (tmp_path / "app.py").write_text('b = "gpt-going"\n')
+        mixed = audit_source(tmp_path, today=TODAY)
+    finally:
+        locked.chmod(0o600)
+
+    assert only_locked["files_scanned"] == 0
+    assert only_locked["files_unreadable"] == 1
+    assert only_locked["decision"] == "inconclusive"
+    assert mixed["files_scanned"] == 1
+    assert mixed["files_unreadable"] == 1
+    assert [item["model"] for item in mixed["references"]] == ["gpt-going"]

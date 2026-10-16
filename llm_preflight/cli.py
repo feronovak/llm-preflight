@@ -332,7 +332,7 @@ _AUDIT_NOTHING_READ = {
     "git": "git lists no tracked or unignored source file under the path",
     "filesystem": "the path holds no source file outside skipped directories",
 }
-_AUDIT_NOTHING_UTF8 = "no selected source file is UTF-8 text"
+_AUDIT_NOTHING_UTF8 = "no selected source file could be read as UTF-8 text"
 _AUDIT_CI_EXIT = {
     0: "no referenced model is retired, retiring or stale.",
     1: "a referenced model is retired.",
@@ -396,7 +396,7 @@ def _format_audit_source(
     if unreadable:
         files_lines.append(
             f"Not audited: {_counted(unreadable, 'file')} that "
-            f"{'is' if unreadable == 1 else 'are'} not UTF-8 text."
+            "could not be read as UTF-8 text."
         )
     if not audit["files_scanned"]:
         why = (

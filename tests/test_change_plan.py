@@ -1,3 +1,4 @@
+import json
 import os
 import stat
 import subprocess
@@ -286,6 +287,29 @@ def test_git_change_plan_ignores_git_environment_redirection(tmp_path, monkeypat
     plan = git_change_plan(repo, "HEAD")
 
     assert plan["changed_files"] == ["app.py"]
+
+
+def test_git_change_plan_reports_a_name_that_is_not_utf8_as_utf8_text(
+    tmp_path, non_utf8_file_names
+):
+    repo = _repository(tmp_path / "repo")
+    gone = repo / os.fsdecode(b"g\xffone.py")
+    gone.write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    gone.unlink()
+    (repo / os.fsdecode(b"n\xfeew.py")).write_text('model = "gpt-5.5"\n')
+
+    plan = git_change_plan(repo, "HEAD")
+
+    assert plan["changed_files"] == ["g\\xffone.py", "n\\xfeew.py"]
+    assert plan["deleted_files"] == ["g\\xffone.py"]
+    assert [(item["path"], item["model"]) for item in plan["triggers"]] == [
+        ("g\\xffone.py", "gpt-5.4-mini"),
+        ("n\\xfeew.py", "gpt-5.5"),
+    ]
+    # A lone surrogate cannot be encoded, so this fails on any escaped byte.
+    json.dumps(plan, ensure_ascii=False).encode("utf-8")
 
 
 def test_approval_receipt_is_bound_to_one_plan_and_expires():

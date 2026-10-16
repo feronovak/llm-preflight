@@ -11,9 +11,10 @@ change. Keep the benchmark contract specific to the application change.
 In a repository with no benchmark config, use `audit_source` first. It needs
 no config and makes no provider request. Report its `decision` before anything
 else: `fail` means a referenced model is retired, `inconclusive` means one is
-retiring, its snapshot row is stale, or no file was read, and `none` means no
-reference is in the retirement snapshot; it is not a pass. `ok` does not
-reflect it. Then follow the
+retiring, its snapshot row is stale, or no file was read, `pass` means every
+referenced model the snapshot lists is active, and `none` means no reference
+is in the retirement snapshot; it is not a pass. It covers only literal model
+IDs; a model chosen at run time needs review. `ok` does not reflect it. Then follow the
 [project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md)
 to create a benchmark; the other MCP tools read an existing config and do not
 create it.

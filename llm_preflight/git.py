@@ -64,7 +64,10 @@ def run_git(
     return subprocess.run(  # nosec B603
         [*command, *overrides, *arguments],
         check=check,
-        text=True,
+        # Git prints file names as raw bytes. Undecodable bytes become
+        # surrogates, so a name that is not UTF-8 still opens as a path.
+        encoding="utf-8",
+        errors="surrogateescape",
         capture_output=True,
         env=environment,
     )
@@ -95,7 +98,8 @@ def _filter_overrides(command: list[str], environment: dict[str, str]) -> list[s
     listed = subprocess.run(  # nosec B603
         [*command, "config", "-z", "--name-only", "--get-regexp", r"^filter\."],
         check=False,
-        text=True,
+        encoding="utf-8",
+        errors="surrogateescape",
         capture_output=True,
         env=environment,
     )

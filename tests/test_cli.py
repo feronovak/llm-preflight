@@ -3998,9 +3998,9 @@ def test_audit_source_that_could_read_no_file_says_so_and_ci_is_inconclusive(
 
     assert lines[0] == (
         "Decision: inconclusive — nothing was audited: no selected source file "
-        "is UTF-8 text."
+        "could be read as UTF-8 text."
     )
-    assert lines[-1] == "Not audited: 1 file that is not UTF-8 text."
+    assert lines[-1] == "Not audited: 1 file that could not be read as UTF-8 text."
     monkeypatch.setattr(
         sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
     )
@@ -4020,7 +4020,23 @@ def test_audit_source_mentions_unreadable_files_after_the_file_selection(
     lines = _audit_text(monkeypatch, capsys, tmp_path)
 
     assert lines[0].startswith("Decision: pass — 1 file audited; ")
-    assert lines[3] == "Not audited: 2 files that are not UTF-8 text."
+    assert lines[3] == "Not audited: 2 files that could not be read as UTF-8 text."
+
+
+def test_audit_source_prints_a_name_that_is_not_utf8_as_utf8_text(
+    monkeypatch, tmp_path, capsys, retirement_table, non_utf8_file_names
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    (tmp_path / os.fsdecode(b"bad\xff.py")).write_text('a = "gpt-gone"\n')
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+    report = json.loads("\n".join(_audit_text(monkeypatch, capsys, tmp_path, "--json")))
+
+    assert "    bad\\xff.py:1" in lines
+    assert report["references"][0]["path"] == "bad\\xff.py"
+    # A lone surrogate cannot be encoded, so these fail on any escaped byte.
+    "\n".join(lines).encode("utf-8")
+    json.dumps(report, ensure_ascii=False).encode("utf-8")
 
 
 def test_audit_source_names_the_unlisted_files_when_git_lists_none(

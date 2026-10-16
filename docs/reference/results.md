@@ -177,10 +177,12 @@ no regression by itself. A non-empty `regressions` list makes `--ci` exit 1.
 ## Source audit JSON
 
 `llm-preflight --audit-source PATH --json` writes a separate, uncapped audit
-object. `root` is the resolved path, `network_accessed` is always `false`,
+object. `root` is the resolved path; in it and in each reference `path`, a
+byte of a name that is not UTF-8 is written as a backslash escape such as
+`\xff`. `network_accessed` is always `false`,
 `files_scanned` counts the selected files that were read as UTF-8 text,
-`files_unreadable` the selected files that were not (such as UTF-16 files),
-and `file_selection` names how
+`files_unreadable` the selected files that were not (such as UTF-16 files or
+files the user may not read), and `file_selection` names how
 they were selected: `git` (tracked files, including initialized submodules,
 plus untracked files `.gitignore` does not exclude, including those of an
 untracked nested repository), `filesystem` (every file under the path) or

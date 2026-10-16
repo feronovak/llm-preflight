@@ -8,10 +8,12 @@ All notable changes to this project are documented here.
 
 - MCP tool `audit_source`, the zero-config first step for an agent in a
   repository with no benchmark config. It returns the same object as
-  `--audit-source --json`, with the same `fail`, `inconclusive`, `pass` or
-  `none` decision, and leads its text content with the CLI's first line. Its
-  optional `path` is workspace-relative, defaults to the workspace root and
-  keeps the existing workspace boundary, symlinks included. It is read-only,
+  `--audit-source --json`, with secret-like strings redacted as in every MCP
+  tool result, so a path segment such as `sk-demo` reads `[REDACTED]`. It has
+  the same `fail`, `inconclusive`, `pass` or `none` decision, and leads its
+  text content with the CLI's first line. Its optional `path` is
+  workspace-relative, defaults to the workspace root and keeps the existing
+  workspace boundary, symlinks included. It is read-only,
   idempotent and closed-world: no credentials, no provider requests. The
   server instructions and the safe-workflow resource name it first.
 - A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
@@ -73,15 +75,21 @@ All notable changes to this project are documented here.
   tracked files, including initialized submodules, plus untracked files
   `.gitignore` does not exclude, including those of an untracked nested
   repository. Elsewhere, without Git, or when the work tree ignores the
-  audited path itself, it reads every file under the path as before. Symlinks
-  that leave the audited path are never read. The decision for non-ignored
-  files is unchanged.
+  audited path itself, it reads every file under the path as before. A file
+  name that is not UTF-8 does not turn `.gitignore` off. Symlinks that leave
+  the audited path are never read. The decision for non-ignored files is
+  unchanged.
 - `--audit-source` never reports a clean result after reading no file. Such
   an audit is `inconclusive`, says that nothing was audited and why, and
   exits 3 under `--ci`; 2.21.x printed `Decision: none` and exited 0.
   `files_scanned` keeps its key but now counts only the files read as UTF-8
   text; files that are not, which 2.21.x counted as audited, are counted in
-  `files_unreadable` and on a `Not audited:` line.
+  `files_unreadable` and on a `Not audited:` line. So are files the user may
+  not read; 2.21.x stopped the whole audit at the first one.
+- `--audit-source` and `--change-plan` show a file or directory name that is
+  not UTF-8 with backslash escapes, such as `bad\xff.py`, so text and JSON
+  output stay valid UTF-8. 2.21.x wrote lone-surrogate escapes into the JSON,
+  stopped the text output with an encoding error, and `--change-plan` failed.
 - `--audit-source` skips `results`, `venv` and the other skipped directory
   names only below the audited path, so a project stored under such a
   directory is no longer audited as empty.

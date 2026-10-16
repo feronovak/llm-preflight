@@ -85,8 +85,8 @@ verified.
 
 When the scan reads no file at all, the decision is `inconclusive` and
 `--ci` exits 3: an audit that read nothing has no evidence. A selected file
-that is not UTF-8 text is not read; the output counts such files on a
-`Not audited:` line. The first line
+that is not UTF-8 text, or that the user may not read, is not audited; the
+output counts such files on a `Not audited:` line. The first line
 says so and why, for example:
 
 ```text

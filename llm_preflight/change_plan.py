@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .git import run_git
-from .source_audit import audit_source, audit_source_text
+from .source_audit import audit_source, audit_source_text, display_path
 
 _REFERENCE = re.compile(r"[A-Za-z0-9._/@^~-]+\Z")
 _CONTRACT_SURFACE = re.compile(
@@ -26,7 +26,10 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
     _validate_reference(reference)
     changed_files, deleted_files = _changed_files(root, reference)
     triggers: list[dict[str, Any]] = []
+    # Paths stay as Git listed them for file and Git access, and are displayed
+    # as UTF-8 text.
     for relative_path in changed_files:
+        shown = display_path(relative_path)
         path = (root / relative_path).resolve()
         deleted = relative_path in deleted_files
         if not deleted and root != path and root not in path.parents:
@@ -42,7 +45,7 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
             triggers.extend(
                 {
                     "kind": "model_id",
-                    "path": relative_path,
+                    "path": shown,
                     "line": finding["line"],
                     "provider": finding["provider"],
                     "model": finding["model"],
@@ -53,9 +56,9 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
             )
             continue
         trigger = (
-            _contract_surface_trigger_text(previous, relative_path)
+            _contract_surface_trigger_text(previous, shown)
             if deleted
-            else _contract_surface_trigger(path, relative_path)
+            else _contract_surface_trigger(path, shown)
         )
         if trigger:
             if deleted:
@@ -66,8 +69,8 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
         "reference": reference,
         "network_accessed": False,
         "paid_work_authorized": False,
-        "changed_files": changed_files,
-        "deleted_files": deleted_files,
+        "changed_files": [display_path(item) for item in changed_files],
+        "deleted_files": [display_path(item) for item in deleted_files],
         "triggers": triggers,
         "requires_preflight_review": bool(triggers),
         "notes": [

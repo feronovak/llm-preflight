@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 
 # Only CalledProcessError is used; run_git starts Git.
@@ -97,6 +98,12 @@ def _summary_fields(references: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def display_path(path: Path | str) -> str:
+    """A file system or Git path as UTF-8 text; bytes that are not UTF-8 become
+    backslash escapes, since a lone surrogate is invalid in JSON output."""
+    return os.fsencode(path).decode("utf-8", "backslashreplace")
+
+
 def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     """Find literal model IDs without importing project code or contacting providers."""
     current = today or today_utc()
@@ -107,16 +114,17 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     references = []
     unreadable = 0
     for file_path in files:
+        # One file that is not UTF-8 or may not be read leaves the rest audited.
         try:
             lines = file_path.read_text(encoding="utf-8").splitlines()
-        except UnicodeDecodeError:
+        except (OSError, UnicodeDecodeError):
             unreadable += 1
             continue
-        display_path = (
-            str(file_path.relative_to(root)) if root.is_dir() else str(file_path)
+        shown = display_path(
+            file_path.relative_to(root) if root.is_dir() else file_path
         )
         references.extend(
-            _references_for_lines(lines, file_path.suffix, display_path, current)
+            _references_for_lines(lines, file_path.suffix, shown, current)
         )
     scanned = len(files) - unreadable
     summary = _summary_fields(references)
@@ -124,7 +132,7 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
         # A scan that read no file has no evidence; unknown is never a pass.
         summary["decision"] = "inconclusive"
     return {
-        "root": str(root),
+        "root": display_path(root),
         "network_accessed": False,
         "files_scanned": scanned,
         "file_selection": file_selection,
@@ -217,10 +225,10 @@ def audit_source_text(
 ) -> dict[str, Any]:
     """Find literal model IDs in supplied source text without writing it to disk."""
     references = _references_for_lines(
-        text.splitlines(), path.suffix, str(path), today or today_utc()
+        text.splitlines(), path.suffix, display_path(path), today or today_utc()
     )
     return {
-        "root": str(path),
+        "root": display_path(path),
         "network_accessed": False,
         "files_scanned": 1,
         "references": references,

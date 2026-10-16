@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime
 
 import pytest
@@ -54,3 +55,20 @@ def tripwire(tmp_path):
         return str(script)
 
     return make
+
+
+@pytest.fixture
+def non_utf8_file_names(tmp_path):
+    """Skip unless the filesystem stores a file name that is not UTF-8 as given.
+
+    APFS rejects such names, HFS+ rewrites them, and Windows names are UTF-16.
+    """
+    try:
+        probe = tmp_path / os.fsdecode(b"probe\xff")
+        probe.touch()
+    except (OSError, ValueError):
+        pytest.skip("the filesystem rejects file names that are not UTF-8")
+    stored = os.fsencode(probe.name) in os.listdir(os.fsencode(tmp_path))
+    probe.unlink(missing_ok=True)
+    if not stored:
+        pytest.skip("the filesystem rewrites file names that are not UTF-8")

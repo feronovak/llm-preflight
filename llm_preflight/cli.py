@@ -25,6 +25,7 @@ from .attestation import (
     DEFAULT_MAX_AGE_DAYS,
     attest_result,
     default_record_path,
+    describe_route,
     gate,
     load_record,
     verify_record,
@@ -2244,6 +2245,7 @@ def _format_verify(report: dict[str, Any], exit_code: int) -> str:
             f"Subject:   {subject['role']} {subject['name']}: "
             f"{subject_states[subject['state']]}"
         )
+    lines.extend(f"Route:     {describe_route(route)}" for route in report["routes"])
     if freshness["state"] == "unknown":
         lines.append("Freshness: unknown — the record has no valid checkedAt")
     else:

@@ -36,6 +36,16 @@ All notable changes to this project are documented here.
   config or record cannot be read. Text and `--json` carry the same reason
   code, why and numbered next steps. Existing commands and results are
   unchanged.
+- `observed_model` in each saved model result and sample: the model the
+  provider's responses said answered, read from the OpenAI-compatible
+  `model` field (OpenAI, OpenRouter, xAI, DeepSeek, Qwen, Z.ai and custom
+  endpoints), Anthropic's `message_start`, Gemini's `modelVersion` and the
+  OpenAI Responses `model`. It is a string when the responses agree, the
+  sorted distinct strings when they disagree, and `null` when none named a
+  model; it is never filled in from the configured model. It is additive and
+  outside `provenance`, so every fingerprint is unchanged. `attest` copies it
+  into each route as `observedModel`, `verify` prints it on a `Route:` line
+  and in `routes`, and the gate names it when it passes.
 
 ### Changed
 

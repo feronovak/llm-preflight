@@ -29,6 +29,7 @@ from typing import Any
 
 from . import __version__
 from .catalog import resolve_models
+from .client import observed_model, reported_model
 from .contracts import _fingerprint, provenance
 from .features import apply_model_aliases, apply_provider_presets
 from .git import run_git
@@ -292,8 +293,11 @@ def integrity_problems(record: Any, today: date) -> list[str]:
     evidence = descriptors["evidence"].get("annotations")
     if not isinstance(evidence, dict):
         return [*problems, "llm-preflight/evidence has no annotations"]
-    if _routes_annotation(descriptors["routes"]) is None:
+    routes = _routes_annotation(descriptors["routes"])
+    if routes is None:
         problems.append("llm-preflight/routes does not list provider and model")
+    elif not all(_valid_observed(route.get("observedModel")) for route in routes):
+        problems.append("llm-preflight/routes carries a malformed observedModel")
     fingerprints = evidence.get("provenance")
     if not isinstance(fingerprints, dict) or fingerprints.get("schema_version") != 1:
         problems.append("the evidence carries no schema-version-1 provenance")
@@ -351,8 +355,9 @@ def verify_record(
     predicate = predicate if isinstance(predicate, dict) else {}
     descriptors = _descriptors(predicate.get("configuration"))
     evidence = _annotations(descriptors.get("evidence"))
+    recorded = _routes_annotation(descriptors.get("routes")) or []
     if routes is None:
-        routes = _routes_annotation(descriptors.get("routes")) or []
+        routes = recorded
     origin = evidence.get("origin")
     url = predicate.get("url")
     return {
@@ -361,6 +366,7 @@ def verify_record(
         if predicate.get("result") in _RESULTS.values()
         else None,
         "integrity": {"ok": not problems, "problems": problems, "subjects": subjects},
+        "routes": _checked_routes(recorded),
         "freshness": _freshness(
             _timestamp(evidence.get("checkedAt")), routes, today, max_age_days
         ),
@@ -369,6 +375,17 @@ def verify_record(
         "url": url if isinstance(url, str) else None,
         "signature": SIGNATURE_NOTE,
     }
+
+
+def describe_route(route: Mapping[str, Any]) -> str:
+    """`provider:model` and the model its provider reported answering, if any."""
+    label = f"{route['provider']}:{route['model']}"
+    observed = route["observed_model"]
+    if observed is None:
+        return f"{label} did not report the model that answered"
+    if isinstance(observed, list):
+        return f"{label} answered as {', '.join(observed)} (responses disagreed)"
+    return f"{label} answered as {observed}"
 
 
 def current_fingerprints(config_path: Path) -> dict[str, Any]:
@@ -534,6 +551,7 @@ def _evaluate(
         },
         blocking_warnings=len(evidence["decision"].get("blocking_warnings") or []),
         retired_routes=freshness["retired_routes"],
+        routes=report["routes"],
         contract_sha256=_digest(descriptors["contract"]),
         routes_sha256=_digest(descriptors["routes"]),
         _checked=_timestamp(evidence["checkedAt"]),
@@ -585,6 +603,7 @@ def _entry(path: Path, verdict: str, reason: str) -> dict[str, Any]:
         "tests": None,
         "blocking_warnings": None,
         "retired_routes": [],
+        "routes": [],
         "contract_sha256": None,
         "routes_sha256": None,
         "_checked": None,
@@ -617,7 +636,9 @@ def _explain(
                 f"Run {newest['run_id']} on {newest['repository']} passed this "
                 f"contract and its routes on {newest['checked_at'][:10]} "
                 f"({_age(newest['age_days'])}); it stays fresh until "
-                f"{newest['valid_until']}. The signature is {SIGNATURE_NOTE}."
+                f"{newest['valid_until']}. "
+                + "".join(f"{describe_route(route)}. " for route in newest["routes"])
+                + f"The signature is {SIGNATURE_NOTE}."
             ),
             [],
         )
@@ -920,6 +941,19 @@ def _origin_problems(
     return []
 
 
+def _valid_observed(value: Any) -> bool:
+    """Absent, one reported model, or two or more distinct ones, as attest writes."""
+    if value is None:
+        return True
+    if isinstance(value, list):
+        return (
+            len(value) >= 2
+            and len(set(map(str, value))) == len(value)
+            and all(reported_model(item) is not None for item in value)
+        )
+    return reported_model(value) is not None
+
+
 def _valid_ci_field(key: str, value: Any) -> bool:
     if not isinstance(value, str):
         return False
@@ -979,7 +1013,12 @@ def _test_outcomes(
 
 
 def _routes(result: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Every resolved route, from the pricing ledger the run used."""
+    """Every resolved route, from the pricing ledger the run used.
+
+    Each carries the model its provider reported answering; a result written
+    before `observed_model` existed records none.
+    """
+    models = result.get("models", [])
     ledger = result.get("pricing_ledger") or [
         {
             "provider": model.get("provider", "openai_compatible"),
@@ -992,6 +1031,12 @@ def _routes(result: Mapping[str, Any]) -> list[dict[str, Any]]:
             "provider": entry["provider"],
             "model": entry["model"],
             "pricingAsOf": entry.get("as_of"),
+            "observedModel": observed_model(
+                model.get("observed_model")
+                for model in models
+                if model.get("provider", "openai_compatible") == entry["provider"]
+                and model["model"] == entry["model"]
+            ),
         }
         for entry in ledger
     ]
@@ -1003,6 +1048,20 @@ def _request_count(result: Mapping[str, Any]) -> int:
         for model in result.get("models", [])
         for summary in ("summary", "warmup_summary")
     )
+
+
+def _checked_routes(routes: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """The recorded routes as reported: a malformed observed model shows as none."""
+    return [
+        {
+            "provider": route["provider"],
+            "model": route["model"],
+            "observed_model": route.get("observedModel")
+            if _valid_observed(route.get("observedModel"))
+            else None,
+        }
+        for route in routes
+    ]
 
 
 def _routes_annotation(descriptor: Any) -> list[dict[str, Any]] | None:

@@ -997,6 +997,85 @@ def test_profile_run_groups_quality_and_operational_metrics(monkeypatch):
     assert "| fake | exact-routing-check | 33% | 100% |" in rendered
 
 
+def _observed_run(monkeypatch, reported, profile_selector=None):
+    """Run one route whose requests report these models, warmup first."""
+    answers = iter(reported)
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            observed = next(answers)
+            return {
+                "ok": observed != "fail",
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 10,
+                "input_tokens": 5,
+                "output_tokens": 1,
+                "response_chars": 7,
+                "response": "billing",
+                "observed_model": None if observed == "fail" else observed,
+                "error": "HTTP 500" if observed == "fail" else None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    return run_benchmark(
+        {
+            "name": "observed",
+            "prompt": "Route the ticket.",
+            "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+            "repetitions": len(reported) - 1,
+            "warmups": 1,
+            "suite_repetitions": 1,
+        },
+        profile_selector=profile_selector,
+    )
+
+
+@pytest.mark.parametrize(
+    ("reported", "observed"),
+    [
+        (["gpt-4.1-mini-2025-04-14"] * 3, "gpt-4.1-mini-2025-04-14"),
+        (
+            ["gpt-4.1-mini-b", None, ["gpt-4.1-mini-a", "gpt-4.1-mini-b"]],
+            ["gpt-4.1-mini-a", "gpt-4.1-mini-b"],
+        ),
+        (["gpt-4.1-mini-a", None, None], "gpt-4.1-mini-a"),
+        ([None, None, "fail"], None),
+    ],
+    ids=["agreeing", "disagreeing", "warmup-only", "none-reported"],
+)
+def test_run_records_each_route_observed_model_from_every_response(
+    monkeypatch, reported, observed
+):
+    result = _observed_run(monkeypatch, reported)
+
+    assert result["models"][0]["observed_model"] == observed
+    assert [sample["observed_model"] for sample in result["models"][0]["samples"]]
+
+
+def test_profile_run_records_the_observed_model_of_its_profile_requests(monkeypatch):
+    result = _observed_run(
+        monkeypatch,
+        ["gpt-4.1-mini-a"] + ["gpt-4.1-mini-a"] * 3,
+        profile_selector="classification",
+    )
+
+    assert result["models"][0]["observed_model"] == "gpt-4.1-mini-a"
+
+
+def test_observed_model_changes_no_provenance_fingerprint(monkeypatch):
+    first = _observed_run(monkeypatch, ["gpt-4.1-mini-a"] * 3)
+    second = _observed_run(monkeypatch, ["gpt-4.1-mini-b"] * 3)
+
+    assert first["models"][0]["observed_model"] == "gpt-4.1-mini-a"
+    assert second["models"][0]["observed_model"] == "gpt-4.1-mini-b"
+    assert first["provenance"] == second["provenance"]
+
+
 def test_run_benchmark_reports_live_model_and_request_progress(monkeypatch):
     class FakeClient:
         model: ClassVar = {"base_url": "https://example.test"}

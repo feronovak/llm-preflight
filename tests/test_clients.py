@@ -1975,3 +1975,227 @@ def test_gemini_4_thinking_only_truncation_cannot_pass_the_contract(monkeypatch)
         ]
         is False
     )
+
+
+class _StreamResponse:
+    """A provider's server-sent events, as `urllib.request.urlopen` yields them."""
+
+    def __init__(self, events):
+        self.events = events
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return None
+
+    def __iter__(self):
+        return iter(
+            [f"data: {json.dumps(event)}\n".encode() for event in self.events]
+            + [b"data: [DONE]\n"]
+        )
+
+
+def _chat_chunk(model, text=None, usage=None):
+    chunk = {
+        "id": "chatcmpl-fixture",
+        "object": "chat.completion.chunk",
+        "created": 1_791_000_000,
+        "choices": [{"index": 0, "delta": {"content": text}}] if text else [],
+    }
+    if model is not None:
+        chunk["model"] = model
+    if usage is not None:
+        chunk["usage"] = usage
+    return chunk
+
+
+def _chat_stream(model):
+    return [
+        _chat_chunk(model, "bill"),
+        _chat_chunk(model, "ing"),
+        _chat_chunk(model, usage={"prompt_tokens": 9, "completion_tokens": 2}),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("configured", "key", "events", "observed"),
+    [
+        (
+            {"provider": "openai", "model": "gpt-4.1-mini"},
+            "OPENAI_API_KEY",
+            _chat_stream("gpt-4.1-mini-2025-04-14"),
+            "gpt-4.1-mini-2025-04-14",
+        ),
+        (
+            {"provider": "openrouter", "model": "z-ai/glm-5.3"},
+            "OPENROUTER_API_KEY",
+            _chat_stream("z-ai/glm-5.3-20260901"),
+            "z-ai/glm-5.3-20260901",
+        ),
+        (
+            {"provider": "deepseek", "model": "deepseek-flash"},
+            "DEEPSEEK_API_KEY",
+            _chat_stream("deepseek-v4.1-flash"),
+            "deepseek-v4.1-flash",
+        ),
+        (
+            {"provider": "qwen", "model": "qwen3.8-max"},
+            "DASHSCOPE_API_KEY",
+            _chat_stream("qwen3.8-max-0902"),
+            "qwen3.8-max-0902",
+        ),
+        (
+            {"provider": "zai", "model": "glm-5.3"},
+            "ZAI_API_KEY",
+            _chat_stream("glm-5.3"),
+            "glm-5.3",
+        ),
+        (
+            {"provider": "anthropic", "model": "claude-sonnet-5-5"},
+            "ANTHROPIC_API_KEY",
+            [
+                {
+                    "type": "message_start",
+                    "message": {
+                        "id": "msg_fixture",
+                        "type": "message",
+                        "role": "assistant",
+                        "model": "claude-sonnet-5-5-20260901",
+                        "content": [],
+                        "usage": {"input_tokens": 9, "output_tokens": 1},
+                    },
+                },
+                {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "text_delta", "text": "billing"},
+                },
+                {
+                    "type": "message_delta",
+                    "delta": {"stop_reason": "end_turn"},
+                    "usage": {"output_tokens": 2},
+                },
+                {"type": "message_stop"},
+            ],
+            "claude-sonnet-5-5-20260901",
+        ),
+        (
+            {"provider": "gemini", "model": "gemini-4-argon"},
+            "GEMINI_API_KEY",
+            [
+                {
+                    "candidates": [{"content": {"parts": [{"text": "bill"}]}}],
+                    "modelVersion": "gemini-4-argon-001",
+                    "responseId": "fixture",
+                },
+                {
+                    "candidates": [{"content": {"parts": [{"text": "ing"}]}}],
+                    "usageMetadata": {
+                        "promptTokenCount": 9,
+                        "candidatesTokenCount": 2,
+                    },
+                    "modelVersion": "gemini-4-argon-001",
+                    "responseId": "fixture",
+                },
+            ],
+            "gemini-4-argon-001",
+        ),
+    ],
+    ids=["openai", "openrouter", "deepseek", "qwen", "zai", "anthropic", "gemini"],
+)
+def test_stream_records_the_model_the_provider_reported(
+    monkeypatch, configured, key, events, observed
+):
+    monkeypatch.setenv(key, "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: _StreamResponse(events)
+    )
+
+    sample = create_client(configured, 10).run(
+        "Charged twice", {"max_output_tokens": 64, "retry": {"max_attempts": 1}}
+    )
+
+    assert sample["ok"] is True
+    assert sample["response"] == "billing"
+    assert sample["observed_model"] == observed
+
+
+def test_responses_api_records_the_model_the_provider_reported(monkeypatch):
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(
+                {
+                    "id": "resp_fixture",
+                    "object": "response",
+                    "model": "gpt-6.1-sol-2026-09-30",
+                    "output_text": "billing",
+                    "usage": {"input_tokens": 9, "output_tokens": 2},
+                }
+            ).encode()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", lambda request, timeout: Response())
+
+    sample = create_client(
+        {"provider": "openai", "model": "gpt-6.1-sol", "adapter": "openai_responses"},
+        10,
+    ).run("Charged twice", {"retry": {"max_attempts": 1}})
+
+    assert sample["observed_model"] == "gpt-6.1-sol-2026-09-30"
+
+
+@pytest.mark.parametrize(
+    ("models", "observed"),
+    [
+        (
+            ["gpt-4.1-mini-b", "gpt-4.1-mini-a", "gpt-4.1-mini-b"],
+            ["gpt-4.1-mini-a", "gpt-4.1-mini-b"],
+        ),
+        ([None, None, None], None),
+        (["", 7, "gpt\x1b[31m"], None),
+        ([None, "x" * 257, "gpt-4.1-mini-a"], "gpt-4.1-mini-a"),
+    ],
+    ids=["disagreeing", "absent", "malformed", "oversized"],
+)
+def test_stream_records_every_distinct_reported_model_and_never_guesses(
+    monkeypatch, models, observed
+):
+    events = [
+        _chat_chunk(models[0], "bill"),
+        _chat_chunk(models[1], "ing"),
+        _chat_chunk(models[2], usage={"prompt_tokens": 9, "completion_tokens": 2}),
+    ]
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: _StreamResponse(events)
+    )
+
+    sample = create_client({"provider": "openai", "model": "gpt-4.1-mini"}, 10).run(
+        "Charged twice", {"retry": {"max_attempts": 1}}
+    )
+
+    assert sample["observed_model"] == observed
+
+
+def test_a_failed_request_reports_no_observed_model(monkeypatch):
+    def refuse(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url, 400, "bad", {}, io.BytesIO(b"bad request")
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", refuse)
+
+    sample = create_client({"provider": "openai", "model": "gpt-4.1-mini"}, 10).run(
+        "Charged twice", {"retry": {"max_attempts": 1}}
+    )
+
+    assert sample["ok"] is False
+    assert sample["observed_model"] is None

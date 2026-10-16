@@ -7,6 +7,7 @@ import time
 import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import Any
 
 from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
@@ -18,6 +19,7 @@ TokenUsage = dict[str, int | None]
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
+MAX_OBSERVED_MODEL_CHARS = 256
 _QWEN_COMBINED_OUTPUT_MODELS = {
     "qwen3.8-max",
     "qwen3.8-max-0902",
@@ -145,6 +147,38 @@ def validate_native_request_options(
         )
 
 
+def reported_model(value: Any) -> str | None:
+    """The model string a response names, or None when it names none usable.
+
+    A non-string, empty, oversized or non-printable value is not evidence of
+    which model answered, so it is dropped rather than repaired.
+    """
+    if (
+        isinstance(value, str)
+        and 0 < len(value) <= MAX_OBSERVED_MODEL_CHARS
+        and value.isprintable()
+    ):
+        return value
+    return None
+
+
+def observed_model(values: Iterable[Any]) -> str | list[str] | None:
+    """One reported model, the sorted distinct set when they disagree, or None.
+
+    Values may themselves be lists, as a sample's `observed_model` is when its
+    events disagreed. Absent or unusable values are skipped, never inferred.
+    """
+    distinct: set[str] = set()
+    for value in values:
+        for item in value if isinstance(value, list) else [value]:
+            model = reported_model(item)
+            if model is not None:
+                distinct.add(model)
+    if not distinct:
+        return None
+    return distinct.pop() if len(distinct) == 1 else sorted(distinct)
+
+
 def _retry_config(options: dict[str, Any]) -> dict[str, Any]:
     configured = options.get("retry", {})
     if configured is True:
@@ -230,6 +264,10 @@ class ProviderClient(ABC):
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
         """Return a text delta and any input/output token usage."""
 
+    def event_model(self, event: dict[str, Any]) -> Any:
+        """The model an event says answered; OpenAI-compatible chunks name it."""
+        return event.get("model")
+
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
         started = time.perf_counter()
         key_env = self.model.get("api_key_env")
@@ -252,6 +290,7 @@ class ProviderClient(ABC):
             first_token_at: float | None = None
             content: list[str] = []
             usage: dict[str, int] = {}
+            models: list[Any] = []
             try:
                 endpoint = self.endpoint()
                 require_http_url(endpoint)
@@ -279,7 +318,9 @@ class ProviderClient(ABC):
                         payload = line[5:].strip()
                         if not payload or payload == "[DONE]":
                             continue
-                        text, event_usage = self.parse_event(json.loads(payload))
+                        event = json.loads(payload)
+                        text, event_usage = self.parse_event(event)
+                        models.append(self.event_model(event))
                         usage.update(
                             {
                                 key: value
@@ -334,6 +375,7 @@ class ProviderClient(ABC):
                     "output_tokens": output_tokens,
                     "response_chars": sum(map(len, content)),
                     "response": "".join(content),
+                    "observed_model": observed_model(models),
                     "error": None,
                     "attempts": attempt,
                     "retry_count": attempt - 1,
@@ -383,6 +425,7 @@ class ProviderClient(ABC):
             "output_tokens": None,
             "response_chars": 0,
             "response": "",
+            "observed_model": None,
             "error": error,
             "attempts": attempts,
             "retry_count": max(0, attempts - 1),
@@ -568,6 +611,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                     "output_tokens": usage.get("output_tokens"),
                     "response_chars": len(text),
                     "response": text,
+                    "observed_model": observed_model([payload.get("model")]),
                     "error": None if text else "Responses API returned no text output",
                     "attempts": attempt,
                     "retry_count": attempt - 1,
@@ -643,6 +687,11 @@ class AnthropicClient(ProviderClient):
             ]
         delta = event.get("delta") or {}
         return delta.get("text"), normalized
+
+    def event_model(self, event: dict[str, Any]) -> Any:
+        """Only `message_start` names the model, inside its message."""
+        message = event.get("message")
+        return message.get("model") if isinstance(message, dict) else None
 
 
 class GeminiClient(ProviderClient):
@@ -735,6 +784,10 @@ class GeminiClient(ProviderClient):
         )
         return text, normalized
 
+    def event_model(self, event: dict[str, Any]) -> Any:
+        """Each chunk names the serving model version."""
+        return event.get("modelVersion")
+
 
 class MockClient(ProviderClient):
     def endpoint(self) -> str:
@@ -766,6 +819,8 @@ class MockClient(ProviderClient):
             "output_tokens": output_tokens,
             "response_chars": len(response),
             "response": response,
+            # The mock is not a provider; it reports no model.
+            "observed_model": None,
             "error": None,
         }
 

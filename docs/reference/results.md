@@ -87,6 +87,7 @@ Each `models[]` object identifies the resolved provider/model and includes:
 | Field | Meaning |
 |---|---|
 | `name`, `provider`, `model` | Human label and resolved model identity. |
+| `observed_model` | The model the provider's responses said answered, across measured and warmup requests: a string when they agree, the sorted distinct strings when they disagree, and `null` when no response named one. It is read from the OpenAI-compatible `model` field (OpenAI, OpenRouter, xAI, DeepSeek, Qwen, Z.ai and custom endpoints), the Anthropic `message_start` message's `model`, the Gemini `modelVersion` and the OpenAI Responses `model`. A value that is not a non-empty printable string of at most 256 characters is ignored, never repaired. It is a measurement, not configuration: it is not part of `provenance`, so no fingerprint depends on it. Results written before 2.22.0 do not have it. |
 | `summary` | Measured requests, validation, timing, usage, cost, retries, and failures. |
 | `warmup_summary` | The same metrics for warmup requests; exclude it from your quality gate. |
 | `samples` | Per-request observations for a plain prompt, subject to `save_responses`. |
@@ -154,8 +155,10 @@ Golden samples include normalized `golden_expected`, `golden_observed`, and
 
 A plain-prompt `samples[]` entry includes `ok`, `valid_output`,
 `quality_score`, `evaluation_error`, `failure_category`, `attempts`,
-`retry_count`, `retry_reasons`, timing, token counts, cost inputs, and an
-optional response or response preview according to `save_responses`.
+`retry_count`, `retry_reasons`, timing, token counts, cost inputs,
+`observed_model` (that request's reported model, with the same string, list or
+`null` rule as the model result), and an optional response or response preview
+according to `save_responses`.
 
 For a profile run, `profiles[]` contains `name`, `description`, `summary`, and
 per-case `samples`. Each sample has `case_id`; concurrency-health samples also
@@ -216,7 +219,7 @@ a contract and its routes; it does not certify production behaviour.
 | `predicate.result` | The saved decision, copied and never recomputed: `pass` is `PASSED`, `inconclusive` is `WARNED`, `fail` is `FAILED`. |
 | `predicate.passedTests`, `warnedTests`, `failedTests` | One name per model and test, such as `openai:gpt-4.1-mini/strict-json-extraction`, or per model and prompt without tests (`provider:model/config-prompt`). In an inconclusive run every test that did not fail is listed as warned. |
 | `predicate.url` | The GitHub Actions run attempt, `SERVER/OWNER/REPO/actions/runs/ID/attempts/N`. Absent for a local record. |
-| `predicate.configuration` | Four ResourceDescriptors whose `sha256` digests are the result's `provenance` fingerprints: `llm-preflight/contract` (`annotations.validatorVersion`), `llm-preflight/routes` (`annotations.routes`: `provider`, `model` and `pricingAsOf` for each resolved route), `llm-preflight/pricing`, and `llm-preflight/evidence`. |
+| `predicate.configuration` | Four ResourceDescriptors whose `sha256` digests are the result's `provenance` fingerprints: `llm-preflight/contract` (`annotations.validatorVersion`), `llm-preflight/routes` (`annotations.routes`: `provider`, `model`, `pricingAsOf` and `observedModel` for each resolved route; `observedModel` is the result's `observed_model` for that route, and `null` for a result without one), `llm-preflight/pricing`, and `llm-preflight/evidence`. |
 | `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
 | `ci` | `repository`, `workflow`, `runId`, `runAttempt`, `commit` and `serverUrl`, read from `GITHUB_REPOSITORY`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA` and `GITHUB_SERVER_URL`. `null` when none is set. `attest` refuses a partial or malformed set. |
 
@@ -245,6 +248,8 @@ separate objects; neither implies the other.
   `retired_routes`. A record stays fresh through `valid_until`, `checkedAt`
   plus `--max-age-days` (default 30). It is `superseded` once the verifier's
   own retirement snapshot lists a checked route as retired.
+- `routes[]`: `provider`, `model` and `observed_model` for each recorded
+  route; `observed_model` is `null` when the record has none.
 - `retirement_snapshot` (the verifier's own snapshot date), `result`,
   `origin`, `url` and `signature`, which is always "not checked here — use gh
   attestation verify".
@@ -261,7 +266,7 @@ reads each record file and every `*.preflight.json` under each directory.
 | `decision` | `pass` (exit 0), `blocked` (exit 1) or `undecided` (exit 3). |
 | `reason_code` | `fresh_pass`; when blocked, `no_record`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error` or `record_error`. |
 | `why`, `next` | The reason in one sentence and the numbered next steps, identical to the text output. |
-| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`. |
+| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
 | `contract_sha256`, `routes_sha256` | The current tree's fingerprints; `null` when the config cannot be fingerprinted. |
 | `config`, `max_age_days`, `retirement_snapshot`, `signature`, `network_accessed` | Inputs and the verifier's snapshot; `network_accessed` is always `false`. |
 

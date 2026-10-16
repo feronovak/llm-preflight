@@ -18,6 +18,8 @@ from llm_preflight.runner import load_config
 STATEMENT = "https://in-toto.io/Statement/v1"
 TEST_RESULT = "https://in-toto.io/attestation/test-result/v0.1"
 CHECKED = "2026-10-10T08:00:00+00:00"
+OBSERVED = "gpt-4.1-mini-2025-04-14"
+UNRECORDED = object()
 TODAY = date(2026, 10, 17)
 CONFIG = {
     "name": "demo",
@@ -61,8 +63,19 @@ def _config(tmp_path, config=CONFIG):
     return path
 
 
-def _result(tmp_path, config_path, *, state="pass", timestamp=CHECKED, name="run.json"):
-    """A billable single-model result whose decision comes from decision.py."""
+def _result(
+    tmp_path,
+    config_path,
+    *,
+    state="pass",
+    timestamp=CHECKED,
+    name="run.json",
+    observed=OBSERVED,
+):
+    """A billable single-model result whose decision comes from decision.py.
+
+    `observed=UNRECORDED` writes a result from before `observed_model` existed.
+    """
     config = load_config(config_path)
     routes = resolve_pricing(resolve_models(config))["models"]
     model = {
@@ -78,6 +91,8 @@ def _result(tmp_path, config_path, *, state="pass", timestamp=CHECKED, name="run
         },
         "warmup_summary": {"requests": 1, "successful": 1, "failed": 0},
     }
+    if observed is not UNRECORDED:
+        model["observed_model"] = observed
     result = {
         "schema_version": 1,
         "run_id": "6f1c2d4e-0000-4000-8000-000000000001",
@@ -181,7 +196,12 @@ def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
             "sha256": saved["provenance"][f"{name}_sha256"]
         }
     assert _descriptor(record, "routes")["annotations"]["routes"] == [
-        {"provider": "openai", "model": "gpt-4.1-mini", "pricingAsOf": "2026-10-16"}
+        {
+            "provider": "openai",
+            "model": "gpt-4.1-mini",
+            "pricingAsOf": "2026-10-16",
+            "observedModel": OBSERVED,
+        }
     ]
     evidence = _descriptor(record, "evidence")["annotations"]
     # Verbatim, except the safe next command that names a local path.
@@ -207,6 +227,38 @@ def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
     assert evidence["origin"] == "local"
     assert evidence["ci"] is None
     assert "url" not in predicate
+
+
+@pytest.mark.parametrize(
+    ("observed", "recorded", "shown"),
+    [
+        (UNRECORDED, None, "did not report the model that answered"),
+        (None, None, "did not report the model that answered"),
+        (
+            ["gpt-4.1-mini-a", "gpt-4.1-mini-b"],
+            ["gpt-4.1-mini-a", "gpt-4.1-mini-b"],
+            "answered as gpt-4.1-mini-a, gpt-4.1-mini-b (responses disagreed)",
+        ),
+    ],
+    ids=["result-before-the-field", "not-reported", "disagreeing"],
+)
+def test_attest_and_verify_carry_the_observed_model_and_never_guess_one(
+    monkeypatch, capsys, tmp_path, observed, recorded, shown
+):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path), observed=observed)
+
+    assert _run(monkeypatch, capsys, "attest", "results/run.json")[0] == 0
+    record = tmp_path / "results/run.preflight.json"
+    routes = _descriptor(json.loads(record.read_text()), "routes")["annotations"]
+    _, out, _ = _run(monkeypatch, capsys, "verify", record)
+    _, report, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+    assert routes["routes"][0]["observedModel"] == recorded
+    assert f"Route:     openai:gpt-4.1-mini {shown}\n" in out
+    assert json.loads(report)["routes"] == [
+        {"provider": "openai", "model": "gpt-4.1-mini", "observed_model": recorded}
+    ]
 
 
 def test_attest_refuses_a_result_without_schema_version_1_provenance(
@@ -404,6 +456,7 @@ def test_verify_reports_intact_and_fresh_with_snapshot_and_signature_note(
         "fresh until 2026-11-09 (limit 30 days)"
     ) in out
     assert "Subject:   result results/run.json: matches" in out
+    assert f"Route:     openai:gpt-4.1-mini answered as {OBSERVED}\n" in out
     assert (
         "Origin:    GitHub Actions "
         "https://github.com/acme/app/actions/runs/4425592351/attempts/1"
@@ -492,6 +545,15 @@ def _evidence(record):
             ),
             "predicate.url does not match the GitHub Actions identity",
         ),
+        *(
+            (
+                lambda record, value=value: _descriptor(record, "routes")[
+                    "annotations"
+                ]["routes"][0].update(observedModel=value),
+                "llm-preflight/routes carries a malformed observedModel",
+            )
+            for value in (7, "", "gpt\x1b[31m", ["gpt-a"], ["gpt-a", "gpt-a"])
+        ),
     ],
 )
 def test_verify_rejects_an_internally_inconsistent_record(
@@ -576,6 +638,7 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
         "Gate: pass — a fresh passing preflight matches this contract.\n"
         "Why:  Run 4425592351 on acme/app passed this contract and its routes on "
         "2026-10-10 (7 days old); it stays fresh until 2026-11-09. "
+        f"openai:gpt-4.1-mini answered as {OBSERVED}. "
         "The signature is not checked here — use gh attestation verify.\n"
         "Exit 0.\n"
     )
@@ -587,6 +650,9 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
     assert report["network_accessed"] is False
     assert [(item["path"], item["verdict"]) for item in report["records"]] == [
         ("results/run.preflight.json", "pass")
+    ]
+    assert report["records"][0]["routes"] == [
+        {"provider": "openai", "model": "gpt-4.1-mini", "observed_model": OBSERVED}
     ]
 
 

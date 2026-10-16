@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .catalog import resolve_models
-from .client import create_client
+from .client import create_client, observed_model
 from .contracts import (
     check_contract,
     contract_fixtures_declared,
@@ -911,6 +911,10 @@ def run_benchmark(
             "name": model.get("name", model["model"]),
             "model": model["model"],
             "provider": model.get("provider", "openai_compatible"),
+            # What the provider said answered, warmups included; never inferred.
+            "observed_model": observed_model(
+                sample.get("observed_model") for sample in [*samples, *warmup_samples]
+            ),
             "base_url": client.model["base_url"],
             "capabilities": model.get("capabilities", {}),
             "context_length": model.get("context_length"),

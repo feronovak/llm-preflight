@@ -142,7 +142,10 @@ identity. It rejects a record tracked by Git and never passes a local one. Its
 text output gives the reason first, then numbered next steps, then the exit
 line; `--json` carries the same `why` and `next` with a `reason_code` and a
 verdict per record. Put `CONFIG` before `--records`, which takes every
-following path. See [Preflight record](results.md#preflight-record) for the
+following path. `verify` prints a `Route:` line per checked route with the
+model its provider reported answering, and a gate pass names it in its reason;
+a route whose responses named no model says so instead of repeating the
+configured one. See [Preflight record](results.md#preflight-record) for the
 record, verify and gate fields.
 
 ## Built-in test packs

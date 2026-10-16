@@ -198,3 +198,79 @@ retiring or stale verdict. `decision` (`fail`, `inconclusive`, `pass` or
 the `--ci` exit code. When `files_scanned` is 0, including when every
 selected file was unreadable, the decision is `inconclusive`: an audit that read nothing has no evidence. `next_commands`,
 `retirement_snapshot`, `confidence` and `notes` complete the object.
+
+## Preflight record
+
+`llm-preflight attest RESULT` writes a portable record of a saved
+schema-version-1 result. The record is an
+[in-toto Statement v1](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
+with the
+[test-result v0.1 predicate](https://github.com/in-toto/attestation/blob/main/spec/predicates/test-result.md),
+so `actions/attest` can sign it unchanged. It proves that a named check ran on
+a contract and its routes; it does not certify production behaviour.
+
+| Field | Meaning |
+|---|---|
+| `_type`, `predicateType` | `https://in-toto.io/Statement/v1` and `https://in-toto.io/attestation/test-result/v0.1`. |
+| `subject` | Two ResourceDescriptors with a `sha256` digest: the benchmark config (`annotations.role: "config"`) and the saved result (`"result"`). A name is relative to the working directory, or the bare file name for a file outside it. |
+| `predicate.result` | The saved decision, copied and never recomputed: `pass` is `PASSED`, `inconclusive` is `WARNED`, `fail` is `FAILED`. |
+| `predicate.passedTests`, `warnedTests`, `failedTests` | One name per model and test, such as `openai:gpt-4.1-mini/strict-json-extraction`, or per model and prompt without tests (`provider:model/config-prompt`). In an inconclusive run every test that did not fail is listed as warned. |
+| `predicate.url` | The GitHub Actions run attempt, `SERVER/OWNER/REPO/actions/runs/ID/attempts/N`. Absent for a local record. |
+| `predicate.configuration` | Four ResourceDescriptors whose `sha256` digests are the result's `provenance` fingerprints: `llm-preflight/contract` (`annotations.validatorVersion`), `llm-preflight/routes` (`annotations.routes`: `provider`, `model` and `pricingAsOf` for each resolved route), `llm-preflight/pricing`, and `llm-preflight/evidence`. |
+| `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
+| `ci` | `repository`, `workflow`, `runId`, `runAttempt`, `commit` and `serverUrl`, read from `GITHUB_REPOSITORY`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA` and `GITHUB_SERVER_URL`. `null` when none is set. `attest` refuses a partial or malformed set. |
+
+`attest` refuses a result without schema-version-1 provenance, provenance that
+does not match its `evidence_sha256`, and a result it could not attest
+consistently, such as a `pass` decision without complete cost confidence.
+
+### Verify JSON
+
+`llm-preflight verify RECORD --json` reports integrity and freshness as
+separate objects; neither implies the other.
+
+- `integrity.ok` and `integrity.problems`: statement type, predicate type,
+  subject and descriptor shape, the descriptor digests against the embedded
+  provenance and its `evidence_sha256`, the result against the decision,
+  the GitHub identity against `predicate.url`, and a `checkedAt` that is not
+  after today. A `PASSED` record must come from a `pass` decision with
+  complete cost confidence, no blocking warnings, and passed tests only.
+- `integrity.subjects[]`: `name`, `role` and `state` (`matches`, `differs` or
+  `absent`). Each subject is looked up relative to the working directory, then
+  beside the record. A result that `differs` breaks integrity; a config that
+  differs is reported only, because a later edit does not make the record
+  dishonest.
+- `freshness`: `state` (`fresh`, `stale`, `superseded` or `unknown`),
+  `checked_at`, `age_days`, `max_age_days`, `valid_until` and
+  `retired_routes`. A record stays fresh through `valid_until`, `checkedAt`
+  plus `--max-age-days` (default 30). It is `superseded` once the verifier's
+  own retirement snapshot lists a checked route as retired.
+- `retirement_snapshot` (the verifier's own snapshot date), `result`,
+  `origin`, `url` and `signature`, which is always "not checked here — use gh
+  attestation verify".
+
+### Gate JSON
+
+`llm-preflight gate [CONFIG] --records PATH... --json` decides offline whether
+the current tree has a fresh passing record. It fingerprints `CONFIG` as a
+default run would record it, with no credentials and no provider request, and
+reads each record file and every `*.preflight.json` under each directory.
+
+| Field | Meaning |
+|---|---|
+| `decision` | `pass` (exit 0), `blocked` (exit 1) or `undecided` (exit 3). |
+| `reason_code` | `fresh_pass`; when blocked, `no_record`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error` or `record_error`. |
+| `why`, `next` | The reason in one sentence and the numbered next steps, identical to the text output. |
+| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`. |
+| `contract_sha256`, `routes_sha256` | The current tree's fingerprints; `null` when the config cannot be fingerprinted. |
+| `config`, `max_age_days`, `retirement_snapshot`, `signature`, `network_accessed` | Inputs and the verifier's snapshot; `network_accessed` is always `false`. |
+
+The newest record by `checkedAt` that matches both fingerprints and carries a
+GitHub Actions identity decides; on equal age a non-passing record wins. A
+record tracked by Git, a local record, an inconsistent record and a record for
+other fingerprints never decides. One unreadable record makes the gate
+`undecided`, because it could have been the newest. A config with `discovery`
+cannot be fingerprinted offline and is `config_error`. A run under `--env`,
+`--prompt` or `--migration-check` can record a different contract or routes
+than a default run, so its record reads as `contract_changed` or
+`routes_changed`.

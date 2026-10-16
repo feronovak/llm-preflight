@@ -30,6 +30,9 @@ claim savings. Strict pricing freshness checks every source description.
 | Option | Default | Purpose |
 |---|---:|---|
 | `report RESULT [--format html\|markdown] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. |
+| `attest RESULT [--config PATH] [--output PATH] [--force] [--json]` | `RESULT` with `.preflight.json` | Write an in-toto record that this result's check ran, with its decision copied, never upgraded. It refuses a result without schema-version-1 provenance and never replaces a record without `--force`. `--config` defaults to the result's recorded `source_config_path`. In GitHub Actions the record carries the run identity; elsewhere its origin is `local`. No provider request. |
+| `verify RECORD [--max-age-days DAYS] [--json]` | 30 days | Report a record's integrity and freshness separately, with this verifier's retirement-snapshot date. Exit 0 intact and fresh, 1 integrity broken, 3 intact but stale or superseded. Signatures are not checked here; use `gh attestation verify`. |
+| `gate [CONFIG] --records PATH... [--max-age-days DAYS] [--json]` | `benchmark.json`, 30 days | Decide offline whether a fresh, passing GitHub Actions record matches the current contract and routes. Exit 0 pass, 1 blocked, 3 cannot decide. It never fetches artifacts, loads credentials or contacts a provider. |
 | `--output-dir PATH` | `results` | Directory for saved result artifacts. |
 | `--no-save` | off | Do not create result artifacts. |
 | `--json` | off | Print the full result, plan, doctor report, or diff as JSON. |
@@ -119,6 +122,28 @@ For a completed benchmark, exit code `0` means `decision.state` is `pass`;
 `2` remains invalid input or operational setup failure, and `130` remains a
 cancelled operation. The decision is present in JSON artifacts and MCP
 `run_preflight` results; see [Agent decision contract](decision.md).
+
+## Proof of preflight
+
+A pull request that changes an LLM contract should not merge on a stale,
+borrowed or hand-typed pass. CI attests the saved result of a bounded run and
+uploads the record as an artifact; the gate checks the downloaded records
+against the current tree:
+
+```bash
+llm-preflight attest results/run.json
+llm-preflight verify results/run.preflight.json
+llm-preflight gate benchmark.json --records records/
+```
+
+The gate passes only on the newest matching record that is `PASSED`,
+consistent, fresh and not superseded, and that carries a GitHub Actions run
+identity. It rejects a record tracked by Git and never passes a local one. Its
+text output gives the reason first, then numbered next steps, then the exit
+line; `--json` carries the same `why` and `next` with a `reason_code` and a
+verdict per record. Put `CONFIG` before `--records`, which takes every
+following path. See [Preflight record](results.md#preflight-record) for the
+record, verify and gate fields.
 
 ## Built-in test packs
 

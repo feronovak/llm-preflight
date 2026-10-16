@@ -1,0 +1,933 @@
+import hashlib
+import json
+import shutil
+import socket
+import subprocess
+import sys
+from datetime import date
+
+import pytest
+
+from llm_preflight import cli
+from llm_preflight.catalog import resolve_models
+from llm_preflight.contracts import provenance
+from llm_preflight.decision import build_decision
+from llm_preflight.pricing import resolve_pricing
+from llm_preflight.runner import load_config
+
+STATEMENT = "https://in-toto.io/Statement/v1"
+TEST_RESULT = "https://in-toto.io/attestation/test-result/v0.1"
+CHECKED = "2026-10-10T08:00:00+00:00"
+TODAY = date(2026, 10, 17)
+CONFIG = {
+    "name": "demo",
+    "prompt": "Return a JSON object.",
+    "validation": {"json_object": True},
+    "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+}
+GITHUB = {
+    "GITHUB_REPOSITORY": "acme/app",
+    "GITHUB_WORKFLOW": "preflight",
+    "GITHUB_RUN_ID": "4425592351",
+    "GITHUB_RUN_ATTEMPT": "1",
+    "GITHUB_SHA": "d20ace7968ba43c0219f62d71334c1095bab1602",
+    "GITHUB_SERVER_URL": "https://github.com",
+}
+
+
+@pytest.fixture(autouse=True)
+def local_clock_and_environment(monkeypatch):
+    """No GitHub identity unless a test sets one, and a pinned verifier clock."""
+    for name in GITHUB:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(cli, "today_utc", lambda: TODAY)
+
+
+def _run(monkeypatch, capsys, *arguments):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *map(str, arguments)])
+    try:
+        cli.main()
+    except SystemExit as exc:
+        code = exc.code
+    else:
+        code = 0
+    captured = capsys.readouterr()
+    return code, captured.out, captured.err
+
+
+def _config(tmp_path, config=CONFIG):
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    return path
+
+
+def _result(tmp_path, config_path, *, state="pass", timestamp=CHECKED, name="run.json"):
+    """A billable single-model result whose decision comes from decision.py."""
+    config = load_config(config_path)
+    routes = resolve_pricing(resolve_models(config))["models"]
+    model = {
+        "name": "gpt-4.1-mini",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "samples": [{"valid_output": True}, {"valid_output": True}],
+        "summary": {
+            "requests": 2,
+            "successful": 2,
+            "failed": 0,
+            "valid_output_rate": 1.0,
+        },
+        "warmup_summary": {"requests": 1, "successful": 1, "failed": 0},
+    }
+    result = {
+        "schema_version": 1,
+        "run_id": "6f1c2d4e-0000-4000-8000-000000000001",
+        "timestamp": timestamp,
+        "benchmark": "demo",
+        "models": [model],
+        "pricing_ledger": [
+            {"provider": "openai", "model": "gpt-4.1-mini", "as_of": "2026-10-16"}
+        ],
+        "pricing_coverage": {"summary": {"billable": 1}, "models": []},
+        "cost_confidence": "complete",
+        "total_estimated_cost_usd": 0.0012,
+        "cost_coverage": {
+            "known_requests": 3,
+            "missing_usage_requests": 0,
+            "missing_price_requests": 0,
+            "unobserved_retry_requests": 0,
+        },
+        "provenance": provenance(config, routes, "f" * 64),
+        "source_config_path": str(config_path.resolve()),
+    }
+    if state == "fail":
+        model["summary"]["valid_output_rate"] = 0.5
+        model["samples"][1]["valid_output"] = False
+    if state == "inconclusive":
+        result["cost_confidence"] = "partial"
+        result["total_estimated_cost_usd"] = None
+    result["decision"] = build_decision(result)
+    assert result["decision"]["state"] == state
+    directory = tmp_path / "results"
+    directory.mkdir(exist_ok=True)
+    path = directory / name
+    path.write_text(json.dumps(result, indent=2))
+    return path
+
+
+def _sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _descriptor(record, name):
+    return next(
+        item
+        for item in record["predicate"]["configuration"]
+        if item["name"] == f"llm-preflight/{name}"
+    )
+
+
+# attest
+
+
+@pytest.mark.parametrize(
+    ("state", "verdict", "tests"),
+    [
+        ("pass", "PASSED", "passedTests"),
+        ("inconclusive", "WARNED", "warnedTests"),
+        ("fail", "FAILED", "failedTests"),
+    ],
+)
+def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
+    monkeypatch, capsys, tmp_path, state, verdict, tests
+):
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    result = _result(tmp_path, config, state=state)
+    saved = json.loads(result.read_text())
+
+    code, out, _ = _run(monkeypatch, capsys, "attest", "results/run.json")
+
+    assert code == 0
+    output = tmp_path / "results/run.preflight.json"
+    assert "Saved preflight record to results/run.preflight.json" in out
+    record = json.loads(output.read_text())
+    assert record["_type"] == STATEMENT
+    assert record["predicateType"] == TEST_RESULT
+    assert record["subject"] == [
+        {
+            "name": "benchmark.json",
+            "digest": {"sha256": _sha256(config)},
+            "annotations": {"role": "config"},
+        },
+        {
+            "name": "results/run.json",
+            "digest": {"sha256": _sha256(result)},
+            "annotations": {"role": "result"},
+        },
+    ]
+    predicate = record["predicate"]
+    assert predicate["result"] == verdict
+    case = "openai:gpt-4.1-mini/config-prompt"
+    for field in ("passedTests", "warnedTests", "failedTests"):
+        assert predicate[field] == ([case] if field == tests else [])
+    assert [item["name"] for item in predicate["configuration"]] == [
+        "llm-preflight/contract",
+        "llm-preflight/routes",
+        "llm-preflight/pricing",
+        "llm-preflight/evidence",
+    ]
+    for name in ("contract", "routes", "pricing", "evidence"):
+        assert _descriptor(record, name)["digest"] == {
+            "sha256": saved["provenance"][f"{name}_sha256"]
+        }
+    assert _descriptor(record, "routes")["annotations"]["routes"] == [
+        {"provider": "openai", "model": "gpt-4.1-mini", "pricingAsOf": "2026-10-16"}
+    ]
+    evidence = _descriptor(record, "evidence")["annotations"]
+    # Verbatim, except the safe next command that names a local path.
+    assert "safe_next_command" in saved["decision"]
+    assert evidence["decision"] == {
+        key: value
+        for key, value in saved["decision"].items()
+        if key != "safe_next_command"
+    }
+    assert evidence["provenance"] == saved["provenance"]
+    assert evidence["checkedAt"] == CHECKED
+    assert evidence["runId"] == saved["run_id"]
+    assert evidence["requests"] == 3
+    assert evidence["costConfidence"] == saved["cost_confidence"]
+    assert evidence["costUsd"] == saved["total_estimated_cost_usd"]
+    assert evidence["retirementSnapshot"] == "2026-10-16"
+    assert evidence["claimsNotMade"] == [
+        "production behaviour",
+        "accuracy beyond the declared validators",
+        "safety",
+        "other accounts or regions",
+    ]
+    assert evidence["origin"] == "local"
+    assert evidence["ci"] is None
+    assert "url" not in predicate
+
+
+def test_attest_refuses_a_result_without_schema_version_1_provenance(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    result = _result(tmp_path, _config(tmp_path))
+    payload = json.loads(result.read_text())
+    del payload["provenance"]
+    result.write_text(json.dumps(payload))
+
+    code, _, err = _run(monkeypatch, capsys, "attest", result)
+
+    assert code == 2
+    assert "schema-version-1 provenance" in err
+    assert not (tmp_path / "results/run.preflight.json").exists()
+
+
+def test_attest_refuses_provenance_that_does_not_match_its_evidence_hash(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    result = _result(tmp_path, _config(tmp_path))
+    payload = json.loads(result.read_text())
+    payload["provenance"]["contract_sha256"] = "0" * 64
+    result.write_text(json.dumps(payload))
+
+    code, _, err = _run(monkeypatch, capsys, "attest", result)
+
+    assert code == 2
+    assert "evidence_sha256" in err
+    assert not (tmp_path / "results/run.preflight.json").exists()
+
+
+def test_attest_never_upgrades_an_edited_pass_with_incomplete_cost_evidence(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    result = _result(tmp_path, _config(tmp_path), state="inconclusive")
+    payload = json.loads(result.read_text())
+    payload["decision"] = {**payload["decision"], "state": "pass"}
+    payload["decision"]["blocking_warnings"] = []
+    result.write_text(json.dumps(payload))
+
+    code, _, err = _run(monkeypatch, capsys, "attest", result)
+
+    assert code == 2
+    assert "cost confidence" in err
+    assert not (tmp_path / "results/run.preflight.json").exists()
+
+
+def test_attest_records_github_actions_identity_and_run_url(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path))
+    for name, value in GITHUB.items():
+        monkeypatch.setenv(name, value)
+
+    code, _, _ = _run(monkeypatch, capsys, "attest", "results/run.json")
+
+    assert code == 0
+    record = json.loads((tmp_path / "results/run.preflight.json").read_text())
+    assert record["predicate"]["url"] == (
+        "https://github.com/acme/app/actions/runs/4425592351/attempts/1"
+    )
+    evidence = _descriptor(record, "evidence")["annotations"]
+    assert evidence["origin"] == "github-actions"
+    assert evidence["ci"] == {
+        "repository": "acme/app",
+        "workflow": "preflight",
+        "runId": "4425592351",
+        "runAttempt": "1",
+        "commit": "d20ace7968ba43c0219f62d71334c1095bab1602",
+        "serverUrl": "https://github.com",
+    }
+
+
+def test_attest_refuses_an_incomplete_github_actions_identity(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path))
+    monkeypatch.setenv("GITHUB_RUN_ID", "4425592351")
+
+    code, _, err = _run(monkeypatch, capsys, "attest", "results/run.json")
+
+    assert code == 2
+    assert "GITHUB_REPOSITORY" in err
+    assert not (tmp_path / "results/run.preflight.json").exists()
+
+
+def test_attest_never_overwrites_without_force_and_honours_output(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path))
+    assert _run(monkeypatch, capsys, "attest", "results/run.json")[0] == 0
+    existing = tmp_path / "results/run.preflight.json"
+    before = existing.read_text()
+
+    code, _, err = _run(monkeypatch, capsys, "attest", "results/run.json")
+
+    assert code == 2
+    assert "already exists; refusing to overwrite it" in err
+    assert existing.read_text() == before
+    assert _run(monkeypatch, capsys, "attest", "results/run.json", "--force")[0] == 0
+    code, out, _ = _run(
+        monkeypatch, capsys, "attest", "results/run.json", "--output", "proof.json"
+    )
+    assert code == 0
+    assert "Saved preflight record to proof.json" in out
+    assert json.loads((tmp_path / "proof.json").read_text())["_type"] == STATEMENT
+
+
+def test_attest_json_prints_the_path_and_the_record(monkeypatch, capsys, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path))
+
+    code, out, _ = _run(monkeypatch, capsys, "attest", "results/run.json", "--json")
+
+    assert code == 0
+    payload = json.loads(out)
+    assert payload["path"] == "results/run.preflight.json"
+    assert payload["record"] == json.loads(
+        (tmp_path / "results/run.preflight.json").read_text()
+    )
+
+
+def test_existing_commands_and_help_are_unchanged(monkeypatch, capsys, tmp_path):
+    code, out, _ = _run(monkeypatch, capsys, "--help")
+    assert code == 0
+    assert "--audit-source" in out
+    code, out, _ = _run(monkeypatch, capsys, "report", "--help")
+    assert code == 0
+    assert "--format" in out
+    code, out, _ = _run(monkeypatch, capsys, "--version")
+    assert code == 0
+    assert out.startswith("llm-preflight ")
+    monkeypatch.chdir(tmp_path)
+    config = _config(
+        tmp_path,
+        {"prompt": "ok", "models": [{"provider": "mock", "model": "local"}]},
+    )
+    code, out, _ = _run(monkeypatch, capsys, config, "--dry-run", "--json")
+    assert code == 0
+    assert json.loads(out)["requests"] > 0
+
+
+def _attest(
+    monkeypatch,
+    capsys,
+    tmp_path,
+    *,
+    state="pass",
+    ci=True,
+    timestamp=CHECKED,
+    name="run.json",
+):
+    """Attest one result in tmp_path, the working directory, and return the record path."""
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "benchmark.json"
+    if not config.exists():
+        _config(tmp_path)
+    _result(tmp_path, config, state=state, timestamp=timestamp, name=name)
+    with monkeypatch.context() as scoped:
+        if ci:
+            for variable, value in GITHUB.items():
+                scoped.setenv(variable, value)
+        code, _, err = _run(monkeypatch, capsys, "attest", f"results/{name}")
+    assert code == 0, err
+    return tmp_path / "results" / name.replace(".json", ".preflight.json")
+
+
+def _edit_record(path, edit):
+    record = json.loads(path.read_text())
+    edit(record)
+    path.write_text(json.dumps(record))
+
+
+# verify
+
+
+def test_verify_reports_intact_and_fresh_with_snapshot_and_signature_note(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record)
+
+    assert code == 0
+    assert "Integrity: intact" in out
+    assert (
+        "Freshness: fresh — checked 2026-10-10, 7 days ago; "
+        "fresh until 2026-11-09 (limit 30 days)"
+    ) in out
+    assert "Subject:   result results/run.json: matches" in out
+    assert (
+        "Origin:    GitHub Actions "
+        "https://github.com/acme/app/actions/runs/4425592351/attempts/1"
+    ) in out
+    assert "Snapshot:  retirement snapshot 2026-10-16 (this verifier)" in out
+    assert "Signature: not checked here — use gh attestation verify" in out
+    assert out.rstrip().endswith("Exit 0.")
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    report = json.loads(out)
+    assert code == 0
+    assert report["integrity"]["ok"] is True
+    assert report["freshness"]["state"] == "fresh"
+    assert report["freshness"]["age_days"] == 7
+    assert report["retirement_snapshot"] == "2026-10-16"
+    assert report["signature"] == "not checked here — use gh attestation verify"
+    assert report["origin"] == "github-actions"
+
+
+def test_verify_flags_a_tampered_result_file_but_keeps_freshness_separate(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    result = tmp_path / "results/run.json"
+    result.write_text(result.read_text().replace('"complete"', '"partial"'))
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+    report = json.loads(out)
+    assert code == 1
+    assert report["integrity"]["ok"] is False
+    assert report["integrity"]["problems"] == [
+        "the result file results/run.json does not match its subject digest"
+    ]
+    assert report["freshness"]["state"] == "fresh"
+
+
+def test_verify_reports_a_changed_config_without_failing_integrity(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    (tmp_path / "benchmark.json").write_text(json.dumps({**CONFIG, "name": "renamed"}))
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record)
+
+    assert code == 0
+    assert "Subject:   config benchmark.json: changed since the check" in out
+    assert "Integrity: intact" in out
+
+
+def _evidence(record):
+    return _descriptor(record, "evidence")["annotations"]
+
+
+@pytest.mark.parametrize(
+    ("edit", "problem"),
+    [
+        (
+            lambda record: _evidence(record).update(costConfidence="partial"),
+            "a PASSED record needs complete cost confidence",
+        ),
+        (
+            lambda record: _evidence(record)["decision"].update(
+                blocking_warnings=["Cost confidence is partial."]
+            ),
+            "a PASSED record cannot carry blocking warnings",
+        ),
+        (
+            lambda record: record.update(
+                predicateType="https://slsa.dev/provenance/v1"
+            ),
+            "predicateType is not the in-toto test-result v0.1 predicate",
+        ),
+        (
+            lambda record: _evidence(record)["decision"].update(state="inconclusive"),
+            "PASSED does not match the inconclusive decision",
+        ),
+        (
+            lambda record: _descriptor(record, "contract")["digest"].update(
+                sha256="0" * 64
+            ),
+            "llm-preflight/contract digest does not match provenance.contract_sha256",
+        ),
+        (
+            lambda record: record["predicate"].update(
+                url="https://github.com/acme/other/actions/runs/1/attempts/1"
+            ),
+            "predicate.url does not match the GitHub Actions identity",
+        ),
+    ],
+)
+def test_verify_rejects_an_internally_inconsistent_record(
+    monkeypatch, capsys, tmp_path, edit, problem
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, edit)
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+    assert code == 1
+    assert problem in json.loads(out)["integrity"]["problems"]
+
+
+@pytest.mark.parametrize(
+    ("today", "state", "exit_code"),
+    [(date(2026, 11, 9), "fresh", 0), (date(2026, 11, 10), "stale", 3)],
+)
+def test_verify_freshness_boundary_is_inclusive_at_max_age_days(
+    monkeypatch, capsys, tmp_path, today, state, exit_code
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    monkeypatch.setattr(cli, "today_utc", lambda: today)
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+    report = json.loads(out)
+    assert code == exit_code
+    assert report["integrity"]["ok"] is True
+    assert report["freshness"]["state"] == state
+    assert report["freshness"]["valid_until"] == "2026-11-09"
+
+
+def test_verify_marks_a_record_superseded_once_its_route_retires(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 15))
+    record = _attest(monkeypatch, capsys, tmp_path, timestamp="2027-01-10T08:00:00Z")
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record)
+
+    assert code == 3
+    assert "Integrity: intact" in out
+    assert "Freshness: superseded — checked 2027-01-10, 5 days ago" in out
+    assert "- openai:gpt-4.1-mini retired on 2027-01-14" in out
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 14))
+    assert _run(monkeypatch, capsys, "verify", record)[0] == 3
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 13))
+    assert _run(monkeypatch, capsys, "verify", record)[0] == 0
+
+
+def test_verify_rejects_unreadable_records_and_invalid_max_age(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    code, _, err = _run(monkeypatch, capsys, "verify", record, "--max-age-days", "0")
+    assert code == 2
+    assert "1 to 3650" in err
+    broken = tmp_path / "broken.preflight.json"
+    broken.write_text("{not json")
+    code, _, err = _run(monkeypatch, capsys, "verify", broken)
+    assert code == 2
+    assert "error:" in err
+
+
+# gate
+
+
+def _gate(monkeypatch, capsys, *arguments):
+    code, out, err = _run(monkeypatch, capsys, "gate", *arguments, "--json")
+    assert out, err
+    return code, json.loads(out)
+
+
+def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+
+    assert code == 0
+    assert out == (
+        "Gate: pass — a fresh passing preflight matches this contract.\n"
+        "Why:  Run 4425592351 on acme/app passed this contract and its routes on "
+        "2026-10-10 (7 days old); it stays fresh until 2026-11-09. "
+        "The signature is not checked here — use gh attestation verify.\n"
+        "Exit 0.\n"
+    )
+    code, report = _gate(monkeypatch, capsys, "benchmark.json", "--records", "results")
+    assert code == 0
+    assert report["decision"] == "pass"
+    assert report["reason_code"] == "fresh_pass"
+    assert report["next"] == []
+    assert report["network_accessed"] is False
+    assert [(item["path"], item["verdict"]) for item in report["records"]] == [
+        ("results/run.preflight.json", "pass")
+    ]
+
+
+def test_gate_blocks_a_changed_contract_why_first_then_next_steps(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    recorded = _descriptor(json.loads(record.read_text()), "contract")["digest"]
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps({**CONFIG, "validation": {"json_array": True}})
+    )
+
+    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert code == 1
+    assert report["reason_code"] == "contract_changed"
+    assert report["why"] == (
+        f"benchmark.json changed (contract {recorded['sha256'][:8]}… → "
+        f"{report['contract_sha256'][:8]}…). The latest record "
+        "(run 4425592351, 7 days old) checked a different contract."
+    )
+    assert out == (
+        "Gate: blocked — no fresh passing preflight for this contract.\n"
+        f"Why:  {report['why']}\n"
+        "Next: 1. llm-preflight benchmark.json --dry-run   (free: plan and cost)\n"
+        "      2. approve the plan, then run the bounded check\n"
+        "      3. llm-preflight attest results/<new>.json   (CI does this for you)\n"
+        "Exit 1.\n"
+    )
+
+
+def _change_route(tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps({**CONFIG, "models": [{"provider": "openai", "model": "gpt-4.1"}]})
+    )
+
+
+def _commit(tmp_path, record):
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("git is not installed")
+    for arguments in (
+        ["init", "-q"],
+        ["add", str(record)],
+        ["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "r"],
+    ):
+        subprocess.run([git, *arguments], cwd=tmp_path, check=True)
+
+
+@pytest.mark.parametrize(
+    ("reason_code", "attest", "after"),
+    [
+        ("no_record", None, lambda tmp_path, record: record.unlink()),
+        ("routes_changed", {}, lambda tmp_path, record: _change_route(tmp_path)),
+        ("inconclusive_record", {"state": "inconclusive"}, None),
+        ("failed_record", {"state": "fail"}, None),
+        ("local_record", {"ci": False}, None),
+        (
+            "inconsistent_record",
+            {},
+            lambda tmp_path, record: _edit_record(
+                record, lambda data: _evidence(data).update(costConfidence="partial")
+            ),
+        ),
+        ("committed_record", {}, _commit),
+    ],
+)
+def test_gate_blocks_with_each_reason_code(
+    monkeypatch, capsys, tmp_path, reason_code, attest, after
+):
+    record = _attest(monkeypatch, capsys, tmp_path, **(attest or {}))
+    if after is not None:
+        after(tmp_path, record)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert code == 1
+    assert report["decision"] == "blocked"
+    assert report["reason_code"] == reason_code
+    assert report["why"]
+    assert report["next"]
+
+
+def test_gate_accepts_an_untracked_record_inside_a_git_work_tree(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _commit(tmp_path, tmp_path / "benchmark.json")
+
+    code, report = _gate(monkeypatch, capsys, "--records", record)
+
+    assert code == 0
+    assert report["reason_code"] == "fresh_pass"
+
+
+@pytest.mark.parametrize(
+    ("today", "reason_code", "exit_code"),
+    [
+        (date(2026, 11, 9), "fresh_pass", 0),
+        (date(2026, 11, 10), "stale", 1),
+    ],
+)
+def test_gate_freshness_boundary_under_a_shifted_clock(
+    monkeypatch, capsys, tmp_path, today, reason_code, exit_code
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    monkeypatch.setattr(cli, "today_utc", lambda: today)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (exit_code, reason_code)
+
+
+def test_gate_max_age_days_shortens_freshness(monkeypatch, capsys, tmp_path):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    code, report = _gate(
+        monkeypatch, capsys, "--records", "results", "--max-age-days", "6"
+    )
+
+    assert (code, report["reason_code"]) == (1, "stale")
+    assert "older than the 6 days allowed" in report["why"]
+
+
+def test_gate_blocks_a_record_superseded_by_the_verifier_snapshot(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 13))
+    _attest(monkeypatch, capsys, tmp_path, timestamp="2027-01-10T08:00:00Z")
+    assert _gate(monkeypatch, capsys, "--records", "results")[0] == 0
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 14))
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "superseded")
+    assert "openai:gpt-4.1-mini (retired on 2027-01-14)" in report["why"]
+    assert "2026-10-16" in report["why"]
+
+
+@pytest.mark.parametrize(
+    ("older", "newer", "reason_code"),
+    [("pass", "fail", "failed_record"), ("fail", "pass", "fresh_pass")],
+)
+def test_gate_decides_on_the_newest_matching_record(
+    monkeypatch, capsys, tmp_path, older, newer, reason_code
+):
+    _attest(
+        monkeypatch,
+        capsys,
+        tmp_path,
+        state=older,
+        timestamp="2026-10-05T08:00:00+00:00",
+        name="older.json",
+    )
+    _attest(monkeypatch, capsys, tmp_path, state=newer, name="newer.json")
+
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert report["reason_code"] == reason_code
+    assert sorted(item["verdict"] for item in report["records"]) == sorted(
+        ["pass", "failed_record"]
+    )
+
+
+def test_gate_ignores_a_newer_record_for_another_contract(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path, timestamp="2026-10-05T08:00:00+00:00")
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps({**CONFIG, "validation": {"json_array": True}})
+    )
+    _attest(monkeypatch, capsys, tmp_path, state="fail", name="other.json")
+    (tmp_path / "benchmark.json").write_text(json.dumps(CONFIG))
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (0, "fresh_pass")
+
+
+def test_gate_prefers_a_failure_over_a_pass_of_the_same_age(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path, name="a.json")
+    _attest(monkeypatch, capsys, tmp_path, state="fail", name="b.json")
+
+    assert _gate(monkeypatch, capsys, "--records", "results")[1]["reason_code"] == (
+        "failed_record"
+    )
+
+
+def test_gate_cannot_decide_when_a_record_or_the_config_cannot_be_read(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    broken = tmp_path / "results/broken.preflight.json"
+    broken.write_text("{not json")
+
+    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    assert code == 3
+    assert out.startswith("Gate: cannot decide — an input could not be read.\n")
+    assert out.rstrip().endswith("Exit 3.")
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+    assert (report["decision"], report["reason_code"]) == ("undecided", "record_error")
+    assert "results/broken.preflight.json cannot be checked" in report["why"]
+    broken.unlink()
+    code, report = _gate(monkeypatch, capsys, "--records", "missing")
+    assert (code, report["reason_code"]) == (3, "record_error")
+    code, report = _gate(monkeypatch, capsys, "absent.json", "--records", "results")
+    assert (code, report["reason_code"]) == (3, "config_error")
+    assert "absent.json" in report["why"]
+
+
+def test_gate_cannot_fingerprint_discovered_routes_offline(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {"prompt": "ok", "discovery": [{"provider": "openrouter", "limit": 1}]}
+        )
+    )
+    monkeypatch.setattr(
+        "llm_preflight.catalog.discover_models",
+        lambda _source: pytest.fail("network discovery"),
+    )
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (3, "config_error")
+    assert "discovery" in report["why"]
+
+
+def test_gate_text_and_json_carry_the_same_why_and_next(monkeypatch, capsys, tmp_path):
+    _attest(monkeypatch, capsys, tmp_path, state="inconclusive")
+
+    _, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert report["reason_code"] == "inconclusive_record"
+    assert f"Why:  {report['why']}\n" in out
+    for number, step in enumerate(report["next"], 1):
+        assert f"{number}. {step}\n" in out
+
+
+def test_gate_opens_no_network_connection(monkeypatch, capsys, tmp_path):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("gate opened a network connection")
+
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+
+    assert _gate(monkeypatch, capsys, "--records", "results")[0] == 0
+
+
+def test_gate_fingerprints_match_the_provenance_of_a_real_run(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    _config(
+        tmp_path,
+        {
+            "name": "mock",
+            "prompts": [
+                {
+                    "name": "json",
+                    "prompt": "Return JSON.",
+                    "validation": {"json_object": True},
+                }
+            ],
+            "profiles": "json",
+            "aliases": {
+                "local": {"provider": "mock", "model": "local", "response": "{}"}
+            },
+            "models": ["local"],
+            "presets": ["json"],
+            "repetitions": 1,
+            "warmups": 0,
+        },
+    )
+    code, _, err = _run(
+        monkeypatch, capsys, "benchmark.json", "--output-dir", "results"
+    )
+    assert code == 3, err
+    (result,) = (tmp_path / "results").glob("*-mock-*.json")
+    for variable, value in GITHUB.items():
+        monkeypatch.setenv(variable, value)
+    assert _run(monkeypatch, capsys, "attest", result)[0] == 0
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "inconclusive_record")
+    record = json.loads(result.with_suffix(".preflight.json").read_text())
+    assert record["predicate"]["warnedTests"] == ["mock:local/json"]
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda record: record["subject"][0].update(name="bench\x00mark.json"),
+        lambda record: record["subject"][0].update(name=""),
+        lambda record: _evidence(record).update(checkedAt="9999-12-31T00:00:00+00:00"),
+    ],
+)
+def test_gate_reports_a_hostile_record_as_inconsistent_without_crashing(
+    monkeypatch, capsys, tmp_path, edit
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, edit)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "inconsistent_record")
+
+
+def test_gate_cannot_decide_on_a_config_that_is_not_an_object(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    (tmp_path / "benchmark.json").write_text("[]")
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (3, "config_error")
+
+
+def test_gate_records_share_one_shape_whatever_the_verdict(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path, name="a.json")
+    _commit(tmp_path, tmp_path / "results/a.preflight.json")
+    _attest(monkeypatch, capsys, tmp_path, name="b.json")
+
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    shapes = {tuple(item) for item in report["records"]}
+    assert len(shapes) == 1
+    assert sorted(item["verdict"] for item in report["records"]) == [
+        "committed_record",
+        "pass",
+    ]

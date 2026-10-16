@@ -19,6 +19,23 @@ All notable changes to this project are documented here.
 - A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
   Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
   checks. Native live results still require separate credentials and execution.
+- Proof of preflight: `attest`, `verify` and `gate`. `attest RESULT` writes
+  an in-toto Statement v1 with the test-result v0.1 predicate beside the
+  result (`RESULT` with `.preflight.json`; `--output` overrides, `--force`
+  replaces). It copies the saved decision (`PASSED`, `WARNED` or `FAILED`)
+  and the provenance fingerprints, never upgrades the decision, and refuses a
+  result without schema-version-1 provenance. In GitHub Actions it records the
+  run identity and URL; elsewhere the record says `local`. `verify RECORD`
+  reports integrity and freshness separately, prints its own
+  retirement-snapshot date and states that signatures are checked with
+  `gh attestation verify`, not here. `gate [CONFIG] --records PATH...` decides
+  offline: it passes only on the newest GitHub Actions record that matches the
+  current contract and routes and is `PASSED`, consistent, fresh
+  (`--max-age-days`, default 30) and not superseded. It rejects records tracked
+  by Git, never passes a local record, and exits 0 pass, 1 blocked, 3 when a
+  config or record cannot be read. Text and `--json` carry the same reason
+  code, why and numbered next steps. Existing commands and results are
+  unchanged.
 
 ### Changed
 

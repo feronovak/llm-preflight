@@ -21,6 +21,14 @@ from .approval import (
     verify_approval_receipt,
     write_approval_receipt,
 )
+from .attestation import (
+    DEFAULT_MAX_AGE_DAYS,
+    attest_result,
+    default_record_path,
+    gate,
+    load_record,
+    verify_record,
+)
 from .capability_ledger import apply_probe_evidence, load_ledger
 from .catalog import classify_catalog_model, discover_models, resolve_models
 from .catalog_probe import probe_model
@@ -2160,7 +2168,239 @@ def _report_main(argv: list[str]) -> None:
         sys.stdout.write(rendered)
 
 
+def _max_age_days(value: str) -> int:
+    days = int(value)
+    if not 1 <= days <= 3650:
+        raise argparse.ArgumentTypeError("must be a whole number of days, 1 to 3650")
+    return days
+
+
+def _attest_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog=f"{_display_command()} attest",
+        description=(
+            "Write a portable in-toto record of a saved result; it proves the "
+            "check ran and never upgrades its decision"
+        ),
+    )
+    parser.add_argument("result", type=Path, help="saved schema-version-1 result JSON")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="benchmark config the result ran (default: its recorded source_config_path)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="record path (default: RESULT with the .preflight.json suffix)",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="replace an existing record"
+    )
+    parser.add_argument("--json", action="store_true", help="print path and record")
+    args = parser.parse_args(argv)
+    output = args.output or default_record_path(args.result)
+    if output.exists() and not args.force:
+        raise ValueError(f"{output} already exists; refusing to overwrite it")
+    record = attest_result(
+        args.result, config_path=args.config, environ=os.environ, today=today_utc()
+    )
+    _write_starter_config(output, record, force=args.force)
+    if args.json:
+        print(json.dumps({"path": str(output), "record": record}, indent=2))
+        return
+    evidence = next(
+        item["annotations"]
+        for item in record["predicate"]["configuration"]
+        if item["name"] == "llm-preflight/evidence"
+    )
+    origin = (
+        f"GitHub Actions {record['predicate']['url']}"
+        if evidence["origin"] == "github-actions"
+        else "local, no CI run identity; the gate does not accept it"
+    )
+    print(f"Saved preflight record to {output}")
+    print(f"Result: {record['predicate']['result']} · origin: {origin}")
+
+
+def _format_verify(report: dict[str, Any], exit_code: int) -> str:
+    integrity = report["integrity"]
+    freshness = report["freshness"]
+    result = report["result"] or "unknown result"
+    lines = [f"Record:    {report['record']} ({result})"]
+    lines.append(f"Integrity: {'intact' if integrity['ok'] else 'broken'}")
+    lines.extend(f"           - {problem}" for problem in integrity["problems"])
+    subject_states = {
+        "matches": "matches",
+        "differs": "changed since the check",
+        "absent": "not present, not checked",
+    }
+    for subject in integrity["subjects"]:
+        lines.append(
+            f"Subject:   {subject['role']} {subject['name']}: "
+            f"{subject_states[subject['state']]}"
+        )
+    if freshness["state"] == "unknown":
+        lines.append("Freshness: unknown — the record has no valid checkedAt")
+    else:
+        age = freshness["age_days"]
+        lines.append(
+            f"Freshness: {freshness['state']} — checked {freshness['checked_at'][:10]}, "
+            f"{age} day{'' if age == 1 else 's'} ago; fresh until "
+            f"{freshness['valid_until']} (limit {freshness['max_age_days']} days)"
+        )
+    for route in freshness["retired_routes"]:
+        retired = (
+            f"retired on {route['retirement_date']}"
+            if route["retirement_date"]
+            else "listed as retired"
+        )
+        lines.append(f"           - {route['provider']}:{route['model']} {retired}")
+    origin = (
+        f"GitHub Actions {report['url']}"
+        if report["origin"] == "github-actions"
+        else "local, no CI run identity"
+        if report["origin"] == "local"
+        else "unknown"
+    )
+    lines.append(f"Origin:    {origin}")
+    lines.append(
+        f"Snapshot:  retirement snapshot {report['retirement_snapshot']} (this verifier)"
+    )
+    lines.append(f"Signature: {report['signature']}")
+    lines.append(f"Exit {exit_code}.")
+    return "\n".join(lines) + "\n"
+
+
+def _verify_exit_code(report: dict[str, Any]) -> int:
+    if not report["integrity"]["ok"]:
+        return 1
+    return 0 if report["freshness"]["state"] == "fresh" else 3
+
+
+def _verify_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog=f"{_display_command()} verify",
+        description=(
+            "Report a preflight record's integrity and freshness separately; "
+            "signatures are not checked here (use gh attestation verify)"
+        ),
+    )
+    parser.add_argument("record", type=Path, help="record written by attest")
+    parser.add_argument(
+        "--max-age-days",
+        type=_max_age_days,
+        default=DEFAULT_MAX_AGE_DAYS,
+        help="days a record stays fresh after its run",
+    )
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+    report = verify_record(
+        load_record(args.record), args.record, today_utc(), args.max_age_days
+    )
+    exit_code = _verify_exit_code(report)
+    print(
+        json.dumps(report, indent=2)
+        if args.json
+        else _format_verify(report, exit_code),
+        end="\n" if args.json else "",
+    )
+    if exit_code:
+        raise SystemExit(exit_code)
+
+
+# Bandit B105 misreads the "pass" key as a hard-coded password; without the
+# suppression, `make audit` fails.
+_GATE_EXIT_CODES = {"pass": 0, "blocked": 1, "undecided": 3}  # nosec B105
+_GATE_HEADLINES = {
+    "pass": "pass — a fresh passing preflight matches this contract.",  # nosec B105
+    "blocked": "blocked — no fresh passing preflight for this contract.",
+    "undecided": "cannot decide — an input could not be read.",
+}
+
+
+def _format_gate(report: dict[str, Any]) -> str:
+    lines = [
+        f"Gate: {_GATE_HEADLINES[report['decision']]}",
+        f"Why:  {report['why']}",
+    ]
+    for number, step in enumerate(report["next"], 1):
+        lines.append(f"{'Next: ' if number == 1 else '      '}{number}. {step}")
+    lines.append(f"Exit {_GATE_EXIT_CODES[report['decision']]}.")
+    return "\n".join(lines) + "\n"
+
+
+def _gate_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog=f"{_display_command()} gate",
+        description=(
+            "Decide offline whether this tree has a fresh passing preflight: "
+            "exit 0 pass, 1 blocked, 3 cannot decide"
+        ),
+    )
+    parser.add_argument(
+        "config",
+        type=Path,
+        nargs="?",
+        default=Path("benchmark.json"),
+        help="benchmark JSON configuration (default: benchmark.json)",
+    )
+    parser.add_argument(
+        "--records",
+        type=Path,
+        nargs="+",
+        required=True,
+        metavar="PATH",
+        help="record files or directories searched for *.preflight.json",
+    )
+    parser.add_argument(
+        "--max-age-days",
+        type=_max_age_days,
+        default=DEFAULT_MAX_AGE_DAYS,
+        help="days a record stays fresh after its run",
+    )
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+    report = gate(args.config, args.records, today_utc(), args.max_age_days)
+    print(
+        json.dumps(report, indent=2) if args.json else _format_gate(report),
+        end="\n" if args.json else "",
+    )
+    if exit_code := _GATE_EXIT_CODES[report["decision"]]:
+        raise SystemExit(exit_code)
+
+
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "attest":
+        try:
+            _attest_main(sys.argv[2:])
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "verify":
+        try:
+            _verify_main(sys.argv[2:])
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "gate":
+        try:
+            _gate_main(sys.argv[2:])
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "report":
         try:
             _report_main(sys.argv[2:])

@@ -95,6 +95,17 @@ All notable changes to this project are documented here.
   certify: accuracy · safety · production behaviour" above the evidence hash
   and the `llm-preflight verify` command. It refuses a record that fails
   verification or attests a different result file.
+- Marketplace Action inputs `attest` and `sign`, both off by default; with
+  both off the Action behaves exactly as before. `attest: "true"`, with
+  `run-paid: "true"`, writes a preflight record and its SVG card after the
+  paid smoke and uploads them as the `llm-preflight-record` artifact through
+  `actions/upload-artifact` pinned by commit SHA; the job summary links the
+  artifact. The result, which holds the prompts, is not uploaded. A failed or
+  inconclusive run is recorded as such and keeps its exit code. `sign: "true"`
+  also signs the record with `actions/attest`, pinned by commit SHA, using the
+  record's test-result v0.1 predicate; the calling job needs `id-token: write`
+  and `attestations: write`. Either input without its prerequisite stops the
+  job before anything is installed.
 
 ### Changed
 

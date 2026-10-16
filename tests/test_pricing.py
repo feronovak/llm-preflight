@@ -101,7 +101,7 @@ def test_sonnet_5_5_has_bundled_pricing_for_cost_checks():
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 10.0
     assert model["cached_input_cost_per_million"] == 0.1
-    assert model["pricing_metadata"]["as_of"] == "2026-10-07"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source"] == "official snapshot"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.anthropic.com/claude-haiku-5-5"
@@ -121,7 +121,7 @@ def test_haiku_5_5_has_bundled_pricing_for_cost_checks():
     assert model["pricing_metadata"] == {
         "source": "official snapshot",
         "confidence": "official",
-        "as_of": "2026-10-07",
+        "as_of": "2026-10-16",
         "source_url": "https://platform.claude.com/docs/en/models/haiku-5-5/overview",
     }
 
@@ -328,7 +328,7 @@ def test_gemini_3_1_flash_lite_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 0.25
     assert model["output_cost_per_million"] == 1.5
     assert model["cached_input_cost_per_million"] == 0.025
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
 
 
 @pytest.mark.parametrize(
@@ -358,7 +358,7 @@ def test_gpt_6_astra_pricing_has_cache_and_long_context_tiers():
         "cached_input_cost_per_million": 2.0,
         "cache_write_input_cost_per_million": 25.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://developers.openai.com/api/docs/models/gpt-6-astra"
     )
@@ -386,7 +386,7 @@ def test_gpt_6_sol_and_luna_use_official_short_and_long_context_rates():
         "cached_input_cost_per_million": 0.02,
         "cache_write_input_cost_per_million": 0.25,
     }
-    assert sol["pricing_metadata"]["as_of"] == "2026-10-13"
+    assert sol["pricing_metadata"]["as_of"] == "2026-10-16"
 
 
 @pytest.mark.parametrize(
@@ -434,7 +434,7 @@ def test_gpt_6_1_sol_uses_official_cache_and_long_context_rates():
             "cache_write_input_cost_per_million": 5.0,
         },
     ]
-    assert model["pricing_metadata"]["as_of"] == "2026-09-30"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
     )
@@ -502,7 +502,7 @@ def test_glm_5_3_uses_official_native_rates_and_cache_discount():
     assert model["input_cost_per_million"] == 1.4
     assert model["output_cost_per_million"] == 4.4
     assert model["cached_input_cost_per_million"] == 0.26
-    assert model["pricing_metadata"]["as_of"] == "2026-09-30"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://docs.z.ai/guides/overview/pricing"
     )
@@ -518,7 +518,7 @@ def test_gemini_3_8_flash_uses_the_current_introductory_rate(snapshot_review_day
     assert model["input_cost_per_million"] == 0.75
     assert model["output_cost_per_million"] == 3.75
     assert model["cached_input_cost_per_million"] == 0.075
-    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://ai.google.dev/gemini-api/docs/pricing"
     )
@@ -537,7 +537,7 @@ def test_deepseek_flash_snapshot_uses_conservative_peak_rates():
     assert model["input_cost_per_million"] == 0.3
     assert model["output_cost_per_million"] == 1.2
     assert model["cached_input_cost_per_million"] == 0.006
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://api-docs.deepseek.com/quick_start/pricing"
     )
@@ -549,7 +549,7 @@ def test_qwen_3_8_max_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 6.0
     assert model["cached_input_cost_per_million"] is None
-    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
@@ -561,7 +561,7 @@ def test_qwen_3_8_flash_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 0.15
     assert model["output_cost_per_million"] == 0.47
     assert model["cached_input_cost_per_million"] is None
-    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
@@ -595,7 +595,7 @@ def test_claude_opus_5_5_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 4.0
     assert model["output_cost_per_million"] == 20.0
     assert model["cached_input_cost_per_million"] == 0.2
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == (
         "https://platform.claude.com/docs/en/about-claude/pricing"
     )
@@ -612,7 +612,7 @@ def test_grok_4_7_uses_official_200k_breakpoint():
         "output_cost_per_million": 12.0,
         "cached_input_cost_per_million": 1.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
 
 
 def test_claude_fable_5_1_official_snapshot_pricing():
@@ -621,7 +621,7 @@ def test_claude_fable_5_1_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 10.0
     assert model["output_cost_per_million"] == 50.0
     assert model["cached_input_cost_per_million"] == 0.25
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
 
 
 def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():
@@ -638,7 +638,7 @@ def test_jev_snapshot_prices_input_only(model_id):
 
     assert model["input_cost_per_million"] == 0.042
     assert model["output_cost_per_million"] == 0.0
-    assert model["pricing_metadata"]["as_of"] == "2026-09-28"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert model["pricing_metadata"]["source_url"] == "https://docs.typesafe.ai/models"
 
 
@@ -646,45 +646,45 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
     from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
 
     assert PUBLIC_PRICING == {
-        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-13"),
-        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-13"),
-        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-13"),
-        ("openai", "gpt-5.5"): (5.0, 30.0, "2026-09-28"),
-        ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-09-28"),
-        ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-09-28"),
-        ("openai", "gpt-4.1"): (2.0, 8.0, "2026-09-28"),
-        ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-09-28"),
-        ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-09-28"),
-        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-13"),
-        ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-09-30"),
-        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-13"),
-        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-13"),
-        ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-09-28"),
-        ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-09-28"),
-        ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-13"),
-        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-13"),
-        ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-13"),
-        ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-09-28"),
-        ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-07"),
-        ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-07"),
-        ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-09-28"),
-        ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-09-28"),
-        ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-09-28"),
-        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-09-28"),
-        ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-09-28"),
-        ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-09-28"),
-        ("xai", "grok-4.3"): (1.25, 2.5, "2026-09-28"),
-        ("xai", "grok-4.5"): (2.0, 6.0, "2026-09-28"),
-        ("xai", "grok-4.6"): (2.0, 6.0, "2026-09-28"),
-        ("xai", "grok-4.7"): (2.0, 6.0, "2026-09-28"),
-        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-09-28"),
-        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-09-28"),
-        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-15"),
-        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-15"),
-        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-09-28"),
-        ("zai", "glm-5.3"): (1.4, 4.4, "2026-09-30"),
-        ("typesafe", "jev-latest"): (0.042, 0.0, "2026-09-28"),
-        ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-09-28"),
+        ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-16"),
+        ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-16"),
+        ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-16"),
+        ("openai", "gpt-5.5"): (5.0, 30.0, "2026-10-16"),
+        ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-10-16"),
+        ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-10-16"),
+        ("openai", "gpt-4.1"): (2.0, 8.0, "2026-10-16"),
+        ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-10-16"),
+        ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-10-16"),
+        ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-16"),
+        ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-10-16"),
+        ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-16"),
+        ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-16"),
+        ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-10-16"),
+        ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-10-16"),
+        ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-16"),
+        ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-16"),
+        ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-16"),
+        ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-10-16"),
+        ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-16"),
+        ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-16"),
+        ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-10-16"),
+        ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-10-16"),
+        ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-10-16"),
+        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-10-16"),
+        ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-10-16"),
+        ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-10-16"),
+        ("xai", "grok-4.3"): (1.25, 2.5, "2026-10-16"),
+        ("xai", "grok-4.5"): (2.0, 6.0, "2026-10-16"),
+        ("xai", "grok-4.6"): (2.0, 6.0, "2026-10-16"),
+        ("xai", "grok-4.7"): (2.0, 6.0, "2026-10-16"),
+        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-10-16"),
+        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-10-16"),
+        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-16"),
+        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-16"),
+        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-10-16"),
+        ("zai", "glm-5.3"): (1.4, 4.4, "2026-10-16"),
+        ("typesafe", "jev-latest"): (0.042, 0.0, "2026-10-16"),
+        ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-10-16"),
     }
     assert set(PUBLIC_PRICING_SOURCES) == set(PUBLIC_PRICING)
     assert all(
@@ -703,7 +703,7 @@ def test_approved_smoke_cohort_has_complete_current_pricing(snapshot_review_day)
 
     report = pricing_coverage_report(
         resolve_pricing(approved["models"])["models"],
-        today=date(2026, 10, 13),
+        today=date(2026, 10, 16),
         require_current_pricing=True,
     )
 
@@ -1124,7 +1124,7 @@ def test_native_model_studio_cache_price_needs_reviewed_account_evidence(model_i
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-15"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     cached = {"input_tokens": 100, "cached_input_tokens": 50, "output_tokens": 10}
     assert estimate_sample_cost(cached, model) is None
     uncached = {**cached, "cached_input_tokens": 0}

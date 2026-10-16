@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-15 · **As of:** unreleased source
+**Last reviewed:** 2026-10-16 · **As of:** unreleased source
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
@@ -41,50 +41,51 @@ Anthropic section below records the rates, request behavior and limits.
 ## Bundled official snapshots
 
 Rates are USD per million tokens. `as_of` is the date this package last
-checked the official page. Long-context bands, cache rates, and DeepSeek peak
-hours live in code; this table is the headline input/output pair.
+checked the official page. Every row was rechecked on 2026-10-16 UTC; no
+rate changed. Long-context bands, cache rates, and DeepSeek peak hours live
+in code; this table is the headline input/output pair.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
-| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-13 |
-| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-09-30 |
-| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-13 |
-| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-13 |
-| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-13 |
-| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-13 |
-| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-13 |
-| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-09-28 |
-| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-09-28 |
-| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-09-28 |
-| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-09-28 |
-| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-09-28 |
-| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-09-28 |
-| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-09-28 |
-| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-09-28 |
-| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-09-28 |
-| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-09-28 |
-| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-09-28 |
-| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-09-28 |
-| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-07 |
-| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-07 |
-| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-09-28 |
-| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-13 |
-| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-13 |
-| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-13 |
-| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-09-28 |
-| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-09-28 |
-| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-09-28 |
-| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-09-28 |
-| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-09-28 |
-| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-09-28 |
-| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-09-28 |
-| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-09-28 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-15 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-15 |
-| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-09-28 |
-| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-09-30 |
-| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-09-28 |
-| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-09-28 |
+| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-16 |
+| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-10-16 |
+| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-16 |
+| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-16 |
+| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-16 |
+| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-16 |
+| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-16 |
+| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-10-16 |
+| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-10-16 |
+| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-10-16 |
+| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-10-16 |
+| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-10-16 |
+| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-10-16 |
+| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-10-16 |
+| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-10-16 |
+| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-10-16 |
+| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-10-16 |
+| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-10-16 |
+| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-10-16 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-16 |
+| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-16 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-10-16 |
+| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-16 |
+| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-16 |
+| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-16 |
+| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-10-16 |
+| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-10-16 |
+| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-10-16 |
+| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-10-16 |
+| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-10-16 |
+| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-10-16 |
+| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-10-16 |
+| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-10-16 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-16 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-16 |
+| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-10-16 |
+| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-10-16 |
+| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-10-16 |
+| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-10-16 |
 
 DeepSeek rows use peak cache-miss rates. Qwen rows use USD list rates; the
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
@@ -100,7 +101,7 @@ that threshold. See
 
 The Max and Flash rows use Model Studio Singapore/International standard
 input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
-on October 15. Other regions and deployment scopes require their own reviewed
+on October 16. Other regions and deployment scopes require their own reviewed
 overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
 must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed
@@ -120,7 +121,7 @@ Google's [October changelog](https://ai.google.dev/gemini-api/docs/changelog)
 announces GA of `gemini-4-argon` on October 13. The
 [migration guide](https://ai.google.dev/gemini-api/docs/latest-model) and
 [pricing page](https://ai.google.dev/gemini-api/docs/pricing) document these
-standard synchronous USD rates per million tokens, checked October 13 UTC:
+standard synchronous USD rates per million tokens, rechecked October 16 UTC:
 
 | Model | Period | Input | Cached input | Output, including thinking |
 |---|---|---:|---:|---:|
@@ -167,7 +168,7 @@ are applied only when usage reports a cache hit.
 
 ### Anthropic pricing and request updates in 2.19.1
 
-Reviewed on **2026-10-07**. The
+Reviewed on **2026-10-07** and rechecked unchanged on 2026-10-16. The
 [Haiku 5.5 model page](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
 documents `claude-haiku-5-5` with these standard synchronous USD rates per
 million tokens:
@@ -198,7 +199,7 @@ or reported writes make the cost estimate unavailable.
 
 ### OpenAI cache-write pricing correction
 
-Rechecked October 13 UTC against each model's official page. Version 2.21.0
+Rechecked October 16 UTC against each model's official page. Version 2.21.0
 adds the published cache-write rate for these six models; their cache-read
 rates and long-context input/output tiers were already bundled. Standard USD
 write rates per million tokens:
@@ -222,7 +223,7 @@ rate is published, so no later transition is invented.
 ### GPT-6.1 Sol pricing and request limits
 
 The [official model page](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
-was checked on 2026-09-30. Standard synchronous USD rates per million tokens:
+was rechecked on 2026-10-16. Standard synchronous USD rates per million tokens:
 
 | Input length | Input | Cached input | Cache writes | Output |
 |---|---:|---:|---:|---:|
@@ -243,7 +244,7 @@ The project's minimal Responses adapter currently accepts text requests.
 ### GLM-5.3 pricing and request limits
 
 The [official Z.ai pricing page](https://docs.z.ai/guides/overview/pricing)
-was checked on 2026-09-30: $1.40 input, $0.26 cached input and $4.40 output
+was rechecked on 2026-10-16: $1.40 input, $0.26 cached input and $4.40 output
 per million tokens for the standard native API. Cache storage is temporarily
 free; estimates exclude storage charges if that offer changes.
 The route is `https://api.z.ai/api/paas/v4/chat/completions`, with

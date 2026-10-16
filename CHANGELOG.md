@@ -45,6 +45,11 @@ All notable changes to this project are documented here.
   affects it: all 114 rows keep their status, shutdown date and replacement.
   Non-retired rows now become stale on 2026-11-16, when their `--ci` verdict
   becomes inconclusive (exit 3). Retired rows continue to fail (exit 1).
+- Pricing snapshots re-reviewed on 2026-10-16 UTC: all 39 bundled official
+  rows were checked against their recorded provider pages. No price changed,
+  including cache, long-context and scheduled Gemini rates. The rows now go
+  stale from 2026-11-16 instead of from 2026-10-29. Qwen 3.8 cache-hit prices
+  remain unknown.
 
 ### Fixed
 
@@ -58,7 +63,7 @@ All notable changes to this project are documented here.
 - Native Model Studio Qwen 3.8 Max/Flash cache-hit prices remain unknown
   until a reviewed account-specific override is supplied; QwenCloud cache
   rates are no longer substituted. Standard Singapore input/output prices
-  were checked on October 15.
+  were checked on October 15 and rechecked on October 16.
 - `--audit-source` no longer reads gitignored files such as local worktrees,
   scratch directories and build output. Inside a Git work tree it audits
   tracked files, including initialized submodules, plus untracked files

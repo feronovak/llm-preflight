@@ -14,7 +14,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-15 · **As of:** unreleased source" in page
+    assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in page
     assert "Package version: **2.21.2**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
@@ -24,11 +24,15 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
     ):
-        assert f"| `qwen` | `{model}` | {rates} | 2026-10-15 |" in page
+        assert f"| `qwen` | `{model}` | {rates} | 2026-10-16 |" in page
     assert "Model Studio" in page and "account console" in page
-    for provider, model_id in PUBLIC_PRICING:
-        assert f"`{provider}`" in page
-        assert f"`{model_id}`" in page
+    for (provider, model_id), (_, _, as_of) in PUBLIC_PRICING.items():
+        rows = [
+            line
+            for line in page.splitlines()
+            if line.startswith(f"| `{provider}` | `{model_id}` |")
+        ]
+        assert len(rows) == 1 and rows[0].endswith(f"| {as_of} |"), rows
 
 
 def test_docs_home_and_mcp_guide_are_first_class_entry_points():

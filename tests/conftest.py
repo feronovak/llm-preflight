@@ -4,7 +4,7 @@ import pytest
 
 # Deterministic clock at or after every bundled snapshot review date.
 # Bump it when a newly reviewed row would otherwise be in the future.
-SNAPSHOT_REVIEW_DAY = date(2026, 10, 15)
+SNAPSHOT_REVIEW_DAY = date(2026, 10, 16)
 
 
 @pytest.fixture

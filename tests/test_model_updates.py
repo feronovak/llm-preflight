@@ -162,7 +162,7 @@ def test_gemini_4_pricing_switches_on_the_published_date(monkeypatch, day, rates
         )
         == rates
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
     assert (
         model["pricing_metadata"]["source_url"]
         == "https://ai.google.dev/gemini-api/docs/pricing"
@@ -259,7 +259,7 @@ def test_gemini_4_example_is_a_bounded_fixture_verified_plan(snapshot_review_day
     assert check_contract(config)["ok"] is True
     assert (
         pricing_coverage_report(
-            models, today=date(2026, 10, 13), require_current_pricing=True
+            models, today=date(2026, 10, 16), require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
@@ -311,7 +311,7 @@ def test_published_openai_cache_writes_use_the_full_request_context_boundary(
         + 1000 * output_rate
     ) / 1_000_000
     assert estimate_sample_cost(sample, model) == pytest.approx(expected)
-    assert model["pricing_metadata"]["as_of"] == "2026-10-13"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
 
 
 @pytest.mark.parametrize(

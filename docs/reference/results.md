@@ -239,6 +239,11 @@ separate objects; neither implies the other.
   the GitHub identity against `predicate.url`, and a `checkedAt` that is not
   after today. A `PASSED` record must come from a `pass` decision with
   complete cost confidence, no blocking warnings, and passed tests only.
+  Each route's `provider`, `model` and `observedModel` must be a non-empty,
+  printable string of at most 256 characters. A record is untrusted input,
+  so text output shows any non-printable character in a record string or
+  file name as its backslash escape (`\x1b`, `\n`), even when integrity
+  fails; JSON output keeps the value, JSON-escaped.
 - `integrity.subjects[]`: `name`, `role` and `state` (`matches`, `differs` or
   `absent`). Each subject is looked up relative to the working directory, then
   beside the record. A result that `differs` breaks integrity; a config that

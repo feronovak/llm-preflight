@@ -1216,6 +1216,111 @@ def test_gate_reports_a_hostile_record_as_inconsistent_without_crashing(
     assert (code, report["reason_code"]) == (1, "inconsistent_record")
 
 
+INJECTIONS = ["\x1b[31m", "\n", "\r"]
+ESCAPED = {"\x1b[31m": "\\x1b[31m", "\n": "\\n", "\r": "\\r"}
+
+
+def _injected(field, payload):
+    """An edit that appends payload to one record string a report displays."""
+
+    def route(record):
+        return _descriptor(record, "routes")["annotations"]["routes"][0]
+
+    edits = {
+        "provider": lambda record: route(record).update(provider=f"openai{payload}"),
+        "model": lambda record: route(record).update(
+            model=f"gpt-4.1-mini{payload}fake"
+        ),
+        "observedModel": lambda record: route(record).update(
+            observedModel=f"{OBSERVED}{payload}fake"
+        ),
+        "url": lambda record: record["predicate"].update(
+            url=record["predicate"]["url"] + payload
+        ),
+        "workflow": lambda record: _evidence(record)["ci"].update(
+            workflow=f"preflight{payload}fake"
+        ),
+    }
+    return edits[field]
+
+
+def _no_raw_control_characters(text):
+    return all(char.isprintable() for line in text.split("\n") for char in line)
+
+
+def _gate_lines(report):
+    """Headline, why, one line per next step and the exit line: nothing injected."""
+    return 2 + len(report["next"]) + 1
+
+
+@pytest.mark.parametrize("payload", INJECTIONS, ids=["ansi", "newline", "return"])
+@pytest.mark.parametrize(
+    "field", ["provider", "model", "observedModel", "url", "workflow"]
+)
+def test_record_strings_never_reach_text_output_as_control_characters(
+    monkeypatch, capsys, tmp_path, field, payload
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, _injected(field, payload))
+
+    code, text, _ = _run(monkeypatch, capsys, "verify", record)
+    _, report, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    gate_code, gate_text, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, gate_report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert code == 1
+    assert json.loads(report)["integrity"]["ok"] is False
+    assert _no_raw_control_characters(text), text
+    if field in {"provider", "model", "url"}:
+        assert ESCAPED[payload] in text, text
+    assert (gate_code, gate_report["reason_code"]) == (1, "inconsistent_record")
+    assert _no_raw_control_characters(gate_text), gate_text
+    assert len(gate_text.splitlines()) == _gate_lines(gate_report), gate_text
+
+
+@pytest.mark.parametrize(
+    ("field", "problem"),
+    [
+        ("provider", "llm-preflight/routes carries a malformed provider or model"),
+        ("model", "llm-preflight/routes carries a malformed provider or model"),
+        ("observedModel", "llm-preflight/routes carries a malformed observedModel"),
+    ],
+)
+def test_verify_requires_printable_bounded_route_names(
+    monkeypatch, capsys, tmp_path, field, problem
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    for value in ["", "x" * 257, "gpt\x1b[31m", "gpt\nfake", "gpt\rfake"]:
+        _edit_record(
+            record,
+            lambda record, value=value: _descriptor(record, "routes")["annotations"][
+                "routes"
+            ][0].update({field: value}),
+        )
+
+        code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+        assert code == 1, value
+        assert problem in json.loads(out)["integrity"]["problems"], value
+
+
+@pytest.mark.parametrize("payload", INJECTIONS, ids=["ansi", "newline", "return"])
+def test_gate_text_escapes_a_record_file_name_with_control_characters(
+    monkeypatch, capsys, tmp_path, payload
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, lambda record: _evidence(record).update(costConfidence="?"))
+    record.rename(record.with_name(f"evil{payload}x.preflight.json"))
+
+    code, text, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "inconsistent_record")
+    assert _no_raw_control_characters(text), text
+    assert len(text.splitlines()) == _gate_lines(report), text
+    assert f"evil{ESCAPED[payload]}x.preflight.json" in text
+
+
 def test_gate_cannot_decide_on_a_config_that_is_not_an_object(
     monkeypatch, capsys, tmp_path
 ):

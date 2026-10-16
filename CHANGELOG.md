@@ -34,8 +34,12 @@ All notable changes to this project are documented here.
   (`--max-age-days`, default 30) and not superseded. It rejects records tracked
   by Git, never passes a local record, and exits 0 pass, 1 blocked, 3 when a
   config or record cannot be read. Text and `--json` carry the same reason
-  code, why and numbered next steps. Existing commands and results are
-  unchanged.
+  code, why and numbered next steps. A record is untrusted input: integrity
+  requires every route's provider, model and observed model to be a
+  non-empty, printable string of at most 256 characters, and text output
+  shows any control character in a record string or file name, a newline or
+  an ANSI escape included, as its backslash escape, never raw. Existing
+  commands and results are unchanged.
 - `observed_model` in each saved model result and sample: the model the
   provider's responses said answered, read from the OpenAI-compatible
   `model` field (OpenAI, OpenRouter, xAI, DeepSeek, Qwen, Z.ai and custom

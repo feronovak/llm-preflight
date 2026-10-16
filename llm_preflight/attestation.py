@@ -93,6 +93,7 @@ DEFAULT_SELECTION: dict[str, Any] = {
     "migrationCheck": False,
 }
 _MAX_SELECTION_LENGTH = 200
+_MAX_ROUTE_NAME_LENGTH = 256
 # A gate decides on the newest of these; every other verdict cannot count.
 _CANDIDATE_VERDICTS = {
     "pass",
@@ -318,8 +319,16 @@ def integrity_problems(record: Any, today: date) -> list[str]:
     routes = _routes_annotation(descriptors["routes"])
     if routes is None:
         problems.append("llm-preflight/routes does not list provider and model")
-    elif not all(_valid_observed(route.get("observedModel")) for route in routes):
-        problems.append("llm-preflight/routes carries a malformed observedModel")
+    else:
+        if not all(
+            _valid_route_name(route["provider"]) and _valid_route_name(route["model"])
+            for route in routes
+        ):
+            problems.append(
+                "llm-preflight/routes carries a malformed provider or model"
+            )
+        if not all(_valid_observed(route.get("observedModel")) for route in routes):
+            problems.append("llm-preflight/routes carries a malformed observedModel")
     fingerprints = evidence.get("provenance")
     if not isinstance(fingerprints, dict) or fingerprints.get("schema_version") != 1:
         problems.append("the evidence carries no schema-version-1 provenance")
@@ -401,15 +410,26 @@ def verify_record(
     }
 
 
+def printable(text: str) -> str:
+    """Text safe for a terminal or CI log: a record is untrusted input, so every
+    non-printable character, a newline or an escape sequence included, is
+    shown as its backslash escape instead of being emitted."""
+    return "".join(
+        char if char.isprintable() else char.encode("unicode_escape").decode("ascii")
+        for char in text
+    )
+
+
 def describe_route(route: Mapping[str, Any]) -> str:
     """`provider:model` and the model its provider reported answering, if any."""
-    label = f"{route['provider']}:{route['model']}"
+    label = printable(f"{route['provider']}:{route['model']}")
     observed = route["observed_model"]
     if observed is None:
         return f"{label} did not report the model that answered"
     if isinstance(observed, list):
-        return f"{label} answered as {', '.join(observed)} (responses disagreed)"
-    return f"{label} answered as {observed}"
+        models = printable(", ".join(observed))
+        return f"{label} answered as {models} (responses disagreed)"
+    return f"{label} answered as {printable(observed)}"
 
 
 def current_fingerprints(
@@ -1075,6 +1095,10 @@ def _valid_selection(value: Any) -> bool:
         return False
     exclusive = (value["migrationCheck"], value["prompt"], value["tests"])
     return sum(bool(item) for item in exclusive) <= 1
+
+
+def _valid_route_name(value: str) -> bool:
+    return 0 < len(value) <= _MAX_ROUTE_NAME_LENGTH and value.isprintable()
 
 
 def _valid_observed(value: Any) -> bool:

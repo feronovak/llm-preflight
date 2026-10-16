@@ -28,6 +28,7 @@ from .attestation import (
     describe_route,
     gate,
     load_record,
+    printable,
     verify_record,
 )
 from .capability_ledger import apply_probe_evidence, load_ledger
@@ -2284,7 +2285,7 @@ def _format_verify(report: dict[str, Any], exit_code: int) -> str:
     )
     lines.append(f"Signature: {report['signature']}")
     lines.append(f"Exit {exit_code}.")
-    return "\n".join(lines) + "\n"
+    return "\n".join(printable(line) for line in lines) + "\n"
 
 
 def _verify_exit_code(report: dict[str, Any]) -> int:
@@ -2342,7 +2343,7 @@ def _format_gate(report: dict[str, Any]) -> str:
     for number, step in enumerate(report["next"], 1):
         lines.append(f"{'Next: ' if number == 1 else '      '}{number}. {step}")
     lines.append(f"Exit {_GATE_EXIT_CODES[report['decision']]}.")
-    return "\n".join(lines) + "\n"
+    return "\n".join(printable(line) for line in lines) + "\n"
 
 
 def _gate_main(argv: list[str]) -> None:

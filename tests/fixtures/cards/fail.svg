@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="514" viewBox="0 0 600 514" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<title id="card-title">LLM Preflight: FAIL · support-routing</title>
+<desc id="card-desc">FAIL; checked 2026-10-14; Config: support-routing; Model: gemini-3.8-flash (gemini); Probes: 13 of 16 passed; p95 latency: 2.255 s; Cost: $0.3541 per 1,000 calls; Retirement: active in the bundled snapshot; Model: claude-sonnet-4-20250514 (anthropic); Probes: 16 probes, all passed; p95 latency: 1.100 s; Cost: $0.3250 per 1,000 calls; Retirement: retired on 2026-06-15; Why: One or more requested models failed the configured output contract; Does not certify: accuracy · safety · production behaviour; evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
+<rect x="1" y="1" width="598" height="512" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+<text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
+<text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-10-14</text>
+<rect x="2" y="46" width="596" height="56" fill="#cf222e"/>
+<text x="20" y="84" font-size="28" font-weight="700" fill="#ffffff">FAIL</text>
+<text x="20" y="130" font-size="13" font-weight="700">Config</text>
+<text x="132" y="130" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">support-routing</text>
+<line x1="20" y1="138" x2="580" y2="138" stroke="#000000" stroke-width="1"/>
+<text x="20" y="164" font-size="13" font-weight="700">Model</text>
+<text x="132" y="164" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">gemini-3.8-flash (gemini)</text>
+<text x="20" y="186" font-size="13" font-weight="700">Probes</text>
+<text x="132" y="186" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">13 of 16 passed</text>
+<text x="20" y="208" font-size="13" font-weight="700">p95 latency</text>
+<text x="132" y="208" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">2.255 s</text>
+<text x="20" y="230" font-size="13" font-weight="700">Cost</text>
+<text x="132" y="230" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">$0.3541 per 1,000 calls</text>
+<text x="20" y="252" font-size="13" font-weight="700">Retirement</text>
+<text x="132" y="252" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">active in the bundled snapshot</text>
+<line x1="20" y1="260" x2="580" y2="260" stroke="#000000" stroke-width="1"/>
+<text x="20" y="286" font-size="13" font-weight="700">Model</text>
+<text x="132" y="286" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">claude-sonnet-4-20250514 (anthropic)</text>
+<text x="20" y="308" font-size="13" font-weight="700">Probes</text>
+<text x="132" y="308" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">16 probes, all passed</text>
+<text x="20" y="330" font-size="13" font-weight="700">p95 latency</text>
+<text x="132" y="330" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">1.100 s</text>
+<text x="20" y="352" font-size="13" font-weight="700">Cost</text>
+<text x="132" y="352" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">$0.3250 per 1,000 calls</text>
+<text x="20" y="374" font-size="13" font-weight="700">Retirement</text>
+<text x="132" y="374" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">retired on 2026-06-15</text>
+<line x1="20" y1="382" x2="580" y2="382" stroke="#000000" stroke-width="1"/>
+<text x="20" y="408" font-size="13" font-weight="700">Why:</text>
+<text x="132" y="408" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">One or more requested models failed the configured</text>
+<text x="132" y="426" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">output contract.</text>
+<text x="20" y="454" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
+<text x="20" y="474" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 3f9a1c000000</text>
+<text x="20" y="494" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">Not attested: no preflight record was given</text>
+</svg>

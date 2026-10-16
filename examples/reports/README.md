@@ -21,5 +21,18 @@ into a schema failure. The candidate report compares an incumbent with a
 cheaper candidate that fails the same contract. The final report shows a
 compatible baseline comparison that flags latency and cost regressions.
 
+The same fixtures render as SVG preflight cards, a passing and a failing one
+here:
+
+```bash
+python3 -m llm_preflight report examples/reports/schema-baseline.json \
+  --format svg --output /tmp/schema-baseline.svg
+python3 -m llm_preflight report examples/reports/cheaper-candidate-fails.json \
+  --format svg --output /tmp/cheaper-candidate-fails.svg
+```
+
+The fixtures carry no provenance, so their cards show no evidence fingerprint
+and they cannot be attested; the card's EXPIRED state needs a record.
+
 All values are invented to demonstrate report behavior. They are not model
 rankings, provider claims, or evidence from a paid run.

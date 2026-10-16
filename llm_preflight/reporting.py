@@ -5,10 +5,14 @@ from __future__ import annotations
 import html
 import math
 import re
+import textwrap
 from collections.abc import Mapping
+from datetime import date, datetime
+from pathlib import PurePath
 from typing import Any
 
 from .decision import build_decision, legacy_cost_evidence
+from .retirements import retirement_verdict
 
 _SCHEMA_VERSION = 1
 _SOURCE_LABELS = {
@@ -26,6 +30,37 @@ _REGRESSION_LABELS = {
     "cost",
     "removed",
 }
+CARD_LIMITS = "Does not certify: accuracy · safety · production behaviour"
+_CARD_WIDTH = 600
+_CARD_MARGIN = 20
+_CARD_VALUE_X = 132
+_CARD_LINE = 22
+# A 14px monospace glyph is about 8.4px wide; 52 of them fill the value column.
+_CARD_VALUE_CHARS = 52
+_CARD_SANS = "Helvetica, Arial, sans-serif"
+_CARD_MONO = "ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace"
+# The band is the card's only colour. Its word carries the verdict, so the
+# card reads the same in grayscale; each pair keeps at least 4.5:1 contrast.
+_CARD_BANDS = {
+    "pass": ("PASS", "#1a7f37", "#ffffff"),
+    "inconclusive": ("INCONCLUSIVE", "#f2c94c", "#000000"),
+    "fail": ("FAIL", "#cf222e", "#ffffff"),
+    "expired": ("EXPIRED", "#6e7781", "#ffffff"),
+}
+# The step that clears each blocking warning decision.py raises, matched on
+# the warning's opening words; a new warning falls back to a generic step.
+_CARD_REMEDIATIONS = (
+    ("Mock-only runs", "run the bounded check against a live provider route"),
+    ("Pricing is ", "price every route (--pricing-check), then rerun the check"),
+    ("Legacy artifact", "rerun the check with a current llm-preflight"),
+    ("Unobserved retry usage", "rerun until every request reports its usage"),
+    ("Missing or invalid usage", "rerun until every request reports its usage"),
+    (
+        "Cost confidence is ",
+        "rerun with every route priced and every request reporting usage",
+    ),
+)
+_CARD_FALLBACK_REMEDIATION = "resolve this warning, then rerun the bounded check"
 
 
 def _validate_result(result: Any) -> dict[str, Any]:
@@ -531,3 +566,290 @@ code {{ overflow-wrap: anywhere; }}
 </body>
 </html>
 """
+
+
+def render_card_svg(
+    payload: Any, *, today: date, record: Mapping[str, Any] | None = None
+) -> str:
+    """Render a self-contained SVG card of a schema-v1 result.
+
+    `record` is the verifier's report (`verify_record`) for a record of this
+    result: it adds the valid-until date, and a stale or superseded record
+    turns the band EXPIRED. The card depends only on its inputs and `today`,
+    and, like the other reports, recomputes the decision from the evidence.
+    """
+    result = _validate_result(payload)
+    decision = build_decision(result)
+    state = decision["state"]
+    freshness = record["freshness"] if record is not None else None
+    expired = freshness is not None and freshness["state"] != "fresh"
+    word = _CARD_BANDS[state][0]
+    complete_cost = result.get("cost_confidence") == "complete"
+    complete_cost = complete_cost and not legacy_cost_evidence(result)
+    rows: list[tuple[str, str, str]] = [
+        ("row", "Config", _card_text(result.get("benchmark")))
+    ]
+    for model in result["models"]:
+        rows.append(("rule", "", ""))
+        rows.extend(_card_model_rows(model, today, complete_cost))
+    rows.append(("rule", "", ""))
+    if freshness is not None:
+        rows.append(("row", "Valid until", _card_valid_until(freshness)))
+    if state == "inconclusive":
+        warnings = decision["blocking_warnings"]
+        steps = dict.fromkeys(_card_remediation(text) for text in warnings)
+        rows.extend(
+            ("row", "" if index else "Why:", _card_text(text, 240))
+            for index, text in enumerate(warnings)
+        )
+        rows.extend(
+            ("row", "" if index else "To pass:", step)
+            for index, step in enumerate(steps)
+        )
+    elif state == "fail":
+        rows.append(("row", "Why:", _card_text(decision["reason"], 240)))
+    provenance = result.get("provenance")
+    evidence = (
+        provenance.get("evidence_sha256") if isinstance(provenance, dict) else None
+    )
+    footer = [
+        f"evidence {evidence[:12]}"
+        if isinstance(evidence, str) and re.fullmatch(r"[0-9a-f]{64}", evidence)
+        else "evidence: no provenance fingerprint",
+        f"llm-preflight verify {_card_text(PurePath(record['record']).name)}"
+        if record is not None
+        else "Not attested: no preflight record was given",
+    ]
+    title = f"LLM Preflight: {'EXPIRED (was ' + word + ')' if expired else word}"
+    return _card_svg(
+        title=f"{title} · {_card_text(result.get('benchmark'))}",
+        band=_CARD_BANDS["expired" if expired else state],
+        subtitle=f"was {word}" if expired else "",
+        checked=f"checked {_card_date(result.get('timestamp'))}",
+        rows=rows,
+        footer=footer,
+    )
+
+
+def _card_model_rows(
+    model: Mapping[str, Any], today: date, complete_cost: bool
+) -> list[tuple[str, str, str]]:
+    provider = model.get("provider", "openai_compatible")
+    summary = model.get("summary", {})
+    rows = [
+        (
+            "row",
+            "Model",
+            f"{_identifier(model.get('model'))} ({_identifier(provider)})",
+        )
+    ]
+    observed = model.get("observed_model")
+    if isinstance(observed, str) and observed:
+        rows.append(("row", "Observed", _identifier(observed)))
+    latency = summary.get("latency_seconds")
+    p95 = _number(latency.get("p95")) if isinstance(latency, dict) else None
+    cost = _number(summary.get("estimated_cost_usd"))
+    requests = summary.get("requests", 0)
+    rows.extend(
+        [
+            ("row", "Probes", _card_probes(model)),
+            ("row", "p95 latency", "unknown" if p95 is None else f"{p95:.3f} s"),
+            (
+                "row",
+                "Cost",
+                f"{_card_money(cost / requests * 1000)} per 1,000 calls"
+                if complete_cost and cost is not None and requests
+                else "cost unknown",
+            ),
+            (
+                "row",
+                "Retirement",
+                _card_retirement(provider, model.get("model"), today),
+            ),
+        ]
+    )
+    return rows
+
+
+def _card_probes(model: Mapping[str, Any]) -> str:
+    """Probe counts, never a bare percentage; a profile run counts every profile."""
+    profiles = model.get("profiles") or []
+    summaries = (
+        [profile.get("summary", {}) for profile in profiles]
+        if profiles
+        else [model.get("summary", {})]
+    )
+    total = passed = 0
+    for summary in summaries:
+        requests = summary.get("requests", 0)
+        rate = _rate(summary.get("valid_output_rate"))
+        if rate is None:
+            rate = _rate(summary.get("success_rate"))
+        if rate is None:
+            return f"{total + requests} probes, outcomes not recorded"
+        total += requests
+        passed += round(rate * requests)
+    if total == 0:
+        return "no probes ran"
+    if passed == total:
+        return "1 probe, passed" if total == 1 else f"{total} probes, all passed"
+    return f"{passed} of {total} passed"
+
+
+def _card_money(value: float) -> str:
+    if value == 0:
+        return "$0.00"
+    if value < 0.0001:
+        return "under $0.0001"
+    return f"${value:,.2f}" if value >= 1 else f"${value:.4f}"
+
+
+def _card_retirement(provider: Any, model: Any, today: date) -> str:
+    if not isinstance(provider, str) or not isinstance(model, str):
+        return "not in the bundled snapshot"
+    verdict = retirement_verdict(provider, model, today)
+    status = verdict["status"]
+    retirement_date = verdict.get("retirement_date")
+    if status == "retired":
+        return (
+            f"retired on {retirement_date}" if retirement_date else "listed as retired"
+        )
+    if status == "retiring":
+        return (
+            f"retiring on {retirement_date}"
+            if retirement_date
+            else "deprecated, date not recorded"
+        )
+    if status == "stale":
+        return f"snapshot row of {verdict['as_of']} is stale"
+    if status == "active":
+        return "active in the bundled snapshot"
+    return "not in the bundled snapshot"
+
+
+def _card_valid_until(freshness: Mapping[str, Any]) -> str:
+    valid_until = freshness["valid_until"]
+    if freshness["state"] == "fresh":
+        return str(valid_until)
+    if freshness["state"] == "superseded":
+        return f"{valid_until}, expired: a checked route has since retired"
+    return f"{valid_until}, expired: older than {freshness['max_age_days']} days"
+
+
+def _card_remediation(warning: str) -> str:
+    return next(
+        (step for prefix, step in _CARD_REMEDIATIONS if warning.startswith(prefix)),
+        _CARD_FALLBACK_REMEDIATION,
+    )
+
+
+def _card_date(value: Any) -> str:
+    if not isinstance(value, str):
+        return "date unknown"
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return "date unknown"
+
+
+def _card_text(value: Any, limit: int = _CARD_VALUE_CHARS) -> str:
+    """Printable text only: XML forbids control characters even when escaped,
+    and a bidirectional override could reorder what the card claims."""
+    if not isinstance(value, str) or not value:
+        return "unknown"
+    text = "".join(char if char.isprintable() else "?" for char in value)
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _svg_text(
+    x: int,
+    y: int,
+    text: str,
+    *,
+    size: int,
+    mono: bool = False,
+    bold: bool = False,
+    fill: str | None = None,
+    end: bool = False,
+) -> str:
+    """One text element; only attributes that differ from the card's defaults."""
+    attributes = [f'x="{x}"', f'y="{y}"', f'font-size="{size}"']
+    if mono:
+        attributes.append(f'font-family="{_CARD_MONO}"')
+    if bold:
+        attributes.append('font-weight="700"')
+    if fill:
+        attributes.append(f'fill="{fill}"')
+    if end:
+        attributes.append('text-anchor="end"')
+    return f"<text {' '.join(attributes)}>{html.escape(text)}</text>"
+
+
+def _card_svg(
+    *,
+    title: str,
+    band: tuple[str, str, str],
+    subtitle: str,
+    checked: str,
+    rows: list[tuple[str, str, str]],
+    footer: list[str],
+) -> str:
+    word, fill, ink = band
+    right = _CARD_WIDTH - _CARD_MARGIN
+    elements = [
+        _svg_text(_CARD_MARGIN, 32, "LLM Preflight", size=16, bold=True),
+        _svg_text(right, 32, checked, size=13, mono=True, end=True),
+        f'<rect x="2" y="46" width="{_CARD_WIDTH - 4}" height="56" fill="{fill}"/>',
+        _svg_text(_CARD_MARGIN, 84, word, size=28, bold=True, fill=ink),
+    ]
+    if subtitle:
+        elements.append(_svg_text(right, 82, subtitle, size=14, fill=ink, end=True))
+    described = [word + (f" ({subtitle})" if subtitle else ""), checked]
+    y = 108
+    for kind, label, value in rows:
+        if kind == "rule":
+            y += 8
+            elements.append(
+                f'<line x1="{_CARD_MARGIN}" y1="{y}" x2="{right}" y2="{y}" '
+                'stroke="#000000" stroke-width="1"/>'
+            )
+            y += 4
+            continue
+        lines = textwrap.wrap(value, _CARD_VALUE_CHARS) or [value]
+        y += _CARD_LINE
+        if label:
+            elements.append(_svg_text(_CARD_MARGIN, y, label, size=13, bold=True))
+        for index, line in enumerate(lines):
+            if index:
+                y += _CARD_LINE - 4
+            elements.append(_svg_text(_CARD_VALUE_X, y, line, size=14, mono=True))
+        sentence = value.rstrip(".")
+        described.append(f"{label.rstrip(':')}: {sentence}" if label else sentence)
+    y += _CARD_LINE + 6
+    elements.append(_svg_text(_CARD_MARGIN, y, CARD_LIMITS, size=13, bold=True))
+    for line in footer:
+        y += 20
+        elements.append(_svg_text(_CARD_MARGIN, y, line, size=12, mono=True))
+    described.extend([CARD_LIMITS, *footer])
+    height = y + _CARD_MARGIN
+    opening = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{_CARD_WIDTH}" '
+        f'height="{height}" viewBox="0 0 {_CARD_WIDTH} {height}" role="img" '
+        f'aria-labelledby="card-title card-desc" font-family="{_CARD_SANS}" '
+        'fill="#000000">'
+    )
+    frame = (
+        f'<rect x="1" y="1" width="{_CARD_WIDTH - 2}" height="{height - 2}" '
+        'fill="#ffffff" stroke="#000000" stroke-width="2"/>'
+    )
+    return "\n".join(
+        [
+            opening,
+            f'<title id="card-title">{html.escape(title)}</title>',
+            f'<desc id="card-desc">{html.escape("; ".join(described))}</desc>',
+            frame,
+            *elements,
+            "</svg>",
+            "",
+        ]
+    )

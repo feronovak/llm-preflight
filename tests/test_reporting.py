@@ -1,9 +1,15 @@
 import json
+from datetime import date
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 
-from llm_preflight.reporting import render_job_summary, render_report_html
+from llm_preflight.reporting import (
+    render_card_svg,
+    render_job_summary,
+    render_report_html,
+)
 
 
 @pytest.mark.parametrize(
@@ -239,3 +245,183 @@ def test_synthetic_gallery_fixtures_render_without_live_provider_calls():
     assert all("Limitations:" in report for report in reports)
     assert any("Decision: fail" in report for report in reports)
     assert any("Baseline comparison: regression" in report for report in reports)
+
+
+CARD_TODAY = date(2026, 10, 17)
+CARD_GOLDEN = Path(__file__).parent / "fixtures" / "cards"
+FORBIDDEN_WORDS = (
+    "certified",
+    "certificate",
+    "guaranteed",
+    "compliant",
+    "nutrition label",
+)
+
+
+def _card_model(provider, model, *, valid, p95, cost, requests=16):
+    return {
+        "name": f"private-{model}",
+        "provider": provider,
+        "model": model,
+        "summary": {
+            "requests": requests,
+            "successful": requests,
+            "failed": 0,
+            "success_rate": 1.0,
+            "valid_output_rate": valid / requests,
+            "contract_only_failures": 0,
+            "latency_seconds": {"p50": p95 / 2, "p95": p95},
+            "estimated_cost_usd": cost,
+            "input_tokens": 100 * requests,
+            "output_tokens": 20 * requests,
+        },
+        "samples": [{"ok": True, "valid_output": i < valid} for i in range(requests)],
+    }
+
+
+def card_result(state):
+    """A deterministic schema-v1 result whose recomputed decision is `state`."""
+    models = {
+        "pass": [
+            _card_model(
+                "anthropic", "claude-haiku-5-5", valid=16, p95=0.934, cost=0.000479
+            ),
+            _card_model("openai", "gpt-4.1-mini", valid=16, p95=1.412, cost=0.000612),
+        ],
+        "inconclusive": [
+            _card_model("openai", "gpt-4.1-mini", valid=16, p95=1.412, cost=None),
+        ],
+        "fail": [
+            _card_model(
+                "gemini", "gemini-3.8-flash", valid=13, p95=2.255, cost=0.005666
+            ),
+            _card_model(
+                "anthropic", "claude-sonnet-4-20250514", valid=16, p95=1.1, cost=0.0052
+            ),
+        ],
+    }[state]
+    if state == "pass":
+        models[0]["observed_model"] = "claude-haiku-5-5-20261001"
+    complete = state != "inconclusive"
+    return {
+        "schema_version": 1,
+        "run_id": "private-run-identifier",
+        "timestamp": "2026-10-14T09:30:00+00:00",
+        "benchmark": "support-routing",
+        "environment": {"hostname": "alice-workstation"},
+        "source_config_path": "/home/alice/private/benchmark.json",
+        "prompt_name": "customer-support-prompt",
+        "source_config": {"prompt": "private prompt contents"},
+        "models": models,
+        "pricing_coverage": {
+            "summary": {"billable": len(models)},
+            "models": [
+                {
+                    "provider": model["provider"],
+                    "model": model["model"],
+                    "status": "priced",
+                    "source": "official snapshot",
+                    "as_of": "2026-10-16",
+                }
+                for model in models
+            ],
+        },
+        "cost_confidence": "complete" if complete else "partial",
+        "total_estimated_cost_usd": (
+            sum(model["summary"]["estimated_cost_usd"] for model in models)
+            if complete
+            else None
+        ),
+        "cost_coverage": {
+            "known_requests": 16 * len(models) if complete else 0,
+            "missing_usage_requests": 0,
+            "missing_price_requests": 0,
+            "unobserved_retry_requests": 0,
+        },
+        "usage_coverage": {"input_tokens": 16, "output_tokens": 16},
+        "provenance": {"schema_version": 1, "evidence_sha256": "3f9a1c" + "0" * 58},
+    }
+
+
+@pytest.mark.parametrize("state", ["pass", "inconclusive", "fail"])
+def test_svg_card_matches_its_golden_file_for_each_verdict(state):
+    rendered = render_card_svg(card_result(state), today=CARD_TODAY)
+
+    assert rendered == (CARD_GOLDEN / f"{state}.svg").read_text(encoding="utf-8")
+
+
+def test_svg_card_is_well_formed_self_contained_and_accessible():
+    namespace = "{http://www.w3.org/2000/svg}"
+    for state in ("pass", "inconclusive", "fail"):
+        svg = render_card_svg(card_result(state), today=CARD_TODAY)
+        root = ElementTree.fromstring(svg)
+
+        assert root.tag == f"{namespace}svg"
+        assert root.get("width") == "600"
+        assert root.get("role") == "img"
+        assert root.find(f"{namespace}title").text.startswith("LLM Preflight: ")
+        assert "Does not certify" in root.find(f"{namespace}desc").text
+        assert "<script" not in svg and "href" not in svg and "url(" not in svg
+        assert "@import" not in svg and "@font-face" not in svg
+        assert svg.count("http") == 1  # the SVG namespace, nothing fetched
+        assert svg == render_card_svg(card_result(state), today=CARD_TODAY)
+
+
+def test_svg_card_states_counts_and_limits_without_a_bare_percentage():
+    passed = render_card_svg(card_result("pass"), today=CARD_TODAY)
+    failed = render_card_svg(card_result("fail"), today=CARD_TODAY)
+    unknown = render_card_svg(card_result("inconclusive"), today=CARD_TODAY)
+
+    assert ">PASS<" in passed and ">FAIL<" in failed and ">INCONCLUSIVE<" in unknown
+    assert "16 probes, all passed" in passed
+    assert "13 of 16 passed" in failed
+    assert "%" not in passed + failed + unknown
+    for svg in (passed, failed, unknown):
+        assert "Does not certify: accuracy · safety · production behaviour" in svg
+        assert "Not attested: no preflight record was given" in svg
+        assert not any(word in svg.lower() for word in FORBIDDEN_WORDS)
+    assert "$0.0299 per 1,000 calls" in passed
+    assert "cost unknown" in unknown and "per 1,000 calls" not in unknown
+    assert "Why:" in unknown and "To pass:" in unknown
+    assert "Cost confidence is partial" in unknown
+    assert "Why:" in failed and "To pass:" not in failed and "Why:" not in passed
+
+
+def test_svg_card_shows_the_observed_model_and_retirement_status():
+    passed = render_card_svg(card_result("pass"), today=CARD_TODAY)
+    failed = render_card_svg(card_result("fail"), today=CARD_TODAY)
+
+    assert "claude-haiku-5-5 (anthropic)" in passed
+    assert "claude-haiku-5-5-20261001" in passed
+    assert passed.count(">Observed<") == 1
+    assert "retiring on 2027-01-14" in passed
+    assert "active in the bundled snapshot" in passed
+    assert "retired on 2026-06-15" in failed
+    assert ">Observed<" not in failed
+
+
+def test_svg_card_escapes_text_and_keeps_non_ascii_names():
+    result = card_result("pass")
+    result["benchmark"] = '<b>&"Žltý čaj ✓"</b>\x00\u202e'
+
+    svg = render_card_svg(result, today=CARD_TODAY)
+    root = ElementTree.fromstring(svg)
+
+    assert "&lt;b&gt;&amp;&quot;Žltý čaj ✓&quot;&lt;/b&gt;" in svg
+    assert "<b>" not in svg
+    assert "\x00" not in svg and "\u202e" not in svg
+    assert '<b>&"Žltý čaj ✓"</b>' in "".join(root.itertext())
+
+
+def test_svg_card_omits_private_metadata():
+    svg = render_card_svg(card_result("pass"), today=CARD_TODAY)
+
+    for private in (
+        "private-run-identifier",
+        "alice-workstation",
+        "/home/alice",
+        "customer-support-prompt",
+        "private prompt contents",
+        "private-claude-haiku-5-5",
+    ):
+        assert private not in svg

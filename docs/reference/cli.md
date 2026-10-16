@@ -15,11 +15,13 @@ Render a saved result without running a benchmark:
 ```bash
 llm-preflight report results/run.json --output report.html
 llm-preflight report results/run.json --format markdown
+llm-preflight report results/run.json --format svg --record results/run.preflight.json
 ```
 
-The HTML is self-contained and opens offline. Both report formats accept only
-schema-version-1 results and omit prompt/response content, local paths, and
-identifying run metadata.
+The HTML is self-contained and opens offline. Every report format accepts only
+schema-version-1 results and omits prompt/response content, local paths, and
+identifying run metadata; the SVG card alone names the configuration, so a
+shared card says which check it shows.
 
 For 2.17.2 source builds, unsupported output-schema keywords stop validation
 before requests. Missing usage or unobserved retry usage keeps billable cost
@@ -29,7 +31,7 @@ claim savings. Strict pricing freshness checks every source description.
 
 | Option | Default | Purpose |
 |---|---:|---|
-| `report RESULT [--format html\|markdown] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. |
+| `report RESULT [--format html\|markdown\|svg] [--record RECORD] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. `svg` is the [preflight card](../guides/reports.md#preflight-card); `--record` adds the record's valid-until date and refuses a record that fails verification or attests another result. |
 | `attest RESULT [--config PATH] [--output PATH] [--force] [--json]` | `RESULT` with `.preflight.json` | Write an in-toto record that this result's check ran, with its decision copied, never upgraded. It refuses a result without schema-version-1 provenance and never replaces a record without `--force`. `--config` defaults to the result's recorded `source_config_path`. In GitHub Actions the record carries the run identity; elsewhere its origin is `local`. No provider request. |
 | `verify RECORD [--max-age-days DAYS] [--json]` | 30 days | Report a record's integrity and freshness separately, with this verifier's retirement-snapshot date. Exit 0 intact and fresh, 1 integrity broken, 3 intact but stale or superseded. Signatures are not checked here; use `gh attestation verify`. |
 | `gate [CONFIG] --records PATH... [--repository OWNER/NAME] [--env NAME] [--prompt NAME \| --tests LIST \| --migration-check] [--max-age-days DAYS] [--json]` | `benchmark.json`, `GITHUB_REPOSITORY`, a default run, 30 days | Decide offline whether a fresh, passing GitHub Actions record from this repository ran the same selection flags and matches the current contract and routes under them. Exit 0 pass, 1 blocked, 3 cannot decide, including when no repository is known. It never fetches artifacts, loads credentials or contacts a provider. |

@@ -6,6 +6,7 @@ import socket
 import subprocess
 import sys
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -1470,3 +1471,105 @@ def test_gate_records_share_one_shape_whatever_the_verdict(
         "committed_record",
         "pass",
     ]
+
+
+# card
+
+
+def _card(monkeypatch, capsys, *arguments):
+    return _run(
+        monkeypatch, capsys, "report", "results/run.json", "--format", "svg", *arguments
+    )
+
+
+def test_card_with_a_fresh_record_shows_valid_until_and_the_verify_command(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    evidence = json.loads((tmp_path / "results/run.json").read_text())["provenance"]
+
+    code, out, err = _card(
+        monkeypatch, capsys, "--record", "results/run.preflight.json"
+    )
+
+    assert code == 0, err
+    assert ">PASS<" in out and ">EXPIRED<" not in out
+    assert "2026-11-09" in out and ">Valid until<" in out
+    assert "llm-preflight verify run.preflight.json" in out
+    assert f"evidence {evidence['evidence_sha256'][:12]}" in out
+    assert "Not attested" not in out
+
+
+def test_card_for_a_stale_record_is_expired_and_matches_its_golden_file(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 10))
+
+    code, out, err = _card(
+        monkeypatch, capsys, "--record", "results/run.preflight.json"
+    )
+
+    assert code == 0, err
+    golden = Path(__file__).parent / "fixtures/cards/expired.svg"
+    assert out == golden.read_text(encoding="utf-8")
+
+
+def test_card_for_a_superseded_record_is_expired(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 15))
+    _attest(monkeypatch, capsys, tmp_path, timestamp="2027-01-10T08:00:00Z")
+
+    code, out, _ = _card(monkeypatch, capsys, "--record", "results/run.preflight.json")
+
+    assert code == 0
+    assert ">EXPIRED<" in out and "was PASS" in out
+    assert "a checked route has since retired" in out
+    assert "retired on 2027-01-14" in out
+
+
+def test_card_refuses_a_record_of_another_result_or_a_broken_record(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    other = _attest(
+        monkeypatch,
+        capsys,
+        tmp_path,
+        timestamp="2026-10-11T08:00:00+00:00",
+        name="other.json",
+    )
+
+    code, out, err = _card(monkeypatch, capsys, "--record", other)
+
+    assert (code, out) == (2, "")
+    assert "does not attest results/run.json" in err
+
+    record = tmp_path / "results/run.preflight.json"
+    _edit_record(record, lambda r: r["predicate"].update(result="FAILED"))
+    code, out, err = _card(monkeypatch, capsys, "--record", record)
+
+    assert (code, out) == (2, "")
+    assert "fails its integrity check" in err
+    assert "llm-preflight verify" in err
+
+
+def test_card_record_needs_the_svg_format_and_output_writes_a_file(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    code, _, err = _run(
+        monkeypatch,
+        capsys,
+        "report",
+        "results/run.json",
+        "--record",
+        "results/run.preflight.json",
+    )
+    assert code == 2
+    assert "--record needs --format svg" in err
+
+    code, out, _ = _card(monkeypatch, capsys, "--output", "card.svg")
+    assert code == 0
+    assert out == "Saved svg report to card.svg\n"
+    assert (tmp_path / "card.svg").read_text(encoding="utf-8").startswith("<svg ")

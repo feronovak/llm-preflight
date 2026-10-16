@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="496" viewBox="0 0 600 496" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<title id="card-title">LLM Preflight: PASS · support-routing</title>
+<desc id="card-desc">PASS; checked 2026-10-14; Config: support-routing; Model: claude-haiku-5-5 (anthropic); Observed: claude-haiku-5-5-20261001; Probes: 16 probes, all passed; p95 latency: 0.934 s; Cost: $0.0299 per 1,000 calls; Retirement: active in the bundled snapshot; Model: gpt-4.1-mini (openai); Probes: 16 probes, all passed; p95 latency: 1.412 s; Cost: $0.0382 per 1,000 calls; Retirement: retiring on 2027-01-14; Does not certify: accuracy · safety · production behaviour; evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
+<rect x="1" y="1" width="598" height="494" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+<text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
+<text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-10-14</text>
+<rect x="2" y="46" width="596" height="56" fill="#1a7f37"/>
+<text x="20" y="84" font-size="28" font-weight="700" fill="#ffffff">PASS</text>
+<text x="20" y="130" font-size="13" font-weight="700">Config</text>
+<text x="132" y="130" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">support-routing</text>
+<line x1="20" y1="138" x2="580" y2="138" stroke="#000000" stroke-width="1"/>
+<text x="20" y="164" font-size="13" font-weight="700">Model</text>
+<text x="132" y="164" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">claude-haiku-5-5 (anthropic)</text>
+<text x="20" y="186" font-size="13" font-weight="700">Observed</text>
+<text x="132" y="186" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">claude-haiku-5-5-20261001</text>
+<text x="20" y="208" font-size="13" font-weight="700">Probes</text>
+<text x="132" y="208" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">16 probes, all passed</text>
+<text x="20" y="230" font-size="13" font-weight="700">p95 latency</text>
+<text x="132" y="230" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">0.934 s</text>
+<text x="20" y="252" font-size="13" font-weight="700">Cost</text>
+<text x="132" y="252" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">$0.0299 per 1,000 calls</text>
+<text x="20" y="274" font-size="13" font-weight="700">Retirement</text>
+<text x="132" y="274" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">active in the bundled snapshot</text>
+<line x1="20" y1="282" x2="580" y2="282" stroke="#000000" stroke-width="1"/>
+<text x="20" y="308" font-size="13" font-weight="700">Model</text>
+<text x="132" y="308" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">gpt-4.1-mini (openai)</text>
+<text x="20" y="330" font-size="13" font-weight="700">Probes</text>
+<text x="132" y="330" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">16 probes, all passed</text>
+<text x="20" y="352" font-size="13" font-weight="700">p95 latency</text>
+<text x="132" y="352" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">1.412 s</text>
+<text x="20" y="374" font-size="13" font-weight="700">Cost</text>
+<text x="132" y="374" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">$0.0382 per 1,000 calls</text>
+<text x="20" y="396" font-size="13" font-weight="700">Retirement</text>
+<text x="132" y="396" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">retiring on 2027-01-14</text>
+<line x1="20" y1="404" x2="580" y2="404" stroke="#000000" stroke-width="1"/>
+<text x="20" y="436" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
+<text x="20" y="456" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 3f9a1c000000</text>
+<text x="20" y="476" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">Not attested: no preflight record was given</text>
+</svg>

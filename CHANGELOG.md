@@ -82,6 +82,19 @@ All notable changes to this project are documented here.
   repository the gate cannot decide (exit 3, `repository_unknown`) and names
   the `--repository` flag. `verify` shows the record's repository, and its
   JSON adds `repository` and `server_url`.
+- `report RESULT --format svg [--record RECORD]` renders a preflight card: a
+  self-contained, deterministic SVG with no external fonts, scripts or
+  images, an accessible title and description, and one coloured verdict band
+  (PASS, INCONCLUSIVE, FAIL, or EXPIRED when the record is stale or a checked
+  route has since retired) whose word reads the same in grayscale. Per model
+  it shows the probe counts ("16 probes, all passed" or "13 of 16 passed",
+  never a percentage), p95 latency, cost per 1,000 calls only when the cost
+  is complete, the bundled retirement status and the observed model when the
+  result records one. An inconclusive card adds "Why:" and "To pass:" lines,
+  a record adds its valid-until date, and every card states "Does not
+  certify: accuracy · safety · production behaviour" above the evidence hash
+  and the `llm-preflight verify` command. It refuses a record that fails
+  verification or attests a different result file.
 
 ### Changed
 

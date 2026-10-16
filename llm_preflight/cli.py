@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -68,7 +69,7 @@ from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
 from .redaction import redact_secrets
-from .reporting import render_job_summary, render_report_html
+from .reporting import render_card_svg, render_job_summary, render_report_html
 from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
     benchmark_run_lock,
@@ -2161,9 +2162,17 @@ def _report_main(argv: list[str]) -> None:
     parser.add_argument("result", type=Path, help="saved schema-version-1 result JSON")
     parser.add_argument(
         "--format",
-        choices=("html", "markdown"),
+        choices=("html", "markdown", "svg"),
         default="html",
-        help="offline HTML report or compact GitHub-flavored Markdown summary",
+        help=(
+            "offline HTML report, compact GitHub-flavored Markdown summary, "
+            "or self-contained SVG card"
+        ),
+    )
+    parser.add_argument(
+        "--record",
+        type=Path,
+        help="with --format svg: this result's preflight record, for its valid-until date",
     )
     parser.add_argument(
         "--output",
@@ -2171,17 +2180,47 @@ def _report_main(argv: list[str]) -> None:
         help="write to this path instead of standard output",
     )
     args = parser.parse_args(argv)
+    if args.record and args.format != "svg":
+        parser.error("--record needs --format svg")
     payload = load_json(args.result)
-    rendered = (
-        render_report_html(payload)
-        if args.format == "html"
-        else render_job_summary(payload)
-    )
+    if args.format == "svg":
+        today = today_utc()
+        record = _card_record(args.result, args.record, today) if args.record else None
+        rendered = render_card_svg(payload, today=today, record=record)
+    elif args.format == "html":
+        rendered = render_report_html(payload)
+    else:
+        rendered = render_job_summary(payload)
     if args.output:
         args.output.write_text(rendered, encoding="utf-8")
         print(f"Saved {args.format} report to {args.output}")
     else:
         sys.stdout.write(rendered)
+
+
+def _card_record(result_path: Path, record_path: Path, today: date) -> dict[str, Any]:
+    """The verifier's report for an intact record of exactly this result.
+
+    A card never shows a record that fails verification or attests other bytes.
+    """
+    record = load_record(record_path)
+    report = verify_record(record, record_path, today)
+    if not report["integrity"]["ok"]:
+        raise ValueError(
+            f"{record_path} fails its integrity check: "
+            f"{report['integrity']['problems'][0]}; run "
+            f"{_display_command()} verify {shlex.quote(str(record_path))}"
+        )
+    attested = next(
+        subject["digest"]["sha256"]
+        for subject in record["subject"]
+        if subject["annotations"]["role"] == "result"
+    )
+    if hashlib.sha256(result_path.read_bytes()).hexdigest() != attested:
+        raise ValueError(
+            f"{record_path} does not attest {result_path}: its result digest differs"
+        )
+    return report
 
 
 def _max_age_days(value: str) -> int:

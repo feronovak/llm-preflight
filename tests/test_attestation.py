@@ -1553,6 +1553,53 @@ def test_card_refuses_a_record_of_another_result_or_a_broken_record(
     assert "llm-preflight verify" in err
 
 
+def test_card_names_the_repository_that_recorded_it(monkeypatch, capsys, tmp_path):
+    _attest(monkeypatch, capsys, tmp_path)
+    _, ci, _ = _card(monkeypatch, capsys, "--record", "results/run.preflight.json")
+    _attest(monkeypatch, capsys, tmp_path, ci=False, name="local.json")
+    _, local, _ = _run(
+        monkeypatch,
+        capsys,
+        "report",
+        "results/local.json",
+        "--format",
+        "svg",
+        "--record",
+        "results/local.preflight.json",
+    )
+    _, unattested, _ = _card(monkeypatch, capsys)
+
+    assert ">Repository<" in ci and "acme/app on https://github.com" in ci
+    assert ">Repository<" in local
+    assert "none — a local record, which the gate never accepts" in local
+    assert ">Repository<" not in unattested
+
+
+@pytest.mark.parametrize("payload", INJECTIONS, ids=["ansi", "newline", "return"])
+def test_card_shows_record_strings_escaped_never_raw(
+    monkeypatch, capsys, tmp_path, payload
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    hostile = tmp_path / f"results/evil{payload}x.preflight.json"
+    hostile.write_text(record.read_text())
+
+    code, out, err = _card(monkeypatch, capsys, "--record", hostile)
+
+    assert code == 0, err
+    assert f"llm-preflight verify evil{ESCAPED[payload]}x.preflight.json" in out
+    assert f"evil{payload}x" not in out
+
+    _edit_record(
+        hostile,
+        lambda r: r["subject"][1].update(name=f"results/run{payload}x.json"),
+    )
+    code, _, err = _card(monkeypatch, capsys, "--record", hostile)
+
+    assert code == 2
+    assert f"evil{ESCAPED[payload]}x.preflight.json fails its integrity" in err
+    assert _no_raw_control_characters(err.rstrip("\n")), err
+
+
 def test_card_record_needs_the_svg_format_and_output_writes_a_file(
     monkeypatch, capsys, tmp_path
 ):

@@ -400,6 +400,40 @@ def test_svg_card_shows_the_observed_model_and_retirement_status():
     assert ">Observed<" not in failed
 
 
+@pytest.mark.parametrize(
+    ("observed", "shown"),
+    [
+        (
+            ["claude-haiku-5-5-20261001", "claude-haiku-5-5-20261101"],
+            (
+                "Observed: claude-haiku-5-5-20261001, claude-haiku-5-5-20261101 "
+                "(responses disagreed)"
+            ),
+        ),
+        (None, None),
+        ("", None),
+        ("claude\x1b[31m", None),
+        ([None, 7], None),
+    ],
+    ids=["disagreeing", "not-reported", "empty", "control-character", "unusable"],
+)
+def test_svg_card_shows_a_disagreeing_observed_set_and_never_guesses_one(
+    observed, shown
+):
+    result = card_result("pass")
+    result["models"][0]["observed_model"] = observed
+
+    svg = render_card_svg(result, today=CARD_TODAY)
+    desc = ElementTree.fromstring(svg).find("{http://www.w3.org/2000/svg}desc").text
+
+    if shown is None:
+        assert ">Observed<" not in svg and "Observed:" not in desc
+        assert "claude-haiku-5-5-2026" not in svg
+    else:
+        assert svg.count(">Observed<") == 1
+        assert f"; {shown};" in desc
+
+
 def test_svg_card_escapes_text_and_keeps_non_ascii_names():
     result = card_result("pass")
     result["benchmark"] = '<b>&"Žltý čaj ✓"</b>\x00\u202e'

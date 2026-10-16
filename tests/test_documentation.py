@@ -1,3 +1,4 @@
+import ast
 import hashlib
 import json
 import math
@@ -827,3 +828,156 @@ def test_build_rating_revision_is_recorded_with_its_reason():
     assert "publication readiness" in decisions
     assert "build-rating-2" in rubric
     assert "weights and checkpoint set are unchanged" in rubric
+
+
+PROOF_OF_PREFLIGHT_PAGES = (
+    "docs/guides/proof-of-preflight.md",
+    "docs/automation/ci.md",
+    "docs/automation/github-action.md",
+    "docs/guides/reports.md",
+)
+HONESTY_LINE = "It doesn't certify production behaviour. It proves the check was done."
+FORBIDDEN_CLAIMS = re.compile(
+    r"\bcertified\b|\bcertificates?\b|\bguarantee[ds]?\b|\bcompliant\b|nutrition label",
+    re.IGNORECASE,
+)
+
+
+def _gate_reason_codes():
+    """Every reason code the gate returns, each with its decision, read from
+    attestation.py itself so a new code cannot miss the guide's table.
+
+    A code is a candidate or blocking verdict, a literal `reason_code` in a
+    report (whose literal `decision` names it), or a literal the gate assigns
+    to `code`; only `fresh_pass` passes.
+    """
+    from llm_preflight import attestation
+
+    codes = {
+        code: "blocked"
+        for code in [
+            *(attestation._CANDIDATE_VERDICTS - {"pass"}),
+            *attestation._BLOCKING_PRIORITY,
+        ]
+    }
+    tree = ast.parse(Path(attestation.__file__).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Dict):
+            fields = {
+                key.value: value.value
+                for key, value in zip(node.keys, node.values, strict=True)
+                if isinstance(key, ast.Constant) and isinstance(value, ast.Constant)
+            }
+            if isinstance(fields.get("reason_code"), str):
+                codes[fields["reason_code"]] = fields.get("decision", "blocked")
+        elif isinstance(node, ast.Assign):
+            for target, value in _assignments(node):
+                if isinstance(target, ast.Name) and target.id == "code":
+                    branches = (
+                        [value.body, value.orelse]
+                        if isinstance(value, ast.IfExp)
+                        else [value]
+                    )
+                    for branch in branches:
+                        if isinstance(branch, ast.Constant):
+                            codes.setdefault(branch.value, "blocked")
+    codes["fresh_pass"] = "pass"
+    return codes
+
+
+def _assignments(node):
+    """(target, value) pairs, unpacking `a, b = x, y`."""
+    for target in node.targets:
+        if isinstance(target, ast.Tuple) and isinstance(node.value, ast.Tuple):
+            yield from zip(target.elts, node.value.elts, strict=True)
+        else:
+            yield target, node.value
+
+
+def test_proof_of_preflight_guide_explains_the_record_commands_and_reason_codes():
+    from llm_preflight.cli import _GATE_EXIT_CODES
+
+    guide = (ROOT / "docs/guides/proof-of-preflight.md").read_text()
+    table = guide.split("## Gate reason codes", 1)[1].split("\n## ", 1)[0]
+
+    assert "**Last reviewed:** 2026-10-17 · **As of:** unreleased source" in guide
+    assert HONESTY_LINE in guide
+    assert "pilot signs the preflight" in guide
+    for command in (
+        "llm-preflight attest results/run.json",
+        "llm-preflight verify results/run.preflight.json",
+        "llm-preflight gate benchmark.json --repository acme/app --records records",
+    ):
+        assert command in guide
+    rows = re.findall(r"^\| `([a-z_]+)` \| ([a-z ]+) \| (\d) \|", table, re.MULTILINE)
+    expected = _gate_reason_codes()
+    decisions = {"pass": "pass", "blocked": "blocked", "undecided": "cannot decide"}
+    assert {code for code, _, _ in rows} == set(expected)
+    assert len(rows) == len(expected)
+    for code, decision, exit_code in rows:
+        assert decision == decisions[expected[code]], code
+        assert int(exit_code) == _GATE_EXIT_CODES[expected[code]], code
+    for heading in (
+        "## What a record proves",
+        "## Same selection, same repository",
+        "## Private and public repositories",
+        "## Freshness",
+        "## When the gate blocks",
+    ):
+        assert heading in guide
+    assert "30 days" in guide and "gh attestation verify" in guide
+    for flag in ("--prompt", "--tests", "--profiles", "--env", "--migration-check"):
+        assert f"`{flag}" in guide, flag
+    assert "`--repository OWNER/NAME`" in guide and "`GITHUB_REPOSITORY`" in guide
+    assert "GitHub Enterprise Cloud" in guide
+
+
+def test_proof_of_preflight_pages_avoid_the_forbidden_claims():
+    for page in PROOF_OF_PREFLIGHT_PAGES:
+        claim = FORBIDDEN_CLAIMS.search((ROOT / page).read_text())
+        assert claim is None, (page, claim)
+
+
+def test_proof_of_preflight_guide_is_linked_from_every_entry_point():
+    readme = (ROOT / "README.md").read_text()
+    index = (ROOT / "docs/index.md").read_text()
+    feature_map = (ROOT / "docs/FEATURE_MAP.md").read_text()
+    docmap = (ROOT / "docs/DOCMAP.md").read_text()
+    choose = readme.split("## Choose your path", 1)[1].split("\n## ", 1)[0]
+
+    assert choose.count("docs/guides/proof-of-preflight.md") == 1
+    assert "proof-of-preflight" not in readme.split("## Choose your path", 1)[0]
+    assert "(guides/proof-of-preflight.md)" in index
+    assert "`attestation.py`" in feature_map and "`report --format svg`" in feature_map
+    action_row = feature_map.split("GitHub Marketplace Action", 1)[1].split("\n")[0]
+    assert "`attest`" in action_row and "`sign`" in action_row
+    assert "docs/guides/proof-of-preflight.md" in docmap
+
+
+def test_gate_and_record_workflows_pin_every_action_and_the_package():
+    ci = (ROOT / "docs/automation/ci.md").read_text()
+    action_guide = (ROOT / "docs/automation/github-action.md").read_text()
+    gate = ci.split("## Proof-of-preflight gate", 1)[1].split("\n## ", 1)[0]
+    record = action_guide.split("## Proof of preflight", 1)[1].split("\n## ", 1)[0]
+
+    for workflow in (gate, record):
+        for reference in re.findall(r"uses: (\S+)", workflow):
+            assert re.fullmatch(
+                r"feronovak/llm-preflight@v2\.22\.0|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                reference,
+            ), reference
+    assert "on:\n  pull_request:" in gate
+    assert (
+        "uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4"
+        in gate
+    )
+    assert "run-id: ${{ steps.source.outputs.run-id }}" in gate
+    assert "github-token: ${{ github.token }}" in gate
+    assert 'python -m pip install "llm-preflight==2.22.0"' in gate
+    assert "llm-preflight gate benchmark.json --records records" in gate
+    assert "gh attestation verify" in gate
+    assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
+    assert 'attest: "true"' in record and 'sign: "true"' in record
+    assert 'package-version: "2.22.0"' in record
+    assert "id-token: write" in record and "attestations: write" in record
+    assert HONESTY_LINE in record

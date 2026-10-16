@@ -109,6 +109,8 @@ for the intended workflow and boundaries.
 - **Automate an established contract.** Add the no-spend
   [GitHub Marketplace Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
   or use [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md).
+- **Gate merges on a fresh check.** Record each approved run in CI and block
+  stale or borrowed passes with [proof of preflight](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/proof-of-preflight.md).
 - **Configure a coding agent.** Start the local MCP server from a trusted
   repository with `llm-preflight-mcp --workspace "$PWD"`, then use the
   [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md)

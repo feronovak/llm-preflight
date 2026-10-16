@@ -24,7 +24,7 @@ module names.
 | `--interactive` with `--approve-to` — review a saved run, promote models only when the whole result decision passes | live | `cli.py` |
 | Capability ledger — what each model was observed to support | live | `capability_ledger.py` |
 | Catalog-to-smoke eligibility — classify each discovered model as eligible or requiring catalogue, probe, adapter, pricing, or bounds evidence; only eligible rows enter generated candidate plans | live | `eligibility.py`, `catalog.py`, `catalog_watch.py`, `cli.py` |
-| GitHub Marketplace Action — doctor, pricing, and dry-run checks without provider generation by default; adds a privacy-filtered job summary; an explicitly set input is required for a paid smoke | live | `action.yml`, `.github/workflows/action-smoke.yml` |
+| GitHub Marketplace Action — doctor, pricing, and dry-run checks without provider generation by default; adds a privacy-filtered job summary; an explicitly set input is required for a paid smoke; opt-in `attest` and `sign` inputs upload and sign a preflight record of that smoke | live | `action.yml`, `.github/workflows/action-smoke.yml` |
 | Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
 | Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
@@ -40,6 +40,8 @@ module names.
 | Expiring local approval receipts — bind a review note to one dry-run plan and its bounds, without granting paid-run authority | live | `approval.py`, `cli.py` |
 | Terminal report — separate machine decision state and warnings from the executive ranking | live | `runner.py`, `docs/reference/decision.md` |
 | `report` — render saved schema-version-1 evidence as offline HTML or a privacy-filtered Markdown summary | live | `reporting.py`, `cli.py`, `action.yml` |
+| `report --format svg` — a deterministic, self-contained preflight card of a result and, optionally, its record: one verdict band, probe counts, latency, cost when complete, retirement status, and what it does not certify | live | `reporting.py`, `cli.py` |
+| Proof of preflight — `attest` writes an in-toto test-result record of a saved result, `verify` reports its integrity and freshness separately, and `gate` decides offline whether a fresh, passing CI record matches the current contract and routes | live | `attestation.py`, `git.py`, `cli.py`, `docs/guides/proof-of-preflight.md` |
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 
 Nothing listed here is gated, partial or deprecated. Work proposed but not

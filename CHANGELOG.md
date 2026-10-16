@@ -89,12 +89,17 @@ All notable changes to this project are documented here.
   route has since retired) whose word reads the same in grayscale. Per model
   it shows the probe counts ("16 probes, all passed" or "13 of 16 passed",
   never a percentage), p95 latency, cost per 1,000 calls only when the cost
-  is complete, the bundled retirement status and the observed model when the
-  result records one. An inconclusive card adds "Why:" and "To pass:" lines,
-  a record adds its valid-until date, and every card states "Does not
+  is complete, the bundled retirement status and the result's
+  `observed_model`: one model, or every distinct one marked "responses
+  disagreed", and no row when none was reported. An inconclusive card adds
+  "Why:" and "To pass:" lines, a record adds its valid-until date and the
+  repository that recorded it (or "none" for a local record), and every card
+  states "Does not
   certify: accuracy · safety · production behaviour" above the evidence hash
   and the `llm-preflight verify` command. It refuses a record that fails
-  verification or attests a different result file.
+  verification or attests a different result file, and shows a control
+  character in a record string or file name as its backslash escape, as
+  `verify` does.
 - Marketplace Action inputs `attest` and `sign`, both off by default; with
   both off the Action behaves exactly as before. `attest: "true"`, with
   `run-paid: "true"`, writes a preflight record and its SVG card after the
@@ -105,7 +110,9 @@ All notable changes to this project are documented here.
   also signs the record with `actions/attest`, pinned by commit SHA, using the
   record's test-result v0.1 predicate; the calling job needs `id-token: write`
   and `attestations: write`. Either input without its prerequisite stops the
-  job before anything is installed.
+  job before anything is installed. The paid smoke is a default run, so its
+  record carries the default selection and this repository's identity, and
+  the documented pull-request gate passes on it without selection flags.
 
 ### Changed
 

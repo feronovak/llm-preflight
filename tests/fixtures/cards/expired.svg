@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="396" viewBox="0 0 600 396" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="418" viewBox="0 0 600 418" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <title id="card-title">LLM Preflight: EXPIRED (was PASS) · demo</title>
-<desc id="card-desc">EXPIRED (was PASS); checked 2026-10-10; Config: demo; Model: gpt-4.1-mini (openai); Observed: gpt-4.1-mini-2025-04-14; Probes: 2 probes, all passed; p95 latency: unknown; Cost: cost unknown; Retirement: retiring on 2027-01-14; Valid until: 2026-11-09, expired: older than 30 days; Does not certify: accuracy · safety · production behaviour; evidence 91898b914691; llm-preflight verify run.preflight.json</desc>
-<rect x="1" y="1" width="598" height="394" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+<desc id="card-desc">EXPIRED (was PASS); checked 2026-10-10; Config: demo; Model: gpt-4.1-mini (openai); Observed: gpt-4.1-mini-2025-04-14; Probes: 2 probes, all passed; p95 latency: unknown; Cost: cost unknown; Retirement: retiring on 2027-01-14; Valid until: 2026-11-09, expired: older than 30 days; Repository: acme/app on https://github.com; Does not certify: accuracy · safety · production behaviour; evidence 91898b914691; llm-preflight verify run.preflight.json</desc>
+<rect x="1" y="1" width="598" height="416" fill="#ffffff" stroke="#000000" stroke-width="2"/>
 <text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
 <text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-10-10</text>
 <rect x="2" y="46" width="596" height="56" fill="#6e7781"/>
@@ -25,7 +25,9 @@
 <line x1="20" y1="282" x2="580" y2="282" stroke="#000000" stroke-width="1"/>
 <text x="20" y="308" font-size="13" font-weight="700">Valid until</text>
 <text x="132" y="308" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">2026-11-09, expired: older than 30 days</text>
-<text x="20" y="336" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
-<text x="20" y="356" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 91898b914691</text>
-<text x="20" y="376" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">llm-preflight verify run.preflight.json</text>
+<text x="20" y="330" font-size="13" font-weight="700">Repository</text>
+<text x="132" y="330" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">acme/app on https://github.com</text>
+<text x="20" y="358" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
+<text x="20" y="378" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 91898b914691</text>
+<text x="20" y="398" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">llm-preflight verify run.preflight.json</text>
 </svg>

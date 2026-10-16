@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -220,22 +221,104 @@ def test_action_pins_the_upload_and_signing_actions_and_the_predicate_type():
     assert "id-token: write" in sign_input and "attestations: write" in sign_input
 
 
-def _run_action_script(tmp_path, script, **variables):
-    """Run an action script against the mock starter, with llm-preflight from source."""
+# A GitHub Actions run of the record workflow in acme/app.
+ACTIONS_RUN = {
+    "GITHUB_REPOSITORY": "acme/app",
+    "GITHUB_WORKFLOW": "LLM preflight record",
+    "GITHUB_RUN_ID": "4425592351",
+    "GITHUB_RUN_ATTEMPT": "1",
+    "GITHUB_SHA": "d20ace7968ba43c0219f62d71334c1095bab1602",
+    "GITHUB_SERVER_URL": "https://github.com",
+}
+# A priced custom route outside the retirement snapshot, so its pass does not
+# depend on the day the suite runs.
+LIVE_CONFIG = {
+    "name": "support-routing",
+    "prompt": "Reply with ok.",
+    "validation": {"exact": "ok"},
+    "models": [
+        {
+            "name": "acme",
+            "provider": "openai_compatible",
+            "base_url": "https://llm.example.com/v1",
+            "api_key_env": "ACME_API_KEY",
+            "model": "acme-chat-1",
+            "input_cost_per_million": 1,
+            "output_cost_per_million": 2,
+        }
+    ],
+    "repetitions": 1,
+    "warmups": 0,
+    "save_responses": False,
+}
+# A deterministic OpenAI-compatible stream in place of the network, patched
+# where tests/test_clients.py patches it; no request leaves the machine.
+FAKE_TRANSPORT = """\
+import json
+
+import llm_preflight.client
+import llm_preflight.security
+
+EVENTS = [
+    {"model": "acme-chat-1-2026-09", "choices": [{"delta": {"content": "ok"}}]},
+    {
+        "model": "acme-chat-1-2026-09",
+        "choices": [],
+        "usage": {"prompt_tokens": 9, "completion_tokens": 1},
+    },
+]
+
+
+class Stream:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return None
+
+    def __iter__(self):
+        lines = [f"data: {json.dumps(event)}\\n".encode() for event in EVENTS]
+        return iter([*lines, b"data: [DONE]\\n"])
+
+
+llm_preflight.security.socket.getaddrinfo = lambda *args, **kwargs: [
+    (2, 1, 6, "", ("8.8.8.8", 443))
+]
+llm_preflight.client.open_public_url = lambda request, timeout: Stream()
+"""
+
+
+def _run_action_script(tmp_path, script, *, config=None, transport=False, **variables):
+    """Run an action script with llm-preflight from source, against the mock
+    starter or `config`; `transport` answers provider requests offline."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     command = bin_dir / "llm-preflight"
-    command.write_text(
-        f'#!/bin/bash\nPYTHONPATH="{ROOT}" exec "{sys.executable}" -m llm_preflight "$@"\n'
-    )
+    if transport:
+        (tmp_path / "transport").mkdir(exist_ok=True)
+        (tmp_path / "transport/fake_transport.py").write_text(FAKE_TRANSPORT)
+        command.write_text(
+            f'#!/bin/bash\nPYTHONPATH="{ROOT}:{tmp_path / "transport"}" exec '
+            f'"{sys.executable}" -c "import fake_transport, runpy; '
+            "runpy.run_module('llm_preflight', run_name='__main__', alter_sys=True)\" "
+            '"$@"\n'
+        )
+    else:
+        command.write_text(
+            f'#!/bin/bash\nPYTHONPATH="{ROOT}" exec "{sys.executable}" '
+            '-m llm_preflight "$@"\n'
+        )
     command.chmod(0o755)
     python = bin_dir / "python"
     if not python.exists():
         python.symlink_to(sys.executable)
     workspace = tmp_path / "workspace"
     workspace.mkdir(exist_ok=True)
-    config = workspace / "benchmark.json"
-    config.write_text((ROOT / "examples/starter/mock-benchmark.json").read_text())
+    (workspace / "benchmark.json").write_text(
+        json.dumps(config)
+        if config is not None
+        else (ROOT / "examples/starter/mock-benchmark.json").read_text()
+    )
     runner_temp = tmp_path / "runner"
     runner_temp.mkdir(exist_ok=True)
     files = {name: tmp_path / name for name in ("summary.md", "output.txt")}
@@ -345,3 +428,110 @@ def test_action_refuses_sign_without_attest_and_attest_without_a_paid_run(tmp_pa
     assert code == 1 and 'run-paid: "true"' in err
     code, err = check(RUN_PAID="true", ATTEST="false")
     assert code == 1 and 'attest: "true"' in err
+
+
+def _documented_gate(tmp_path, **variables):
+    """Run the Gate step of the documented pull-request workflow in the
+    workspace, on the records the download step left in `records`."""
+    ci = (ROOT / "docs/automation/ci.md").read_text()
+    workflow = ci.split("## Proof-of-preflight gate", 1)[1].split("```yaml\n", 1)[1]
+    step = workflow.split("```", 1)[0].split("      - name: Gate\n", 1)[1]
+    run = step.split("        run: |\n", 1)[1].splitlines()
+    script = "\n".join(
+        line[10:] for line in run if line.startswith(" " * 10) or not line
+    )
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("GITHUB_", "RUNNER_"))
+    }
+    return subprocess.run(
+        ["bash", "-c", script],
+        cwd=tmp_path / "workspace",
+        capture_output=True,
+        text=True,
+        env={
+            **environment,
+            "PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}",
+            **variables,
+        },
+        timeout=60,
+        check=False,
+    )
+
+
+def _download_records(outputs, tmp_path):
+    """What the documented download step leaves: the artifact in `records`."""
+    records = tmp_path / "workspace/records"
+    shutil.rmtree(records, ignore_errors=True)
+    shutil.copytree(outputs["record-dir"], records)
+
+
+def test_documented_gate_passes_on_the_record_the_action_wrote_and_only_then(
+    tmp_path,
+):
+    action = (ROOT / "action.yml").read_text()
+    script = _action_script(action, "Run explicitly authorized paid smoke")
+
+    result, outputs, _ = _run_action_script(
+        tmp_path,
+        script,
+        config=LIVE_CONFIG,
+        transport=True,
+        ATTEST="true",
+        SIGN="false",
+        ACME_API_KEY="sk-synthetic-secret",
+        **ACTIONS_RUN,
+    )
+
+    assert result.returncode == 0, result.stderr
+    record = json.loads(Path(outputs["record"]).read_text())
+    evidence = next(
+        item["annotations"]
+        for item in record["predicate"]["configuration"]
+        if item["name"] == "llm-preflight/evidence"
+    )
+    assert record["predicate"]["result"] == "PASSED"
+    assert evidence["selection"] == {
+        "prompt": None,
+        "tests": None,
+        "environment": None,
+        "migrationCheck": False,
+    }
+    _download_records(outputs, tmp_path)
+
+    gate = _documented_gate(tmp_path, **ACTIONS_RUN)
+
+    assert gate.returncode == 0, gate.stdout + gate.stderr
+    assert gate.stdout.startswith("Gate: pass")
+    assert "answered as acme-chat-1-2026-09" in gate.stdout
+
+    other = _documented_gate(tmp_path, **{**ACTIONS_RUN, "GITHUB_REPOSITORY": "a/b"})
+    assert other.returncode == 1
+    assert "comes from acme/app on https://github.com, not a/b" in other.stdout
+
+    config = tmp_path / "workspace/benchmark.json"
+    config.write_text(json.dumps({**LIVE_CONFIG, "validation": {"exact": "ok."}}))
+    changed = _documented_gate(tmp_path, **ACTIONS_RUN)
+
+    assert changed.returncode == 1
+    assert changed.stdout.startswith("Gate: blocked")
+    assert "different contract" in changed.stdout
+
+
+def test_documented_gate_decides_on_the_mock_record_the_action_wrote(tmp_path):
+    action = (ROOT / "action.yml").read_text()
+    script = _action_script(action, "Run explicitly authorized paid smoke")
+
+    _, outputs, _ = _run_action_script(
+        tmp_path, script, ATTEST="true", SIGN="false", **ACTIONS_RUN
+    )
+    _download_records(outputs, tmp_path)
+
+    gate = _documented_gate(tmp_path, **ACTIONS_RUN)
+
+    # The record matches the selection, contract, routes and repository, so
+    # the gate decides on it; a mock run is inconclusive and never passes.
+    assert gate.returncode == 1, gate.stdout + gate.stderr
+    assert "The latest record for this contract (run 4425592351" in gate.stdout
+    assert "is WARNED" in gate.stdout

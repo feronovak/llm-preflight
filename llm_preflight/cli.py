@@ -2202,14 +2202,17 @@ def _card_record(result_path: Path, record_path: Path, today: date) -> dict[str,
     """The verifier's report for an intact record of exactly this result.
 
     A card never shows a record that fails verification or attests other bytes.
+    A record is untrusted input, so a refusal escapes what it quotes from it.
     """
     record = load_record(record_path)
     report = verify_record(record, record_path, today)
     if not report["integrity"]["ok"]:
         raise ValueError(
-            f"{record_path} fails its integrity check: "
-            f"{report['integrity']['problems'][0]}; run "
-            f"{_display_command()} verify {shlex.quote(str(record_path))}"
+            printable(
+                f"{record_path} fails its integrity check: "
+                f"{report['integrity']['problems'][0]}; run "
+                f"{_display_command()} verify {shlex.quote(str(record_path))}"
+            )
         )
     attested = next(
         subject["digest"]["sha256"]
@@ -2218,7 +2221,10 @@ def _card_record(result_path: Path, record_path: Path, today: date) -> dict[str,
     )
     if hashlib.sha256(result_path.read_bytes()).hexdigest() != attested:
         raise ValueError(
-            f"{record_path} does not attest {result_path}: its result digest differs"
+            printable(
+                f"{record_path} does not attest {result_path}: "
+                "its result digest differs"
+            )
         )
     return report
 

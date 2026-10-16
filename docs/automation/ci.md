@@ -138,6 +138,91 @@ against fork-controlled code. The example cancels superseded runs for the same
 pull request. Do not copy that concurrency setting into a paid job unless the
 provider requests are independently idempotent and cancellation-safe.
 
+## Proof-of-preflight gate
+
+From 2.22.0, a pull request can be blocked unless a fresh, passing CI record
+matches its contract and routes. The
+[record workflow](github-action.md#proof-of-preflight) attests each approved
+paid smoke and uploads the record as the `llm-preflight-record` artifact. This
+workflow downloads the newest record, from the pull request's branch if a
+maintainer ran the record workflow there and from `main` otherwise, then runs
+the gate offline:
+
+```yaml
+name: LLM preflight gate
+on:
+  pull_request:
+permissions:
+  contents: read
+  actions: read        # list runs and download their artifacts
+  attestations: read   # the optional signature check
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "llm-preflight==2.22.0"
+      - name: Find the newest record run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          for branch in "$HEAD_REF" main; do
+            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow llm-preflight-record.yml --branch "$branch" \
+              --status completed --limit 1 --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            if [ -n "$run_id" ]; then
+              echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
+      - name: Download the record
+        if: steps.source.outputs.run-id != ''
+        continue-on-error: true  # a run without a record leaves the gate no_record
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: llm-preflight-record
+          path: records
+          run-id: ${{ steps.source.outputs.run-id }}
+          github-token: ${{ github.token }}
+      # Optional, for signed records (public repositories, or GitHub Enterprise Cloud).
+      - name: Verify the record's signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for record in records/*.preflight.json; do
+            [ -e "$record" ] || continue
+            gh attestation verify "$record" --repo "$GITHUB_REPOSITORY" \
+              --predicate-type https://in-toto.io/attestation/test-result/v0.1
+          done
+      - name: Gate
+        # The record workflow runs a default smoke, so no selection flags;
+        # GITHUB_REPOSITORY names the repository whose records count.
+        run: |
+          mkdir -p records
+          llm-preflight gate benchmark.json --records records
+```
+
+The gate step fails the check on exit 1 (blocked) and exit 3 (the gate cannot
+decide); its output starts with the reason, then numbered next steps. The gate
+fingerprints `benchmark.json` from the pull request's checkout, so a record
+for the previous contract blocks with `contract_changed`. It counts only
+records from `GITHUB_REPOSITORY`, which Actions sets in every job; a record
+from another repository blocks with `foreign_record`. Give the gate the same
+selection flags as the run that wrote the record (`--prompt`, `--tests`,
+`--env`, `--migration-check`): the Action runs a default smoke, so this gate
+takes none, and a workflow that runs `llm-preflight benchmark.json --smoke
+--env staging` and attests its result needs `--env staging` here too,
+or the gate blocks with `selection_changed`. Remove the signature
+step on a private repository without GitHub Enterprise Cloud. The
+[proof-of-preflight guide](../guides/proof-of-preflight.md) lists every
+reason code and what to do when the gate blocks.
+
 ## Release documentation checklist
 
 For every release, update the package version, the README's current

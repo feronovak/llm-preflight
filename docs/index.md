@@ -75,6 +75,9 @@ Results stay local unless you decide to attach or publish them.
   fork-safe mock workflow that uploads redacted evidence.
 - [Marketplace Action](automation/github-action.md) — run no-spend doctor,
   pricing, and dry-run checks in a repository workflow.
+- [Proof of preflight](guides/proof-of-preflight.md) — attest an approved run
+  in CI, verify the record, and block merges without a fresh pass for the
+  current contract.
 - [Coding agents](automation/coding-agents.md) — a safe command sequence and
   decision rules for agents.
 - [Git-aware change plans](automation/change-plans.md) — inspect local changes,

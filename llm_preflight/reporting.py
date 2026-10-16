@@ -11,6 +11,8 @@ from datetime import date, datetime
 from pathlib import PurePath
 from typing import Any
 
+from .attestation import printable
+from .client import observed_model
 from .decision import build_decision, legacy_cost_evidence
 from .retirements import retirement_verdict
 
@@ -595,6 +597,8 @@ def render_card_svg(
     rows.append(("rule", "", ""))
     if freshness is not None:
         rows.append(("row", "Valid until", _card_valid_until(freshness)))
+    if record is not None and (repository := _card_repository(record)):
+        rows.append(("row", "Repository", repository))
     if state == "inconclusive":
         warnings = decision["blocking_warnings"]
         steps = dict.fromkeys(_card_remediation(text) for text in warnings)
@@ -643,9 +647,19 @@ def _card_model_rows(
             f"{_identifier(model.get('model'))} ({_identifier(provider)})",
         )
     ]
-    observed = model.get("observed_model")
-    if isinstance(observed, str) and observed:
-        rows.append(("row", "Observed", _identifier(observed)))
+    # Normalised as attest records it: a disagreeing set is shown as a set,
+    # and no usable value means no row, never the configured model.
+    observed = observed_model([model.get("observed_model")])
+    if isinstance(observed, list):
+        rows.append(
+            (
+                "row",
+                "Observed",
+                f"{_card_text(', '.join(observed), 240)} (responses disagreed)",
+            )
+        )
+    elif observed is not None:
+        rows.append(("row", "Observed", _card_text(observed, 240)))
     latency = summary.get("latency_seconds")
     p95 = _number(latency.get("p95")) if isinstance(latency, dict) else None
     cost = _number(summary.get("estimated_cost_usd"))
@@ -736,6 +750,15 @@ def _card_valid_until(freshness: Mapping[str, Any]) -> str:
     return f"{valid_until}, expired: older than {freshness['max_age_days']} days"
 
 
+def _card_repository(record: Mapping[str, Any]) -> str | None:
+    """Where the record was made, worded as `verify` prints it."""
+    if record["origin"] == "local":
+        return "none — a local record, which the gate never accepts"
+    if record["repository"] is None:
+        return None
+    return _card_text(f"{record['repository']} on {record['server_url']}", 240)
+
+
 def _card_remediation(warning: str) -> str:
     return next(
         (step for prefix, step in _CARD_REMEDIATIONS if warning.startswith(prefix)),
@@ -754,10 +777,11 @@ def _card_date(value: Any) -> str:
 
 def _card_text(value: Any, limit: int = _CARD_VALUE_CHARS) -> str:
     """Printable text only: XML forbids control characters even when escaped,
-    and a bidirectional override could reorder what the card claims."""
+    and a bidirectional override could reorder what the card claims. Each one
+    shows as its backslash escape, as `verify` and `gate` print it."""
     if not isinstance(value, str) or not value:
         return "unknown"
-    text = "".join(char if char.isprintable() else "?" for char in value)
+    text = printable(value)
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 

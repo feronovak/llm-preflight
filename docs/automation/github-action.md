@@ -57,3 +57,68 @@ Read the [North
 star](../NORTH_STAR.md), [agent decision contract](../reference/decision.md),
 and [pricing and safety guide](../guides/pricing-and-safety.md) before using it
 for a live integration change.
+
+## Proof of preflight
+
+From 2.22.0, two more inputs, both off by default, turn the paid smoke into a
+record that a merge gate can check. With both off the Action behaves as
+described above.
+
+- `attest: "true"` needs `run-paid: "true"`. After the paid smoke it writes a
+  [preflight record](../guides/proof-of-preflight.md) of the result and its
+  SVG card, uploads both as the `llm-preflight-record` artifact, and links the
+  artifact from the job summary. The result, which holds the prompts, is not
+  uploaded. A failed or inconclusive run is recorded as such, and the step
+  keeps the run's exit code. The paid smoke is a default run, so the record's
+  selection is the default one and a gate for it takes no selection flags;
+  the record names this repository, which is the only one whose gate counts
+  it. Use `package-version` 2.22.0 or later: an older package's result
+  records no selection, and the gate blocks its record as
+  `selection_changed`.
+- `sign: "true"` needs `attest: "true"`. It also signs the record with
+  `actions/attest`, using the record's test-result predicate, so
+  `gh attestation verify` can check that this repository's workflow produced
+  it. The job needs `id-token: write` and `attestations: write`. Signing is
+  available for public repositories, and for private or internal ones on
+  GitHub Enterprise Cloud.
+
+The Action pins `actions/upload-artifact` and `actions/attest` to commit
+SHAs. This workflow records the contract on `main` and, when a maintainer
+starts it, on a pull request's branch. The protected environment's required
+reviewers approve each paid run:
+
+```yaml
+name: LLM preflight record
+on:
+  push:
+    branches: [main]
+    paths: [benchmark.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write      # sign: "true" only
+  attestations: write  # sign: "true" only
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    environment: llm-preflight-paid  # required reviewers approve the spend
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: feronovak/llm-preflight@v2.22.0
+        with:
+          config: benchmark.json
+          package-version: "2.22.0"
+          run-paid: "true"
+          attest: "true"
+          sign: "true"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+Save it as `.github/workflows/llm-preflight-record.yml`; the
+[gate workflow](ci.md#proof-of-preflight-gate) looks for that file name. List
+every file that shapes the contract under `paths`, such as prompt or schema
+files, or drop the filter. Drop `sign` and both write permissions on a private
+repository without GitHub Enterprise Cloud.
+
+It doesn't certify production behaviour. It proves the check was done.

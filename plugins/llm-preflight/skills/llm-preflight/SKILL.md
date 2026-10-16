@@ -30,8 +30,15 @@ create it.
    `confirm_paid_run: true`. Preserve the returned structured `decision` and
    its blocking warnings.
 
-Source audits, mock runs, validation, planning, and baseline diffs do not
-contact providers.
+To check proof of preflight, use `verify` on a record CI attested, or `gate`
+with the config, the downloaded records and the selection CI runs. Report the
+gate's `decision`, `why` and next steps verbatim. A gate `pass` is not
+approval: it shows that a fresh passing CI record matches the contract, never
+that a model, a budget, a merge or paid work is approved. Never attest a
+record yourself; that stays a CI step.
+
+Source audits, mock runs, validation, planning, baseline diffs, `verify` and
+`gate` do not contact providers.
 Do not approve a model, raise a budget, weaken the contract, or treat a pass as
 production approval. See `docs/automation/mcp.md` and
 `docs/reference/decision.md` in the project for the complete contract.

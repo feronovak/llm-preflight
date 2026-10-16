@@ -16,6 +16,18 @@ All notable changes to this project are documented here.
   workspace boundary, symlinks included. It is read-only,
   idempotent and closed-world: no credentials, no provider requests. The
   server instructions and the safe-workflow resource name it first.
+- MCP tools `verify` and `gate`, bringing the server to seven tools. They
+  return the same object as `verify --json` and `gate --json`, with
+  secret-like strings redacted, and lead their text content with the CLI's
+  first line; `verify` text now starts with
+  `Verify: integrity …; freshness ….`. `gate` takes `records`, an optional
+  `config` (default `benchmark.json`), `max_age_days` and the CI selection
+  (`prompt`, `tests`, `environment`, `migration_check`). Every path, and every
+  record or subject file found through it, must resolve inside the workspace.
+  Both are read-only, idempotent and closed-world, and `attest` stays a CI
+  step. The tool descriptions, server instructions, safe-workflow resource
+  and plugin skill state that a gate `pass` is not approval of a model, a
+  budget, a merge or paid work.
 - A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
   Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
   checks. Native live results still require separate credentials and execution.

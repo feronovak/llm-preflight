@@ -129,6 +129,8 @@ def test_standard_mcp_clients_negotiate_any_initialize_version_and_discover_tool
         "dry_run_plan",
         "run_preflight",
         "diff_baseline",
+        "verify",
+        "gate",
     ]
     assert "resultType" not in listed["result"]
     assert plan["result"]["isError"] is False
@@ -324,6 +326,8 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
         "dry_run_plan",
         "run_preflight",
         "diff_baseline",
+        "verify",
+        "gate",
     ]
     assert plan["result"]["isError"] is False
     assert plan["result"]["structuredContent"]["pricing_coverage"]["summary"] == {
@@ -1193,3 +1197,307 @@ def test_audit_source_redacts_secret_like_paths_that_the_cli_json_keeps(
         (Path(__file__).parent.parent / "CHANGELOG.md").read_text(),
     ):
         assert "with secret-like strings redacted" in " ".join(text.split())
+
+
+# Proof-of-preflight tools
+
+PROOF_GITHUB = {
+    "GITHUB_REPOSITORY": "acme/app",
+    "GITHUB_WORKFLOW": "preflight",
+    "GITHUB_RUN_ID": "4425592351",
+    "GITHUB_RUN_ATTEMPT": "1",
+    "GITHUB_SHA": "d20ace7968ba43c0219f62d71334c1095bab1602",
+    "GITHUB_SERVER_URL": "https://github.com",
+}
+PROOF_CONFIG = {
+    "name": "proof",
+    "prompt": "Reply with ok.",
+    "validation": {"exact": "ok"},
+    "prompts": [{"name": "json", "prompt": "Return JSON.", "validation": {}}],
+    "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+    "repetitions": 1,
+    "warmups": 0,
+}
+
+
+def _cli(monkeypatch, capsys, *arguments):
+    from llm_preflight import cli
+
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *map(str, arguments)])
+    try:
+        cli.main()
+    except SystemExit as exc:
+        code = exc.code
+    else:
+        code = 0
+    return code, capsys.readouterr().out
+
+
+@pytest.fixture
+def proof_workspace(tmp_path, monkeypatch, capsys):
+    """A workspace with a config and the CI record of a mock run of it."""
+    from llm_preflight import cli
+
+    for name in PROOF_GITHUB:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "benchmark.json").write_text(json.dumps(PROOF_CONFIG))
+    code, _ = _cli(
+        monkeypatch,
+        capsys,
+        "benchmark.json",
+        "--prompt",
+        "json",
+        "--output-dir",
+        "results",
+    )
+    assert code == 3
+    (result,) = (tmp_path / "results").glob("*.json")
+    # The verifier's clock is the run's own date, so freshness never depends on
+    # when the suite runs.
+    ran = date.fromisoformat(json.loads(result.read_text())["timestamp"][:10])
+    monkeypatch.setattr(cli, "today_utc", lambda: ran)
+    monkeypatch.setattr(mcp, "today_utc", lambda: ran)
+    with monkeypatch.context() as scoped:
+        for name, value in PROOF_GITHUB.items():
+            scoped.setenv(name, value)
+        assert _cli(monkeypatch, capsys, "attest", result)[0] == 0
+    return tmp_path
+
+
+def _tool(workspace, name, arguments, meta=None):
+    params = {"name": name, "arguments": arguments}
+    if meta is not None:
+        params["_meta"] = meta
+    return mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": params},
+        workspace,
+    )
+
+
+def _record_name(workspace):
+    (record,) = (workspace / "results").glob("*.preflight.json")
+    return record.relative_to(workspace).as_posix()
+
+
+@pytest.mark.parametrize("meta", [None, META], ids=["standard", "2026"])
+def test_verify_returns_the_cli_json_and_first_text_line(
+    proof_workspace, monkeypatch, capsys, meta
+):
+    record = _record_name(proof_workspace)
+    _, cli_json = _cli(
+        monkeypatch, capsys, "verify", proof_workspace / record, "--json"
+    )
+    _, cli_text = _cli(monkeypatch, capsys, "verify", proof_workspace / record)
+
+    result = _tool(proof_workspace, "verify", {"record": record}, meta)["result"]
+
+    assert result["isError"] is False
+    assert result["structuredContent"] == json.loads(cli_json)
+    assert result["content"][0]["text"] == cli_text.splitlines()[0]
+    assert result["content"][0]["text"] == "Verify: integrity intact; freshness fresh."
+    assert json.loads(result["content"][1]["text"]) == result["structuredContent"]
+    assert ("resultType" in result) is (meta is not None)
+
+
+@pytest.mark.parametrize("meta", [None, META], ids=["standard", "2026"])
+def test_gate_returns_the_cli_json_and_first_text_line(
+    proof_workspace, monkeypatch, capsys, meta
+):
+    flags = ("--prompt", "json", "--max-age-days", "10")
+    config = proof_workspace / "benchmark.json"
+    records = proof_workspace / "results"
+    _, cli_json = _cli(
+        monkeypatch, capsys, "gate", config, "--records", records, *flags, "--json"
+    )
+    _, cli_text = _cli(
+        monkeypatch, capsys, "gate", config, "--records", records, *flags
+    )
+
+    result = _tool(
+        proof_workspace,
+        "gate",
+        {"records": ["results"], "prompt": "json", "max_age_days": 10},
+        meta,
+    )["result"]
+
+    content = result["structuredContent"]
+    assert result["isError"] is False
+    assert content == json.loads(cli_json)
+    assert content["decision"] == "blocked"
+    assert content["reason_code"] == "inconclusive_record"
+    assert content["selection"]["prompt"] == "json"
+    assert result["content"][0]["text"] == cli_text.splitlines()[0]
+    assert result["content"][0]["text"].startswith("Gate: blocked")
+    assert ("resultType" in result) is (meta is not None)
+
+
+def test_gate_requires_the_selection_the_agent_names(proof_workspace):
+    content = _tool(proof_workspace, "gate", {"records": ["results"]})["result"][
+        "structuredContent"
+    ]
+
+    assert content["reason_code"] == "selection_changed"
+    assert "this gate requires a default run" in content["why"]
+
+
+def test_gate_defaults_to_the_workspace_benchmark_json(proof_workspace):
+    content = _tool(proof_workspace, "gate", {"records": ["results"]})["result"][
+        "structuredContent"
+    ]
+
+    assert content["config"] == str(proof_workspace / "benchmark.json")
+
+
+@pytest.mark.parametrize(
+    ("name", "arguments"),
+    [
+        ("verify", {"record": "../outside.preflight.json"}),
+        ("verify", {"record": "/etc/hostname"}),
+        ("verify", {"record": "linked/outside.preflight.json"}),
+        ("gate", {"records": ["../outside"]}),
+        ("gate", {"records": ["results", "/tmp"]}),
+        ("gate", {"records": ["linked"]}),
+        ("gate", {"config": "../benchmark.json", "records": ["results"]}),
+    ],
+)
+def test_proof_tools_never_read_paths_outside_the_workspace(
+    tmp_path, monkeypatch, name, arguments
+):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "outside.preflight.json").write_text('{"secret": "gpt-gone"}')
+    (workspace / "linked").symlink_to(outside, target_is_directory=True)
+    (workspace / "results").mkdir()
+
+    response = _tool(workspace, name, arguments)
+
+    result = response["result"]
+    assert result["isError"] is True
+    assert result["structuredContent"]["error"] in {
+        "path must stay within the MCP workspace",
+        "paths must be relative to the MCP workspace",
+    }
+    assert "gpt-gone" not in json.dumps(response)
+
+
+def test_gate_refuses_a_record_file_linked_from_outside_the_workspace(
+    proof_workspace, tmp_path_factory
+):
+    outside = tmp_path_factory.mktemp("outside") / "stolen.preflight.json"
+    outside.write_text('{"secret": "gpt-gone"}')
+    (proof_workspace / "results" / "linked.preflight.json").symlink_to(outside)
+
+    response = _tool(proof_workspace, "gate", {"records": ["results"]})
+
+    content = response["result"]["structuredContent"]
+    assert content["decision"] == "undecided"
+    assert content["reason_code"] == "record_error"
+    assert "resolves outside the MCP workspace" in content["why"]
+    assert "gpt-gone" not in json.dumps(response)
+
+
+def test_verify_never_hashes_a_subject_linked_from_outside_the_workspace(
+    proof_workspace, tmp_path_factory
+):
+    record = _record_name(proof_workspace)
+    subject = json.loads((proof_workspace / record).read_text())["subject"][0]["name"]
+    outside = tmp_path_factory.mktemp("outside") / "benchmark.json"
+    outside.write_text(json.dumps(PROOF_CONFIG))
+    (proof_workspace / subject).unlink()
+    (proof_workspace / subject).symlink_to(outside)
+
+    content = _tool(proof_workspace, "verify", {"record": record})["result"][
+        "structuredContent"
+    ]
+
+    assert content["integrity"]["subjects"][0]["state"] == "absent"
+
+
+def test_proof_tools_open_no_network_connection(proof_workspace, monkeypatch):
+    import socket
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a proof tool opened a network connection")
+
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+
+    verify = _tool(proof_workspace, "verify", {"record": _record_name(proof_workspace)})
+    gate = _tool(proof_workspace, "gate", {"records": ["results"], "prompt": "json"})
+
+    assert verify["result"]["isError"] is False
+    assert gate["result"]["structuredContent"]["network_accessed"] is False
+
+
+@pytest.mark.parametrize(
+    ("name", "arguments"),
+    [
+        ("verify", {}),
+        ("verify", {"record": ""}),
+        ("verify", {"record": "a", "max_age_days": 0}),
+        ("verify", {"record": "a", "max_age_days": 3651}),
+        ("verify", {"record": "a", "max_age_days": True}),
+        ("verify", {"record": "a", "max_age_days": "30"}),
+        ("verify", {"record": "a", "json": True}),
+        ("gate", {}),
+        ("gate", {"records": []}),
+        ("gate", {"records": "results"}),
+        ("gate", {"records": [""]}),
+        ("gate", {"records": [7]}),
+        ("gate", {"records": ["results"], "migration_check": "yes"}),
+        ("gate", {"records": ["results"], "prompt": ""}),
+        ("gate", {"records": ["results"], "profiles": "json"}),
+    ],
+)
+def test_proof_tools_reject_arguments_outside_their_schema(tmp_path, name, arguments):
+    assert _tool(tmp_path, name, arguments)["error"]["code"] == -32602
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"records": ["results"], "prompt": "json", "tests": "json"},
+        {"records": ["results"], "migration_check": True, "tests": "json"},
+        {"records": ["results"], "migration_check": True, "prompt": "json"},
+    ],
+)
+def test_gate_refuses_the_selections_a_run_refuses(proof_workspace, arguments):
+    result = _tool(proof_workspace, "gate", arguments)["result"]
+
+    assert result["isError"] is True
+    assert "cannot be combined" in result["structuredContent"]["error"]
+
+
+def test_proof_tools_are_read_only_idempotent_and_closed_world(tmp_path):
+    listed = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, tmp_path
+    )
+    by_name = {tool["name"]: tool for tool in listed["result"]["tools"]}
+
+    for name in ("verify", "gate"):
+        assert by_name[name]["annotations"] == by_name["audit_source"]["annotations"]
+        assert "not approval" in by_name[name]["description"]
+    assert by_name["verify"]["inputSchema"]["required"] == ["record"]
+    assert by_name["gate"]["inputSchema"]["required"] == ["records"]
+
+
+def test_agent_guidance_never_presents_a_gate_pass_as_approval(tmp_path):
+    root = Path(__file__).parent.parent
+    skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    guide = (root / "docs/automation/mcp.md").read_text()
+    readme = (root / "README.md").read_text()
+    instructions = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )["result"]["instructions"]
+
+    for text in (mcp.SAFE_WORKFLOW, skill, guide, instructions):
+        flat = " ".join(text.split()).casefold()
+        assert "a gate `pass` is not approval" in flat
+    assert "| `verify` |" in guide
+    assert "| `gate` |" in guide
+    assert "seven tools" in " ".join(guide.split())
+    assert "seven tools" in " ".join(readme.split())

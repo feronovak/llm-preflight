@@ -2242,7 +2242,11 @@ def _format_verify(report: dict[str, Any], exit_code: int) -> str:
     integrity = report["integrity"]
     freshness = report["freshness"]
     result = report["result"] or "unknown result"
-    lines = [f"Record:    {report['record']} ({result})"]
+    state = "intact" if integrity["ok"] else "broken"
+    lines = [
+        f"Verify: integrity {state}; freshness {freshness['state']}.",
+        f"Record:    {report['record']} ({result})",
+    ]
     lines.append(f"Integrity: {'intact' if integrity['ok'] else 'broken'}")
     lines.extend(f"           - {problem}" for problem in integrity["problems"])
     subject_states = {

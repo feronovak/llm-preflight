@@ -11,7 +11,14 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .cli import _format_audit_source, dry_run_plan
+from .attestation import DEFAULT_MAX_AGE_DAYS, gate, load_record, verify_record
+from .cli import (
+    _format_audit_source,
+    _format_gate,
+    _format_verify,
+    _verify_exit_code,
+    dry_run_plan,
+)
 from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_model_aliases,
@@ -21,12 +28,18 @@ from .features import (
 )
 from .redaction import redact_secrets
 from .retirements import today_utc
-from .runner import load_config, run_benchmark, validate_config_validations
+from .runner import (
+    canonical_test_selector,
+    load_config,
+    run_benchmark,
+    validate_config_validations,
+)
 from .source_audit import audit_source
 
 PROTOCOL_VERSION = "2026-07-28"
 STANDARD_PROTOCOL_VERSION = "2025-06-18"
 SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
+_MAX_AGE_DAYS = 3650
 SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
 In a repository with no benchmark config, call `audit_source` first. It
@@ -62,7 +75,17 @@ providers. A live run does not approve a model, increase a budget, or replace
 production approval.
 Use `llm-preflight report` on saved JSON for offline HTML or Markdown export;
 CI setup and report export are CLI workflows, not MCP tools.
+
+To check proof of preflight, call `verify` on a record CI attested and report
+its integrity and freshness separately, or call `gate` with the config, the
+downloaded records and the selection CI runs (`prompt`, `tests`,
+`environment`, `migration_check`). Both read only workspace files and never
+contact a provider. Report the gate's `decision`, `why` and each `next` step.
+A gate `pass` is not approval: it shows that a fresh passing record matches
+this contract, never that a model, a budget, a merge or paid work is
+approved. Never attest a record; that stays a CI step.
 """
+_SELECTION_ARGUMENTS = {"prompt", "tests", "environment", "migration_check"}
 
 
 class ProtocolError(ValueError):
@@ -121,6 +144,8 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         "dry_run_plan": {"config"},
         "run_preflight": {"config", "env_file", "confirm_paid_run"},
         "diff_baseline": {"baseline", "current"},
+        "verify": {"record", "max_age_days"},
+        "gate": {"config", "records", "max_age_days", *_SELECTION_ARGUMENTS},
     }
     required: dict[str, set[str]] = {
         "audit_source": set(),
@@ -128,6 +153,8 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         "dry_run_plan": {"config"},
         "run_preflight": {"config"},
         "diff_baseline": {"baseline", "current"},
+        "verify": {"record"},
+        "gate": {"records"},
     }
     if name not in allowed:
         raise ProtocolError(-32602, f"unknown tool: {name}")
@@ -138,9 +165,36 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
     if any(
         not isinstance(arguments[key], str) or not arguments[key]
         for key in arguments
-        if key in {"path", "config", "env_file", "baseline", "current"}
+        if key
+        in {
+            "path",
+            "config",
+            "env_file",
+            "baseline",
+            "current",
+            "record",
+            "prompt",
+            "tests",
+            "environment",
+        }
     ):
         raise ProtocolError(-32602, "path arguments must be non-empty strings")
+    if "records" in arguments and (
+        not isinstance(arguments["records"], list)
+        or not arguments["records"]
+        or not all(isinstance(item, str) and item for item in arguments["records"])
+    ):
+        raise ProtocolError(-32602, "records must be a non-empty list of paths")
+    if "max_age_days" in arguments and (
+        not isinstance(arguments["max_age_days"], int)
+        or isinstance(arguments["max_age_days"], bool)
+        or not 1 <= arguments["max_age_days"] <= _MAX_AGE_DAYS
+    ):
+        raise ProtocolError(-32602, "max_age_days must be a whole number, 1 to 3650")
+    if "migration_check" in arguments and not isinstance(
+        arguments["migration_check"], bool
+    ):
+        raise ProtocolError(-32602, "migration_check must be a boolean")
     if "confirm_paid_run" in arguments and not isinstance(
         arguments["confirm_paid_run"], bool
     ):
@@ -170,6 +224,24 @@ def _readonly_config(path: Path) -> dict[str, Any]:
     if config.get("discovery"):
         raise ValueError("read-only MCP tools do not resolve provider discovery")
     return config
+
+
+def _gate_selection(arguments: dict[str, Any]) -> dict[str, Any]:
+    """The gate's selection, refusing the combinations a run refuses."""
+    if arguments.get("migration_check") and (
+        "tests" in arguments or "prompt" in arguments
+    ):
+        raise ValueError("migration_check cannot be combined with tests or prompt")
+    if "tests" in arguments and "prompt" in arguments:
+        raise ValueError("tests cannot be combined with prompt")
+    return {
+        "prompt": arguments.get("prompt"),
+        "tests": canonical_test_selector(arguments["tests"])
+        if "tests" in arguments
+        else None,
+        "environment": arguments.get("environment"),
+        "migrationCheck": arguments.get("migration_check", False),
+    }
 
 
 def _tool_result(
@@ -410,6 +482,206 @@ def _tools() -> list[dict[str, Any]]:
         ["ok", "models"],
         "Comparison of two saved local result artifacts.",
     )
+    nullable_string = {"type": ["string", "null"]}
+    nullable_count = {"type": ["integer", "null"], "minimum": 0}
+    max_age_schema = {"type": "integer", "minimum": 1, "maximum": _MAX_AGE_DAYS}
+    record_results = ["PASSED", "WARNED", "FAILED", None]
+    origins = ["github-actions", "local", None]
+    route_schema = {
+        "type": "object",
+        "properties": {
+            "provider": {"type": "string"},
+            "model": {"type": "string"},
+            "observed_model": {
+                "type": ["string", "array", "null"],
+                "items": {"type": "string"},
+                "description": "The model the provider reported answering: one string, the distinct strings when responses disagreed, or null when none was reported.",
+            },
+        },
+        "required": ["provider", "model", "observed_model"],
+        "additionalProperties": True,
+    }
+    retired_route_schema = {
+        "type": "object",
+        "properties": {
+            "provider": nullable_string,
+            "model": {"type": "string"},
+            "retirement_date": nullable_string,
+        },
+        "required": ["provider", "model", "retirement_date"],
+        "additionalProperties": True,
+    }
+    selection_schema = {
+        "type": "object",
+        "properties": {
+            "prompt": nullable_string,
+            "tests": nullable_string,
+            "environment": nullable_string,
+            "migrationCheck": {"type": "boolean"},
+        },
+        "required": ["prompt", "tests", "environment", "migrationCheck"],
+        "additionalProperties": False,
+    }
+    blocked_codes = [
+        "selection_changed",
+        "contract_changed",
+        "routes_changed",
+        "stale",
+        "superseded",
+        "inconclusive_record",
+        "failed_record",
+        "inconsistent_record",
+        "committed_record",
+        "local_record",
+    ]
+    error_or_verify = _output_schema(
+        {
+            "record": {"type": "string"},
+            "result": {"enum": record_results},
+            "integrity": {
+                "type": "object",
+                "properties": {
+                    "ok": {"type": "boolean"},
+                    "problems": strings_schema,
+                    "subjects": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "role": {"enum": ["config", "result"]},
+                                "state": {"enum": ["matches", "differs", "absent"]},
+                            },
+                            "required": ["name", "role", "state"],
+                            "additionalProperties": True,
+                        },
+                    },
+                },
+                "required": ["ok", "problems", "subjects"],
+                "additionalProperties": True,
+            },
+            "routes": {"type": "array", "items": route_schema},
+            "freshness": {
+                "type": "object",
+                "properties": {
+                    "state": {"enum": ["fresh", "stale", "superseded", "unknown"]},
+                    "checked_at": nullable_string,
+                    "age_days": nullable_count,
+                    "max_age_days": max_age_schema,
+                    "valid_until": nullable_string,
+                    "retired_routes": {"type": "array", "items": retired_route_schema},
+                },
+                "required": [
+                    "state",
+                    "checked_at",
+                    "age_days",
+                    "max_age_days",
+                    "valid_until",
+                    "retired_routes",
+                ],
+                "additionalProperties": True,
+            },
+            "retirement_snapshot": {"type": "string"},
+            "origin": {"enum": origins},
+            "url": nullable_string,
+            "signature": {"type": "string"},
+        },
+        [
+            "record",
+            "result",
+            "integrity",
+            "routes",
+            "freshness",
+            "retirement_snapshot",
+            "origin",
+            "url",
+            "signature",
+        ],
+        "The CLI verify --json report. Integrity and freshness are separate; neither is approval, and the signature is not checked here.",
+    )
+    error_or_gate = _output_schema(
+        {
+            "decision": {"enum": ["pass", "blocked", "undecided"]},
+            "reason_code": {
+                "enum": ["fresh_pass", "no_record", *blocked_codes]
+                + ["config_error", "record_error"]
+            },
+            "why": {"type": "string"},
+            "next": strings_schema,
+            "records": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "verdict": {"enum": ["pass", *blocked_codes, "record_error"]},
+                        "reason": {"type": "string"},
+                        "result": {"enum": record_results},
+                        "origin": {"enum": origins},
+                        "run_id": nullable_string,
+                        "repository": nullable_string,
+                        "checked_at": nullable_string,
+                        "age_days": nullable_count,
+                        "valid_until": nullable_string,
+                        "tests": {"type": ["object", "null"]},
+                        "blocking_warnings": nullable_count,
+                        "retired_routes": {
+                            "type": "array",
+                            "items": retired_route_schema,
+                        },
+                        "routes": {"type": "array", "items": route_schema},
+                        "selection": {**selection_schema, "type": ["object", "null"]},
+                        "contract_sha256": nullable_string,
+                        "routes_sha256": nullable_string,
+                    },
+                    "required": [
+                        "path",
+                        "verdict",
+                        "reason",
+                        "result",
+                        "origin",
+                        "run_id",
+                        "repository",
+                        "checked_at",
+                        "age_days",
+                        "valid_until",
+                        "tests",
+                        "blocking_warnings",
+                        "retired_routes",
+                        "routes",
+                        "selection",
+                        "contract_sha256",
+                        "routes_sha256",
+                    ],
+                    "additionalProperties": True,
+                },
+            },
+            "config": {"type": "string"},
+            "selection": selection_schema,
+            "contract_sha256": nullable_string,
+            "routes_sha256": nullable_string,
+            "max_age_days": max_age_schema,
+            "retirement_snapshot": {"type": "string"},
+            "signature": {"type": "string"},
+            "network_accessed": {"const": False},
+        },
+        [
+            "decision",
+            "reason_code",
+            "why",
+            "next",
+            "records",
+            "config",
+            "selection",
+            "contract_sha256",
+            "routes_sha256",
+            "max_age_days",
+            "retirement_snapshot",
+            "signature",
+            "network_accessed",
+        ],
+        "The CLI gate --json report. A gate pass means a fresh passing CI record matches this contract under this selection; it is not approval of a model, a budget, a merge or paid work.",
+    )
     readonly_annotations = {
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -487,6 +759,47 @@ def _tools() -> list[dict[str, Any]]:
             "outputSchema": error_or_diff,
             "annotations": readonly_annotations,
         },
+        {
+            "name": "verify",
+            "description": (
+                "Report a proof-of-preflight record's integrity and freshness "
+                "separately. Reads workspace files only; makes no provider "
+                "request. An intact, fresh record is not approval."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {"record": path_schema, "max_age_days": max_age_schema},
+                "required": ["record"],
+                "additionalProperties": False,
+            },
+            "outputSchema": error_or_verify,
+            "annotations": {**readonly_annotations, "idempotentHint": True},
+        },
+        {
+            "name": "gate",
+            "description": (
+                "Decide offline whether the workspace has a fresh passing CI "
+                "record for its contract under the selection CI runs. Reads "
+                "workspace files only; makes no provider request. A gate pass "
+                "is not approval of a model, a budget, a merge or paid work."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "config": path_schema,
+                    "records": {"type": "array", "items": path_schema, "minItems": 1},
+                    "max_age_days": max_age_schema,
+                    "prompt": path_schema,
+                    "tests": path_schema,
+                    "environment": path_schema,
+                    "migration_check": {"type": "boolean"},
+                },
+                "required": ["records"],
+                "additionalProperties": False,
+            },
+            "outputSchema": error_or_gate,
+            "annotations": {**readonly_annotations, "idempotentHint": True},
+        },
     ]
 
 
@@ -537,6 +850,29 @@ def _call(
         baseline = json.loads(_path(arguments["baseline"], workspace).read_text())
         current = json.loads(_path(arguments["current"], workspace).read_text())
         return _tool_result(compare_results(baseline, current), standard=standard)
+    if name == "verify":
+        record_path = _path(arguments["record"], workspace)
+        report = verify_record(
+            load_record(record_path),
+            record_path,
+            today_utc(),
+            arguments.get("max_age_days", DEFAULT_MAX_AGE_DAYS),
+            root=workspace,
+        )
+        summary = _format_verify(report, _verify_exit_code(report)).splitlines()[0]
+        return _tool_result(report, standard=standard, summary=summary)
+    if name == "gate":
+        selection = _gate_selection(arguments)
+        report = gate(
+            _path(arguments.get("config", "benchmark.json"), workspace),
+            [_path(item, workspace) for item in arguments["records"]],
+            today_utc(),
+            arguments.get("max_age_days", DEFAULT_MAX_AGE_DAYS),
+            selection=selection,
+            root=workspace,
+        )
+        summary = _format_gate(report).splitlines()[0]
+        return _tool_result(report, standard=standard, summary=summary)
     if name == "run_preflight":
         config_path = _path(arguments["config"], workspace)
         config = _config(config_path)
@@ -627,7 +963,10 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                     "retired model, `inconclusive` for a retiring model or a "
                     "stale snapshot row. "
                     "Only call run_preflight for a paid config when the user "
-                    "explicitly authorizes it and confirm_paid_run is true."
+                    "explicitly authorizes it and confirm_paid_run is true. "
+                    "verify and gate check proof-of-preflight records offline; "
+                    "a gate `pass` is not approval of a model, a budget, a "
+                    "merge or paid work."
                 ),
             }
         elif method == "ping":

@@ -371,14 +371,17 @@ def verify_record(
     today: date,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     routes: Sequence[Mapping[str, Any]] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     """Report integrity and freshness separately; they are never merged.
 
     `routes` overrides the record's own route list for the retirement check;
-    the gate passes the routes it resolved from the current config.
+    the gate passes the routes it resolved from the current config. `root`
+    (default: the working directory) is where subject names are looked up;
+    when given, a subject file that resolves outside it is not read.
     """
     problems = integrity_problems(record, today)
-    subjects = _subject_checks(record, record_path)
+    subjects = _subject_checks(record, record_path, root)
     problems.extend(
         f"the result file {subject['name']} does not match its subject digest"
         for subject in subjects
@@ -480,6 +483,7 @@ def gate(
     today: date,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     selection: Mapping[str, Any] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     """Decide offline whether the current tree has a fresh passing record.
 
@@ -488,7 +492,8 @@ def gate(
     it, is PASSED, consistent, fresh and not superseded. The gate, not the
     record, sets the selection: a record cannot lower the bar by having run
     less. A record that cannot be read makes the gate unable to decide: it
-    might be the newest.
+    might be the newest. With `root`, as for the MCP workspace, a record or
+    subject file that resolves outside it is never read.
     """
     config = display_path(config_path)
     required = {**DEFAULT_SELECTION, **(selection or {})}
@@ -513,10 +518,10 @@ def gate(
     report["contract_sha256"] = current["contract_sha256"]
     report["routes_sha256"] = current["routes_sha256"]
     entries = [
-        _evaluate(path, current, required, today, max_age_days)
+        _evaluate(path, current, required, today, max_age_days, root)
         if error is None
         else _entry(path, "record_error", error)
-        for path, error in _record_files(record_paths)
+        for path, error in _record_files(record_paths, root)
     ]
     report["records"] = [
         {key: value for key, value in entry.items() if not key.startswith("_")}
@@ -585,6 +590,7 @@ def _evaluate(
     required: Mapping[str, Any],
     today: date,
     max_age_days: int,
+    root: Path | None,
 ) -> dict[str, Any]:
     try:
         tracked = _tracked_by_git(path)
@@ -598,7 +604,7 @@ def _evaluate(
         record = load_record(path)
     except (OSError, ValueError) as exc:
         return _entry(path, "record_error", _read_error(exc))
-    report = verify_record(record, path, today, max_age_days, current["routes"])
+    report = verify_record(record, path, today, max_age_days, current["routes"], root)
     if not report["integrity"]["ok"]:
         return _entry(path, "inconsistent_record", report["integrity"]["problems"][0])
     descriptors = _descriptors(record["predicate"]["configuration"])
@@ -909,8 +915,14 @@ def _quote(text: str) -> str:
     return shlex.quote(text)
 
 
-def _record_files(paths: Iterable[Path]) -> list[tuple[Path, str | None]]:
-    """Each record file once; a directory contributes its *.preflight.json files."""
+def _record_files(
+    paths: Iterable[Path], root: Path | None = None
+) -> list[tuple[Path, str | None]]:
+    """Each record file once; a directory contributes its *.preflight.json files.
+
+    With `root`, a file that resolves outside it, through a symbolic link, is
+    reported instead of read.
+    """
     found: list[tuple[Path, str | None]] = []
     seen: set[Path] = set()
     for path in paths:
@@ -924,10 +936,20 @@ def _record_files(paths: Iterable[Path]) -> list[tuple[Path, str | None]]:
             found.append((path, "it does not exist or is not a file"))
             continue
         for item in files:
-            if item.resolve() not in seen:
-                seen.add(item.resolve())
+            resolved = item.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            if root is not None and not _within(resolved, root):
+                found.append((item, "it resolves outside the MCP workspace"))
+            else:
                 found.append((item, None))
     return found
+
+
+def _within(path: Path, root: Path) -> bool:
+    root = root.resolve()
+    return path == root or root in path.parents
 
 
 def _tracked_by_git(path: Path) -> bool:
@@ -988,16 +1010,32 @@ def _freshness(
     }
 
 
-def _subject_checks(record: Any, record_path: Path) -> list[dict[str, Any]]:
-    """Compare each subject digest with its file, beside the cwd or the record."""
+def _subject_checks(
+    record: Any, record_path: Path, root: Path | None = None
+) -> list[dict[str, Any]]:
+    """Compare each subject digest with its file, under root or beside the record.
+
+    Without `root`, names are relative to the working directory. With it, a
+    file that resolves outside `root` counts as absent and is never read.
+    """
     subjects = record.get("subject") if isinstance(record, dict) else None
     if not isinstance(subjects, list) or _subject_problems(subjects):
         return []
     checks = []
     for subject in subjects:
         name = subject["name"]
-        candidates = [Path(name), record_path.parent / Path(name).name]
-        found = next((path for path in candidates if path.is_file()), None)
+        candidates = [
+            (root or Path()) / name,
+            record_path.parent / Path(name).name,
+        ]
+        found = next(
+            (
+                path
+                for path in candidates
+                if path.is_file() and (root is None or _within(path.resolve(), root))
+            ),
+            None,
+        )
         if found is None:
             state = "absent"
         else:

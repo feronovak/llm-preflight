@@ -6,11 +6,13 @@ coverage test instead of being silently skipped.
 """
 
 import json
+from datetime import date
 from typing import Any
 
 import pytest
 
 from llm_preflight import mcp
+from llm_preflight.attestation import attest_result
 
 SUPPORTED_KEYWORDS = {
     "type",
@@ -22,7 +24,9 @@ SUPPORTED_KEYWORDS = {
     "const",
     "enum",
     "minimum",
+    "maximum",
     "minLength",
+    "minItems",
     "description",
 }
 _TYPES = {
@@ -63,6 +67,18 @@ def schema_errors(instance: Any, schema: dict[str, Any], path: str = "$") -> lis
         and instance < schema["minimum"]
     ):
         errors.append(f"{path}: below minimum {schema['minimum']}")
+    if (
+        "maximum" in schema
+        and _TYPES["number"](instance)
+        and instance > schema["maximum"]
+    ):
+        errors.append(f"{path}: above maximum {schema['maximum']}")
+    if (
+        "minItems" in schema
+        and isinstance(instance, list)
+        and len(instance) < schema["minItems"]
+    ):
+        errors.append(f"{path}: fewer than {schema['minItems']} items")
     if (
         "minLength" in schema
         and isinstance(instance, str)
@@ -146,6 +162,8 @@ _BAD_INSTANCES = [
     ("const", {"const": True}, False),
     ("enum", {"enum": ["pass", "fail"]}, "maybe"),
     ("minimum", {"type": "integer", "minimum": 1}, 0),
+    ("maximum", {"type": "integer", "maximum": 10}, 11),
+    ("minItems", {"type": "array", "minItems": 1}, []),
     ("minLength", {"type": "string", "minLength": 1}, ""),
 ]
 
@@ -241,6 +259,20 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     )
     run = _call(tmp_path, "run_preflight", {"config": "mock.json"})
     (tmp_path / "baseline.json").write_text(json.dumps(run["structuredContent"]))
+    (tmp_path / "records").mkdir()
+    ran = date.fromisoformat(run["structuredContent"]["timestamp"][:10])
+    record = attest_result(
+        tmp_path / "baseline.json",
+        config_path=tmp_path / "mock.json",
+        environ={},
+        today=ran,
+    )
+    (tmp_path / "records" / "run.preflight.json").write_text(json.dumps(record))
+    (tmp_path / "records" / "broken.preflight.json").write_text(
+        json.dumps({**record, "predicateType": "other"})
+    )
+    (tmp_path / "unreadable").mkdir()
+    (tmp_path / "unreadable" / "bad.preflight.json").write_text("{")
     (tmp_path / "unknown").mkdir()
     (tmp_path / "unknown" / "app.py").write_text('model = "gpt-unlisted"\n')
     (tmp_path / "empty").mkdir()
@@ -270,6 +302,21 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
         "diff_baseline": [
             ({"baseline": "baseline.json", "current": "baseline.json"}, False),
             ({"baseline": "baseline.json", "current": "missing.json"}, True),
+        ],
+        "verify": [
+            ({"record": "records/run.preflight.json"}, False),
+            ({"record": "records/broken.preflight.json", "max_age_days": 1}, False),
+            ({"record": "unreadable/bad.preflight.json"}, True),
+            ({"record": "../run.preflight.json"}, True),
+        ],
+        "gate": [
+            ({"config": "mock.json", "records": ["records"]}, False),
+            ({"config": "mock.json", "records": ["unreadable"]}, False),
+            ({"config": "discovery.json", "records": ["records"]}, False),
+            ({"config": "mock.json", "records": ["missing"]}, False),
+            ({"config": "mock.json", "records": ["records"], "prompt": "x"}, False),
+            ({"records": ["records"], "prompt": "x", "tests": "y"}, True),
+            ({"records": [".."]}, True),
         ],
     }
     tools = _tools()

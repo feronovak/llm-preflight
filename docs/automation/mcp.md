@@ -102,6 +102,35 @@ offline HTML or Markdown, use the CLI's `llm-preflight report` command; to
 add a pull-request check, use the [CI guide](ci.md). Report export and CI setup
 are not MCP tools.
 
+## Check proof of preflight
+
+`verify` and `gate` read records that CI attested and that the workflow
+downloaded into the workspace; they never fetch artifacts, load credentials
+or contact a provider, and `attest` stays a CI step. `verify` takes a
+workspace-relative `record` and an optional `max_age_days` (1 to 3650,
+default 30). `gate` takes `records` (one or more workspace-relative files or
+directories), an optional `config` (default `benchmark.json`),
+`max_age_days`, and the selection CI runs: `prompt`, `tests`, `environment`
+and `migration_check`, with the same exclusions as the CLI flags. Every path,
+and every record or subject file found under a directory, must resolve
+inside the workspace; a record file linked from outside makes the gate
+undecided, and a subject file linked from outside counts as absent.
+
+Each returns the same object as `llm-preflight verify --json` or
+`llm-preflight gate --json` for the same absolute paths, with secret-like
+strings redacted, and leads its text content with the CLI's first line:
+
+```text
+Gate: blocked — no fresh passing preflight for this contract.
+```
+
+Report the gate's `decision`, `why` and each `next` step. A gate `pass` is
+not approval: it shows that a fresh passing CI record matches this contract
+under this selection, never that a model, a budget, a merge or paid work is
+approved. A blocked or undecided gate is a normal result, not a tool error;
+`isError` is reserved for arguments the tool cannot use, such as a path
+outside the workspace or a record that is not JSON.
+
 For a confirmed live run, a benchmark's relative `env_file` reference is
 accepted only when its resolved path remains within that workspace. An explicit
 MCP `env_file` argument has the same boundary. The server never returns a key
@@ -122,9 +151,9 @@ explicit, project-local setup decision.
 
 On the standard protocol path, `tools/list` also declares a client-visible
 safety hint for every tool and a JSON output schema for its structured result.
-`audit_source`, `validate_config`, `dry_run_plan`, and `diff_baseline` are
-read-only and closed to the external world; `audit_source` is also marked
-idempotent. `run_preflight` is marked as external-world capable,
+`audit_source`, `validate_config`, `dry_run_plan`, `diff_baseline`,
+`verify` and `gate` are read-only and closed to the external world;
+`audit_source`, `verify` and `gate` are also marked idempotent. `run_preflight` is marked as external-world capable,
 because a confirmed live configuration can contact a provider.
 
 ## Connect common coding agents
@@ -200,6 +229,8 @@ remains a user-controlled workspace decision.
 
 ## Available tools
 
+The server exposes seven tools.
+
 | Tool | What it does | Provider access |
 |---|---|---|
 | `audit_source` | Audits literal model IDs under an optional workspace-relative `path` (default: the workspace) and returns the CLI `--audit-source --json` object, with secret-like strings redacted, and the decision as the first text line. Needs no benchmark config. | Never contacts a provider or loads credentials. |
@@ -207,13 +238,16 @@ remains a user-controlled workspace decision.
 | `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
+| `verify` | Reports a record's integrity and freshness separately and returns the CLI `verify --json` object, with its first text line. | Never contacts a provider or loads credentials. |
+| `gate` | Decides whether the workspace has a fresh passing CI record for its contract under the given selection and returns the CLI `gate --json` object, with its first text line. A gate `pass` is not approval. | Never contacts a provider or loads credentials. |
 
 ## Discover the safe workflow
 
 Clients that support MCP resources can read
 `llm-preflight://guides/safe-workflow`. It is a short, static checklist:
 run `audit_source` when there is no config, validate, inspect the dry-run plan, stop for explicit user approval, then use
-`run_preflight` only with `confirm_paid_run: true`. Reading this
+`run_preflight` only with `confirm_paid_run: true`. It also says how to
+use `verify` and `gate`, and that a gate `pass` is not approval. Reading this
 resource never accesses the workspace, loads credentials, or contacts a
 provider.
 

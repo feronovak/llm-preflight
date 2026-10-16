@@ -1,6 +1,11 @@
+import shutil
+import subprocess
 from datetime import date
+from pathlib import Path
 
-from llm_preflight import retirements
+import pytest
+
+from llm_preflight import retirements, source_audit
 from llm_preflight.source_audit import audit_source, audit_source_text
 
 TODAY = date(2026, 10, 9)
@@ -207,3 +212,193 @@ def test_source_audit_defaults_today_to_the_current_date(tmp_path):
         "inconclusive",
         "fail",
     }
+
+
+def test_source_audit_notes_name_every_provider_in_the_retirement_snapshot():
+    note = next(
+        note
+        for note in audit_source_text(Path("app.py"), "")["notes"]
+        if note.startswith("Retirement verdicts")
+    )
+
+    for provider in retirements.RETIREMENT_PROVIDERS:
+        assert provider in note.casefold()
+
+
+requires_git = pytest.mark.skipif(
+    shutil.which("git") is None, reason="git is not installed"
+)
+
+
+def _git(workspace, *args):
+    subprocess.run(
+        ["git", *args], cwd=workspace, check=True, text=True, capture_output=True
+    )
+
+
+def _repository(workspace):
+    workspace.mkdir()
+    _git(workspace, "init", "-q")
+    _git(workspace, "config", "user.email", "test@example.invalid")
+    _git(workspace, "config", "user.name", "Test User")
+    return workspace
+
+
+@requires_git
+def test_source_audit_in_a_git_work_tree_skips_ignored_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitignore").write_text("scratch/\n")
+    (repo / "app.py").write_text('a = "gpt-going"\n')
+    _git(repo, "add", ".gitignore", "app.py")
+    _git(repo, "commit", "-q", "-m", "initial")
+    (repo / "new.py").write_text('b = "gpt-going"\n')
+    (repo / "scratch").mkdir()
+    (repo / "scratch" / "old.py").write_text('c = "gpt-gone"\n')
+
+    report = audit_source(repo, today=TODAY)
+
+    assert report["file_selection"] == "git"
+    assert report["files_scanned"] == 2
+    assert [(item["path"], item["model"]) for item in report["references"]] == [
+        ("app.py", "gpt-going"),
+        ("new.py", "gpt-going"),
+    ]
+    assert report["decision"] == "inconclusive"
+
+
+@requires_git
+def test_source_audit_decision_on_unignored_files_matches_the_filesystem_walk(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitignore").write_text("*.local.json\n")
+    (repo / "app.py").write_text('a = "gpt-gone"\nb = "gpt-mystery"\n')
+    (repo / "pkg").mkdir()
+    (repo / "pkg" / "models.yaml").write_text("model: gpt-going\n")
+    (repo / "results").mkdir()
+    (repo / "results" / "run.json").write_text('{"model": "gpt-new"}\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    (repo / "draft.local.json").write_text('{"model": "gpt-new"}\n')
+
+    from_git = audit_source(repo, today=TODAY)
+    (repo / "draft.local.json").unlink()
+    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    from_walk = audit_source(repo, today=TODAY)
+
+    assert from_git["file_selection"] == "git"
+    assert from_walk["file_selection"] == "filesystem"
+    for key in ("references", "findings", "decision", "next_commands"):
+        assert from_git[key] == from_walk[key]
+
+
+@requires_git
+def test_source_audit_audits_a_subdirectory_of_a_git_work_tree(tmp_path, monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitignore").write_text("build/\n")
+    (repo / "pkg" / "build").mkdir(parents=True)
+    (repo / "pkg" / "app.py").write_text('a = "gpt-going"\n')
+    (repo / "pkg" / "build" / "app.py").write_text('a = "gpt-gone"\n')
+    (repo / "top.py").write_text('a = "gpt-gone"\n')
+
+    report = audit_source(repo / "pkg", today=TODAY)
+
+    assert report["file_selection"] == "git"
+    assert [item["path"] for item in report["references"]] == ["app.py"]
+
+
+@requires_git
+def test_source_audit_includes_tracked_submodule_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    library = _repository(tmp_path / "library")
+    (library / "client.py").write_text('a = "gpt-gone"\n')
+    _git(library, "add", "client.py")
+    _git(library, "commit", "-q", "-m", "initial")
+    repo = _repository(tmp_path / "repo")
+    _git(
+        repo,
+        "-c",
+        "protocol.file.allow=always",
+        "submodule",
+        "add",
+        "-q",
+        str(library),
+        "vendor/library",
+    )
+
+    report = audit_source(repo, today=TODAY)
+
+    assert report["file_selection"] == "git"
+    assert [item["path"] for item in report["references"]] == [
+        "vendor/library/client.py"
+    ]
+    assert report["decision"] == "fail"
+
+
+@requires_git
+def test_source_audit_never_reads_a_symlink_that_leaves_the_audited_path(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    outside = tmp_path / "outside.py"
+    outside.write_text('a = "gpt-gone"\n')
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('a = "gpt-going"\n')
+    (repo / "linked.py").symlink_to(outside)
+    (repo / "alias.py").symlink_to(repo / "app.py")
+    _git(repo, "add", ".")
+
+    from_git = audit_source(repo, today=TODAY)
+    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    from_walk = audit_source(repo, today=TODAY)
+
+    assert from_git["file_selection"] == "git"
+    for report in (from_git, from_walk):
+        assert [item["path"] for item in report["references"]] == [
+            "alias.py",
+            "app.py",
+        ]
+        assert report["decision"] == "inconclusive"
+
+
+@requires_git
+def test_source_audit_walks_a_directory_that_is_not_a_git_work_tree(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    (tmp_path / ".gitignore").write_text("generated.py\n")
+    (tmp_path / "generated.py").write_text('a = "gpt-5.4-mini"\n')
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "dep.js").write_text('a = "gpt-5.4-mini"\n')
+
+    report = audit_source(tmp_path)
+
+    assert report["file_selection"] == "filesystem"
+    assert [item["path"] for item in report["references"]] == ["generated.py"]
+
+
+def test_source_audit_walks_the_directory_when_git_is_unavailable(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "run.json").write_text('{"model": "gpt-5.4-mini"}\n')
+
+    report = audit_source(tmp_path)
+
+    assert report["file_selection"] == "filesystem"
+    assert [item["path"] for item in report["references"]] == ["app.py"]
+
+
+def test_source_audit_of_a_single_file_reports_the_file_selection(tmp_path):
+    source = tmp_path / "app.py"
+    source.write_text('a = "gpt-5.4-mini"\n')
+
+    report = audit_source(source)
+
+    assert report["file_selection"] == "file"
+    assert report["files_scanned"] == 1

@@ -316,28 +316,134 @@ def _next_block(payload: dict[str, Any], entries: list[dict[str, Any]]) -> list[
     return lines
 
 
-def _format_audit_source(audit: dict[str, Any]) -> str:
-    statuses = [item["retirement"]["status"] for item in audit["references"]]
+_AUDIT_MODEL_LIMIT = 10
+_AUDIT_LOCATION_LIMIT = 3
+_AUDIT_FILE_SELECTION = {
+    "git": "Files: tracked by git, plus untracked files .gitignore does not exclude.",
+    "filesystem": (
+        "Files: every file under the path; not a git work tree or git is "
+        "unavailable, so .gitignore is not applied."
+    ),
+    "file": "Files: the named file.",
+}
+_AUDIT_CI_EXIT = {
+    0: "no referenced model is retired, retiring or stale.",
+    1: "a referenced model is retired.",
+    3: "a referenced model is retiring or its snapshot row is stale.",
+}
+
+
+def _counted(count: int, noun: str) -> str:
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def _audit_exit_line(decision: str, ci: bool) -> str:
+    code = _RETIREMENT_EXIT.get(decision, 0)
+    if ci:
+        return f"Exit {code} (--ci): {_AUDIT_CI_EXIT[code]}"
+    if code:
+        return f"Exit 0 — add --ci to exit {code} on this decision."
+    return "Exit 0 — --ci also exits 0 on this decision."
+
+
+def _audit_groups(references: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """References grouped by model ID, most-referenced first, then first seen."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for item in references:
+        groups.setdefault(item["model"], []).append(item)
+    return sorted(groups.values(), key=len, reverse=True)
+
+
+def _audit_group_lines(
+    group: list[dict[str, Any]], show_all: bool, with_next: bool
+) -> list[str]:
+    verdict = group[0]["retirement"]
+    lines = [
+        (
+            f"  {group[0]['model']} ({_counted(len(group), 'reference')}) — "
+            f"{_retirement_phrase(verdict)}"
+        )
+    ]
+    shown = group if show_all else group[:_AUDIT_LOCATION_LIMIT]
+    lines.extend(f"    {item['path']}:{item['line']}" for item in shown)
+    if len(group) > len(shown):
+        lines.append(
+            f"    {_counted(len(group) - len(shown), 'more location')} — use --all"
+        )
+    if with_next:
+        lines.append(f"    Next: {verdict.get('next_command', verdict['next_step'])}")
+    return lines
+
+
+def _format_audit_source(
+    audit: dict[str, Any], show_all: bool = False, ci: bool = False
+) -> str:
+    references = audit["references"]
+    statuses = [item["retirement"]["status"] for item in references]
     retired = statuses.count("retired")
     retiring = statuses.count("retiring") + statuses.count("stale")
     unknown = statuses.count("unknown")
+    decision = (
+        "none (no reference is in the retirement snapshot)"
+        if audit["decision"] == "none"
+        else audit["decision"]
+    )
     lines = [
         (
-            f"Audited {audit['files_scanned']} files; {len(audit['references'])} "
-            f"model references; {retired} retired; {retiring} retiring or stale; "
-            f"{unknown} unknown."
-        )
+            f"Decision: {decision} — {_counted(audit['files_scanned'], 'file')} "
+            f"audited; {_counted(len(references), 'model reference')}: "
+            f"{retired} retired, {retiring} retiring or stale, {unknown} unknown."
+        ),
+        _audit_exit_line(audit["decision"], ci),
+        _AUDIT_FILE_SELECTION[audit["file_selection"]],
     ]
-    for finding in audit["findings"]:
+    retired_groups = _audit_groups(
+        [item for item in references if item["retirement"]["status"] == "retired"]
+    )
+    retiring_groups = _audit_groups(
+        [
+            item
+            for item in references
+            if item["retirement"]["status"] in {"retiring", "stale"}
+        ]
+    )
+    limit = len(retired_groups) + len(retiring_groups)
+    if not show_all:
+        limit = min(limit, _AUDIT_MODEL_LIMIT)
+    retired_shown = retired_groups[:limit]
+    retiring_shown = retiring_groups[: limit - len(retired_shown)]
+    for heading, shown in (
+        ("Retired:", retired_shown),
+        ("Retiring or stale:", retiring_shown),
+    ):
+        if shown:
+            lines.append(heading)
+        for group in shown:
+            lines.extend(_audit_group_lines(group, show_all, with_next=True))
+    hidden_retired = len(retired_groups) - len(retired_shown)
+    hidden_retiring = len(retiring_groups) - len(retiring_shown)
+    if hidden_retired or hidden_retiring:
         lines.append(
-            f"{finding['path']}:{finding['line']}: {finding['model']} — "
-            f"{finding['status']}; {_retirement_phrase(finding['retirement'])}"
+            f"{_counted(hidden_retired + hidden_retiring, 'more model')} "
+            f"({hidden_retired} retired, {hidden_retiring} retiring or stale) "
+            "— use --all"
         )
-    lines.extend(_next_block(audit, audit["references"]))
-    if audit["decision"] == "none":
-        lines.append("Decision: none (no reference is in the retirement snapshot)")
-    else:
-        lines.append(f"Decision: {audit['decision']}")
+    unpriced = [
+        item
+        for item in audit["findings"]
+        if item["retirement"]["status"] not in {"retired", "retiring", "stale"}
+    ]
+    unpriced_groups = _audit_groups(unpriced)
+    if unpriced and show_all:
+        lines.append("Pricing unknown, no retirement finding:")
+        for group in unpriced_groups:
+            lines.extend(_audit_group_lines(group, show_all, with_next=False))
+    elif unpriced:
+        lines.append(
+            "Pricing unknown, no retirement finding: "
+            f"{_counted(len(unpriced), 'reference')} to "
+            f"{_counted(len(unpriced_groups), 'model ID')} — use --all to list them."
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -2203,6 +2309,11 @@ def main() -> None:
         help="statically audit literal model IDs in a repository without provider requests",
     )
     parser.add_argument(
+        "--all",
+        action="store_true",
+        help="with --audit-source, print every model and location instead of the first ones",
+    )
+    parser.add_argument(
         "--change-plan",
         nargs="?",
         const="HEAD",
@@ -2328,6 +2439,8 @@ def main() -> None:
             )
         if args.replace_approval_receipt and not args.approval_receipt:
             parser.error("--replace-approval-receipt requires --approval-receipt")
+        if args.all and not args.audit_source:
+            parser.error("--all requires --audit-source")
         if args.diff:
             diff = compare_results(load_json(args.diff[0]), load_json(args.diff[1]))
             print(json.dumps(diff, indent=2) if args.json else _format_diff(diff))
@@ -2339,7 +2452,7 @@ def main() -> None:
             print(
                 json.dumps(audit, indent=2)
                 if args.json
-                else _format_audit_source(audit),
+                else _format_audit_source(audit, show_all=args.all, ci=args.ci),
                 end="\n" if args.json else "",
             )
             _retirement_exit(audit["decision"], args.ci)

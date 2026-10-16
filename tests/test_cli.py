@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from llm_preflight import cli
+from llm_preflight import cli, source_audit
 from llm_preflight.cli import (
     catalog_output,
     format_progress_event,
@@ -3600,34 +3600,52 @@ def retirement_table(monkeypatch):
     monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
 
 
-def test_audit_source_prints_retirement_findings_and_next_commands(
+def _audit_text(monkeypatch, capsys, tmp_path, *flags):
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), *flags]
+    )
+    cli.main()
+    return capsys.readouterr().out.splitlines()
+
+
+def test_audit_source_leads_with_the_verdict_and_groups_findings_by_model(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
-    (tmp_path / "app.py").write_text('a = "gpt-gone"\nb = "gpt-going"\n')
-    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    (tmp_path / "app.py").write_text('a = "gpt-going"\nb = "gpt-gone"\n')
+    (tmp_path / "other.py").write_text('c = "gpt-gone"\n')
 
-    cli.main()
-    out = capsys.readouterr().out
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
 
-    assert (
-        "Audited 1 files; 2 model references; 1 retired; 1 retiring or stale; "
-        "0 unknown." in out
-    )
-    assert (
-        "app.py:1: gpt-gone — pricing_unknown; retired 2026-10-01, replacement gpt-new"
-        in out
-    )
-    assert (
-        "app.py:2: gpt-going — pricing_unknown; retiring 2027-04-01, no single replacement recorded"
-        in out
-    )
-    assert "Next:" in out
-    assert (
-        '  llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
-        in out
-    )
-    assert f"  gpt-going: no single replacement recorded; see {_RETIREMENT_URL}" in out
-    assert "Decision: fail" in out
+    assert lines == [
+        (
+            "Decision: fail — 2 files audited; 3 model references: 2 retired, "
+            "1 retiring or stale, 0 unknown."
+        ),
+        "Exit 0 — add --ci to exit 1 on this decision.",
+        (
+            "Files: every file under the path; not a git work tree or git is "
+            "unavailable, so .gitignore is not applied."
+        ),
+        "Retired:",
+        "  gpt-gone (2 references) — retired 2026-10-01, replacement gpt-new",
+        "    app.py:2",
+        "    other.py:1",
+        (
+            '    Next: llm-preflight --quick "<your prompt>" '
+            "--models openai:gpt-gone,openai:gpt-new --dry-run"
+        ),
+        "Retiring or stale:",
+        (
+            "  gpt-going (1 reference) — retiring 2027-04-01, no single replacement "
+            "recorded"
+        ),
+        "    app.py:1",
+        (
+            "    Next: no single replacement recorded; read the page, choose one and "
+            f"preflight it ({_RETIREMENT_URL})"
+        ),
+    ]
 
 
 def test_audit_source_exit_is_zero_without_ci(
@@ -3636,6 +3654,187 @@ def test_audit_source_exit_is_zero_without_ci(
     (tmp_path / "app.py").write_text('a = "gpt-gone"\n')
     monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
     cli.main()  # no SystemExit
+
+
+@pytest.mark.parametrize(
+    ("source", "without_ci", "code", "with_ci"),
+    [
+        (
+            'a = "gpt-gone"\n',
+            "Exit 0 — add --ci to exit 1 on this decision.",
+            1,
+            "Exit 1 (--ci): a referenced model is retired.",
+        ),
+        (
+            'a = "gpt-going"\n',
+            "Exit 0 — add --ci to exit 3 on this decision.",
+            3,
+            (
+                "Exit 3 (--ci): a referenced model is retiring or its snapshot row "
+                "is stale."
+            ),
+        ),
+        (
+            'a = "gpt-new"\n',
+            "Exit 0 — --ci also exits 0 on this decision.",
+            0,
+            "Exit 0 (--ci): no referenced model is retired, retiring or stale.",
+        ),
+    ],
+)
+def test_audit_source_second_line_states_the_exit_semantics(
+    monkeypatch, tmp_path, capsys, retirement_table, source, without_ci, code, with_ci
+):
+    (tmp_path / "app.py").write_text(source)
+
+    assert _audit_text(monkeypatch, capsys, tmp_path)[1] == without_ci
+
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    if code:
+        with pytest.raises(SystemExit) as exc_info:
+            cli.main()
+        assert exc_info.value.code == code
+    else:
+        cli.main()
+    assert capsys.readouterr().out.splitlines()[1] == with_ci
+
+
+def _many_retired_models(monkeypatch, tmp_path, count, locations):
+    table = {
+        ("openai", f"gpt-r{index:02d}"): {
+            "status": "deprecated",
+            "retirement_date": "2026-10-01",
+            "as_of": "2026-10-01",
+            "source_url": _RETIREMENT_URL,
+        }
+        for index in range(count)
+    }
+    table[("openai", "gpt-going")] = _RETIREMENT_TABLE[("openai", "gpt-going")]
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", table)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
+    source = [f'a = "gpt-r{index:02d}"' for index in range(count)]
+    source += ['b = "gpt-r00"'] * (locations - 1)
+    source.append('c = "gpt-going"')
+    (tmp_path / "app.py").write_text("\n".join(source) + "\n")
+
+
+def test_audit_source_caps_model_groups_and_locations_by_default(
+    monkeypatch, tmp_path, capsys
+):
+    models = cli._AUDIT_MODEL_LIMIT + 2
+    locations = cli._AUDIT_LOCATION_LIMIT + 4
+    _many_retired_models(monkeypatch, tmp_path, models, locations)
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    groups = [line for line in lines if line.startswith("  gpt-")]
+    assert len(groups) == cli._AUDIT_MODEL_LIMIT
+    assert groups[0] == (
+        f"  gpt-r00 ({locations} references) — retired 2026-10-01, no single "
+        "replacement recorded"
+    )
+    assert "Retiring or stale:" not in lines
+    assert "    4 more locations — use --all" in lines
+    assert "3 more models (2 retired, 1 retiring or stale) — use --all" == lines[-1]
+    first_group = lines[lines.index(groups[0]) + 1 :]
+    assert first_group[: cli._AUDIT_LOCATION_LIMIT + 1] == [
+        *(f"    app.py:{line}" for line in (1, models + 1, models + 2)),
+        "    4 more locations — use --all",
+    ]
+
+
+def test_audit_source_all_prints_every_group_and_location(
+    monkeypatch, tmp_path, capsys
+):
+    models = cli._AUDIT_MODEL_LIMIT + 2
+    locations = cli._AUDIT_LOCATION_LIMIT + 4
+    _many_retired_models(monkeypatch, tmp_path, models, locations)
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path, "--all")
+
+    assert len([line for line in lines if line.startswith("  gpt-")]) == models + 1
+    assert len([line for line in lines if line.startswith("    app.py:")]) == (
+        models + locations
+    )
+    assert not [line for line in lines if "use --all" in line]
+    assert lines.index("Retired:") < lines.index("Retiring or stale:")
+
+
+def test_audit_source_collapses_references_without_a_retirement_finding(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    (tmp_path / "app.py").write_text(
+        'a = "gpt-mystery"\nb = "gpt-mystery"\nc = "gpt-other"\nd = "gpt-gone"\n'
+    )
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[-1] == (
+        "Pricing unknown, no retirement finding: 3 references to 2 model IDs "
+        "— use --all to list them."
+    )
+    assert not [line for line in lines if "gpt-mystery" in line]
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path, "--all")
+
+    unknown = lines[lines.index("Pricing unknown, no retirement finding:") :]
+    assert unknown == [
+        "Pricing unknown, no retirement finding:",
+        "  gpt-mystery (2 references) — unknown",
+        "    app.py:1",
+        "    app.py:2",
+        "  gpt-other (1 reference) — unknown",
+        "    app.py:3",
+    ]
+
+
+def test_audit_source_all_requires_audit_source(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--all"])
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 2
+    assert "--all requires --audit-source" in capsys.readouterr().err
+
+
+def test_audit_source_json_keeps_its_contract_and_is_never_capped(
+    monkeypatch, tmp_path, capsys
+):
+    models = cli._AUDIT_MODEL_LIMIT + 2
+    _many_retired_models(monkeypatch, tmp_path, models, cli._AUDIT_LOCATION_LIMIT + 4)
+    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+
+    payloads = []
+    for flags in ([], ["--all"]):
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["llm-preflight", "--audit-source", str(tmp_path), "--json", *flags],
+        )
+        cli.main()
+        payloads.append(json.loads(capsys.readouterr().out))
+
+    assert payloads[0] == payloads[1]
+    report = payloads[0]
+    assert set(report) == {
+        "root",
+        "network_accessed",
+        "files_scanned",
+        "file_selection",
+        "references",
+        "findings",
+        "ok",
+        "decision",
+        "next_commands",
+        "retirement_snapshot",
+        "confidence",
+        "notes",
+    }
+    assert report["file_selection"] == "filesystem"
+    assert len(report["references"]) == models + cli._AUDIT_LOCATION_LIMIT + 4
+    assert report["findings"] == report["references"]
+    assert report["decision"] == "fail"
 
 
 @pytest.mark.parametrize(
@@ -3672,11 +3871,16 @@ def test_audit_source_reports_none_when_no_reference_is_in_the_snapshot(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
     (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
-    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
-    cli.main()
-    out = capsys.readouterr().out
-    assert "Decision: none (no reference is in the retirement snapshot)" in out
-    assert "; 1 unknown." in out
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[0] == (
+        "Decision: none (no reference is in the retirement snapshot) — "
+        "1 file audited; 1 model reference: 0 retired, 0 retiring or stale, "
+        "1 unknown."
+    )
+    assert lines[1] == "Exit 0 — --ci also exits 0 on this decision."
+    assert len(lines) == 3
 
 
 def _doctor_config(tmp_path, model):
@@ -3743,15 +3947,23 @@ def test_audit_source_terminal_output_shows_a_stale_reference(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
     (tmp_path / "app.py").write_text('a = "gpt-old-row"\n')
-    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
-    cli.main()
-    out = capsys.readouterr().out
-    assert "0 retired; 1 retiring or stale; 0 unknown." in out
-    assert (
-        "app.py:1: gpt-old-row — pricing_unknown; snapshot stale (snapshot row "
-        "reviewed 2026-01-01 is older than 30 days)" in out
-    )
-    assert "Decision: inconclusive" in out
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[0].startswith("Decision: inconclusive — ")
+    assert lines[0].endswith(": 0 retired, 1 retiring or stale, 0 unknown.")
+    assert lines[3:] == [
+        "Retiring or stale:",
+        (
+            "  gpt-old-row (1 reference) — snapshot stale (snapshot row reviewed "
+            "2026-01-01 is older than 30 days)"
+        ),
+        "    app.py:1",
+        (
+            '    Next: llm-preflight --quick "<your prompt>" '
+            "--models openai:gpt-old-row,openai:gpt-new --dry-run"
+        ),
+    ]
 
 
 def test_doctor_exits_one_on_a_retired_model_with_or_without_ci(

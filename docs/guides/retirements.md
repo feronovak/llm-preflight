@@ -15,6 +15,45 @@ Run it on any repository, with no configuration file:
 llm-preflight --audit-source .
 ```
 
+```text
+Decision: fail — 42 files audited; 57 model references: 6 retired, 2 retiring or stale, 31 unknown.
+Exit 0 — add --ci to exit 1 on this decision.
+Files: tracked by git, plus untracked files .gitignore does not exclude.
+Retired:
+  claude-3-haiku-20240307 (5 references) — retired <date>, replacement claude-haiku-4-5-20251001
+    app/models.py:12
+    app/summarize.py:40
+    config/models.yaml:3
+    2 more locations — use --all
+    Next: llm-preflight --quick "<your prompt>" --models anthropic:claude-3-haiku-20240307,anthropic:claude-haiku-4-5-20251001 --dry-run
+  gpt-4-32k (1 reference) — retired <date>, no single replacement recorded
+    app/legacy.py:8
+    Next: no single replacement recorded; read the page, choose one and preflight it (https://developers.openai.com/api/docs/deprecations)
+Retiring or stale:
+  gpt-4o (2 references) — retiring <date>, replacement gpt-6-luna
+    app/chat.py:21
+    tests/test_chat.py:9
+    Next: llm-preflight --quick "<your prompt>" --models openai:gpt-4o,openai:gpt-6-luna --dry-run
+Pricing unknown, no retirement finding: 14 references to 5 model IDs — use --all to list them.
+```
+
+The first line is the decision and the second the exit code it produces.
+Findings follow, grouped by model ID: retired models first, then retiring or
+stale ones, most-referenced first. The default output shows ten models and
+three locations for each; `--all` prints every model and location, including
+the references whose price is unknown but which have no retirement finding.
+`--json` always contains every reference.
+
+Inside a Git work tree the scan reads the files Git considers part of the
+project: tracked files, including those of initialized submodules, plus
+untracked files that `.gitignore` does not exclude. Outside a work tree, or
+without Git, it reads every file under the path. Both modes skip `.git`,
+`.venv`, `venv`, `node_modules`, `__pycache__` and `results`. They read only
+`.py`, `.js`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.json`, `.yaml`, `.yml` and
+`.toml` files, and never follow a symlink out of the path. The `Files:` line
+and the JSON `file_selection` field (`git`, `filesystem` or `file`) report
+the mode used.
+
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
@@ -66,7 +105,8 @@ you. When the provider names none, names several, or names a model that is
 itself being retired, no single replacement is recorded: the output says so
 and points at the page instead of printing a command.
 
-The doctor, the dry-run and the scan all print the `Next:` block. The doctor
+The doctor and the dry-run print the `Next:` block; the scan prints the same
+command, or the page to read, as a `Next:` line under each model. The doctor
 and the dry-run judge each model under the provider the configuration names, so
 a routed ID under `openrouter` is unknown there; the scan infers the provider
 from the ID.

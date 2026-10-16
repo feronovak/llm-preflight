@@ -173,3 +173,19 @@ object: `ok` plus `models[]`. A compared row exposes
 `latency_p95_delta_seconds`, `success_rate_delta`, `valid_output_rate_delta`,
 `cost_delta_usd`, and `regressions`. An added model has `status: "added"` and
 no regression by itself. A non-empty `regressions` list makes `--ci` exit 1.
+
+## Source audit JSON
+
+`llm-preflight --audit-source PATH --json` writes a separate, uncapped audit
+object. `root` is the resolved path, `network_accessed` is always `false`,
+`files_scanned` counts the files selected, and `file_selection` names how
+they were selected: `git` (tracked files, including initialized submodules,
+plus untracked files `.gitignore` does not exclude), `filesystem` (every file
+under the path, when it is not in a Git work tree or Git is unavailable) or
+`file` (the named file). Each `references[]` entry has `path`, `line`,
+`provider`, `model`, pricing `status` and `confidence`, and a `retirement`
+verdict. `findings` lists the references with unknown pricing or a retired,
+retiring or stale verdict. `decision` (`fail`, `inconclusive`, `pass` or
+`none`) is the worst retirement decision across all references and drives
+the `--ci` exit code; `next_commands`, `retirement_snapshot`, `confidence`
+and `notes` complete the object.

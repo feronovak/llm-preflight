@@ -24,8 +24,12 @@ python3 -m pip install llm-preflight
 llm-preflight --audit-source .
 ```
 
-Retired IDs print their date and the provider-stated replacement with a
-ready `--dry-run` command; see [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
+The first line is the decision with its counts, the second the exit code;
+add `--ci` to fail a pipeline on it. Findings follow, grouped by model ID:
+retired first, each with its date, the provider-stated replacement and a
+ready `--dry-run` command. In a Git checkout only tracked and unignored files
+are read. `--all` lists every model and location; see
+[model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
 Then create and run a deterministic local benchmark—no API key or network request:
 
 ```bash

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import re
+import shutil
+
+# _git_files uses an absolute executable and argument arrays.
+import subprocess  # nosec B404
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -19,7 +23,7 @@ _CONFIDENCE = "limited_static_pricing_and_retirement"
 _NOTES = [
     "Only literal model IDs are reported; dynamic model selection requires review.",
     "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog verdict.",
-    "Retirement verdicts come from the bundled snapshot of the official anthropic and openai deprecation pages for text-generation models; unknown means no row and is not a verdict.",
+    "Retirement verdicts come from the bundled snapshot of the official Anthropic, OpenAI and selected Gemini deprecation and model pages for text-generation models; unknown means no row and is not a verdict.",
 ]
 
 _SOURCE_SUFFIXES = {
@@ -97,17 +101,7 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     root = path.resolve()
     if not root.exists():
         raise ValueError(f"audit source path does not exist: {path}")
-    files = (
-        [root]
-        if root.is_file()
-        else sorted(
-            candidate
-            for candidate in root.rglob("*")
-            if candidate.is_file()
-            and candidate.suffix.casefold() in _SOURCE_SUFFIXES
-            and not any(part in _SKIP_PARTS for part in candidate.parts)
-        )
-    )
+    files, file_selection = _project_files(root)
     references = []
     for file_path in files:
         try:
@@ -137,9 +131,64 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
         "root": str(root),
         "network_accessed": False,
         "files_scanned": len(files),
+        "file_selection": file_selection,
         "references": references,
         **_summary_fields(references),
     }
+
+
+def _project_files(root: Path) -> tuple[list[Path], str]:
+    """Source files under root and how they were selected: file, git or filesystem."""
+    if root.is_file():
+        return [root], "file"
+    selected = _git_files(root)
+    file_selection = "git"
+    if selected is None:
+        selected = list(root.rglob("*"))
+        file_selection = "filesystem"
+    # The skip list applies to tracked files too, so Git selection removes only
+    # ignored files. A symlink may point anywhere; only files that resolve
+    # inside root are read.
+    files = sorted(
+        candidate
+        for candidate in selected
+        if candidate.suffix.casefold() in _SOURCE_SUFFIXES
+        and not any(part in _SKIP_PARTS for part in candidate.parts)
+        and candidate.is_file()
+        and candidate.resolve().is_relative_to(root)
+    )
+    return files, file_selection
+
+
+def _git_files(root: Path) -> list[Path] | None:
+    """Tracked and unignored files under root, or None outside a Git work tree."""
+    executable = shutil.which("git")
+    if executable is None:
+        return None
+    git = [str(Path(executable).resolve()), "-C", str(root), "ls-files", "-z"]
+    paths: list[str] = []
+    # Submodule files are tracked by their own repository; --others cannot
+    # recurse, so untracked files are listed by a second call.
+    for arguments in (
+        ["--cached", "--recurse-submodules"],
+        ["--others", "--exclude-standard"],
+    ):
+        try:
+            # No shell is used and every argument is fixed.
+            completed = subprocess.run(  # nosec B603
+                [*git, *arguments],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        paths.extend(item for item in completed.stdout.split("\0") if item)
+    return [
+        root / relative
+        for relative in map(Path, dict.fromkeys(paths))
+        if not relative.is_absolute() and ".." not in relative.parts
+    ]
 
 
 def audit_source_text(

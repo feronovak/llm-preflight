@@ -41,7 +41,7 @@ selected model is retired, `inconclusive` means one is retiring or its
 snapshot row is stale. Neither is approval, and the agent must not choose a
 replacement the provider did not name.
 
-Each `--audit-source` reference carries a `retirement` object (status, date, provider-stated replacement, next step) and the payload a `decision` and `next_commands`. An agent may run the printed `--dry-run` commands; it must not treat `unknown` as approval or choose a replacement the provider did not name.
+Each `--audit-source` reference carries a `retirement` object (status, date, provider-stated replacement, next step) and the payload a `decision` and `next_commands`. In a Git work tree the audit reads tracked and unignored files only; `file_selection` reports the mode, and the JSON is never capped. See [source audit JSON](../reference/results.md#source-audit-json). An agent may run the printed `--dry-run` commands; it must not treat `unknown` as approval or choose a replacement the provider did not name.
 
 Use `--migration-check` for a small current-versus-candidate compatibility
 check, then run the task-specific contract tests that represent the affected

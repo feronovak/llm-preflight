@@ -689,6 +689,10 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
     assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in guide
+    assert "`.gitignore`" in guide and "`--all`" in guide
+    assert "| `--all` | off | With `--audit-source`" in cli_reference
+    results_reference = (ROOT / "docs/reference/results.md").read_text()
+    assert "`file_selection`" in results_reference.split("## Source audit JSON")[1]
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide

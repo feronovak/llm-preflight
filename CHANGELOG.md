@@ -26,6 +26,23 @@ All notable changes to this project are documented here.
   until a reviewed account-specific override is supplied; QwenCloud cache
   rates are no longer substituted. Standard Singapore input/output prices
   were checked on October 15.
+- `--audit-source` no longer reads gitignored files such as local worktrees,
+  scratch directories and build output. Inside a Git work tree it audits
+  tracked files, including initialized submodules, plus untracked files
+  `.gitignore` does not exclude. Elsewhere, or without Git, it reads every
+  file under the path as before. Symlinks that leave the audited path are
+  never read. The decision for non-ignored files is unchanged.
+- The source audit's notes name the Gemini rows in the retirement snapshot
+  alongside Anthropic and OpenAI.
+
+### Changed
+
+- `--audit-source` text output now starts with the decision and its counts,
+  then the exit code with and without `--ci`. Findings are grouped by model
+  ID, retired first, with capped locations and one `Next:` line each.
+  References with unknown pricing and no retirement finding collapse to one
+  count. `--all` prints every model and location. `--json` is never capped and
+  keeps its keys; it adds `file_selection` (`git`, `filesystem` or `file`).
 
 ### Added
 

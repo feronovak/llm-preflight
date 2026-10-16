@@ -1,13 +1,22 @@
+import copy
 import hashlib
+from pathlib import Path
 
 import pytest
 
 from llm_preflight.contracts import (
     check_contract,
     contract_fixtures_declared,
+    provenance,
     validate_contract_config,
 )
-from llm_preflight.runner import run_benchmark, validate_config_validations
+from llm_preflight.features import compare_results
+from llm_preflight.runner import (
+    load_config,
+    run_benchmark,
+    select_custom_prompt,
+    validate_config_validations,
+)
 
 
 @pytest.mark.parametrize(
@@ -502,3 +511,74 @@ def test_contract_check_lists_prompts_that_declare_a_validator_but_no_fixtures()
 
     assert report["ok"] is True
     assert report["unproven_prompts"] == ["p2"]
+
+
+def test_prompt_selection_lists_the_run_prompt_once_in_provenance():
+    config = load_config(Path("tests/fixtures/two-prompts.json"))
+
+    result = run_benchmark(select_custom_prompt(config, "p1"))
+
+    assert result["prompt_name"] == "p1"
+    assert result["provenance"]["prompts"] == [
+        {
+            "name": "p1",
+            "sha256": result["prompt_sha256"],
+            "chars": result["prompt_chars"],
+        }
+    ]
+
+
+# Pinned from llm-preflight 2.21.2: only `--prompt` selection may change
+# provenance, so every other shape must keep its evidence hash byte for byte.
+UNSELECTED_EVIDENCE_SHA256 = {
+    "configured prompts only": (
+        "352fd534fc34bc59339df7b71e1f71a26cb334fdfecbcb7f69ea8f13ee968b38"
+    ),
+    "top-level prompt with configured prompts": (
+        "b0c413e98e0b7b9830738617ccde6fd8f02fab287d9663b58d6a7fb41f8cc6ae"
+    ),
+    "top-level prompt only": (
+        "f4c54b5cd7e4f4aaefcfb03974b356f7ff00ba5902f3c2ec44f8b6a720f845be"
+    ),
+}
+
+
+def test_provenance_without_prompt_selection_is_unchanged():
+    configured = load_config(Path("tests/fixtures/two-prompts.json"))
+    with_top_level = {**configured, "prompt": "solo", "validation": {"exact": "x"}}
+    top_level_only = {k: v for k, v in with_top_level.items() if k != "prompts"}
+    configs = {
+        "configured prompts only": configured,
+        "top-level prompt with configured prompts": with_top_level,
+        "top-level prompt only": top_level_only,
+    }
+
+    observed = {
+        label: provenance(config, config["models"], "price")["evidence_sha256"]
+        for label, config in configs.items()
+    }
+
+    assert observed == UNSELECTED_EVIDENCE_SHA256
+
+
+def test_baseline_from_before_the_prompt_fix_stays_comparable():
+    config = load_config(Path("tests/fixtures/two-prompts.json"))
+    current = run_benchmark(select_custom_prompt(config, "p1"))
+    baseline = copy.deepcopy(current)
+    baseline["provenance"]["prompts"] = [
+        *current["provenance"]["prompts"],
+        *[
+            {
+                "name": prompt["name"],
+                "sha256": hashlib.sha256(prompt["prompt"].encode()).hexdigest(),
+                "chars": len(prompt["prompt"]),
+            }
+            for prompt in config["prompts"]
+        ],
+    ]
+    baseline["provenance"]["evidence_sha256"] = "2.21.x-evidence"
+
+    diff = compare_results(baseline, current)
+
+    assert diff["comparability"] == "compatible"
+    assert all("provenance" not in warning for warning in diff["warnings"])

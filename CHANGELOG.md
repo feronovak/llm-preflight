@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Under `--prompt`, `provenance.prompts` lists only the selected prompt, once.
+  It previously listed the selected prompt twice and also the configured
+  prompts that did not run. As a result, `evidence_sha256` for `--prompt` runs
+  differs from 2.21.x for the same configuration. Runs without `--prompt` keep
+  identical provenance and hashes, and baseline comparison is unaffected: it
+  uses the contract hash and validator version, not `evidence_sha256`.
+
 ### Fixed
 
 - Native Qwen 3.8 Max, Max-0902 and Flash use `max_completion_tokens` by

@@ -459,9 +459,12 @@ def provenance(
 
 
 def _prompt_fingerprints(config: dict[str, Any]) -> list[dict[str, Any]]:
-    prompts = []
+    prompts: list[tuple[str, str]] = []
     if "prompt" in config:
         prompts.append((config.get("prompt_name") or "config-prompt", config["prompt"]))
+    if config.get("prompt_name"):
+        # --prompt runs only the selected prompt; the rest of the list did not run.
+        return _hash_prompts(prompts)
     prompts.extend(
         (prompt["name"], prompt["prompt"])
         for prompt in config.get("prompts", [])
@@ -469,6 +472,10 @@ def _prompt_fingerprints(config: dict[str, Any]) -> list[dict[str, Any]]:
         and isinstance(prompt.get("name"), str)
         and isinstance(prompt.get("prompt"), str)
     )
+    return _hash_prompts(prompts)
+
+
+def _hash_prompts(prompts: list[tuple[str, str]]) -> list[dict[str, Any]]:
     return [
         {
             "name": name,

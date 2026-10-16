@@ -256,6 +256,8 @@ separate objects; neither implies the other.
   own retirement snapshot lists a checked route as retired.
 - `routes[]`: `provider`, `model` and `observed_model` for each recorded
   route; `observed_model` is `null` when the record has none.
+- `repository` and `server_url`: the record's GitHub Actions repository and
+  server, `null` for a local record.
 - `retirement_snapshot` (the verifier's own snapshot date), `result`,
   `origin`, `url` and `signature`, which is always "not checked here — use gh
   attestation verify".
@@ -272,17 +274,20 @@ every `*.preflight.json` under each directory.
 | Field | Meaning |
 |---|---|
 | `decision` | `pass` (exit 0), `blocked` (exit 1) or `undecided` (exit 3). |
-| `reason_code` | `fresh_pass`; when blocked, `no_record`, `selection_changed`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error` or `record_error`. |
+| `reason_code` | `fresh_pass`; when blocked, `no_record`, `foreign_record`, `selection_changed`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error`, `repository_unknown` or `record_error`. |
 | `why`, `next` | The reason in one sentence and the numbered next steps, identical to the text output. |
-| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `selection` (the record's, `null` when it has none), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
+| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `server_url`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `selection` (the record's, `null` when it has none), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
 | `selection` | The selection the gate requires, in the record's form. |
+| `repository`, `server_url` | The repository whose records count, from `--repository OWNER/NAME`, else `GITHUB_REPOSITORY`, and its server, from `GITHUB_SERVER_URL`, else `https://github.com`. Both are `null` when no repository is known; the gate is then `undecided` with `repository_unknown`. |
 | `contract_sha256`, `routes_sha256` | The current tree's fingerprints under that selection; `null` when the config cannot be fingerprinted. |
 | `config`, `max_age_days`, `retirement_snapshot`, `signature`, `network_accessed` | Inputs and the verifier's snapshot; `network_accessed` is always `false`. |
 
-The newest record by `checkedAt` that ran the gate's selection, matches both
-fingerprints and carries a GitHub Actions identity decides; on equal age a
-non-passing record wins. A record tracked by Git, a local record, an
-inconsistent record, a record for another selection (or one that records
+The newest record by `checkedAt` that comes from the expected repository,
+ran the gate's selection, matches both fingerprints and carries a GitHub
+Actions identity decides; on equal age a
+non-passing record wins. A record tracked by Git, a local record, a record from another repository or
+server (`foreign_record`; owner, name and host compare without regard to
+case, as GitHub does), an inconsistent record, a record for another selection (or one that records
 none) and a record for other fingerprints never decides. The gate sets the
 selection, not the record: a record of a narrower run, such as `--tests` with
 one cheap test, cannot pass a gate that requires a default run, even though

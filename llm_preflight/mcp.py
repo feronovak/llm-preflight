@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .attestation import DEFAULT_MAX_AGE_DAYS, gate, load_record, verify_record
+from .attestation import (
+    DEFAULT_MAX_AGE_DAYS,
+    expected_repository,
+    gate,
+    load_record,
+    verify_record,
+)
 from .cli import (
     _format_audit_source,
     _format_gate,
@@ -78,9 +84,10 @@ CI setup and report export are CLI workflows, not MCP tools.
 
 To check proof of preflight, call `verify` on a record CI attested and report
 its integrity and freshness separately, or call `gate` with the config, the
-downloaded records and the selection CI runs (`prompt`, `tests`,
-`environment`, `migration_check`). Both read only workspace files and never
-contact a provider. Report the gate's `decision`, `why` and each `next` step.
+downloaded records, the selection CI runs (`prompt`, `tests`,
+`environment`, `migration_check`) and the `repository` (OWNER/NAME) the
+workspace belongs to; without it, or GITHUB_REPOSITORY, the gate cannot
+decide. Both read only workspace files and never contact a provider. Report the gate's `decision`, `why` and each `next` step.
 A gate `pass` is not approval: it shows that a fresh passing record matches
 this contract, never that a model, a budget, a merge or paid work is
 approved. Never attest a record; that stays a CI step.
@@ -145,7 +152,13 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         "run_preflight": {"config", "env_file", "confirm_paid_run"},
         "diff_baseline": {"baseline", "current"},
         "verify": {"record", "max_age_days"},
-        "gate": {"config", "records", "max_age_days", *_SELECTION_ARGUMENTS},
+        "gate": {
+            "config",
+            "records",
+            "max_age_days",
+            "repository",
+            *_SELECTION_ARGUMENTS,
+        },
     }
     required: dict[str, set[str]] = {
         "audit_source": set(),
@@ -176,6 +189,7 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
             "prompt",
             "tests",
             "environment",
+            "repository",
         }
     ):
         raise ProtocolError(-32602, "path arguments must be non-empty strings")
@@ -523,6 +537,7 @@ def _tools() -> list[dict[str, Any]]:
         "additionalProperties": False,
     }
     blocked_codes = [
+        "foreign_record",
         "selection_changed",
         "contract_changed",
         "routes_changed",
@@ -583,6 +598,8 @@ def _tools() -> list[dict[str, Any]]:
             },
             "retirement_snapshot": {"type": "string"},
             "origin": {"enum": origins},
+            "repository": nullable_string,
+            "server_url": nullable_string,
             "url": nullable_string,
             "signature": {"type": "string"},
         },
@@ -594,6 +611,8 @@ def _tools() -> list[dict[str, Any]]:
             "freshness",
             "retirement_snapshot",
             "origin",
+            "repository",
+            "server_url",
             "url",
             "signature",
         ],
@@ -604,7 +623,7 @@ def _tools() -> list[dict[str, Any]]:
             "decision": {"enum": ["pass", "blocked", "undecided"]},
             "reason_code": {
                 "enum": ["fresh_pass", "no_record", *blocked_codes]
-                + ["config_error", "record_error"]
+                + ["config_error", "record_error", "repository_unknown"]
             },
             "why": {"type": "string"},
             "next": strings_schema,
@@ -620,6 +639,7 @@ def _tools() -> list[dict[str, Any]]:
                         "origin": {"enum": origins},
                         "run_id": nullable_string,
                         "repository": nullable_string,
+                        "server_url": nullable_string,
                         "checked_at": nullable_string,
                         "age_days": nullable_count,
                         "valid_until": nullable_string,
@@ -642,6 +662,7 @@ def _tools() -> list[dict[str, Any]]:
                         "origin",
                         "run_id",
                         "repository",
+                        "server_url",
                         "checked_at",
                         "age_days",
                         "valid_until",
@@ -658,6 +679,11 @@ def _tools() -> list[dict[str, Any]]:
             },
             "config": {"type": "string"},
             "selection": selection_schema,
+            "repository": {
+                "type": ["string", "null"],
+                "description": "The repository whose records count; null when unknown, and the gate is then undecided.",
+            },
+            "server_url": nullable_string,
             "contract_sha256": nullable_string,
             "routes_sha256": nullable_string,
             "max_age_days": max_age_schema,
@@ -673,6 +699,8 @@ def _tools() -> list[dict[str, Any]]:
             "records",
             "config",
             "selection",
+            "repository",
+            "server_url",
             "contract_sha256",
             "routes_sha256",
             "max_age_days",
@@ -793,6 +821,11 @@ def _tools() -> list[dict[str, Any]]:
                     "tests": path_schema,
                     "environment": path_schema,
                     "migration_check": {"type": "boolean"},
+                    "repository": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "OWNER/NAME of the workspace repository; default GITHUB_REPOSITORY. Records from any other repository do not count.",
+                    },
                 },
                 "required": ["records"],
                 "additionalProperties": False,
@@ -870,6 +903,7 @@ def _call(
             arguments.get("max_age_days", DEFAULT_MAX_AGE_DAYS),
             selection=selection,
             root=workspace,
+            repository=expected_repository(arguments.get("repository"), os.environ),
         )
         summary = _format_gate(report).splitlines()[0]
         return _tool_result(report, standard=standard, summary=summary)

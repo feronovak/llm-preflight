@@ -32,7 +32,7 @@ claim savings. Strict pricing freshness checks every source description.
 | `report RESULT [--format html\|markdown] [--output PATH]` | HTML to stdout | Render saved schema-version-1 evidence offline; this command runs no benchmark. |
 | `attest RESULT [--config PATH] [--output PATH] [--force] [--json]` | `RESULT` with `.preflight.json` | Write an in-toto record that this result's check ran, with its decision copied, never upgraded. It refuses a result without schema-version-1 provenance and never replaces a record without `--force`. `--config` defaults to the result's recorded `source_config_path`. In GitHub Actions the record carries the run identity; elsewhere its origin is `local`. No provider request. |
 | `verify RECORD [--max-age-days DAYS] [--json]` | 30 days | Report a record's integrity and freshness separately, with this verifier's retirement-snapshot date. Exit 0 intact and fresh, 1 integrity broken, 3 intact but stale or superseded. Signatures are not checked here; use `gh attestation verify`. |
-| `gate [CONFIG] --records PATH... [--env NAME] [--prompt NAME \| --tests LIST \| --migration-check] [--max-age-days DAYS] [--json]` | `benchmark.json`, a default run, 30 days | Decide offline whether a fresh, passing GitHub Actions record ran the same selection flags and matches the current contract and routes under them. Exit 0 pass, 1 blocked, 3 cannot decide. It never fetches artifacts, loads credentials or contacts a provider. |
+| `gate [CONFIG] --records PATH... [--repository OWNER/NAME] [--env NAME] [--prompt NAME \| --tests LIST \| --migration-check] [--max-age-days DAYS] [--json]` | `benchmark.json`, `GITHUB_REPOSITORY`, a default run, 30 days | Decide offline whether a fresh, passing GitHub Actions record from this repository ran the same selection flags and matches the current contract and routes under them. Exit 0 pass, 1 blocked, 3 cannot decide, including when no repository is known. It never fetches artifacts, loads credentials or contacts a provider. |
 | `--output-dir PATH` | `results` | Directory for saved result artifacts. |
 | `--no-save` | off | Do not create result artifacts. |
 | `--json` | off | Print the full result, plan, doctor report, or diff as JSON. |
@@ -133,7 +133,7 @@ against the current tree:
 ```bash
 llm-preflight attest results/run.json
 llm-preflight verify results/run.preflight.json
-llm-preflight gate benchmark.json --records records/
+llm-preflight gate benchmark.json --repository acme/app --records records/
 ```
 
 The gate passes only on the newest matching record that is `PASSED`,
@@ -142,7 +142,11 @@ identity. It rejects a record tracked by Git and never passes a local one. Its
 text output gives the reason first, then numbered next steps, then the exit
 line; `--json` carries the same `why` and `next` with a `reason_code` and a
 verdict per record. Put `CONFIG` before `--records`, which takes every
-following path. Give the gate the selection flags the CI run uses (`--env`,
+following path. Only records from the expected repository count: in GitHub
+Actions it is `GITHUB_REPOSITORY` on `GITHUB_SERVER_URL`; elsewhere pass
+`--repository OWNER/NAME`, or the gate cannot decide (exit 3,
+`repository_unknown`), because another repository's record can carry the
+same fingerprints. Give the gate the selection flags the CI run uses (`--env`,
 `--prompt`, `--tests` or `--profiles`, `--migration-check`): the record must
 have run exactly that selection, so a narrower run cannot stand in for the one
 the gate requires. `--env-file` only loads credentials and is not a selection. `verify` prints a `Route:` line per checked route with the

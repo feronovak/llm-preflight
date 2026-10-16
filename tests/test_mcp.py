@@ -1308,16 +1308,38 @@ def test_gate_returns_the_cli_json_and_first_text_line(
     config = proof_workspace / "benchmark.json"
     records = proof_workspace / "results"
     _, cli_json = _cli(
-        monkeypatch, capsys, "gate", config, "--records", records, *flags, "--json"
+        monkeypatch,
+        capsys,
+        "gate",
+        config,
+        "--repository",
+        "acme/app",
+        "--records",
+        records,
+        *flags,
+        "--json",
     )
     _, cli_text = _cli(
-        monkeypatch, capsys, "gate", config, "--records", records, *flags
+        monkeypatch,
+        capsys,
+        "gate",
+        config,
+        "--repository",
+        "acme/app",
+        "--records",
+        records,
+        *flags,
     )
 
     result = _tool(
         proof_workspace,
         "gate",
-        {"records": ["results"], "prompt": "json", "max_age_days": 10},
+        {
+            "repository": "acme/app",
+            "records": ["results"],
+            "prompt": "json",
+            "max_age_days": 10,
+        },
         meta,
     )["result"]
 
@@ -1333,18 +1355,18 @@ def test_gate_returns_the_cli_json_and_first_text_line(
 
 
 def test_gate_requires_the_selection_the_agent_names(proof_workspace):
-    content = _tool(proof_workspace, "gate", {"records": ["results"]})["result"][
-        "structuredContent"
-    ]
+    content = _tool(
+        proof_workspace, "gate", {"repository": "acme/app", "records": ["results"]}
+    )["result"]["structuredContent"]
 
     assert content["reason_code"] == "selection_changed"
     assert "this gate requires a default run" in content["why"]
 
 
 def test_gate_defaults_to_the_workspace_benchmark_json(proof_workspace):
-    content = _tool(proof_workspace, "gate", {"records": ["results"]})["result"][
-        "structuredContent"
-    ]
+    content = _tool(
+        proof_workspace, "gate", {"repository": "acme/app", "records": ["results"]}
+    )["result"]["structuredContent"]
 
     assert content["config"] == str(proof_workspace / "benchmark.json")
 
@@ -1390,7 +1412,9 @@ def test_gate_refuses_a_record_file_linked_from_outside_the_workspace(
     outside.write_text('{"secret": "gpt-gone"}')
     (proof_workspace / "results" / "linked.preflight.json").symlink_to(outside)
 
-    response = _tool(proof_workspace, "gate", {"records": ["results"]})
+    response = _tool(
+        proof_workspace, "gate", {"repository": "acme/app", "records": ["results"]}
+    )
 
     content = response["result"]["structuredContent"]
     assert content["decision"] == "undecided"
@@ -1427,7 +1451,11 @@ def test_proof_tools_open_no_network_connection(proof_workspace, monkeypatch):
     monkeypatch.setattr(socket.socket, "connect", refuse)
 
     verify = _tool(proof_workspace, "verify", {"record": _record_name(proof_workspace)})
-    gate = _tool(proof_workspace, "gate", {"records": ["results"], "prompt": "json"})
+    gate = _tool(
+        proof_workspace,
+        "gate",
+        {"repository": "acme/app", "records": ["results"], "prompt": "json"},
+    )
 
     assert verify["result"]["isError"] is False
     assert gate["result"]["structuredContent"]["network_accessed"] is False
@@ -1448,9 +1476,19 @@ def test_proof_tools_open_no_network_connection(proof_workspace, monkeypatch):
         ("gate", {"records": "results"}),
         ("gate", {"records": [""]}),
         ("gate", {"records": [7]}),
-        ("gate", {"records": ["results"], "migration_check": "yes"}),
-        ("gate", {"records": ["results"], "prompt": ""}),
-        ("gate", {"records": ["results"], "profiles": "json"}),
+        (
+            "gate",
+            {
+                "repository": "acme/app",
+                "records": ["results"],
+                "migration_check": "yes",
+            },
+        ),
+        ("gate", {"repository": "acme/app", "records": ["results"], "prompt": ""}),
+        (
+            "gate",
+            {"repository": "acme/app", "records": ["results"], "profiles": "json"},
+        ),
     ],
 )
 def test_proof_tools_reject_arguments_outside_their_schema(tmp_path, name, arguments):
@@ -1460,9 +1498,24 @@ def test_proof_tools_reject_arguments_outside_their_schema(tmp_path, name, argum
 @pytest.mark.parametrize(
     "arguments",
     [
-        {"records": ["results"], "prompt": "json", "tests": "json"},
-        {"records": ["results"], "migration_check": True, "tests": "json"},
-        {"records": ["results"], "migration_check": True, "prompt": "json"},
+        {
+            "repository": "acme/app",
+            "records": ["results"],
+            "prompt": "json",
+            "tests": "json",
+        },
+        {
+            "repository": "acme/app",
+            "records": ["results"],
+            "migration_check": True,
+            "tests": "json",
+        },
+        {
+            "repository": "acme/app",
+            "records": ["results"],
+            "migration_check": True,
+            "prompt": "json",
+        },
     ],
 )
 def test_gate_refuses_the_selections_a_run_refuses(proof_workspace, arguments):
@@ -1501,3 +1554,24 @@ def test_agent_guidance_never_presents_a_gate_pass_as_approval(tmp_path):
     assert "| `gate` |" in guide
     assert "seven tools" in " ".join(guide.split())
     assert "seven tools" in " ".join(readme.split())
+
+
+def test_gate_without_a_repository_cannot_decide(proof_workspace):
+    result = _tool(proof_workspace, "gate", {"records": ["results"]})["result"]
+
+    assert result["isError"] is False
+    assert result["structuredContent"]["reason_code"] == "repository_unknown"
+    assert result["content"][0]["text"].startswith("Gate: cannot decide")
+
+
+@pytest.mark.parametrize("repository", ["", "acme", "acme/app/x", "acme/app\n"])
+def test_gate_rejects_a_malformed_repository(proof_workspace, repository):
+    response = _tool(
+        proof_workspace, "gate", {"repository": repository, "records": ["results"]}
+    )
+
+    if "error" in response:
+        assert response["error"]["code"] == -32602
+    else:
+        assert response["result"]["isError"] is True
+        assert "OWNER/NAME" in response["result"]["structuredContent"]["error"]

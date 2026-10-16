@@ -26,6 +26,7 @@ from .attestation import (
     attest_result,
     default_record_path,
     describe_route,
+    expected_repository,
     gate,
     load_record,
     printable,
@@ -2284,6 +2285,10 @@ def _format_verify(report: dict[str, Any], exit_code: int) -> str:
         else "unknown"
     )
     lines.append(f"Origin:    {origin}")
+    if report["origin"] == "local":
+        lines.append("Repository: none — a local record")
+    elif report["repository"] is not None:
+        lines.append(f"Repository: {report['repository']} on {report['server_url']}")
     lines.append(
         f"Snapshot:  retirement snapshot {report['retirement_snapshot']} (this verifier)"
     )
@@ -2335,7 +2340,7 @@ _GATE_EXIT_CODES = {"pass": 0, "blocked": 1, "undecided": 3}  # nosec B105
 _GATE_HEADLINES = {
     "pass": "pass — a fresh passing preflight matches this contract.",  # nosec B105
     "blocked": "blocked — no fresh passing preflight for this contract.",
-    "undecided": "cannot decide — an input could not be read.",
+    "undecided": "cannot decide — an input is missing or could not be read.",
 }
 
 
@@ -2379,6 +2384,14 @@ def _gate_main(argv: list[str]) -> None:
         default=DEFAULT_MAX_AGE_DAYS,
         help="days a record stays fresh after its run",
     )
+    parser.add_argument(
+        "--repository",
+        metavar="OWNER/NAME",
+        help=(
+            "repository whose records count (default: GITHUB_REPOSITORY in CI); "
+            "without either the gate cannot decide"
+        ),
+    )
     selection = parser.add_argument_group(
         "selection",
         "the run flags CI passes; a record counts only if it ran the same ones "
@@ -2413,6 +2426,7 @@ def _gate_main(argv: list[str]) -> None:
             "environment": args.environment_name,
             "migrationCheck": args.migration_check,
         },
+        repository=expected_repository(args.repository, os.environ),
     )
     print(
         json.dumps(report, indent=2) if args.json else _format_gate(report),

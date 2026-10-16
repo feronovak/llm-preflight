@@ -45,7 +45,7 @@ All notable changes to this project are documented here.
   current contract and routes and is `PASSED`, consistent, fresh
   (`--max-age-days`, default 30) and not superseded. It rejects records tracked
   by Git, never passes a local record, and exits 0 pass, 1 blocked, 3 when a
-  config or record cannot be read. Text and `--json` carry the same reason
+  config or record cannot be read or no repository is known. Text and `--json` carry the same reason
   code, why and numbered next steps. A record is untrusted input: integrity
   requires every route's provider, model and observed model to be a
   non-empty, printable string of at most 256 characters, and text output
@@ -73,6 +73,15 @@ All notable changes to this project are documented here.
   `--tests` choice cannot pass a gate that requires a default run. An env
   file only supplies credentials; neither its path nor its contents enter a
   result or a record.
+- The gate counts only records from this repository. It takes the expected
+  repository from `--repository OWNER/NAME`, else `GITHUB_REPOSITORY` on
+  `GITHUB_SERVER_URL` (default `https://github.com`), and compares owner,
+  name and host without regard to case, as GitHub does. A record from
+  another repository or server is blocked as `foreign_record`, so a borrowed
+  pass with the same fingerprints no longer counts. Without an expected
+  repository the gate cannot decide (exit 3, `repository_unknown`) and names
+  the `--repository` flag. `verify` shows the record's repository, and its
+  JSON adds `repository` and `server_url`.
 
 ### Changed
 

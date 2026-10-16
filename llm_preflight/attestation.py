@@ -54,6 +54,7 @@ STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PREDICATE_TYPE = "https://in-toto.io/attestation/test-result/v0.1"
 RECORD_SUFFIX = ".preflight.json"
 DEFAULT_MAX_AGE_DAYS = 30
+DEFAULT_SERVER_URL = "https://github.com"
 SIGNATURE_NOTE = "not checked here — use gh attestation verify"
 CLAIMS_NOT_MADE = (
     "production behaviour",
@@ -106,6 +107,7 @@ _CANDIDATE_VERDICTS = {
 _BLOCKING_PRIORITY = (
     "committed_record",
     "local_record",
+    "foreign_record",
     "inconsistent_record",
     "selection_changed",
     "contract_changed",
@@ -142,6 +144,27 @@ def ci_identity(environ: Mapping[str, str]) -> dict[str, str] | None:
     if malformed:
         raise ValueError(f"malformed GitHub Actions identity: {', '.join(malformed)}")
     return values
+
+
+def expected_repository(
+    flag: str | None, environ: Mapping[str, str]
+) -> dict[str, str] | None:
+    """The repository a gate accepts records from, or None when it is unknown.
+
+    `--repository OWNER/NAME` wins over GITHUB_REPOSITORY; the server is
+    GITHUB_SERVER_URL, else github.com. A malformed value is refused.
+    """
+    repository = flag or environ.get("GITHUB_REPOSITORY") or None
+    if repository is None:
+        return None
+    server = environ.get("GITHUB_SERVER_URL") or DEFAULT_SERVER_URL
+    if not _valid_ci_field("repository", repository):
+        raise ValueError(
+            f"the expected repository {repository!r} is not OWNER/NAME, such as acme/app"
+        )
+    if not _valid_ci_field("serverUrl", server):
+        raise ValueError(f"GITHUB_SERVER_URL {server!r} is not an https:// server URL")
+    return {"repository": repository, "serverUrl": server}
 
 
 def run_url(ci: Mapping[str, str]) -> str:
@@ -395,6 +418,7 @@ def verify_record(
     if routes is None:
         routes = recorded
     origin = evidence.get("origin")
+    ci = evidence.get("ci")
     url = predicate.get("url")
     return {
         "record": display_path(record_path),
@@ -408,6 +432,8 @@ def verify_record(
         ),
         "retirement_snapshot": snapshot_summary()["newest_as_of"],
         "origin": origin if origin in {"github-actions", "local"} else None,
+        "repository": ci.get("repository") if isinstance(ci, dict) else None,
+        "server_url": ci.get("serverUrl") if isinstance(ci, dict) else None,
         "url": url if isinstance(url, str) else None,
         "signature": SIGNATURE_NOTE,
     }
@@ -484,6 +510,7 @@ def gate(
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     selection: Mapping[str, Any] | None = None,
     root: Path | None = None,
+    repository: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Decide offline whether the current tree has a fresh passing record.
 
@@ -491,8 +518,11 @@ def gate(
     (default: a default run), matches the current contract and routes under
     it, is PASSED, consistent, fresh and not superseded. The gate, not the
     record, sets the selection: a record cannot lower the bar by having run
-    less. A record that cannot be read makes the gate unable to decide: it
-    might be the newest. With `root`, as for the MCP workspace, a record or
+    less. Only a record from the expected `repository` (see
+    `expected_repository`) counts; without one the gate cannot decide, since
+    another repository's record can carry the same fingerprints. A record
+    that cannot be read makes the gate unable to decide: it might be the
+    newest. With `root`, as for the MCP workspace, a record or
     subject file that resolves outside it is never read.
     """
     config = display_path(config_path)
@@ -500,6 +530,8 @@ def gate(
     report: dict[str, Any] = {
         "config": config,
         "selection": required,
+        "repository": repository["repository"] if repository else None,
+        "server_url": repository["serverUrl"] if repository else None,
         "contract_sha256": None,
         "routes_sha256": None,
         "max_age_days": max_age_days,
@@ -517,8 +549,28 @@ def gate(
         return _undecided_config(report, config, "it is not a benchmark configuration")
     report["contract_sha256"] = current["contract_sha256"]
     report["routes_sha256"] = current["routes_sha256"]
+    if repository is None:
+        run = " ".join([_quote(config), *selection_flags(required)])
+        searched = " ".join(_quote(display_path(path)) for path in record_paths)
+        return {
+            "decision": "undecided",
+            "reason_code": "repository_unknown",
+            "why": (
+                "The gate cannot tell which repository this tree belongs to: no "
+                "--repository OWNER/NAME was given and GITHUB_REPOSITORY is not "
+                "set. A record from another repository can carry the same "
+                "fingerprints, so the gate never decides without it."
+            ),
+            "next": [
+                (
+                    f"llm-preflight gate {run} --repository OWNER/NAME --records "
+                    f"{searched}   (the repository this tree belongs to)"
+                )
+            ],
+            **report,
+        }
     entries = [
-        _evaluate(path, current, required, today, max_age_days, root)
+        _evaluate(path, current, required, repository, today, max_age_days, root)
         if error is None
         else _entry(path, "record_error", error)
         for path, error in _record_files(record_paths, root)
@@ -558,7 +610,14 @@ def gate(
                 newest = max(matching, key=lambda e: e["_checked"] or _EPOCH)
                 break
     why, steps = _explain(
-        code, newest, config, current, required, record_paths, max_age_days
+        code,
+        newest,
+        config,
+        current,
+        required,
+        repository,
+        record_paths,
+        max_age_days,
     )
     return {
         "decision": "pass" if code == "fresh_pass" else "blocked",
@@ -588,6 +647,7 @@ def _evaluate(
     path: Path,
     current: Mapping[str, Any],
     required: Mapping[str, Any],
+    repository: Mapping[str, str],
     today: date,
     max_age_days: int,
     root: Path | None,
@@ -616,6 +676,7 @@ def _evaluate(
         origin=report["origin"],
         run_id=(evidence.get("ci") or {}).get("runId"),
         repository=(evidence.get("ci") or {}).get("repository"),
+        server_url=(evidence.get("ci") or {}).get("serverUrl"),
         checked_at=freshness["checked_at"],
         age_days=freshness["age_days"],
         valid_until=freshness["valid_until"],
@@ -632,6 +693,12 @@ def _evaluate(
         _checked=_timestamp(evidence["checkedAt"]),
     )
     for verdict, reason, applies in (
+        (
+            "foreign_record",
+            f"from {entry['repository']} on {entry['server_url']}",
+            report["origin"] == "github-actions"
+            and not _same_repository(entry, repository),
+        ),
         (
             "selection_changed",
             "does not record its selection"
@@ -679,6 +746,7 @@ def _entry(path: Path, verdict: str, reason: str) -> dict[str, Any]:
         "origin": None,
         "run_id": None,
         "repository": None,
+        "server_url": None,
         "checked_at": None,
         "age_days": None,
         "valid_until": None,
@@ -699,6 +767,7 @@ def _explain(
     config: str,
     current: Mapping[str, Any],
     required: Mapping[str, Any],
+    expected: Mapping[str, str],
     record_paths: Sequence[Path],
     max_age_days: int,
 ) -> tuple[str, list[str]]:
@@ -726,6 +795,23 @@ def _explain(
                 + f"The signature is {SIGNATURE_NOTE}."
             ),
             [],
+        )
+    if code == "foreign_record":
+        return (
+            (
+                f"The latest record ({described}) comes from "
+                f"{newest['repository']} on {newest['server_url']}, not "
+                f"{expected['repository']} on {expected['serverUrl']}. A record "
+                "from another repository proves nothing about this one."
+            ),
+            [
+                "run the bounded check in this repository's CI",
+                _ATTEST_NEXT,
+                (
+                    "download that run's record, then rerun: "
+                    f"llm-preflight gate {run} --records DIR"
+                ),
+            ],
         )
     if code == "selection_changed":
         requires = describe_selection(required)
@@ -1152,11 +1238,22 @@ def _valid_observed(value: Any) -> bool:
     return reported_model(value) is not None
 
 
+def _same_repository(entry: Mapping[str, Any], expected: Mapping[str, str]) -> bool:
+    """GitHub owner and repository names, like host names, ignore case."""
+    return (
+        str(entry["repository"]).casefold() == expected["repository"].casefold()
+        and str(entry["server_url"]).rstrip("/").casefold()
+        == expected["serverUrl"].rstrip("/").casefold()
+    )
+
+
 def _valid_ci_field(key: str, value: Any) -> bool:
     if not isinstance(value, str):
         return False
     if key == "workflow":
         return 0 < len(value) <= _MAX_WORKFLOW_LENGTH and value.isprintable()
+    if key == "repository" and {".", ".."} & set(value.split("/")):
+        return False
     return _CI_FIELDS[key].fullmatch(value) is not None
 
 

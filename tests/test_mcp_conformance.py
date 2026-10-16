@@ -311,6 +311,10 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
         ],
         "gate": [
             ({"config": "mock.json", "records": ["records"]}, False),
+            (
+                {"config": "mock.json", "records": ["records"], "repository": "a/b"},
+                False,
+            ),
             ({"config": "mock.json", "records": ["unreadable"]}, False),
             ({"config": "discovery.json", "records": ["records"]}, False),
             ({"config": "mock.json", "records": ["missing"]}, False),

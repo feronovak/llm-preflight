@@ -28,6 +28,8 @@ CONFIG = {
     "validation": {"json_object": True},
     "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
 }
+# The repository every gate in this module expects, unless a test says otherwise.
+REPO = ("--repository", "acme/app")
 GITHUB = {
     "GITHUB_REPOSITORY": "acme/app",
     "GITHUB_WORKFLOW": "preflight",
@@ -640,8 +642,10 @@ def test_verify_rejects_unreadable_records_and_invalid_max_age(
 # gate
 
 
-def _gate(monkeypatch, capsys, *arguments):
-    code, out, err = _run(monkeypatch, capsys, "gate", *arguments, "--json")
+def _gate(monkeypatch, capsys, *arguments, repository=REPO):
+    code, out, err = _run(
+        monkeypatch, capsys, "gate", *repository, *arguments, "--json"
+    )
     assert out, err
     return code, json.loads(out)
 
@@ -649,7 +653,7 @@ def _gate(monkeypatch, capsys, *arguments):
 def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path):
     _attest(monkeypatch, capsys, tmp_path)
 
-    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    code, out, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
 
     assert code == 0
     assert out == (
@@ -674,6 +678,119 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
     ]
 
 
+@pytest.mark.parametrize(
+    ("flag", "environment", "reason_code"),
+    [
+        (("--repository", "acme/app"), {}, "fresh_pass"),
+        (("--repository", "ACME/App"), {}, "fresh_pass"),
+        (("--repository", "acme/other"), {}, "foreign_record"),
+        (("--repository", "other/app"), {}, "foreign_record"),
+        ((), {"GITHUB_REPOSITORY": "acme/app"}, "fresh_pass"),
+        (
+            (),
+            {
+                "GITHUB_REPOSITORY": "Acme/APP",
+                "GITHUB_SERVER_URL": "https://GitHub.com",
+            },
+            "fresh_pass",
+        ),
+        ((), {"GITHUB_REPOSITORY": "fork/app"}, "foreign_record"),
+        (
+            (),
+            {
+                "GITHUB_REPOSITORY": "acme/app",
+                "GITHUB_SERVER_URL": "https://ghe.example.com",
+            },
+            "foreign_record",
+        ),
+        (("--repository", "acme/app"), {"GITHUB_REPOSITORY": "fork/app"}, "fresh_pass"),
+        (
+            ("--repository", "fork/app"),
+            {"GITHUB_REPOSITORY": "acme/app"},
+            "foreign_record",
+        ),
+    ],
+    ids=[
+        "flag",
+        "flag-case-insensitive",
+        "flag-other-name",
+        "flag-other-owner",
+        "environment",
+        "environment-case-insensitive",
+        "environment-fork",
+        "environment-other-server",
+        "flag-overrides-environment",
+        "flag-overrides-matching-environment",
+    ],
+)
+def test_gate_counts_only_records_from_the_expected_repository(
+    monkeypatch, capsys, tmp_path, flag, environment, reason_code
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    for variable, value in environment.items():
+        monkeypatch.setenv(variable, value)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results", repository=flag)
+
+    assert report["reason_code"] == reason_code
+    assert code == (0 if reason_code == "fresh_pass" else 1)
+    if reason_code == "foreign_record":
+        assert report["records"][0]["verdict"] == "foreign_record"
+        assert "comes from acme/app on https://github.com, not " in report["why"]
+        assert report["next"][0] == "run the bounded check in this repository's CI"
+
+
+def test_gate_cannot_decide_without_the_expected_repository(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, report = _gate(monkeypatch, capsys, "--records", "results", repository=())
+
+    assert (code, report["decision"], report["reason_code"]) == (
+        3,
+        "undecided",
+        "repository_unknown",
+    )
+    assert out.startswith("Gate: cannot decide")
+    assert "GITHUB_REPOSITORY" in report["why"]
+    assert report["next"] == [
+        (
+            "llm-preflight gate benchmark.json --repository OWNER/NAME --records "
+            "results   (the repository this tree belongs to)"
+        )
+    ]
+    assert report["repository"] is None
+
+
+@pytest.mark.parametrize("value", ["acme", "acme/app/extra", "acme/app\n", "../app"])
+def test_gate_refuses_a_malformed_expected_repository(
+    monkeypatch, capsys, tmp_path, value
+):
+    _attest(monkeypatch, capsys, tmp_path)
+
+    code, _, err = _run(
+        monkeypatch, capsys, "gate", "--repository", value, "--records", "results"
+    )
+
+    assert code == 2
+    assert "OWNER/NAME" in err
+
+
+def test_verify_shows_the_record_repository(monkeypatch, capsys, tmp_path):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    local = _attest(monkeypatch, capsys, tmp_path, ci=False, name="local.json")
+
+    _, out, _ = _run(monkeypatch, capsys, "verify", record)
+    _, report, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    _, local_out, _ = _run(monkeypatch, capsys, "verify", local)
+
+    assert "Repository: acme/app on https://github.com\n" in out
+    assert json.loads(report)["repository"] == "acme/app"
+    assert "Repository: none — a local record\n" in local_out
+
+
 def test_gate_blocks_a_changed_contract_why_first_then_next_steps(
     monkeypatch, capsys, tmp_path
 ):
@@ -683,7 +800,7 @@ def test_gate_blocks_a_changed_contract_why_first_then_next_steps(
         json.dumps({**CONFIG, "validation": {"json_array": True}})
     )
 
-    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    code, out, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
     _, report = _gate(monkeypatch, capsys, "--records", "results")
 
     assert code == 1
@@ -869,9 +986,11 @@ def test_gate_cannot_decide_when_a_record_or_the_config_cannot_be_read(
     broken = tmp_path / "results/broken.preflight.json"
     broken.write_text("{not json")
 
-    code, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    code, out, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
     assert code == 3
-    assert out.startswith("Gate: cannot decide — an input could not be read.\n")
+    assert out.startswith(
+        "Gate: cannot decide — an input is missing or could not be read.\n"
+    )
     assert out.rstrip().endswith("Exit 3.")
     _, report = _gate(monkeypatch, capsys, "--records", "results")
     assert (report["decision"], report["reason_code"]) == ("undecided", "record_error")
@@ -907,7 +1026,7 @@ def test_gate_cannot_fingerprint_discovered_routes_offline(
 def test_gate_text_and_json_carry_the_same_why_and_next(monkeypatch, capsys, tmp_path):
     _attest(monkeypatch, capsys, tmp_path, state="inconclusive")
 
-    _, out, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    _, out, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
     _, report = _gate(monkeypatch, capsys, "--records", "results")
 
     assert report["reason_code"] == "inconclusive_record"
@@ -1162,7 +1281,9 @@ def test_gate_refuses_the_selections_a_run_refuses(
     _config(tmp_path, SELECTION_CONFIG)
     monkeypatch.chdir(tmp_path)
 
-    code, _, err = _run(monkeypatch, capsys, "gate", *flags, "--records", "results")
+    code, _, err = _run(
+        monkeypatch, capsys, "gate", *REPO, *flags, "--records", "results"
+    )
 
     assert code == 2
     assert "cannot be combined" in err
@@ -1265,7 +1386,9 @@ def test_record_strings_never_reach_text_output_as_control_characters(
 
     code, text, _ = _run(monkeypatch, capsys, "verify", record)
     _, report, _ = _run(monkeypatch, capsys, "verify", record, "--json")
-    gate_code, gate_text, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    gate_code, gate_text, _ = _run(
+        monkeypatch, capsys, "gate", *REPO, "--records", "results"
+    )
     _, gate_report = _gate(monkeypatch, capsys, "--records", "results")
 
     assert code == 1
@@ -1312,7 +1435,7 @@ def test_gate_text_escapes_a_record_file_name_with_control_characters(
     _edit_record(record, lambda record: _evidence(record).update(costConfidence="?"))
     record.rename(record.with_name(f"evil{payload}x.preflight.json"))
 
-    code, text, _ = _run(monkeypatch, capsys, "gate", "--records", "results")
+    code, text, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
     _, report = _gate(monkeypatch, capsys, "--records", "results")
 
     assert (code, report["reason_code"]) == (1, "inconsistent_record")

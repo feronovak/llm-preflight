@@ -528,37 +528,95 @@ def test_prompt_selection_lists_the_run_prompt_once_in_provenance():
     ]
 
 
-# Pinned from llm-preflight 2.21.2: only `--prompt` selection may change
-# provenance, so every other shape must keep its evidence hash byte for byte.
-UNSELECTED_EVIDENCE_SHA256 = {
-    "configured prompts only": (
-        "352fd534fc34bc59339df7b71e1f71a26cb334fdfecbcb7f69ea8f13ee968b38"
-    ),
-    "top-level prompt with configured prompts": (
-        "b0c413e98e0b7b9830738617ccde6fd8f02fab287d9663b58d6a7fb41f8cc6ae"
-    ),
-    "top-level prompt only": (
-        "f4c54b5cd7e4f4aaefcfb03974b356f7ff00ba5902f3c2ec44f8b6a720f845be"
-    ),
-}
+def _prompt_entry(name, text):
+    return {
+        "name": name,
+        "sha256": hashlib.sha256(text.encode()).hexdigest(),
+        "chars": len(text),
+    }
 
 
-def test_provenance_without_prompt_selection_is_unchanged():
+def _provenance_shapes():
     configured = load_config(Path("tests/fixtures/two-prompts.json"))
     with_top_level = {**configured, "prompt": "solo", "validation": {"exact": "x"}}
     top_level_only = {k: v for k, v in with_top_level.items() if k != "prompts"}
-    configs = {
+    return {
         "configured prompts only": configured,
         "top-level prompt with configured prompts": with_top_level,
         "top-level prompt only": top_level_only,
     }
 
+
+# Pinned from llm-preflight 2.21.2. Baseline comparison keys on the contract
+# hash, so listing only the prompts that ran must never change it.
+CONTRACT_SHA256 = {
+    "configured prompts only": (
+        "72d3e04d34843b2fae953e10fdacf27f4c2e943ce09cdf5bc0db1d06f8139554"
+    ),
+    "top-level prompt with configured prompts": (
+        "87bb9da2644b9db7581be2a3d8bb791488910ca1fa26c531c34e8bbecf51b394"
+    ),
+    "top-level prompt only": (
+        "9fe974807587de00ee73269859d16bee30cb513975792eb9555bec4e247e97dc"
+    ),
+}
+# Pinned from llm-preflight 2.21.2. A run whose config has only a top-level
+# prompt listed exactly that prompt, so its evidence hash must not move.
+TOP_LEVEL_ONLY_EVIDENCE_SHA256 = (
+    "f4c54b5cd7e4f4aaefcfb03974b356f7ff00ba5902f3c2ec44f8b6a720f845be"
+)
+# Pinned from llm-preflight 2.21.2, which also listed the configured prompts
+# that did not run.
+TOP_LEVEL_WITH_PROMPTS_2_21_EVIDENCE_SHA256 = (
+    "b0c413e98e0b7b9830738617ccde6fd8f02fab287d9663b58d6a7fb41f8cc6ae"
+)
+
+
+def test_provenance_keeps_every_contract_hash_and_the_top_level_only_evidence():
+    shapes = _provenance_shapes()
+
     observed = {
-        label: provenance(config, config["models"], "price")["evidence_sha256"]
-        for label, config in configs.items()
+        label: provenance(config, config["models"], "price")
+        for label, config in shapes.items()
     }
 
-    assert observed == UNSELECTED_EVIDENCE_SHA256
+    assert {
+        label: result["contract_sha256"] for label, result in observed.items()
+    } == CONTRACT_SHA256
+    assert (
+        observed["top-level prompt only"]["evidence_sha256"]
+        == TOP_LEVEL_ONLY_EVIDENCE_SHA256
+    )
+
+
+def test_provenance_of_a_top_level_prompt_run_omits_the_configured_prompts():
+    shape = "top-level prompt with configured prompts"
+    config = _provenance_shapes()[shape]
+
+    result = run_benchmark(config)
+
+    assert result["provenance"]["prompts"] == [_prompt_entry("config-prompt", "solo")]
+    assert result["provenance"]["contract_sha256"] == CONTRACT_SHA256[shape]
+    assert (
+        provenance(config, config["models"], "price")["evidence_sha256"]
+        != TOP_LEVEL_WITH_PROMPTS_2_21_EVIDENCE_SHA256
+    )
+
+
+def test_provenance_of_a_profile_run_lists_each_case_it_sent():
+    config = load_config(Path("tests/fixtures/two-prompts.json"))
+
+    configured = run_benchmark({**config, "prompt": "solo", "profiles": ["p1"]})
+    selected = run_benchmark(config, profile_selector="quick-migration-check,p2")
+
+    assert configured["provenance"]["prompts"] == [_prompt_entry("p1", "say alpha")]
+    assert [entry["name"] for entry in selected["provenance"]["prompts"]] == [
+        "chat-capital",
+        "chat-summary",
+        "chat-rewrite",
+        "p2",
+    ]
+    assert selected["provenance"]["prompts"][-1] == _prompt_entry("p2", "say beta")
 
 
 def test_baseline_from_before_the_prompt_fix_stays_comparable():

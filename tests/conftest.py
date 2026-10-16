@@ -35,3 +35,22 @@ def august_catalog_review(monkeypatch):
             return cls(2026, 8, 31, tzinfo=tz)
 
     monkeypatch.setattr("llm_preflight.pricing.datetime", ReviewDatetime)
+
+
+@pytest.fixture
+def tripwire(tmp_path):
+    """Make shell commands that leave `<name>.ran` in tmp_path if they ever run.
+
+    A passthrough command copies stdin to stdout, as a Git clean filter must.
+    """
+
+    def make(name, passthrough=False):
+        script = tmp_path / f"{name}.sh"
+        script.write_text(
+            f'#!/bin/sh\ntouch "{tmp_path / f"{name}.ran"}"\n'
+            + ("exec cat\n" if passthrough else "exit 1\n")
+        )
+        script.chmod(0o755)
+        return str(script)
+
+    return make

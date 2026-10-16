@@ -1,11 +1,12 @@
 import shutil
 import subprocess
+import time
 from datetime import date
 from pathlib import Path
 
 import pytest
 
-from llm_preflight import retirements, source_audit
+from llm_preflight import retirements
 from llm_preflight.source_audit import audit_source, audit_source_text
 
 TODAY = date(2026, 10, 9)
@@ -285,7 +286,7 @@ def test_source_audit_decision_on_unignored_files_matches_the_filesystem_walk(
 
     from_git = audit_source(repo, today=TODAY)
     (repo / "draft.local.json").unlink()
-    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     from_walk = audit_source(repo, today=TODAY)
 
     assert from_git["file_selection"] == "git"
@@ -352,7 +353,7 @@ def test_source_audit_never_reads_a_symlink_that_leaves_the_audited_path(
     _git(repo, "add", ".")
 
     from_git = audit_source(repo, today=TODAY)
-    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     from_walk = audit_source(repo, today=TODAY)
 
     assert from_git["file_selection"] == "git"
@@ -377,13 +378,16 @@ def test_source_audit_walks_a_directory_that_is_not_a_git_work_tree(
     report = audit_source(tmp_path)
 
     assert report["file_selection"] == "filesystem"
+    assert report["file_selection_reason"].startswith(
+        "git could not list files: not a git repository"
+    )
     assert [item["path"] for item in report["references"]] == ["generated.py"]
 
 
 def test_source_audit_walks_the_directory_when_git_is_unavailable(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
     (tmp_path / "results").mkdir()
     (tmp_path / "results" / "run.json").write_text('{"model": "gpt-5.4-mini"}\n')
@@ -391,6 +395,7 @@ def test_source_audit_walks_the_directory_when_git_is_unavailable(
     report = audit_source(tmp_path)
 
     assert report["file_selection"] == "filesystem"
+    assert report["file_selection_reason"] == "git is not installed"
     assert [item["path"] for item in report["references"]] == ["app.py"]
 
 
@@ -401,4 +406,244 @@ def test_source_audit_of_a_single_file_reports_the_file_selection(tmp_path):
     report = audit_source(source)
 
     assert report["file_selection"] == "file"
+    assert report["file_selection_reason"] is None
     assert report["files_scanned"] == 1
+
+
+@requires_git
+def test_source_audit_never_runs_a_command_the_audited_repository_configures(
+    tmp_path, tripwire
+):
+    library = _repository(tmp_path / "library")
+    (library / "client.py").write_text('a = "gpt-5.4-mini"\n')
+    _git(library, "add", "client.py")
+    _git(library, "commit", "-q", "-m", "initial")
+    repo = _repository(tmp_path / "repo")
+    _git(
+        repo,
+        "-c",
+        "protocol.file.allow=always",
+        "submodule",
+        "add",
+        "-q",
+        str(library),
+        "vendor/library",
+    )
+    _git(repo, "config", "core.fsmonitor", tripwire("fsmonitor"))
+    _git(
+        repo / "vendor" / "library",
+        "config",
+        "core.fsmonitor",
+        tripwire("submodule-fsmonitor"),
+    )
+
+    report = audit_source(repo)
+
+    assert report["file_selection"] == "git"
+    assert [item["path"] for item in report["references"]] == [
+        "vendor/library/client.py"
+    ]
+    assert sorted(path.name for path in tmp_path.glob("*.ran")) == []
+
+
+@requires_git
+def test_source_audit_lists_the_audited_repository_whatever_git_environment_is_set(
+    tmp_path, monkeypatch
+):
+    other = _repository(tmp_path / "other")
+    (other / "other.py").write_text('a = "gpt-5.4-mini"\n')
+    _git(other, "add", "other.py")
+    _git(other, "commit", "-q", "-m", "initial")
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(other / ".git" / "index"))
+
+    report = audit_source(repo)
+
+    assert report["file_selection"] == "git"
+    assert [item["path"] for item in report["references"]] == ["app.py"]
+
+
+@requires_git
+def test_source_audit_skips_directories_only_below_the_audited_path(
+    tmp_path, monkeypatch
+):
+    (tmp_path / "results" / "venv").mkdir(parents=True)
+    repo = _repository(tmp_path / "results" / "venv" / "project")
+    (repo / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    (repo / "results").mkdir()
+    (repo / "results" / "run.json").write_text('{"model": "gpt-5.4-mini"}\n')
+
+    from_git = audit_source(repo)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    from_walk = audit_source(repo)
+
+    assert from_git["file_selection"] == "git"
+    for report in (from_git, from_walk):
+        assert report["files_scanned"] == 1
+        assert [item["path"] for item in report["references"]] == ["app.py"]
+
+
+@requires_git
+def test_source_audit_walks_a_path_its_enclosing_repository_ignores(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    home = _repository(tmp_path / "home")
+    (home / ".gitignore").write_text("*\n")
+    (home / "project").mkdir()
+    (home / "project" / "app.py").write_text('a = "gpt-gone"\n')
+
+    report = audit_source(home / "project", today=TODAY)
+
+    assert report["file_selection"] == "filesystem"
+    assert report["file_selection_reason"] == (
+        "the path is ignored by its enclosing git repository"
+    )
+    assert report["files_scanned"] == 1
+    assert report["decision"] == "fail"
+
+
+@requires_git
+def test_source_audit_reads_an_unignored_nested_repository_like_the_walk(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('a = "gpt-going"\n')
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-q", "-m", "initial")
+    nested = _repository(repo / "nested")
+    (nested / "client.py").write_text('a = "gpt-gone"\n')
+    (nested / "node_modules").mkdir()
+    (nested / "node_modules" / "dep.js").write_text('a = "gpt-gone"\n')
+    (nested / "outside.py").symlink_to(tmp_path)
+
+    from_git = audit_source(repo, today=TODAY)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    from_walk = audit_source(repo, today=TODAY)
+
+    assert from_git["file_selection"] == "git"
+    assert [item["path"] for item in from_git["references"]] == [
+        "app.py",
+        "nested/client.py",
+    ]
+    for key in ("files_scanned", "references", "findings", "decision"):
+        assert from_git[key] == from_walk[key]
+
+
+@requires_git
+def test_source_audit_reports_why_git_could_not_list_files(tmp_path, monkeypatch):
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    global_config = tmp_path / "global.gitconfig"
+    global_config.write_text("")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
+
+    report = audit_source(repo)
+
+    assert report["file_selection"] == "filesystem"
+    assert report["file_selection_reason"].startswith(
+        "git could not list files: detected dubious ownership in repository at "
+    )
+    assert [item["path"] for item in report["references"]] == ["app.py"]
+
+
+@requires_git
+@pytest.mark.parametrize(
+    ("stderr", "reason"),
+    [
+        (
+            "fatal: key sk-synthetic-secret rejected\nhint: second line\n",
+            "git could not list files: key [REDACTED] rejected",
+        ),
+        (
+            "\nerror: \x1b[31m" + "x" * 300,
+            "git could not list files: error: [31m" + "x" * 108 + "…",
+        ),
+        ("", "git could not list files: exit status 128"),
+    ],
+)
+def test_source_audit_reason_quotes_one_safe_line_of_git_stderr(
+    tmp_path, monkeypatch, stderr, reason
+):
+    def failing_git(command, **kwargs):
+        raise subprocess.CalledProcessError(128, command, stderr=stderr)
+
+    monkeypatch.setattr(subprocess, "run", failing_git)
+    (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
+
+    report = audit_source(tmp_path)
+
+    assert report["file_selection"] == "filesystem"
+    assert report["file_selection_reason"] == reason
+
+
+@pytest.mark.parametrize("git_available", [True, False])
+def test_source_audit_that_reads_no_file_is_inconclusive(
+    tmp_path, monkeypatch, git_available
+):
+    if git_available:
+        if shutil.which("git") is None:
+            pytest.skip("git is not installed")
+        project = _repository(tmp_path / "repo")
+        (project / "README.md").write_text('model = "gpt-5.4-mini"\n')
+        _git(project, "add", "README.md")
+    else:
+        monkeypatch.setattr(shutil, "which", lambda name: None)
+        project = tmp_path
+        (project / "README.md").write_text('model = "gpt-5.4-mini"\n')
+
+    report = audit_source(project)
+
+    assert report["files_scanned"] == 0
+    assert report["references"] == []
+    assert report["decision"] == "inconclusive"
+    assert report["next_commands"] == []
+
+
+def test_source_audit_lists_each_model_once_per_line_in_source_order(tmp_path):
+    (tmp_path / "models.yaml").write_text(
+        'model: gpt-5.5 # "gpt-5.5"\npair: ["claude-x", "gpt-5.5", "claude-x"]\n'
+    )
+
+    report = audit_source(tmp_path)
+
+    assert [(item["line"], item["model"]) for item in report["references"]] == [
+        (1, "gpt-5.5"),
+        (2, "claude-x"),
+        (2, "gpt-5.5"),
+    ]
+
+
+def test_source_audit_of_many_references_takes_linear_time():
+    count = 10_000
+    text = "".join(f'm = "gpt-{index}"\n' for index in range(count))
+
+    started = time.perf_counter()
+    report = audit_source_text(Path("app.py"), text)
+    elapsed = time.perf_counter() - started
+
+    assert len(report["references"]) == count
+    assert elapsed < 1
+
+
+def test_source_audit_counts_only_files_it_could_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", TABLE)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    (tmp_path / "models.json").write_text('{"model": "gpt-gone"}\n', encoding="utf-16")
+
+    only_unreadable = audit_source(tmp_path, today=TODAY)
+    (tmp_path / "app.py").write_text('a = "gpt-going"\n')
+    mixed = audit_source(tmp_path, today=TODAY)
+
+    assert only_unreadable["files_scanned"] == 0
+    assert only_unreadable["files_unreadable"] == 1
+    assert only_unreadable["decision"] == "inconclusive"
+    assert mixed["files_scanned"] == 1
+    assert mixed["files_unreadable"] == 1
+    assert [item["path"] for item in mixed["references"]] == ["app.py"]

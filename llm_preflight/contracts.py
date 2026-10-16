@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -407,10 +408,13 @@ def _check_fixture(
 
 
 def provenance(
-    config: dict[str, Any], models: list[dict[str, Any]], pricing_fingerprint: str
+    config: dict[str, Any],
+    models: list[dict[str, Any]],
+    pricing_fingerprint: str,
+    profiles: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
     """Return non-secret, stable evidence fingerprints for a completed run."""
-    prompts = _prompt_fingerprints(config)
+    prompts = _prompt_fingerprints(config, profiles)
     clean_config = without_private_fields(config)
     contract = {
         "validator_version": OUTPUT_VALIDATOR_VERSION,
@@ -458,21 +462,24 @@ def provenance(
     return result
 
 
-def _prompt_fingerprints(config: dict[str, Any]) -> list[dict[str, Any]]:
+def _prompt_fingerprints(
+    config: dict[str, Any], profiles: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Fingerprint each prompt the run sent, once."""
     prompts: list[tuple[str, str]] = []
-    if "prompt" in config:
-        prompts.append((config.get("prompt_name") or "config-prompt", config["prompt"]))
-    if config.get("prompt_name"):
-        # --prompt runs only the selected prompt; the rest of the list did not run.
-        return _hash_prompts(prompts)
-    prompts.extend(
-        (prompt["name"], prompt["prompt"])
-        for prompt in config.get("prompts", [])
-        if isinstance(prompt, dict)
-        and isinstance(prompt.get("name"), str)
-        and isinstance(prompt.get("prompt"), str)
-    )
-    return _hash_prompts(prompts)
+    if profiles:
+        # A profile run sends every case of every selected profile, a custom
+        # prompt as one case under its own name, and never the top-level prompt.
+        prompts = [
+            (case["id"], case["prompt"])
+            for profile in profiles
+            for case in profile["cases"]
+        ]
+    elif "prompt" in config:
+        # --prompt copies the selected prompt to the top level; otherwise the
+        # top-level prompt runs and the configured prompts list does not.
+        prompts = [(config.get("prompt_name") or "config-prompt", config["prompt"])]
+    return _hash_prompts(list(dict.fromkeys(prompts)))
 
 
 def _hash_prompts(prompts: list[tuple[str, str]]) -> list[dict[str, Any]]:

@@ -57,7 +57,7 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 | `pricing_coverage` | Coverage for every selected direct model and OpenRouter route, including `priced`, `undated`, `stale`, or `unknown` status, source, source URL, as-of date, stable warning code, remediation, and whether a mock fixture is pricing-exempt. The summary separates all `selected` rows from `billable` rows and `exempt` mock fixtures, so `priced` never counts a mock. `ok` is false for stale or unknown pricing; `enforcement_ok` additionally becomes false for undated pricing when `require_current_pricing` is enabled, and is the paid-run/CI gate verdict. |
 | `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
 | `pricing_ledger`, `pricing_fingerprint` | Redacted resolved per-model prices/provenance used by this run and their stable SHA-256 identity. These are additive fields in schema version 1. |
-| `provenance` | Secret-safe evidence identity. It includes versioned hashes of the effective configuration, contract, and resolved routes; reuses the pricing fingerprint; records per-prompt hashes and declared request/cost caps; and combines these in `evidence_sha256`. It never exposes routes, headers, prompts, or secrets through this field. `provenance.prompts` lists each prompt that ran exactly once. Under `--prompt`, it holds only the selected prompt; configured prompts that were not selected are not listed. |
+| `provenance` | Secret-safe evidence identity. It includes versioned hashes of the effective configuration, contract, and resolved routes; reuses the pricing fingerprint; records per-prompt hashes and declared request/cost caps; and combines these in `evidence_sha256`. It never exposes routes, headers, prompts, or secrets through this field. `provenance.prompts` lists the prompts the run sent, each once, and nothing else. A profile run lists every case of the selected profiles (a custom prompt is one case under its own name) and not the top-level prompt. Any other run lists only its top-level prompt, or under `--prompt` only the selected prompt; the configured `prompts` list is not listed when it did not run. |
 | `decision` | Additive agent decision object with its own `decision.schema_version`. It exposes `pass`, `fail`, or `inconclusive`, an exact safe next command, and verbatim blocking warnings. See [Agent decision contract](decision.md). |
 | `source_config` | Redacted input configuration, retained for replay and audit. |
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |
@@ -178,14 +178,21 @@ no regression by itself. A non-empty `regressions` list makes `--ci` exit 1.
 
 `llm-preflight --audit-source PATH --json` writes a separate, uncapped audit
 object. `root` is the resolved path, `network_accessed` is always `false`,
-`files_scanned` counts the files selected, and `file_selection` names how
+`files_scanned` counts the selected files that were read as UTF-8 text,
+`files_unreadable` the selected files that were not (such as UTF-16 files),
+and `file_selection` names how
 they were selected: `git` (tracked files, including initialized submodules,
-plus untracked files `.gitignore` does not exclude), `filesystem` (every file
-under the path, when it is not in a Git work tree or Git is unavailable) or
-`file` (the named file). Each `references[]` entry has `path`, `line`,
+plus untracked files `.gitignore` does not exclude, including those of an
+untracked nested repository), `filesystem` (every file under the path) or
+`file` (the named file). `file_selection_reason` is `null` except in
+`filesystem` mode, where it says why Git did not select the files: Git is not
+installed, Git could not list files (with Git's first error line, such as
+"not a git repository"), or the path is ignored by its enclosing repository.
+Each `references[]` entry has `path`, `line`,
 `provider`, `model`, pricing `status` and `confidence`, and a `retirement`
 verdict. `findings` lists the references with unknown pricing or a retired,
 retiring or stale verdict. `decision` (`fail`, `inconclusive`, `pass` or
 `none`) is the worst retirement decision across all references and drives
-the `--ci` exit code; `next_commands`, `retirement_snapshot`, `confidence`
-and `notes` complete the object.
+the `--ci` exit code. When `files_scanned` is 0, including when every
+selected file was unreadable, the decision is `inconclusive`: an audit that read nothing has no evidence. `next_commands`,
+`retirement_snapshot`, `confidence` and `notes` complete the object.

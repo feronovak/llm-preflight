@@ -276,7 +276,10 @@ def _retirement_exit(decision: str, ci: bool) -> None:
 def _retirement_phrase(verdict: dict[str, Any]) -> str:
     status = verdict["status"]
     if status in {"retired", "retiring"}:
-        when = verdict.get("retirement_date", "date to be announced")
+        when = verdict.get(
+            "retirement_date",
+            "(date not recorded)" if status == "retired" else "date to be announced",
+        )
         replacement = verdict.get("replacement")
         tail = (
             f"replacement {replacement}"
@@ -321,26 +324,32 @@ _AUDIT_LOCATION_LIMIT = 3
 _AUDIT_FILE_SELECTION = {
     "git": "Files: tracked by git, plus untracked files .gitignore does not exclude.",
     "filesystem": (
-        "Files: every file under the path; not a git work tree or git is "
-        "unavailable, so .gitignore is not applied."
+        "Files: every file under the path; .gitignore is not applied because {reason}."
     ),
     "file": "Files: the named file.",
 }
+_AUDIT_NOTHING_READ = {
+    "git": "git lists no tracked or unignored source file under the path",
+    "filesystem": "the path holds no source file outside skipped directories",
+}
+_AUDIT_NOTHING_UTF8 = "no selected source file is UTF-8 text"
 _AUDIT_CI_EXIT = {
     0: "no referenced model is retired, retiring or stale.",
     1: "a referenced model is retired.",
     3: "a referenced model is retiring or its snapshot row is stale.",
 }
+_AUDIT_CI_NOTHING_READ = "no file was audited, so nothing is verified."
 
 
 def _counted(count: int, noun: str) -> str:
     return f"{count} {noun}{'' if count == 1 else 's'}"
 
 
-def _audit_exit_line(decision: str, ci: bool) -> str:
+def _audit_exit_line(decision: str, ci: bool, audited: bool = True) -> str:
     code = _RETIREMENT_EXIT.get(decision, 0)
     if ci:
-        return f"Exit {code} (--ci): {_AUDIT_CI_EXIT[code]}"
+        reason = _AUDIT_CI_EXIT[code] if audited else _AUDIT_CI_NOTHING_READ
+        return f"Exit {code} (--ci): {reason}"
     if code:
         return f"Exit 0 — add --ci to exit {code} on this decision."
     return "Exit 0 — --ci also exits 0 on this decision."
@@ -378,6 +387,29 @@ def _audit_group_lines(
 def _format_audit_source(
     audit: dict[str, Any], show_all: bool = False, ci: bool = False
 ) -> str:
+    files_lines = [
+        _AUDIT_FILE_SELECTION[audit["file_selection"]].format(
+            reason=audit["file_selection_reason"]
+        )
+    ]
+    unreadable = audit["files_unreadable"]
+    if unreadable:
+        files_lines.append(
+            f"Not audited: {_counted(unreadable, 'file')} that "
+            f"{'is' if unreadable == 1 else 'are'} not UTF-8 text."
+        )
+    if not audit["files_scanned"]:
+        why = (
+            _AUDIT_NOTHING_UTF8
+            if unreadable
+            else _AUDIT_NOTHING_READ[audit["file_selection"]]
+        )
+        lines = [
+            f"Decision: inconclusive — nothing was audited: {why}.",
+            _audit_exit_line(audit["decision"], ci, audited=False),
+            *files_lines,
+        ]
+        return "\n".join(lines) + "\n"
     references = audit["references"]
     statuses = [item["retirement"]["status"] for item in references]
     retired = statuses.count("retired")
@@ -395,7 +427,7 @@ def _format_audit_source(
             f"{retired} retired, {retiring} retiring or stale, {unknown} unknown."
         ),
         _audit_exit_line(audit["decision"], ci),
-        _AUDIT_FILE_SELECTION[audit["file_selection"]],
+        *files_lines,
     ]
     retired_groups = _audit_groups(
         [item for item in references if item["retirement"]["status"] == "retired"]
@@ -2402,6 +2434,8 @@ def main() -> None:
     environment: dict[str, Any] | None = None
     deferred_env_path: Path | None = None
     try:
+        if args.all and not args.audit_source:
+            parser.error("--all requires --audit-source")
         if args.init is not None:
             if args.config is not None:
                 parser.error("--init cannot be combined with a benchmark configuration")
@@ -2439,8 +2473,6 @@ def main() -> None:
             )
         if args.replace_approval_receipt and not args.approval_receipt:
             parser.error("--replace-approval-receipt requires --approval-receipt")
-        if args.all and not args.audit_source:
-            parser.error("--all requires --audit-source")
         if args.diff:
             diff = compare_results(load_json(args.diff[0]), load_json(args.diff[1]))
             print(json.dumps(diff, indent=2) if args.json else _format_diff(diff))

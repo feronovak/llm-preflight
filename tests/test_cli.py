@@ -1,12 +1,13 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from llm_preflight import cli, source_audit
+from llm_preflight import cli
 from llm_preflight.cli import (
     catalog_output,
     format_progress_event,
@@ -3611,7 +3612,7 @@ def _audit_text(monkeypatch, capsys, tmp_path, *flags):
 def test_audit_source_leads_with_the_verdict_and_groups_findings_by_model(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
-    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     (tmp_path / "app.py").write_text('a = "gpt-going"\nb = "gpt-gone"\n')
     (tmp_path / "other.py").write_text('c = "gpt-gone"\n')
 
@@ -3624,8 +3625,8 @@ def test_audit_source_leads_with_the_verdict_and_groups_findings_by_model(
         ),
         "Exit 0 — add --ci to exit 1 on this decision.",
         (
-            "Files: every file under the path; not a git work tree or git is "
-            "unavailable, so .gitignore is not applied."
+            "Files: every file under the path; .gitignore is not applied because "
+            "git is not installed."
         ),
         "Retired:",
         "  gpt-gone (2 references) — retired 2026-10-01, replacement gpt-new",
@@ -3798,12 +3799,24 @@ def test_audit_source_all_requires_audit_source(monkeypatch, capsys):
     assert "--all requires --audit-source" in capsys.readouterr().err
 
 
+def test_init_rejects_all_without_audit_source(monkeypatch, tmp_path, capsys):
+    config_path = tmp_path / "benchmark.json"
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--init", str(config_path), "--all"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 2
+    assert "--all requires --audit-source" in capsys.readouterr().err
+    assert not config_path.exists()
+
+
 def test_audit_source_json_keeps_its_contract_and_is_never_capped(
     monkeypatch, tmp_path, capsys
 ):
     models = cli._AUDIT_MODEL_LIMIT + 2
     _many_retired_models(monkeypatch, tmp_path, models, cli._AUDIT_LOCATION_LIMIT + 4)
-    monkeypatch.setattr(source_audit.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
 
     payloads = []
     for flags in ([], ["--all"]):
@@ -3822,6 +3835,8 @@ def test_audit_source_json_keeps_its_contract_and_is_never_capped(
         "network_accessed",
         "files_scanned",
         "file_selection",
+        "file_selection_reason",
+        "files_unreadable",
         "references",
         "findings",
         "ok",
@@ -3941,6 +3956,112 @@ def test_doctor_prints_a_stale_row_warning_and_ci_exits_three(
     with pytest.raises(SystemExit) as exc_info:
         cli.main()
     assert exc_info.value.code == 3
+
+
+def test_audit_source_that_reads_no_file_says_so_and_ci_is_inconclusive(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    (tmp_path / "README.md").write_text('model = "gpt-gone"\n')
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines == [
+        (
+            "Decision: inconclusive — nothing was audited: the path holds no "
+            "source file outside skipped directories."
+        ),
+        "Exit 0 — add --ci to exit 3 on this decision.",
+        (
+            "Files: every file under the path; .gitignore is not applied because "
+            "git is not installed."
+        ),
+    ]
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 3
+    assert capsys.readouterr().out.splitlines()[1] == (
+        "Exit 3 (--ci): no file was audited, so nothing is verified."
+    )
+
+
+def test_audit_source_that_could_read_no_file_says_so_and_ci_is_inconclusive(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    (tmp_path / "models.json").write_text('{"model": "gpt-gone"}\n', encoding="utf-16")
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[0] == (
+        "Decision: inconclusive — nothing was audited: no selected source file "
+        "is UTF-8 text."
+    )
+    assert lines[-1] == "Not audited: 1 file that is not UTF-8 text."
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 3
+
+
+def test_audit_source_mentions_unreadable_files_after_the_file_selection(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    (tmp_path / "app.py").write_text('a = "gpt-new"\n')
+    (tmp_path / "a.json").write_text("{}", encoding="utf-16")
+    (tmp_path / "b.json").write_text("{}", encoding="utf-16")
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[0].startswith("Decision: pass — 1 file audited; ")
+    assert lines[3] == "Not audited: 2 files that are not UTF-8 text."
+
+
+def test_audit_source_names_the_unlisted_files_when_git_lists_none(
+    monkeypatch, tmp_path, capsys
+):
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "README.md").write_text("notes\n")
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[0] == (
+        "Decision: inconclusive — nothing was audited: git lists no tracked or "
+        "unignored source file under the path."
+    )
+
+
+def test_audit_source_prints_a_retired_model_without_a_recorded_date(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setattr(
+        _retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-undated"): {
+                "status": "retired",
+                "as_of": "2026-10-01",
+                "source_url": _RETIREMENT_URL,
+            }
+        },
+    )
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
+    (tmp_path / "app.py").write_text('a = "gpt-undated"\n')
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert lines[lines.index("Retired:") + 1] == (
+        "  gpt-undated (1 reference) — retired (date not recorded), no single "
+        "replacement recorded"
+    )
 
 
 def test_audit_source_terminal_output_shows_a_stale_reference(

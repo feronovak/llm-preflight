@@ -13,7 +13,12 @@ The command compares the current worktree with `HEAD` (or the supplied Git
 reference), includes modified, staged, deleted, and untracked files, and reports literal model IDs
 plus likely prompt, validation, schema, tool, or provider-option surfaces. It
 uses Git argument arrays, does not execute project code, load credentials,
-contact providers, or authorize paid work.
+contact providers, or authorize paid work. Git runs with the repository's
+hooks, file-system monitor, filter drivers and object fetching disabled, and
+does not look inside submodules for uncommitted edits: a submodule is listed
+when its recorded commit changes. Files inside an untracked nested
+repository are not inspected. A repository whose filter driver name
+contains `=` cannot have that driver disabled, so the change plan refuses it.
 
 Its findings are deliberately incomplete: dynamic model selection and generated
 prompts require human review. Treat the recommended `--doctor`, optional

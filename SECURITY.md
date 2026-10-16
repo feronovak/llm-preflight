@@ -27,5 +27,10 @@ mitigation. Do not include active API keys.
   Do not run configurations from untrusted sources without reviewing them.
 - Custom provider URLs must use HTTP or HTTPS, include a host, and may not
   embed credentials.
+- `--audit-source` and `--change-plan` treat the inspected repository's Git
+  configuration as untrusted. Git runs with its hooks, file-system monitor,
+  filter drivers and object fetching disabled, also in submodules, and with
+  variables that redirect it to another repository removed. Your global and
+  system Git configuration still apply.
 - Revoke and rotate a credential immediately if it is committed or included in
   logs. Removing it from Git history is not sufficient by itself.

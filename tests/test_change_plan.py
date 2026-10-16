@@ -1,6 +1,10 @@
+import os
 import stat
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
+
+import pytest
 
 from llm_preflight.approval import (
     create_approval_receipt,
@@ -95,6 +99,193 @@ def test_git_change_plan_reports_deleted_contract_surfaces_from_the_reference(tm
             "change": "deleted",
         }
     ]
+
+
+def _repository(workspace):
+    workspace.mkdir()
+    _git(workspace, "init", "-q")
+    _git(workspace, "config", "user.email", "test@example.invalid")
+    _git(workspace, "config", "user.name", "Test User")
+    return workspace
+
+
+def _make_stat_dirty(path):
+    """Rewrite a file with an old mtime so Git must re-read its content."""
+    path.write_text(path.read_text())
+    os.utime(path, (946684800, 946684800))
+
+
+def test_git_change_plan_never_runs_a_command_the_repository_configures(
+    tmp_path, tripwire
+):
+    library = _repository(tmp_path / "library")
+    (library / ".gitattributes").write_text("*.py filter=tripwire\n")
+    (library / "client.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(library, "add", ".")
+    _git(library, "commit", "-q", "-m", "initial")
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitattributes").write_text("*.py filter=tripwire\n")
+    (repo / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    _git(
+        repo,
+        "-c",
+        "protocol.file.allow=always",
+        "submodule",
+        "add",
+        "-q",
+        str(library),
+        "vendor/library",
+    )
+    _git(repo, "commit", "-q", "-m", "submodule")
+    submodule = repo / "vendor" / "library"
+    for workspace, prefix in ((repo, ""), (submodule, "submodule-")):
+        _git(workspace, "config", "core.fsmonitor", tripwire(f"{prefix}fsmonitor"))
+        _git(
+            workspace,
+            "config",
+            "filter.tripwire.clean",
+            tripwire(f"{prefix}clean", passthrough=True),
+        )
+        _git(workspace, "config", "filter.tripwire.required", "true")
+    _make_stat_dirty(repo / "app.py")
+    _make_stat_dirty(submodule / "client.py")
+
+    plan = git_change_plan(repo, "HEAD")
+
+    assert sorted(path.name for path in tmp_path.glob("*.ran")) == []
+    assert plan["deleted_files"] == []
+
+
+@pytest.mark.parametrize("hook_location", ["core.hooksPath", ".git/hooks"])
+def test_git_change_plan_never_runs_a_repository_hook(
+    tmp_path, tripwire, monkeypatch, hook_location
+):
+    # A global core.hooksPath would mask the repository's own hooks directory.
+    global_config = tmp_path / "global.gitconfig"
+    global_config.write_text("")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-q", "-m", "initial")
+    if hook_location == "core.hooksPath":
+        hooks = tmp_path / "hooks"
+        hooks.mkdir()
+        _git(repo, "config", "core.hooksPath", str(hooks))
+    else:
+        hooks = repo / ".git" / "hooks"
+    hook = hooks / "post-index-change"
+    hook.write_text(Path(tripwire("hook")).read_text())
+    hook.chmod(0o755)
+    _make_stat_dirty(repo / "app.py")
+
+    plan = git_change_plan(repo, "HEAD")
+
+    assert plan["changed_files"] == []
+    assert list(tmp_path.glob("*.ran")) == []
+
+
+def test_git_change_plan_disables_a_filter_driver_with_an_empty_name(
+    tmp_path, tripwire
+):
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitattributes").write_text("* filter=\n")
+    (repo / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    _git(repo, "config", "filter..clean", tripwire("clean", passthrough=True))
+    _git(repo, "config", "filter..required", "true")
+    _make_stat_dirty(repo / "app.py")
+
+    git_change_plan(repo, "HEAD")
+
+    assert list(tmp_path.glob("*.ran")) == []
+
+
+def test_git_change_plan_refuses_a_filter_it_cannot_disable(tmp_path, tripwire):
+    repo = _repository(tmp_path / "repo")
+    (repo / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-q", "-m", "initial")
+    _git(repo, "config", "filter.a=b.clean", tripwire("clean", passthrough=True))
+    (repo / ".git" / "info" / "attributes").write_text("*.py filter=a=b\n")
+    _make_stat_dirty(repo / "app.py")
+
+    with pytest.raises(ValueError, match="filter driver"):
+        git_change_plan(repo, "HEAD")
+
+    assert list(tmp_path.glob("*.ran")) == []
+
+
+def test_git_change_plan_never_runs_a_filter_and_still_lists_a_change(
+    tmp_path, tripwire
+):
+    repo = _repository(tmp_path / "repo")
+    (repo / ".gitattributes").write_text("*.py filter=tripwire\n")
+    (repo / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "initial")
+    _git(
+        repo,
+        "config",
+        "filter.tripwire.clean",
+        tripwire("clean", passthrough=True),
+    )
+    (repo / "app.py").write_text('model = "gpt-5.5"\n')
+
+    plan = git_change_plan(repo, "HEAD")
+
+    assert plan["changed_files"] == ["app.py"]
+    assert [trigger["model"] for trigger in plan["triggers"]] == ["gpt-5.5"]
+    assert list(tmp_path.glob("*.ran")) == []
+
+
+def test_git_change_plan_never_fetches_a_missing_object(tmp_path, tripwire):
+    origin = _repository(tmp_path / "origin")
+    (origin / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(origin, "add", "app.py")
+    _git(origin, "commit", "-q", "-m", "initial")
+    _git(origin, "config", "uploadpack.allowFilter", "true")
+    _git(
+        tmp_path,
+        "-c",
+        "protocol.file.allow=always",
+        "clone",
+        "-q",
+        "--no-checkout",
+        "--filter=blob:none",
+        (tmp_path / "origin").as_uri(),
+        "clone",
+    )
+    clone = tmp_path / "clone"
+    _git(clone, "config", "remote.origin.url", "ssh://example.invalid/origin")
+    _git(clone, "config", "core.sshCommand", tripwire("ssh"))
+
+    with pytest.raises(ValueError):
+        git_change_plan(clone, "HEAD")
+
+    assert list(tmp_path.glob("*.ran")) == []
+
+
+def test_git_change_plan_ignores_git_environment_redirection(tmp_path, monkeypatch):
+    other = _repository(tmp_path / "other")
+    (other / "other.py").write_text('model = "gpt-5.4-mini"\n')
+    _git(other, "add", "other.py")
+    _git(other, "commit", "-q", "-m", "initial")
+    repo = _repository(tmp_path / "repo")
+    (repo / "README.md").write_text("starter\n")
+    _git(repo, "add", "README.md")
+    _git(repo, "commit", "-q", "-m", "initial")
+    (repo / "app.py").write_text('model = "gpt-5.5"\n')
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+
+    plan = git_change_plan(repo, "HEAD")
+
+    assert plan["changed_files"] == ["app.py"]
 
 
 def test_approval_receipt_is_bound_to_one_plan_and_expires():

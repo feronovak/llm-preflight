@@ -1008,7 +1008,9 @@ def run_benchmark(
         "models": models_result,
         "pricing_ledger": pricing_resolution["ledger"],
         "pricing_fingerprint": pricing_resolution["fingerprint"],
-        "provenance": provenance(config, models, pricing_resolution["fingerprint"]),
+        "provenance": provenance(
+            config, models, pricing_resolution["fingerprint"], profiles
+        ),
         "pricing_warnings": pricing_freshness_report(
             models,
             enforce_override_freshness=bool(config.get("require_current_pricing")),

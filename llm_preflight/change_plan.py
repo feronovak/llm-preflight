@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import re
-import shutil
 
-# _git uses an absolute executable and argument arrays.
+# Only CalledProcessError is used; run_git starts Git.
 import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
+from .git import run_git
 from .source_audit import audit_source, audit_source_text
 
 _REFERENCE = re.compile(r"[A-Za-z0-9._/@^~-]+\Z")
@@ -93,17 +93,27 @@ def _validate_reference(reference: str) -> None:
 
 
 def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
+    # Looking for edits inside a submodule runs git status there, under the
+    # submodule's own configuration. A changed submodule commit is still listed.
     changed = _git(
         root,
         "diff",
         "--name-only",
         "--diff-filter=ACMRD",
+        "--ignore-submodules=dirty",
         "-z",
         reference,
         "--",
     )
     deleted = _git(
-        root, "diff", "--name-only", "--diff-filter=D", "-z", reference, "--"
+        root,
+        "diff",
+        "--name-only",
+        "--diff-filter=D",
+        "--ignore-submodules=dirty",
+        "-z",
+        reference,
+        "--",
     )
     untracked = _git(root, "ls-files", "--others", "--exclude-standard", "-z")
     paths = [
@@ -149,17 +159,9 @@ def _contract_surface_trigger_text(
 
 
 def _git(repository: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    executable = shutil.which("git")
-    if executable is None:
-        raise ValueError("Git is required for --change-plan")
     try:
-        # No shell is used; the Git reference is validated before this call.
-        return subprocess.run(  # nosec B603
-            [str(Path(executable).resolve()), "-C", str(repository), *arguments],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        # The Git reference is validated before this call.
+        return run_git(repository, *arguments)
     except FileNotFoundError as exc:
         raise ValueError("Git is required for --change-plan") from exc
     except subprocess.CalledProcessError as exc:

@@ -4,14 +4,39 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
+  Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
+  checks. Native live results still require separate credentials and execution.
+
 ### Changed
 
-- Under `--prompt`, `provenance.prompts` lists only the selected prompt, once.
-  It previously listed the selected prompt twice and also the configured
-  prompts that did not run. As a result, `evidence_sha256` for `--prompt` runs
-  differs from 2.21.x for the same configuration. Runs without `--prompt` keep
-  identical provenance and hashes, and baseline comparison is unaffected: it
-  uses the contract hash and validator version, not `evidence_sha256`.
+- `provenance.prompts` lists exactly the prompts a run sent, each once.
+  Under `--prompt` it lists only the selected prompt; 2.21.x listed it twice,
+  plus the configured prompts that did not run. A run of a configuration with
+  both a top-level `prompt` and a `prompts` list lists only the top-level
+  prompt. A profile run (`profiles`, `--tests`, `--profiles` or
+  `--migration-check`) lists every case of the selected profiles, built-in
+  ones included, and not the top-level prompt. `evidence_sha256` therefore
+  differs from 2.21.x for these three run shapes; a run without profiles
+  whose configuration has only a top-level prompt keeps identical provenance
+  and hashes. Baseline
+  comparison is unaffected: it uses the contract hash and validator version,
+  which do not change.
+- `--audit-source` text output now starts with the decision and its counts,
+  then the exit code with and without `--ci`. Findings are grouped by model
+  ID, retired first, with capped locations and one `Next:` line each.
+  References with unknown pricing and no retirement finding collapse to one
+  count. `--all` prints every model and location. `--json` is never capped and
+  keeps its keys; it adds `file_selection` (`git`, `filesystem` or `file`),
+  `file_selection_reason`, which says why Git did not select the files, and
+  `files_unreadable`.
+- Retirement snapshot re-reviewed against the official Anthropic, OpenAI and
+  Gemini deprecation pages on October 16 UTC. No announcement since October 14
+  affects it: all 114 rows keep their status, shutdown date and replacement.
+  Non-retired rows now become stale on 2026-11-16, when their `--ci` verdict
+  becomes inconclusive (exit 3). Retired rows continue to fail (exit 1).
 
 ### Fixed
 
@@ -29,34 +54,37 @@ All notable changes to this project are documented here.
 - `--audit-source` no longer reads gitignored files such as local worktrees,
   scratch directories and build output. Inside a Git work tree it audits
   tracked files, including initialized submodules, plus untracked files
-  `.gitignore` does not exclude. Elsewhere, or without Git, it reads every
-  file under the path as before. Symlinks that leave the audited path are
-  never read. The decision for non-ignored files is unchanged.
+  `.gitignore` does not exclude, including those of an untracked nested
+  repository. Elsewhere, without Git, or when the work tree ignores the
+  audited path itself, it reads every file under the path as before. Symlinks
+  that leave the audited path are never read. The decision for non-ignored
+  files is unchanged.
+- `--audit-source` never reports a clean result after reading no file. Such
+  an audit is `inconclusive`, says that nothing was audited and why, and
+  exits 3 under `--ci`; 2.21.x printed `Decision: none` and exited 0.
+  `files_scanned` keeps its key but now counts only the files read as UTF-8
+  text; files that are not, which 2.21.x counted as audited, are counted in
+  `files_unreadable` and on a `Not audited:` line.
+- `--audit-source` skips `results`, `venv` and the other skipped directory
+  names only below the audited path, so a project stored under such a
+  directory is no longer audited as empty.
+- When Git cannot list files, for example in a checkout Git considers of
+  dubious ownership, the `Files:` line quotes Git's first error line instead
+  of claiming the path is not a Git work tree.
+- A retired model with no recorded date prints `retired (date not recorded)`
+  rather than `retired date to be announced`.
+- `--init` combined with `--all` is rejected like any other `--all` without
+  `--audit-source`, instead of being ignored.
 - The source audit's notes name the Gemini rows in the retirement snapshot
   alongside Anthropic and OpenAI.
 
-### Changed
+### Security
 
-- `--audit-source` text output now starts with the decision and its counts,
-  then the exit code with and without `--ci`. Findings are grouped by model
-  ID, retired first, with capped locations and one `Next:` line each.
-  References with unknown pricing and no retirement finding collapse to one
-  count. `--all` prints every model and location. `--json` is never capped and
-  keeps its keys; it adds `file_selection` (`git`, `filesystem` or `file`).
-
-### Added
-
-- A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
-  Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
-  checks. Native live results still require separate credentials and execution.
-
-### Changed
-
-- Retirement snapshot re-reviewed against the official Anthropic, OpenAI and
-  Gemini deprecation pages on October 16 UTC. No announcement since October 14
-  affects it: all 114 rows keep their status, shutdown date and replacement.
-  Non-retired rows now become stale on 2026-11-16, when their `--ci` verdict
-  becomes inconclusive (exit 3). Retired rows continue to fail (exit 1).
+- `--audit-source` and `--change-plan` no longer let the inspected
+  repository's Git configuration run commands. Git runs with hooks, the
+  file-system monitor, filter drivers and object fetching disabled, also in
+  submodules, and without inherited variables that would point it at another
+  repository. Global and system Git configuration still apply.
 
 ## 2.21.2 - 2026-10-14
 

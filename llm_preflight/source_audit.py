@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import re
-import shutil
 
-# _git_files uses an absolute executable and argument arrays.
+# Only CalledProcessError is used; run_git starts Git.
 import subprocess  # nosec B404
 from datetime import date
 from pathlib import Path
 from typing import Any
 
+from .git import run_git
 from .pricing import PUBLIC_PRICING
+from .redaction import redact_secrets
 from .retirements import (
     retirement_verdict,
     snapshot_summary,
@@ -39,6 +40,7 @@ _SOURCE_SUFFIXES = {
     ".toml",
 }
 _SKIP_PARTS = {".git", ".venv", "venv", "node_modules", "__pycache__", "results"}
+_GIT_REASON_LIMIT = 120
 _QUOTED = re.compile(
     r"(?P<quote>['\"])(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)(?P=quote)"
 )
@@ -101,12 +103,14 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
     root = path.resolve()
     if not root.exists():
         raise ValueError(f"audit source path does not exist: {path}")
-    files, file_selection = _project_files(root)
+    files, file_selection, file_selection_reason = _project_files(root)
     references = []
+    unreadable = 0
     for file_path in files:
         try:
             lines = file_path.read_text(encoding="utf-8").splitlines()
         except UnicodeDecodeError:
+            unreadable += 1
             continue
         display_path = (
             str(file_path.relative_to(root)) if root.is_dir() else str(file_path)
@@ -114,81 +118,98 @@ def audit_source(path: Path, today: date | None = None) -> dict[str, Any]:
         references.extend(
             _references_for_lines(lines, file_path.suffix, display_path, current)
         )
-    unique = list(
-        dict.fromkeys(
-            (item["path"], item["line"], item["model"]) for item in references
-        )
-    )
-    references = [
-        next(
-            item
-            for item in references
-            if (item["path"], item["line"], item["model"]) == key
-        )
-        for key in unique
-    ]
+    scanned = len(files) - unreadable
+    summary = _summary_fields(references)
+    if not scanned:
+        # A scan that read no file has no evidence; unknown is never a pass.
+        summary["decision"] = "inconclusive"
     return {
         "root": str(root),
         "network_accessed": False,
-        "files_scanned": len(files),
+        "files_scanned": scanned,
         "file_selection": file_selection,
+        "file_selection_reason": file_selection_reason,
+        "files_unreadable": unreadable,
         "references": references,
-        **_summary_fields(references),
+        **summary,
     }
 
 
-def _project_files(root: Path) -> tuple[list[Path], str]:
-    """Source files under root and how they were selected: file, git or filesystem."""
+def _project_files(root: Path) -> tuple[list[Path], str, str | None]:
+    """Source files under root, how they were selected, and why Git was not used."""
     if root.is_file():
-        return [root], "file"
-    selected = _git_files(root)
-    file_selection = "git"
-    if selected is None:
-        selected = list(root.rglob("*"))
-        file_selection = "filesystem"
+        return [root], "file", None
+    listed = _git_files(root)
+    reason: str | None = None
+    if isinstance(listed, str):
+        selected, file_selection, reason = list(root.rglob("*")), "filesystem", listed
+    else:
+        selected, file_selection = listed, "git"
     # The skip list applies to tracked files too, so Git selection removes only
-    # ignored files. A symlink may point anywhere; only files that resolve
-    # inside root are read.
+    # ignored files. It matches below root only: a project inside a directory
+    # named results is still read. A symlink may point anywhere; only files
+    # that resolve inside root are read.
     files = sorted(
         candidate
         for candidate in selected
         if candidate.suffix.casefold() in _SOURCE_SUFFIXES
-        and not any(part in _SKIP_PARTS for part in candidate.parts)
+        and not any(part in _SKIP_PARTS for part in candidate.relative_to(root).parts)
         and candidate.is_file()
         and candidate.resolve().is_relative_to(root)
     )
-    return files, file_selection
+    return files, file_selection, reason
 
 
-def _git_files(root: Path) -> list[Path] | None:
-    """Tracked and unignored files under root, or None outside a Git work tree."""
-    executable = shutil.which("git")
-    if executable is None:
-        return None
-    git = [str(Path(executable).resolve()), "-C", str(root), "ls-files", "-z"]
-    paths: list[str] = []
-    # Submodule files are tracked by their own repository; --others cannot
-    # recurse, so untracked files are listed by a second call.
-    for arguments in (
-        ["--cached", "--recurse-submodules"],
-        ["--others", "--exclude-standard"],
-    ):
-        try:
-            # No shell is used and every argument is fixed.
-            completed = subprocess.run(  # nosec B603
-                [*git, *arguments],
-                check=True,
-                text=True,
-                capture_output=True,
-            )
-        except (OSError, subprocess.CalledProcessError):
-            return None
-        paths.extend(item for item in completed.stdout.split("\0") if item)
-    return [
-        root / relative
-        for relative in map(Path, dict.fromkeys(paths))
-        if not relative.is_absolute() and ".." not in relative.parts
-    ]
+def _git_files(root: Path) -> list[Path] | str:
+    """Tracked and unignored files under root, or why Git cannot select them."""
+    try:
+        prefix = run_git(root, "rev-parse", "--show-prefix").stdout.strip()
+        # Below the top of a work tree an ignored root lists no file at all, as
+        # for a project kept inside a dotfiles repository that ignores "*".
+        if prefix:
+            ignored = run_git(root, "check-ignore", "-q", ".", check=False)
+            if ignored.returncode == 0:
+                return "the path is ignored by its enclosing git repository"
+        paths: list[str] = []
+        # Submodule files are tracked by their own repository; --others cannot
+        # recurse, so untracked files are listed by a second call.
+        for arguments in (
+            ["--cached", "--recurse-submodules"],
+            ["--others", "--exclude-standard"],
+        ):
+            listed = run_git(root, "ls-files", "-z", *arguments).stdout
+            paths.extend(item for item in listed.split("\0") if item)
+    except FileNotFoundError:
+        return "git is not installed"
+    except OSError:
+        return "git could not be started"
+    except subprocess.CalledProcessError as exc:
+        return f"git could not list files: {_git_failure(exc.stderr, exc.returncode)}"
+    except ValueError as exc:
+        return f"git could not list files: {exc}"
+    files: list[Path] = []
+    for item in dict.fromkeys(paths):
+        relative = Path(item)
+        if relative.is_absolute() or ".." in relative.parts:
+            continue
+        # --others reports an untracked nested repository as "dir/" without
+        # its files; those are selected as the filesystem walk selects them.
+        files.extend(
+            (root / relative).rglob("*") if item.endswith("/") else [root / relative]
+        )
+    return files
+
+
+def _git_failure(stderr: str | None, returncode: int) -> str:
+    """Git's first error line: printable, without secrets, capped in length."""
+    lines = [line for line in (stderr or "").splitlines() if line.strip()]
+    if not lines:
+        return f"exit status {returncode}"
+    printable = "".join(character for character in lines[0] if character.isprintable())
+    line = redact_secrets(printable.strip().removeprefix("fatal: "))
+    if len(line) > _GIT_REASON_LIMIT:
+        line = line[: _GIT_REASON_LIMIT - 1] + "…"
+    return str(line)
 
 
 def audit_source_text(
@@ -218,7 +239,8 @@ def _references_for_lines(
             candidates.extend(
                 match.group("value") for match in _YAML_MODEL.finditer(yaml_content)
             )
-        for model in candidates:
+        # A model ID found twice on one line is one reference.
+        for model in dict.fromkeys(candidates):
             if not _MODEL_PREFIX.match(model):
                 continue
             provider = _provider_for(model)
@@ -236,16 +258,4 @@ def _references_for_lines(
                     "retirement": retirement_verdict(provider, model, today),
                 }
             )
-    unique = list(
-        dict.fromkeys(
-            (item["path"], item["line"], item["model"]) for item in references
-        )
-    )
-    return [
-        next(
-            item
-            for item in references
-            if (item["path"], item["line"], item["model"]) == key
-        )
-        for key in unique
-    ]
+    return references

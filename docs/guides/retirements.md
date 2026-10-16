@@ -46,13 +46,21 @@ the references whose price is unknown but which have no retirement finding.
 
 Inside a Git work tree the scan reads the files Git considers part of the
 project: tracked files, including those of initialized submodules, plus
-untracked files that `.gitignore` does not exclude. Outside a work tree, or
-without Git, it reads every file under the path. Both modes skip `.git`,
-`.venv`, `venv`, `node_modules`, `__pycache__` and `results`. They read only
-`.py`, `.js`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.json`, `.yaml`, `.yml` and
-`.toml` files, and never follow a symlink out of the path. The `Files:` line
-and the JSON `file_selection` field (`git`, `filesystem` or `file`) report
-the mode used.
+untracked files that `.gitignore` does not exclude. An untracked nested
+repository that is not ignored is read as the filesystem walk would read it.
+Outside a work tree, without Git, or when the work tree ignores the path
+itself (a project inside a dotfiles repository that ignores `*`), it reads
+every file under the path. Both modes skip `.git`, `.venv`, `venv`,
+`node_modules`, `__pycache__` and `results` directories below the path; the
+path itself may sit inside one. They read only `.py`, `.js`, `.mjs`, `.cjs`,
+`.ts`, `.tsx`, `.json`, `.yaml`, `.yml` and `.toml` files, and never follow a
+symlink out of the path. The `Files:` line and the JSON `file_selection` field
+(`git`, `filesystem` or `file`) report the mode used; in `filesystem` mode the
+line and `file_selection_reason` say why Git was not used.
+
+Git runs without letting the audited repository run a command: its hooks,
+file-system monitor, filter drivers and object fetching are disabled,
+including in submodules. Global and system Git configuration still apply.
 
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
@@ -75,12 +83,22 @@ When no model is in the snapshot the aggregate decision is `none` and the exit
 is 0; the scan prints `Decision: none` rather than pass, because nothing was
 verified.
 
+When the scan reads no file at all, the decision is `inconclusive` and
+`--ci` exits 3: an audit that read nothing has no evidence. A selected file
+that is not UTF-8 text is not read; the output counts such files on a
+`Not audited:` line. The first line
+says so and why, for example:
+
+```text
+Decision: inconclusive — nothing was audited: the path holds no source file outside skipped directories.
+```
+
 ## Exit codes
 
 Without `--ci` the scan and the dry-run exit 0 whatever they find, and the
 doctor fails only on a `retired` model, as it does for any failed check. With
 `--ci`, a `retired` model exits 1 and a `retiring` or `stale` model exits 3
-in all three commands.
+in all three commands, and a scan that read no file exits 3.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go

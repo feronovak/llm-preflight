@@ -15,9 +15,9 @@ module names.
 | Local stdio MCP server, `llm-preflight-mcp` — standard/2026 handshakes, no-spend tool hints and workflow resource, honest structured-output schemas, symlink-safe workspace credentials, and a safe live-run gate; registry manifest and repository plugin skill | live | `mcp.py`, `server.json`, `plugins/llm-preflight/`, `docs/automation/mcp.md` |
 | `--doctor` — validate config, keys, model resolution, redacted credential provenance, and pricing coverage without a run | live | `cli.py`, `features.py` |
 | Project configuration reuse — a config-relative env-file reference or explicit override loads existing credentials without copying values; MCP keeps the same workspace boundary | live | `env.py`, `cli.py`, `mcp.py` |
-| `--audit-source` — audit literal model IDs in a repository with pricing and retirement snapshot verdicts, no provider requests | live | `source_audit.py`, `retirements.py`, `cli.py` |
+| `--audit-source` — audit literal model IDs in a repository with pricing and retirement snapshot verdicts, no provider requests | live | `source_audit.py`, `git.py`, `retirements.py`, `cli.py` |
 | Bundled model retirement snapshot of official Anthropic, OpenAI and selected Gemini sources, including deprecated alias redirects, with a three-state verdict in the scan, doctor and dry-run | live | `retirements.py`, `features.py`, `cli.py`, `docs/guides/retirements.md` |
-| `--change-plan [REF]` — inspect tracked, staged, and untracked Git changes for static LLM contract signals and recommend no-spend checks | live | `change_plan.py`, `source_audit.py`, `cli.py` |
+| `--change-plan [REF]` — inspect tracked, staged, and untracked Git changes for static LLM contract signals and recommend no-spend checks | live | `change_plan.py`, `git.py`, `source_audit.py`, `cli.py` |
 | `--contract-check` — local accepted/rejected validator fixtures, local image-fixture safety checks, and canonical tool-definition linting, without provider requests | live | `contracts.py`, `images.py`, `runner.py`, `cli.py` |
 | `--baseline` / `--ci` — compare against a previous result, fail when thresholds regress | live | `cli.py` |
 | `--changed-since` — run only models absent from a catalog snapshot | live | `features.py`, `cli.py` |

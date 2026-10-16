@@ -435,6 +435,24 @@ def test_estimated_budget_counts_warmups_per_profile():
     assert budget["requests"] == 8
 
 
+def test_budget_accepts_configured_profiles_as_a_list():
+    config = {
+        "prompt": "hi",
+        "models": [{"model": "fake"}],
+        "suite_repetitions": 1,
+        "warmups": 1,
+    }
+
+    listed = estimate_budget({**config, "profiles": ["classification", "reasoning"]})
+    joined = estimate_budget({**config, "profiles": "classification,reasoning"})
+
+    assert listed["requests"] == joined["requests"] == 8
+    with pytest.raises(ValueError, match="max_requests"):
+        check_budget(
+            {**config, "profiles": ["classification", "reasoning"], "max_requests": 3}
+        )
+
+
 def test_estimated_budget_reports_retry_expanded_upper_bound():
     budget = estimate_budget(
         {

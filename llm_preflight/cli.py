@@ -73,6 +73,7 @@ from .runner import (
     load_config,
     model_failed,
     profile_request_breakdown,
+    profile_selector_text,
     result_failed,
     run_benchmark,
     save_result,
@@ -616,7 +617,10 @@ def dry_run_plan(
     """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
-    profile_selector = profile_selector or budget_config.get("profiles")
+    configured_profiles = budget_config.get("profiles")
+    profile_selector = profile_selector or (
+        profile_selector_text(configured_profiles) if configured_profiles else None
+    )
     models = resolve_models(config)
     selected = {
         (model.get("provider", "openai_compatible"), model["model"]) for model in models

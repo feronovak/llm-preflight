@@ -2604,6 +2604,21 @@ def test_main_dry_run_prints_human_readable_plan_by_default(
     assert "Smoke eligibility: 0 eligible; 1 needs review." in output
 
 
+def test_dry_run_plans_configured_profiles_given_as_a_list():
+    config = {
+        "prompt": "hi",
+        "models": [{"provider": "mock", "model": "local"}],
+        "suite_repetitions": 1,
+        "warmups": 0,
+    }
+
+    listed = cli.dry_run_plan({**config, "profiles": ["classification", "reasoning"]})
+    joined = cli.dry_run_plan({**config, "profiles": "classification,reasoning"})
+
+    assert listed["tests"] == joined["tests"]
+    assert listed["requests"] == joined["requests"]
+
+
 def test_dry_run_summarizes_smoke_eligibility():
     plan = {
         "benchmark": "catalog",

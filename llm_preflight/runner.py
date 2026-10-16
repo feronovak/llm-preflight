@@ -260,6 +260,11 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
     return profile
 
 
+def profile_selector_text(selector: str | list[str]) -> str:
+    """A configured `profiles` value, a list or a comma-separated string, as one selector."""
+    return ",".join(selector) if isinstance(selector, list) else str(selector)
+
+
 def select_test_profiles(config: dict[str, Any], selector: str) -> list[dict[str, Any]]:
     requested = list(dict.fromkeys(normalize_profile_selector(selector).split(",")))
     builtins_all = select_profiles("all")
@@ -789,11 +794,7 @@ def run_benchmark(
     validation = config.get("validation", {})
     configured_profiles = config.get("profiles")
     if profile_selector is None and configured_profiles:
-        profile_selector = (
-            ",".join(configured_profiles)
-            if isinstance(configured_profiles, list)
-            else str(configured_profiles)
-        )
+        profile_selector = profile_selector_text(configured_profiles)
     profiles = (
         select_test_profiles(config, profile_selector) if profile_selector else []
     )

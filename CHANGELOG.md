@@ -78,6 +78,10 @@ All notable changes to this project are documented here.
 
 - Native Qwen 3.8 Max, Max-0902 and Flash use `max_completion_tokens` by
   default so the output limit includes reasoning and the visible answer.
+- A config whose `profiles` is a list, such as
+  `["classification", "reasoning"]`, now passes the budget check and the
+  `--dry-run` plan. Both turned the list into one text that named no profile
+  and refused it; the run itself already accepted a list.
   An explicit legacy `max_tokens` model setting requires
   explicitly disabled thinking. OpenRouter requests are unchanged.
 - Native Z.ai, DeepSeek and Qwen provider options cannot override the model,

@@ -19,7 +19,7 @@ from .pricing import (
     resolve_pricing,
 )
 from .retirements import retirement_report, today_utc
-from .runner import select_test_profiles
+from .runner import profile_selector_text, select_test_profiles
 
 
 def apply_smoke_mode(config: dict[str, Any]) -> dict[str, Any]:
@@ -125,7 +125,7 @@ def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 
     work: list[tuple[str, dict[str, Any]]] = []
     repetitions = int(config.get("suite_repetitions", 1))
-    for profile in select_test_profiles(config, str(selector)):
+    for profile in select_test_profiles(config, profile_selector_text(selector)):
         options = dict(request)
         profile_request = dict(profile.get("request", {}))
         if profile.get("presets"):

@@ -52,6 +52,7 @@ session-notes/
 .interface-design/
 .claude/settings.local.json
 .claude/worktrees/
+.claude/agent-memory/
 .claude/scheduled_tasks.lock
 .codex/cache/
 .cursor/cache/

@@ -70,6 +70,7 @@ from .reporting import render_job_summary, render_report_html
 from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
     benchmark_run_lock,
+    canonical_test_selector,
     console_report,
     load_config,
     model_failed,
@@ -1660,7 +1661,15 @@ def _watch_new_main(argv: list[str]) -> None:
     if not args.interactive:
         check_budget(_budget_config(config, args.tests))
     with benchmark_run_lock(args.output_dir):
-        result = redact_secrets(run_benchmark(config, profile_selector=args.tests))
+        result = redact_secrets(
+            run_benchmark(
+                config,
+                profile_selector=args.tests,
+                selection={
+                    "tests": canonical_test_selector(args.tests) if args.tests else None
+                },
+            )
+        )
     path = None if args.no_save else save_result(result, args.output_dir)
     print(json.dumps(result, indent=2) if args.json else console_report(result))
     if path is not None:
@@ -2365,9 +2374,41 @@ def _gate_main(argv: list[str]) -> None:
         default=DEFAULT_MAX_AGE_DAYS,
         help="days a record stays fresh after its run",
     )
+    selection = parser.add_argument_group(
+        "selection",
+        "the run flags CI passes; a record counts only if it ran the same ones "
+        "(default: a default run)",
+    )
+    selection.add_argument(
+        "--env", dest="environment_name", help="named config environment"
+    )
+    selection.add_argument("--prompt", dest="prompt_name", help="custom prompt")
+    selection.add_argument("--tests", help="comma-separated built-in or custom tests")
+    selection.add_argument("--profiles", help="compatibility alias for --tests")
+    selection.add_argument(
+        "--migration-check", action="store_true", help="the quick migration check"
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
-    report = gate(args.config, args.records, today_utc(), args.max_age_days)
+    if args.profiles and args.tests:
+        parser.error("--profiles cannot be combined with --tests")
+    tests = args.tests or args.profiles
+    if args.migration_check and (tests or args.prompt_name):
+        parser.error("--migration-check cannot be combined with --tests or --prompt")
+    if tests and args.prompt_name:
+        parser.error("--tests cannot be combined with --prompt")
+    report = gate(
+        args.config,
+        args.records,
+        today_utc(),
+        args.max_age_days,
+        selection={
+            "prompt": args.prompt_name,
+            "tests": canonical_test_selector(tests) if tests else None,
+            "environment": args.environment_name,
+            "migrationCheck": args.migration_check,
+        },
+    )
     print(
         json.dumps(report, indent=2) if args.json else _format_gate(report),
         end="\n" if args.json else "",
@@ -2965,6 +3006,14 @@ def main() -> None:
             result = run_benchmark(
                 config,
                 profile_selector=profile_selector,
+                selection={
+                    "prompt": args.prompt_name,
+                    "tests": canonical_test_selector(profile_selector)
+                    if profile_selector and not args.migration_check
+                    else None,
+                    "environment": args.environment_name,
+                    "migration_check": bool(args.migration_check),
+                },
                 progress=(
                     (
                         lambda event: print(

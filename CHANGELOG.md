@@ -46,6 +46,17 @@ All notable changes to this project are documented here.
   outside `provenance`, so every fingerprint is unchanged. `attest` copies it
   into each route as `observedModel`, `verify` prints it on a `Route:` line
   and in `routes`, and the gate names it when it passes.
+- Gate selection parity. Each new result records its run `selection`
+  (`--prompt`, `--tests` or `--profiles`, `--env`, `--migration-check`, by
+  name only) and `attest` copies it into the record. `gate` accepts the same
+  flags and fingerprints the current config as a run under them would, so a
+  record of a `--prompt`, `--env` or `--migration-check` run no longer reads
+  as `contract_changed` or `routes_changed`. A record that ran a different
+  selection, or records none, is blocked as `selection_changed`, naming both
+  selections: the gate sets the bar, so a narrower run such as one cheap
+  `--tests` choice cannot pass a gate that requires a default run. An env
+  file only supplies credentials; neither its path nor its contents enter a
+  result or a record.
 
 ### Changed
 

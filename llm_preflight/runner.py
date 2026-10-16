@@ -6,7 +6,7 @@ import os
 import platform
 import re
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -263,6 +263,11 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
 def profile_selector_text(selector: str | list[str]) -> str:
     """A configured `profiles` value, a list or a comma-separated string, as one selector."""
     return ",".join(selector) if isinstance(selector, list) else str(selector)
+
+
+def canonical_test_selector(selector: str) -> str:
+    """Test names as one comparable selector: legacy names mapped, each once, sorted."""
+    return ",".join(sorted(set(normalize_profile_selector(selector).split(","))))
 
 
 def select_test_profiles(config: dict[str, Any], selector: str) -> list[dict[str, Any]]:
@@ -776,7 +781,14 @@ def run_benchmark(
     config: dict[str, Any],
     profile_selector: str | None = None,
     progress: Callable[[dict[str, Any]], None] | None = None,
+    selection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Run the benchmark and return its result.
+
+    `selection` names the run flags that shaped `config`: `prompt`, `tests`,
+    `environment` and `migration_check`. The result records it so a gate can
+    tell which selection the run checked; it holds names only, never values.
+    """
     validate_config_validations(config)
     if contract_fixtures_declared(config) and not check_contract(config)["ok"]:
         raise ValueError(
@@ -1005,6 +1017,13 @@ def run_benchmark(
             "request": without_private_fields(request_options),
             "profiles": [profile["name"] for profile in profiles],
             "suite_repetitions": int(config.get("suite_repetitions", 1)),
+        },
+        "selection": {
+            "prompt": None,
+            "tests": None,
+            "environment": None,
+            "migration_check": False,
+            **(selection or {}),
         },
         "environment": {
             "hostname": platform.node(),

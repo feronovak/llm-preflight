@@ -46,6 +46,7 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 |---|---|
 | `run_id`, `timestamp`, `benchmark` | Unique run identifier, UTC timestamp, and config name. |
 | `prompt_name`, `prompt_sha256`, `prompt_chars` | Selected custom-prompt name when applicable, plus safe prompt identity metadata. |
+| `selection` | The run flags that shaped the config, by name only: `prompt` (`--prompt`), `tests` (`--tests` or `--profiles`, with legacy names mapped, each once, sorted and comma-joined), `environment` (`--env`) and `migration_check` (`--migration-check`). Unused flags are `null` or `false`. An env file only supplies credentials, so neither its path nor its contents appear. Results written before 2.22.0 do not have it. |
 | `settings` | Effective repetitions, warmups, concurrency, timeout, request options, and selected profiles. |
 | `environment` | Hostname and Python version that produced the evidence. |
 | `models` | One result object per attempted model, in run order. |
@@ -220,7 +221,7 @@ a contract and its routes; it does not certify production behaviour.
 | `predicate.passedTests`, `warnedTests`, `failedTests` | One name per model and test, such as `openai:gpt-4.1-mini/strict-json-extraction`, or per model and prompt without tests (`provider:model/config-prompt`). In an inconclusive run every test that did not fail is listed as warned. |
 | `predicate.url` | The GitHub Actions run attempt, `SERVER/OWNER/REPO/actions/runs/ID/attempts/N`. Absent for a local record. |
 | `predicate.configuration` | Four ResourceDescriptors whose `sha256` digests are the result's `provenance` fingerprints: `llm-preflight/contract` (`annotations.validatorVersion`), `llm-preflight/routes` (`annotations.routes`: `provider`, `model`, `pricingAsOf` and `observedModel` for each resolved route; `observedModel` is the result's `observed_model` for that route, and `null` for a result without one), `llm-preflight/pricing`, and `llm-preflight/evidence`. |
-| `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
+| `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `selection` (the result's `selection` as `prompt`, `tests`, `environment` and `migrationCheck`; `null` for a result without one), `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
 | `ci` | `repository`, `workflow`, `runId`, `runAttempt`, `commit` and `serverUrl`, read from `GITHUB_REPOSITORY`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA` and `GITHUB_SERVER_URL`. `null` when none is set. `attest` refuses a partial or malformed set. |
 
 `attest` refuses a result without schema-version-1 provenance, provenance that
@@ -257,25 +258,32 @@ separate objects; neither implies the other.
 ### Gate JSON
 
 `llm-preflight gate [CONFIG] --records PATH... --json` decides offline whether
-the current tree has a fresh passing record. It fingerprints `CONFIG` as a
-default run would record it, with no credentials and no provider request, and
-reads each record file and every `*.preflight.json` under each directory.
+the current tree has a fresh passing record. It fingerprints `CONFIG` as a run
+under the gate's selection flags would record it (`--env`, `--prompt`,
+`--tests` or `--profiles`, `--migration-check`; by default a default run),
+with no credentials and no provider request, and reads each record file and
+every `*.preflight.json` under each directory.
 
 | Field | Meaning |
 |---|---|
 | `decision` | `pass` (exit 0), `blocked` (exit 1) or `undecided` (exit 3). |
-| `reason_code` | `fresh_pass`; when blocked, `no_record`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error` or `record_error`. |
+| `reason_code` | `fresh_pass`; when blocked, `no_record`, `selection_changed`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error` or `record_error`. |
 | `why`, `next` | The reason in one sentence and the numbered next steps, identical to the text output. |
-| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
-| `contract_sha256`, `routes_sha256` | The current tree's fingerprints; `null` when the config cannot be fingerprinted. |
+| `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `selection` (the record's, `null` when it has none), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
+| `selection` | The selection the gate requires, in the record's form. |
+| `contract_sha256`, `routes_sha256` | The current tree's fingerprints under that selection; `null` when the config cannot be fingerprinted. |
 | `config`, `max_age_days`, `retirement_snapshot`, `signature`, `network_accessed` | Inputs and the verifier's snapshot; `network_accessed` is always `false`. |
 
-The newest record by `checkedAt` that matches both fingerprints and carries a
-GitHub Actions identity decides; on equal age a non-passing record wins. A
-record tracked by Git, a local record, an inconsistent record and a record for
-other fingerprints never decides. One unreadable record makes the gate
+The newest record by `checkedAt` that ran the gate's selection, matches both
+fingerprints and carries a GitHub Actions identity decides; on equal age a
+non-passing record wins. A record tracked by Git, a local record, an
+inconsistent record, a record for another selection (or one that records
+none) and a record for other fingerprints never decides. The gate sets the
+selection, not the record: a record of a narrower run, such as `--tests` with
+one cheap test, cannot pass a gate that requires a default run, even though
+`--tests` changes no fingerprint. One unreadable record makes the gate
 `undecided`, because it could have been the newest. A config with `discovery`
-cannot be fingerprinted offline and is `config_error`. A run under `--env`,
-`--prompt` or `--migration-check` can record a different contract or routes
-than a default run, so its record reads as `contract_changed` or
-`routes_changed`.
+cannot be fingerprinted offline and is `config_error`, as is a gate
+selection the config cannot satisfy, such as an unknown `--prompt`. Give the
+gate the selection flags CI passes to the run; an env file is not a selection
+and needs no flag.

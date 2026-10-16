@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import shutil
@@ -71,10 +72,12 @@ def _result(
     timestamp=CHECKED,
     name="run.json",
     observed=OBSERVED,
+    selection=None,
 ):
     """A billable single-model result whose decision comes from decision.py.
 
-    `observed=UNRECORDED` writes a result from before `observed_model` existed.
+    `observed=UNRECORDED` or `selection=UNRECORDED` writes a result from before
+    that field existed; a default run's selection is the default.
     """
     config = load_config(config_path)
     routes = resolve_pricing(resolve_models(config))["models"]
@@ -114,6 +117,13 @@ def _result(
         "provenance": provenance(config, routes, "f" * 64),
         "source_config_path": str(config_path.resolve()),
     }
+    if selection is not UNRECORDED:
+        result["selection"] = selection or {
+            "prompt": None,
+            "tests": None,
+            "environment": None,
+            "migration_check": False,
+        }
     if state == "fail":
         model["summary"]["valid_output_rate"] = 0.5
         model["samples"][1]["valid_output"] = False
@@ -417,13 +427,21 @@ def _attest(
     ci=True,
     timestamp=CHECKED,
     name="run.json",
+    selection=None,
 ):
     """Attest one result in tmp_path, the working directory, and return the record path."""
     monkeypatch.chdir(tmp_path)
     config = tmp_path / "benchmark.json"
     if not config.exists():
         _config(tmp_path)
-    _result(tmp_path, config, state=state, timestamp=timestamp, name=name)
+    _result(
+        tmp_path,
+        config,
+        state=state,
+        timestamp=timestamp,
+        name=name,
+        selection=selection,
+    )
     with monkeypatch.context() as scoped:
         if ci:
             for variable, value in GITHUB.items():
@@ -950,6 +968,233 @@ def test_gate_fingerprints_match_the_provenance_of_a_real_run(
     assert (code, report["reason_code"]) == (1, "inconclusive_record")
     record = json.loads(result.with_suffix(".preflight.json").read_text())
     assert record["predicate"]["warnedTests"] == ["mock:local/json"]
+
+
+SELECTION_CONFIG = {
+    "name": "selection",
+    "prompt": "Reply with ok.",
+    "validation": {"exact": "ok"},
+    "prompts": [
+        {
+            "name": "json",
+            "prompt": "Return JSON.",
+            "validation": {"json_object": True},
+        }
+    ],
+    "environments": {
+        "staging": {
+            "models": [{"provider": "mock", "model": "staging", "response": "{}"}]
+        }
+    },
+    "models": [{"provider": "mock", "model": "local", "response": "{}"}],
+    "repetitions": 1,
+    "warmups": 0,
+}
+
+
+DEFAULT_SELECTION = {
+    "prompt": None,
+    "tests": None,
+    "environment": None,
+    "migrationCheck": False,
+}
+
+
+def _selected_run(monkeypatch, capsys, tmp_path, *flags):
+    """Run SELECTION_CONFIG on the mock provider under flags, attest it in CI."""
+    monkeypatch.chdir(tmp_path)
+    if not (tmp_path / "benchmark.json").exists():
+        _config(tmp_path, SELECTION_CONFIG)
+    code, _, err = _run(
+        monkeypatch, capsys, "benchmark.json", *flags, "--output-dir", "results"
+    )
+    assert code in {1, 3}, err
+    (result,) = (tmp_path / "results").glob("*-selection*.json")
+    with monkeypatch.context() as scoped:
+        for variable, value in GITHUB.items():
+            scoped.setenv(variable, value)
+        assert _run(monkeypatch, capsys, "attest", result)[0] == 0
+    return result.with_suffix(".preflight.json")
+
+
+@pytest.mark.parametrize(
+    ("flags", "gate_flags", "selection"),
+    [
+        ((), (), {}),
+        (("--prompt", "json"), ("--prompt", "json"), {"prompt": "json"}),
+        (("--tests", "json"), ("--tests", "json"), {"tests": "json"}),
+        (("--profiles", "json"), ("--tests", "json"), {"tests": "json"}),
+        (
+            ("--tests", "classification,json"),
+            ("--profiles", "json,exact-routing-check"),
+            {"tests": "exact-routing-check,json"},
+        ),
+        (("--migration-check",), ("--migration-check",), {"migrationCheck": True}),
+        (("--env", "staging"), ("--env", "staging"), {"environment": "staging"}),
+        (
+            ("--env", "staging", "--prompt", "json"),
+            ("--prompt", "json", "--env", "staging"),
+            {"prompt": "json", "environment": "staging"},
+        ),
+        (("--env-file", "ci.env"), (), {}),
+    ],
+    ids=[
+        "default",
+        "prompt",
+        "tests",
+        "profiles",
+        "tests-in-another-order",
+        "migration-check",
+        "environment",
+        "environment-and-prompt",
+        "env-file",
+    ],
+)
+def test_gate_matches_a_real_run_under_the_same_selection(
+    monkeypatch, capsys, tmp_path, flags, gate_flags, selection
+):
+    (tmp_path / "ci.env").write_text("PARITY_FIXTURE=sk-synthetic-secret\n")
+    monkeypatch.setenv("PARITY_FIXTURE", "already-set")
+    record = _selected_run(monkeypatch, capsys, tmp_path, *flags)
+
+    code, report = _gate(monkeypatch, capsys, *gate_flags, "--records", "results")
+
+    entry = report["records"][0]
+    assert code == 1
+    assert entry["verdict"] in {"failed_record", "inconclusive_record"}, entry
+    expected = {**DEFAULT_SELECTION, **selection}
+    recorded = _descriptor(json.loads(record.read_text()), "evidence")["annotations"]
+    assert recorded["selection"] == expected
+    assert entry["selection"] == expected
+    assert report["selection"] == expected
+    # The env file only supplies credentials: neither its path nor a value is kept.
+    assert "sk-synthetic-secret" not in record.read_text()
+    assert "ci.env" not in record.read_text()
+
+
+@pytest.mark.parametrize(
+    ("flags", "gate_flags", "ran", "requires"),
+    [
+        (("--tests", "json"), (), "--tests json", "a default run"),
+        (("--prompt", "json"), (), "--prompt json", "a default run"),
+        ((), ("--env", "staging"), "a default run", "--env staging"),
+        (
+            ("--migration-check",),
+            ("--tests", "json"),
+            "--migration-check",
+            "--tests json",
+        ),
+    ],
+)
+def test_gate_blocks_a_record_made_under_another_selection(
+    monkeypatch, capsys, tmp_path, flags, gate_flags, ran, requires
+):
+    _selected_run(monkeypatch, capsys, tmp_path, *flags)
+
+    code, report = _gate(monkeypatch, capsys, *gate_flags, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert f"ran {ran}" in report["why"]
+    assert f"this gate requires {requires}" in report["why"]
+    assert report["next"][0].startswith(
+        " ".join(["llm-preflight benchmark.json", *gate_flags, "--dry-run"])
+    )
+    assert report["next"][-1] == (
+        f"if CI runs {ran} on purpose, give the gate the same selection"
+    )
+
+
+def test_gate_blocks_a_record_that_does_not_record_its_selection(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path, selection=UNRECORDED)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (
+        json.loads(record.read_text())["predicate"]["configuration"][3]["annotations"][
+            "selection"
+        ]
+        is None
+    )
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert "does not record which selection it ran" in report["why"]
+
+
+def test_gate_under_a_selection_detects_a_change_to_the_selected_prompt(
+    monkeypatch, capsys, tmp_path
+):
+    _selected_run(monkeypatch, capsys, tmp_path, "--prompt", "json")
+    edited = copy.deepcopy(SELECTION_CONFIG)
+    edited["prompts"][0]["validation"] = {"json_array": True}
+    _config(tmp_path, edited)
+
+    code, report = _gate(
+        monkeypatch, capsys, "--prompt", "json", "--records", "results"
+    )
+
+    assert (code, report["reason_code"]) == (1, "contract_changed")
+    assert report["next"][0].startswith(
+        "llm-preflight benchmark.json --prompt json --dry-run"
+    )
+    _config(tmp_path, {**SELECTION_CONFIG, "prompts": []})
+
+    code, report = _gate(
+        monkeypatch, capsys, "--prompt", "json", "--records", "results"
+    )
+
+    assert (code, report["reason_code"]) == (3, "config_error")
+    assert "unknown custom prompt 'json'" in report["why"]
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ("--tests", "json", "--profiles", "json"),
+        ("--prompt", "json", "--tests", "json"),
+        ("--migration-check", "--prompt", "json"),
+        ("--migration-check", "--tests", "json"),
+    ],
+)
+def test_gate_refuses_the_selections_a_run_refuses(
+    monkeypatch, capsys, tmp_path, flags
+):
+    _config(tmp_path, SELECTION_CONFIG)
+    monkeypatch.chdir(tmp_path)
+
+    code, _, err = _run(monkeypatch, capsys, "gate", *flags, "--records", "results")
+
+    assert code == 2
+    assert "cannot be combined" in err
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        "json",
+        {"prompt": "json"},
+        {**DEFAULT_SELECTION, "prompt": 7},
+        {**DEFAULT_SELECTION, "prompt": ""},
+        {**DEFAULT_SELECTION, "tests": ["json"]},
+        {**DEFAULT_SELECTION, "migrationCheck": "yes"},
+        {**DEFAULT_SELECTION, "prompt": "json", "migrationCheck": True},
+        {**DEFAULT_SELECTION, "prompt": "json", "tests": "json"},
+        {**DEFAULT_SELECTION, "prompt": "a\x1b[31m"},
+        {**DEFAULT_SELECTION, "environment": "staging\n"},
+        {**DEFAULT_SELECTION, "extra": None},
+    ],
+)
+def test_verify_rejects_a_malformed_selection(monkeypatch, capsys, tmp_path, selection):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, lambda record: _evidence(record).update(selection=selection))
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+
+    assert code == 1
+    assert (
+        "llm-preflight/evidence carries a malformed selection"
+        in (json.loads(out)["integrity"]["problems"])
+    )
 
 
 @pytest.mark.parametrize(

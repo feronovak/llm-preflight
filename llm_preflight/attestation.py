@@ -31,12 +31,23 @@ from . import __version__
 from .catalog import resolve_models
 from .client import observed_model, reported_model
 from .contracts import _fingerprint, provenance
-from .features import apply_model_aliases, apply_provider_presets
+from .features import (
+    apply_environment,
+    apply_migration_check,
+    apply_model_aliases,
+    apply_provider_presets,
+)
 from .git import run_git
 from .pricing import resolve_pricing
 from .redaction import redact_secrets
 from .retirements import retirement_verdict, snapshot_summary
-from .runner import load_config, model_failed, validate_config_validations
+from .runner import (
+    load_config,
+    model_failed,
+    select_custom_prompt,
+    select_test_profiles,
+    validate_config_validations,
+)
 from .source_audit import display_path
 
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
@@ -73,6 +84,15 @@ _CI_FIELDS = {
     "serverUrl": re.compile(r"https://[A-Za-z0-9.-]+(:[0-9]{1,5})?"),
 }
 _MAX_WORKFLOW_LENGTH = 200
+# The run flags that shape the config a run fingerprints; names only, so a
+# record never carries a credential or an env-file path.
+DEFAULT_SELECTION: dict[str, Any] = {
+    "prompt": None,
+    "tests": None,
+    "environment": None,
+    "migrationCheck": False,
+}
+_MAX_SELECTION_LENGTH = 200
 # A gate decides on the newest of these; every other verdict cannot count.
 _CANDIDATE_VERDICTS = {
     "pass",
@@ -86,6 +106,7 @@ _BLOCKING_PRIORITY = (
     "committed_record",
     "local_record",
     "inconsistent_record",
+    "selection_changed",
     "contract_changed",
     "routes_changed",
 )
@@ -219,6 +240,7 @@ def build_record(
                     },
                     "provenance": copy.deepcopy(evidence),
                     "requests": requests,
+                    "selection": _result_selection(result),
                     "costUsd": result.get("total_estimated_cost_usd"),
                     "costConfidence": result.get("cost_confidence"),
                     "retirementSnapshot": snapshot_summary()["newest_as_of"],
@@ -308,6 +330,8 @@ def integrity_problems(record: Any, today: date) -> list[str]:
             for name in _FINGERPRINTS
             if _digest(descriptors[name]) != fingerprints.get(f"{name}_sha256")
         )
+    if not _valid_selection(evidence.get("selection")):
+        problems.append("llm-preflight/evidence carries a malformed selection")
     checked = _timestamp(evidence.get("checkedAt"))
     if checked is None:
         problems.append("checkedAt is not a timezone-qualified ISO-8601 timestamp")
@@ -388,14 +412,19 @@ def describe_route(route: Mapping[str, Any]) -> str:
     return f"{label} answered as {observed}"
 
 
-def current_fingerprints(config_path: Path) -> dict[str, Any]:
-    """The contract and route fingerprints a default run of this config records.
+def current_fingerprints(
+    config_path: Path, selection: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """The contract and route fingerprints a run of this config records.
 
-    It resolves the config exactly as a run does before `provenance`, without
-    loading credentials or contacting a provider.
+    It resolves the config exactly as a run under `selection` (`--env`,
+    `--migration-check`, `--prompt`, `--tests`; default: none) does before
+    `provenance`, without loading credentials or contacting a provider.
     """
+    selection = {**DEFAULT_SELECTION, **(selection or {})}
     config = load_config(config_path)
     config["_source_config_path"] = str(config_path.resolve())
+    config = apply_environment(config, selection["environment"])
     config = apply_provider_presets(apply_model_aliases(config))
     validate_config_validations(config)
     if config.get("discovery"):
@@ -403,6 +432,13 @@ def current_fingerprints(config_path: Path) -> dict[str, Any]:
             "its routes come from provider catalogue discovery, which needs the "
             "network; list them under models so the offline gate can fingerprint them"
         )
+    if selection["migrationCheck"]:
+        config = apply_migration_check(config)
+    if selection["prompt"]:
+        config = select_custom_prompt(config, selection["prompt"])
+    if selection["tests"]:
+        # Tests change no fingerprint, but an unknown test is a config error.
+        select_test_profiles(config, selection["tests"])
     models = resolve_pricing(resolve_models(config))["models"]
     fingerprints = provenance(config, models, "")
     return {
@@ -423,16 +459,22 @@ def gate(
     record_paths: Sequence[Path],
     today: date,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
+    selection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Decide offline whether the current tree has a fresh passing record.
 
-    Pass only on the newest CI record that matches the current contract and
-    routes, is PASSED, consistent, fresh and not superseded. A record that
-    cannot be read makes the gate unable to decide: it might be the newest.
+    Pass only on the newest CI record that ran the gate's `selection`
+    (default: a default run), matches the current contract and routes under
+    it, is PASSED, consistent, fresh and not superseded. The gate, not the
+    record, sets the selection: a record cannot lower the bar by having run
+    less. A record that cannot be read makes the gate unable to decide: it
+    might be the newest.
     """
     config = display_path(config_path)
+    required = {**DEFAULT_SELECTION, **(selection or {})}
     report: dict[str, Any] = {
         "config": config,
+        "selection": required,
         "contract_sha256": None,
         "routes_sha256": None,
         "max_age_days": max_age_days,
@@ -442,7 +484,7 @@ def gate(
         "records": [],
     }
     try:
-        current = current_fingerprints(config_path)
+        current = current_fingerprints(config_path, required)
     except (OSError, ValueError) as exc:
         reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else exc
         return _undecided_config(report, config, reason)
@@ -451,7 +493,7 @@ def gate(
     report["contract_sha256"] = current["contract_sha256"]
     report["routes_sha256"] = current["routes_sha256"]
     entries = [
-        _evaluate(path, current, today, max_age_days)
+        _evaluate(path, current, required, today, max_age_days)
         if error is None
         else _entry(path, "record_error", error)
         for path, error in _record_files(record_paths)
@@ -490,7 +532,9 @@ def gate(
                 code = verdict
                 newest = max(matching, key=lambda e: e["_checked"] or _EPOCH)
                 break
-    why, steps = _explain(code, newest, config, current, record_paths, max_age_days)
+    why, steps = _explain(
+        code, newest, config, current, required, record_paths, max_age_days
+    )
     return {
         "decision": "pass" if code == "fresh_pass" else "blocked",
         "reason_code": code,
@@ -509,14 +553,18 @@ def _undecided_config(
         "why": redact_secrets(f"The gate cannot fingerprint {config}: {reason}."),
         "next": [
             f"llm-preflight {_quote(config)} --doctor   (free: config and model resolution)",
-            "fix the config, then rerun the gate",
+            "fix the config or the gate's selection, then rerun the gate",
         ],
         **report,
     }
 
 
 def _evaluate(
-    path: Path, current: Mapping[str, Any], today: date, max_age_days: int
+    path: Path,
+    current: Mapping[str, Any],
+    required: Mapping[str, Any],
+    today: date,
+    max_age_days: int,
 ) -> dict[str, Any]:
     try:
         tracked = _tracked_by_git(path)
@@ -552,11 +600,19 @@ def _evaluate(
         blocking_warnings=len(evidence["decision"].get("blocking_warnings") or []),
         retired_routes=freshness["retired_routes"],
         routes=report["routes"],
+        selection=evidence.get("selection"),
         contract_sha256=_digest(descriptors["contract"]),
         routes_sha256=_digest(descriptors["routes"]),
         _checked=_timestamp(evidence["checkedAt"]),
     )
     for verdict, reason, applies in (
+        (
+            "selection_changed",
+            "does not record its selection"
+            if entry["selection"] is None
+            else "ran a different selection",
+            entry["selection"] != required,
+        ),
         (
             "contract_changed",
             "checked a different contract",
@@ -604,6 +660,7 @@ def _entry(path: Path, verdict: str, reason: str) -> dict[str, Any]:
         "blocking_warnings": None,
         "retired_routes": [],
         "routes": [],
+        "selection": None,
         "contract_sha256": None,
         "routes_sha256": None,
         "_checked": None,
@@ -615,12 +672,14 @@ def _explain(
     newest: dict[str, Any] | None,
     config: str,
     current: Mapping[str, Any],
+    required: Mapping[str, Any],
     record_paths: Sequence[Path],
     max_age_days: int,
 ) -> tuple[str, list[str]]:
     """The why and the numbered next steps for a gate decision."""
+    run = " ".join([_quote(config), *selection_flags(required)])
     fresh_check = [
-        f"llm-preflight {_quote(config)} --dry-run   (free: plan and cost)",
+        f"llm-preflight {run} --dry-run   (free: plan and cost)",
         "approve the plan, then run the bounded check",
         _ATTEST_NEXT,
     ]
@@ -641,6 +700,25 @@ def _explain(
                 + f"The signature is {SIGNATURE_NOTE}."
             ),
             [],
+        )
+    if code == "selection_changed":
+        requires = describe_selection(required)
+        if newest["selection"] is None:
+            return (
+                (
+                    f"{latest} does not record which selection it ran (it was "
+                    "attested from a result written before 2.22.0), so it cannot "
+                    f"show that it ran what this gate requires: {requires}."
+                ),
+                fresh_check,
+            )
+        ran = describe_selection(newest["selection"])
+        return (
+            f"The latest record ({described}) ran {ran}; this gate requires {requires}.",
+            [
+                *fresh_check,
+                f"if CI runs {ran} on purpose, give the gate the same selection",
+            ],
         )
     if code == "contract_changed":
         return (
@@ -686,7 +764,7 @@ def _explain(
             ),
             [
                 (
-                    f"llm-preflight {_quote(config)} --dry-run   "
+                    f"llm-preflight {run} --dry-run   "
                     "(free: retirement verdict, replacement and cost)"
                 ),
                 (
@@ -762,10 +840,28 @@ def _explain(
             _ATTEST_NEXT,
             (
                 "download the record, then rerun: "
-                f"llm-preflight gate {_quote(config)} --records DIR"
+                f"llm-preflight gate {run} --records DIR"
             ),
         ],
     )
+
+
+def selection_flags(selection: Mapping[str, Any]) -> list[str]:
+    """The run flags that reproduce a selection, in the order the CLI applies them."""
+    flags = []
+    if selection.get("environment"):
+        flags += ["--env", _quote(selection["environment"])]
+    if selection.get("migrationCheck"):
+        flags.append("--migration-check")
+    if selection.get("prompt"):
+        flags += ["--prompt", _quote(selection["prompt"])]
+    if selection.get("tests"):
+        flags += ["--tests", _quote(selection["tests"])]
+    return flags
+
+
+def describe_selection(selection: Mapping[str, Any]) -> str:
+    return " ".join(selection_flags(selection)) or "a default run"
 
 
 def _described(entry: Mapping[str, Any]) -> str:
@@ -939,6 +1035,46 @@ def _origin_problems(
     if predicate.get("url") != run_url(ci):
         return ["predicate.url does not match the GitHub Actions identity"]
     return []
+
+
+def _result_selection(result: Mapping[str, Any]) -> Any:
+    """The result's run selection in record form; None when it records none.
+
+    A malformed value is copied as found, so the integrity check refuses it.
+    """
+    selection = result.get("selection")
+    if not isinstance(selection, dict):
+        return selection
+    return {
+        "prompt": selection.get("prompt"),
+        "tests": selection.get("tests"),
+        "environment": selection.get("environment"),
+        "migrationCheck": selection.get("migration_check"),
+    }
+
+
+def _valid_selection(value: Any) -> bool:
+    """None, or the four selection names a run can combine.
+
+    As on the command line, `--migration-check` excludes `--prompt` and
+    `--tests`, and `--prompt` excludes `--tests`.
+    """
+    if value is None:
+        return True
+    if not isinstance(value, dict) or set(value) != set(DEFAULT_SELECTION):
+        return False
+    if not isinstance(value["migrationCheck"], bool) or not all(
+        name is None
+        or (
+            isinstance(name, str)
+            and 0 < len(name) <= _MAX_SELECTION_LENGTH
+            and name.isprintable()
+        )
+        for name in (value["prompt"], value["tests"], value["environment"])
+    ):
+        return False
+    exclusive = (value["migrationCheck"], value["prompt"], value["tests"])
+    return sum(bool(item) for item in exclusive) <= 1
 
 
 def _valid_observed(value: Any) -> bool:

@@ -124,6 +124,7 @@ def test_standard_mcp_clients_negotiate_any_initialize_version_and_discover_tool
     assert "`fail` for a retired model" in instructions
     assert "`inconclusive` for a retiring model or a stale snapshot row" in instructions
     assert [tool["name"] for tool in listed["result"]["tools"]] == [
+        "audit_source",
         "validate_config",
         "dry_run_plan",
         "run_preflight",
@@ -186,6 +187,17 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
             "additionalProperties": False,
         }
         assert schema["oneOf"][1]["type"] == "object"
+    assert by_name["audit_source"]["annotations"] == {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+    assert by_name["audit_source"]["inputSchema"] == {
+        "type": "object",
+        "properties": {"path": {"type": "string", "minLength": 1}},
+        "additionalProperties": False,
+    }
     assert by_name["run_preflight"]["annotations"] == {
         "readOnlyHint": False,
         "destructiveHint": False,
@@ -307,6 +319,7 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
     )
     assert discover["result"]["supportedVersions"] == ["2026-07-28"]
     assert [tool["name"] for tool in listed["result"]["tools"]] == [
+        "audit_source",
         "validate_config",
         "dry_run_plan",
         "run_preflight",
@@ -926,3 +939,215 @@ def test_validate_config_name_schema_accepts_every_preserved_json_name(
         if tool["name"] == "validate_config"
     )
     assert json_type in schema["oneOf"][1]["properties"]["name"]["type"]
+
+
+AUDIT_URL = "https://example.test/deprecations"
+AUDIT_TABLE = {
+    ("openai", "gpt-gone"): {
+        "status": "retired",
+        "retirement_date": "2026-06-01",
+        "replacement": "gpt-new",
+        "as_of": "2026-10-01",
+        "source_url": AUDIT_URL,
+    },
+    ("openai", "gpt-new"): {
+        "status": "active",
+        "as_of": "2026-10-01",
+        "source_url": AUDIT_URL,
+    },
+}
+
+
+def _audit(workspace, arguments, meta=None):
+    params = {"name": "audit_source", "arguments": arguments}
+    if meta is not None:
+        params["_meta"] = meta
+    return mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": params},
+        workspace,
+    )
+
+
+@pytest.fixture
+def audit_snapshot(monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", AUDIT_TABLE)
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+
+
+def test_audit_source_reports_a_retired_model_in_a_workspace_without_a_config(
+    tmp_path, audit_snapshot
+):
+    (tmp_path / "app.py").write_text('model = "gpt-gone"\nnext = "gpt-new"\n')
+
+    result = _audit(tmp_path, {})["result"]
+
+    content = result["structuredContent"]
+    assert result["isError"] is False
+    assert content["decision"] == "fail"
+    assert content["root"] == str(tmp_path)
+    assert content["network_accessed"] is False
+    assert content["files_scanned"] == 1
+    assert [
+        (item["path"], item["line"], item["model"]) for item in content["references"]
+    ] == [("app.py", 1, "gpt-gone"), ("app.py", 2, "gpt-new")]
+    assert content["references"][0]["retirement"]["status"] == "retired"
+    assert content["next_commands"] == [
+        'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
+    ]
+    assert [block["type"] for block in result["content"]] == ["text", "text"]
+    assert result["content"][0]["text"] == (
+        "Decision: fail — 1 file audited; 2 model references: "
+        "1 retired, 0 retiring or stale, 0 unknown."
+    )
+    assert json.loads(result["content"][1]["text"]) == content
+
+
+def test_audit_source_matches_the_cli_json_and_first_text_line(
+    tmp_path, audit_snapshot, monkeypatch, capsys
+):
+    from llm_preflight import cli
+
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text('a = "gpt-gone"\nb = "gpt-mystery"\n')
+    (tmp_path / "models.yaml").write_text("model: gpt-new\n")
+    (tmp_path / "blob.json").write_bytes('{"model": "gpt-gone"}'.encode("utf-16"))
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--json"]
+    )
+    cli.main()
+    cli_json = json.loads(capsys.readouterr().out)
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path)])
+    cli.main()
+    cli_first_line = capsys.readouterr().out.splitlines()[0]
+
+    result = _audit(tmp_path, {})["result"]
+
+    assert result["structuredContent"] == cli_json
+    assert cli_json["files_unreadable"] == 1
+    assert result["content"][0]["text"] == cli_first_line
+
+
+@pytest.mark.parametrize(
+    ("path", "decision"),
+    [
+        ("src", "fail"),
+        ("src/app.py", "fail"),
+        ("docs", "none"),
+        ("empty", "inconclusive"),
+    ],
+)
+def test_audit_source_audits_a_workspace_relative_directory_or_file(
+    tmp_path, audit_snapshot, path, decision
+):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text('a = "gpt-gone"\n')
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "models.json").write_text('{"model": "gpt-mystery"}\n')
+    (tmp_path / "empty").mkdir()
+
+    result = _audit(tmp_path, {"path": path})["result"]
+
+    assert result["isError"] is False
+    assert result["structuredContent"]["root"] == str(tmp_path / path)
+    assert result["structuredContent"]["decision"] == decision
+
+
+def test_audit_source_that_reads_nothing_is_inconclusive(tmp_path, audit_snapshot):
+    (tmp_path / "README.md").write_text('model = "gpt-gone"\n')
+
+    result = _audit(tmp_path, {})["result"]
+
+    content = result["structuredContent"]
+    assert result["isError"] is False
+    assert content["files_scanned"] == 0
+    assert content["references"] == []
+    assert content["decision"] == "inconclusive"
+    assert result["content"][0]["text"].startswith(
+        "Decision: inconclusive — nothing was audited: "
+    )
+
+
+@pytest.mark.parametrize("escape", ["..", "../outside", "absolute", "linked"])
+def test_audit_source_never_reads_outside_the_workspace(
+    tmp_path, audit_snapshot, escape
+):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "app.py").write_text('a = "gpt-gone"\n')
+    (workspace / "linked").symlink_to(outside, target_is_directory=True)
+    path = str(outside) if escape == "absolute" else escape
+
+    response = _audit(workspace, {"path": path})
+
+    result = response["result"]
+    assert result["isError"] is True
+    assert set(result["structuredContent"]) == {"error"}
+    assert result["structuredContent"]["error"] in {
+        "path must stay within the MCP workspace",
+        "paths must be relative to the MCP workspace",
+    }
+    assert "gpt-gone" not in json.dumps(response)
+
+
+def test_audit_source_of_a_missing_path_is_a_tool_error(tmp_path, audit_snapshot):
+    result = _audit(tmp_path, {"path": "missing"}, META)["result"]
+
+    assert result["isError"] is True
+    assert result["resultType"] == "complete"
+    assert "audit source path does not exist" in result["structuredContent"]["error"]
+
+
+@pytest.mark.parametrize(
+    "arguments", [{"path": ""}, {"path": 7}, {"all": True}, {"path": ".", "ci": True}]
+)
+def test_audit_source_rejects_arguments_outside_its_schema(tmp_path, arguments):
+    assert _audit(tmp_path, arguments)["error"]["code"] == -32602
+
+
+def test_audit_source_on_the_2026_path_is_complete(tmp_path, audit_snapshot):
+    (tmp_path / "app.py").write_text('a = "gpt-new"\n')
+
+    result = _audit(tmp_path, {"path": "."}, META)["result"]
+
+    assert result["isError"] is False
+    assert result["resultType"] == "complete"
+    assert result["structuredContent"]["decision"] == "pass"
+
+
+def test_audit_source_opens_no_network_connection(
+    tmp_path, audit_snapshot, monkeypatch
+):
+    import socket
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("audit_source opened a network connection")
+
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    (tmp_path / "app.py").write_text('a = "gpt-gone"\n')
+
+    result = _audit(tmp_path, {})["result"]
+
+    assert result["isError"] is False
+    assert result["structuredContent"]["network_accessed"] is False
+
+
+def test_agent_guidance_starts_a_repository_without_a_config_with_audit_source(
+    tmp_path,
+):
+    root = Path(__file__).parent.parent
+    skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    guide = (root / "docs/automation/mcp.md").read_text()
+    instructions = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )["result"]["instructions"]
+
+    for text in (mcp.SAFE_WORKFLOW, skill, guide, instructions):
+        step = " ".join(text.split())
+        assert "audit_source" in step
+        assert "no benchmark config" in step
+    assert "| `audit_source` |" in guide

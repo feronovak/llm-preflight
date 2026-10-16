@@ -329,9 +329,10 @@ without shell parsing or arbitrary command execution:
 }
 ```
 
-It exposes only four tools: validate a config, prepare a dry-run plan, run an
-explicitly confirmed preflight, and compare saved baselines. The first, second,
-and fourth tools never contact providers or load credentials. A live run still
+It exposes only five tools: audit a repository's literal model IDs without a
+config, validate a config, prepare a dry-run plan, run an explicitly confirmed
+preflight, and compare saved baselines. All but the live run never contact
+providers or load credentials. A live run still
 needs an explicit paid-run confirmation. See the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md) for tool
 semantics, workspace boundaries, and the safe agent workflow.
 

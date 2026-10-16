@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .cli import dry_run_plan
+from .cli import _format_audit_source, dry_run_plan
 from .env import load_env_file, resolve_config_env_file
 from .features import (
     apply_model_aliases,
@@ -22,16 +22,25 @@ from .features import (
 from .redaction import redact_secrets
 from .retirements import today_utc
 from .runner import load_config, run_benchmark, validate_config_validations
+from .source_audit import audit_source
 
 PROTOCOL_VERSION = "2026-07-28"
 STANDARD_PROTOCOL_VERSION = "2025-06-18"
 SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
 SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
-Start with a benchmark config that reflects the application's prompt and
-response contract. The MCP tools use an existing workspace-relative config;
-they do not create or approve one. Use the CLI's `--contract-check` to prove
-accepted and rejected response fixtures locally before a live run.
+In a repository with no benchmark config, call `audit_source` first. It
+reports the literal model IDs in workspace source files with retirement and
+pricing verdicts, without a config, credentials, or provider requests. Report
+its `decision`: `fail` means a referenced model is retired, `inconclusive`
+means one is retiring, its snapshot row is stale, or no file was read, and
+`none` means no reference is in the retirement snapshot.
+
+Start a preflight with a benchmark config that reflects the application's
+prompt and response contract. The other MCP tools use an existing
+workspace-relative config; they do not create or approve one. Use the CLI's
+`--contract-check` to prove accepted and rejected response fixtures locally
+before a live run.
 
 1. Call `validate_config` after an LLM integration change. This validates any
    local image fixture path, MIME type, size, and content fingerprint without a
@@ -46,8 +55,9 @@ accepted and rejected response fixtures locally before a live run.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
    returned decision evidence or compare it with `diff_baseline`.
 
-Mock and dry-run tools never load credentials or contact providers. A live run
-does not approve a model, increase a budget, or replace production approval.
+Source audit, mock and dry-run tools never load credentials or contact
+providers. A live run does not approve a model, increase a budget, or replace
+production approval.
 Use `llm-preflight report` on saved JSON for offline HTML or Markdown export;
 CI setup and report export are CLI workflows, not MCP tools.
 """
@@ -104,12 +114,14 @@ def _meta(params: dict[str, Any]) -> dict[str, Any]:
 
 def _arguments(name: str, arguments: Any) -> dict[str, Any]:
     allowed = {
+        "audit_source": {"path"},
         "validate_config": {"config"},
         "dry_run_plan": {"config"},
         "run_preflight": {"config", "env_file", "confirm_paid_run"},
         "diff_baseline": {"baseline", "current"},
     }
-    required = {
+    required: dict[str, set[str]] = {
+        "audit_source": set(),
         "validate_config": {"config"},
         "dry_run_plan": {"config"},
         "run_preflight": {"config"},
@@ -124,7 +136,7 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
     if any(
         not isinstance(arguments[key], str) or not arguments[key]
         for key in arguments
-        if key in {"config", "env_file", "baseline", "current"}
+        if key in {"path", "config", "env_file", "baseline", "current"}
     ):
         raise ProtocolError(-32602, "path arguments must be non-empty strings")
     if "confirm_paid_run" in arguments and not isinstance(
@@ -159,11 +171,19 @@ def _readonly_config(path: Path) -> dict[str, Any]:
 
 
 def _tool_result(
-    value: dict[str, Any], *, error: bool = False, standard: bool = False
+    value: dict[str, Any],
+    *,
+    error: bool = False,
+    standard: bool = False,
+    summary: str | None = None,
 ) -> dict[str, Any]:
     safe = redact_secrets(value)
+    # A summary leads the text content; the serialized JSON stays for clients
+    # that read text instead of structured content.
+    content = [{"type": "text", "text": redact_secrets(summary)}] if summary else []
+    content.append({"type": "text", "text": json.dumps(safe, sort_keys=True)})
     result: dict[str, Any] = {
-        "content": [{"type": "text", "text": json.dumps(safe, sort_keys=True)}],
+        "content": content,
         "structuredContent": safe,
         "isError": error,
     }
@@ -199,6 +219,96 @@ def _output_schema(
 def _tools() -> list[dict[str, Any]]:
     path_schema = {"type": "string", "minLength": 1}
     optional_number_schema = {"type": ["number", "null"]}
+    strings_schema = {"type": "array", "items": {"type": "string"}}
+    retirement_schema = {
+        "type": "object",
+        "properties": {
+            "status": {"enum": ["active", "retiring", "retired", "stale", "unknown"]},
+            "decision": {"enum": ["pass", "inconclusive", "fail", "none"]},
+            "reason": {"type": "string"},
+            "next_step": {"type": "string"},
+            "retirement_date": {"type": "string"},
+            "replacement": {"type": "string"},
+            "replacement_status": {
+                "enum": ["active", "retiring", "retired", "unknown"]
+            },
+            "next_command": {"type": "string"},
+            "as_of": {"type": "string"},
+            "source_url": {"type": "string"},
+        },
+        "required": ["status", "decision", "reason", "next_step"],
+        "additionalProperties": True,
+    }
+    reference_schema = {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string"},
+            "line": {"type": "integer", "minimum": 1},
+            "provider": {"type": ["string", "null"]},
+            "model": {"type": "string"},
+            "status": {"enum": ["pricing_known", "pricing_unknown"]},
+            "confidence": {"enum": ["official_snapshot", "unknown"]},
+            "retirement": retirement_schema,
+        },
+        "required": [
+            "path",
+            "line",
+            "provider",
+            "model",
+            "status",
+            "confidence",
+            "retirement",
+        ],
+        "additionalProperties": True,
+    }
+    error_or_audit = _output_schema(
+        {
+            "root": {"type": "string"},
+            "network_accessed": {"const": False},
+            "files_scanned": {"type": "integer", "minimum": 0},
+            "file_selection": {"enum": ["git", "filesystem", "file"]},
+            "file_selection_reason": {
+                "type": ["string", "null"],
+                "description": "Why Git did not select the files; null unless file_selection is filesystem.",
+            },
+            "files_unreadable": {"type": "integer", "minimum": 0},
+            "references": {"type": "array", "items": reference_schema},
+            "findings": {"type": "array", "items": reference_schema},
+            "ok": {"const": True},
+            "decision": {"enum": ["fail", "inconclusive", "pass", "none"]},
+            "next_commands": strings_schema,
+            "retirement_snapshot": {
+                "type": "object",
+                "properties": {
+                    "providers": strings_schema,
+                    "rows": {"type": "integer", "minimum": 0},
+                    "oldest_as_of": {"type": "string"},
+                    "newest_as_of": {"type": "string"},
+                },
+                "required": ["providers", "rows", "oldest_as_of", "newest_as_of"],
+                "additionalProperties": True,
+            },
+            "confidence": {"type": "string"},
+            "notes": strings_schema,
+        },
+        [
+            "root",
+            "network_accessed",
+            "files_scanned",
+            "file_selection",
+            "file_selection_reason",
+            "files_unreadable",
+            "references",
+            "findings",
+            "ok",
+            "decision",
+            "next_commands",
+            "retirement_snapshot",
+            "confidence",
+            "notes",
+        ],
+        "The CLI --audit-source --json object. decision is the worst retirement decision across references; none means no reference is in the retirement snapshot, and an audit that read no file is inconclusive. ok does not reflect it.",
+    )
     error_or_validate = _output_schema(
         {
             "ok": {"const": True},
@@ -305,6 +415,21 @@ def _tools() -> list[dict[str, Any]]:
     }
     return [
         {
+            "name": "audit_source",
+            "description": (
+                "Audit literal model IDs in workspace source files for retirement "
+                "and pricing verdicts. Needs no benchmark config; makes no "
+                "provider request."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {"path": path_schema},
+                "additionalProperties": False,
+            },
+            "outputSchema": error_or_audit,
+            "annotations": {**readonly_annotations, "idempotentHint": True},
+        },
+        {
             "name": "validate_config",
             "description": "Validate a local benchmark config without provider access.",
             "inputSchema": {
@@ -383,6 +508,15 @@ def _call(
     *,
     standard: bool,
 ) -> dict[str, Any]:
+    if name == "audit_source":
+        audit = audit_source(
+            _path(arguments.get("path", "."), workspace), today=today_utc()
+        )
+        return _tool_result(
+            audit,
+            standard=standard,
+            summary=_format_audit_source(audit).splitlines()[0],
+        )
     if name == "validate_config":
         config = _readonly_config(_path(arguments["config"], workspace))
         return _tool_result(
@@ -482,6 +616,8 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                 "capabilities": {"tools": {}, "resources": {}},
                 "serverInfo": {"name": "llm-preflight", "version": __version__},
                 "instructions": (
+                    "In a repository with no benchmark config, call audit_source "
+                    "first and report its decision. "
                     "Use validate_config and dry_run_plan before a live run, and "
                     "report the dry_run_plan `retirements` decision: `fail` for a "
                     "retired model, `inconclusive` for a retiring model or a "

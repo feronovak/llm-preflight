@@ -6,6 +6,14 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- MCP tool `audit_source`, the zero-config first step for an agent in a
+  repository with no benchmark config. It returns the same object as
+  `--audit-source --json`, with the same `fail`, `inconclusive`, `pass` or
+  `none` decision, and leads its text content with the CLI's first line. Its
+  optional `path` is workspace-relative, defaults to the workspace root and
+  keeps the existing workspace boundary, symlinks included. It is read-only,
+  idempotent and closed-world: no credentials, no provider requests. The
+  server instructions and the safe-workflow resource name it first.
 - A bounded three-request smoke example for native GLM 5.3, DeepSeek V4.1
   Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
   checks. Native live results still require separate credentials and execution.

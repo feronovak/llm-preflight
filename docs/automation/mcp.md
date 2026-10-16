@@ -51,10 +51,41 @@ The required fields let Claude Code and other strict clients validate the
 responses. Standard `2025-06-18` list/read responses retain their legacy shape.
 See the [MCP cache-field migration guide](https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28#cache-fields-and-cache-hints).
 
+## Start in a repository with no benchmark config
+
+`audit_source` is the zero-config first step. It returns the same object as
+`llm-preflight --audit-source PATH --json`: every literal model ID in the
+workspace's source files with a pricing status and a retirement verdict, plus
+the `decision`, `next_commands`, and how the files were selected. Its optional
+`path` is workspace-relative and defaults to the workspace root; like every
+other path argument, it must resolve (after symlinks) inside the workspace.
+It needs no config, loads no credentials, and makes no provider request; in a
+Git work tree it lists files through the same hardened Git call as the CLI,
+which disables repository-configured hooks, filters, and transports.
+
+```json
+{"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+ "params": {"name": "audit_source", "arguments": {"path": "src"}}}
+```
+
+The first text block leads with the decision, as the CLI's first line does:
+
+```text
+Decision: fail — 1 file audited; 2 model references: 1 retired, 0 retiring or stale, 1 unknown.
+```
+
+The second text block and `structuredContent` carry the full, uncapped JSON;
+there is no `all` argument because only CLI text output is capped. Report
+the `decision`: `fail` means a referenced model is retired, `inconclusive`
+means one is retiring, its snapshot row is stale, or no file was read, and
+`none` means no reference is in the retirement snapshot, which is not a pass.
+`ok` stays `true` whatever the decision. See
+[source audit JSON](../reference/results.md#source-audit-json) for each field.
+
 ## Start with a project contract
 
-The MCP tools read an existing benchmark config; they do not create a project
-contract. Use the [project integration guide](../getting-started/project-integration.md)
+The other MCP tools read an existing benchmark config; they do not create a
+project contract. Use the [project integration guide](../getting-started/project-integration.md)
 to adapt one representative request, the application's response rule, accepted
 and rejected fixtures, an existing env-file reference, and request bounds.
 Run `llm-preflight benchmark.json --contract-check` to test those fixtures
@@ -87,8 +118,9 @@ explicit, project-local setup decision.
 
 On the standard protocol path, `tools/list` also declares a client-visible
 safety hint for every tool and a JSON output schema for its structured result.
-`validate_config`, `dry_run_plan`, and `diff_baseline` are read-only and closed
-to the external world. `run_preflight` is marked as external-world capable,
+`audit_source`, `validate_config`, `dry_run_plan`, and `diff_baseline` are
+read-only and closed to the external world; `audit_source` is also marked
+idempotent. `run_preflight` is marked as external-world capable,
 because a confirmed live configuration can contact a provider.
 
 ## Connect common coding agents
@@ -166,6 +198,7 @@ remains a user-controlled workspace decision.
 
 | Tool | What it does | Provider access |
 |---|---|---|
+| `audit_source` | Audits literal model IDs under an optional workspace-relative `path` (default: the workspace) and returns the CLI `--audit-source --json` object, with the decision as the first text line. Needs no benchmark config. | Never contacts a provider or loads credentials. |
 | `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. | Never contacts a provider or loads credentials. |
 | `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
@@ -175,7 +208,7 @@ remains a user-controlled workspace decision.
 
 Clients that support MCP resources can read
 `llm-preflight://guides/safe-workflow`. It is a short, static checklist:
-validate, inspect the dry-run plan, stop for explicit user approval, then use
+run `audit_source` when there is no config, validate, inspect the dry-run plan, stop for explicit user approval, then use
 `run_preflight` only with `confirm_paid_run: true`. Reading this
 resource never accesses the workspace, loads credentials, or contacts a
 provider.
@@ -197,6 +230,9 @@ each `blocking_warnings` entry verbatim before proposing paid work or approval.
 See [Agent decision contract](../reference/decision.md).
 
 ## Safe agent workflow
+
+In a repository with no benchmark config, ask the agent to run `audit_source`
+first and report its `decision` and each retired or retiring model.
 
 1. Select an existing benchmark that reflects the application's deployed
    prompt and response contract. Prove its fixtures with `--contract-check`.

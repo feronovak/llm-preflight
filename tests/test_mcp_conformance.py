@@ -241,7 +241,18 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     )
     run = _call(tmp_path, "run_preflight", {"config": "mock.json"})
     (tmp_path / "baseline.json").write_text(json.dumps(run["structuredContent"]))
+    (tmp_path / "unknown").mkdir()
+    (tmp_path / "unknown" / "app.py").write_text('model = "gpt-unlisted"\n')
+    (tmp_path / "empty").mkdir()
     calls = {
+        "audit_source": [
+            ({}, False),
+            ({"path": "retired.json"}, False),
+            ({"path": "unknown"}, False),
+            ({"path": "empty"}, False),
+            ({"path": "missing"}, True),
+            ({"path": ".."}, True),
+        ],
         "validate_config": [
             ({"config": "mock.json"}, False),
             ({"config": "missing.json"}, True),
@@ -277,3 +288,13 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     assert retired["structuredContent"]["pricing_warnings"]
     presets = _call(tmp_path, "dry_run_plan", {"config": "presets.json"})
     assert presets["structuredContent"]["configuration_warnings"]
+    audits = {
+        path: _call(tmp_path, "audit_source", {"path": path})["structuredContent"]
+        for path in (".", "retired.json", "unknown", "empty")
+    }
+    assert audits["."]["file_selection_reason"] is not None
+    assert audits["."]["decision"] == "fail"
+    assert audits["retired.json"]["file_selection"] == "file"
+    assert audits["retired.json"]["file_selection_reason"] is None
+    assert audits["unknown"]["decision"] == "none"
+    assert audits["empty"]["decision"] == "inconclusive"

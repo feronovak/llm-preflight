@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-14 · **As of:** v2.21.1
+**Last reviewed:** 2026-10-16 · **As of:** unreleased source
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -45,10 +45,10 @@ in all three commands.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
-stale 30 days after their review date (rows reviewed 2026-10-14 are stale from
-2026-11-14), after which `--ci` returns 3 for every non-retired model in the
-snapshot (retired stays 1) until the package is updated; models with no row
-stay at 0.
+stale 30 days after their review date (the bundled rows are stale from the 31st
+day after the review date stamped above), after which `--ci` returns 3 for
+every non-retired model in the snapshot (retired stays 1) until the package is
+updated; models with no row stay at 0.
 
 ## Next steps
 
@@ -97,12 +97,11 @@ from the ID.
 
 ## Release retirement review
 
-The current snapshot contains 114 rows: 36 Anthropic, 73 OpenAI and five Gemini.
-OpenAI's October 14 announcement adds five GPT-4 dated snapshots retiring on
-January 14, 2027, with `gpt-6-luna` as replacement. The corresponding four
-current aliases follow that schedule. The older `gpt-4o-2024-05-13` retains its
-October 23, 2026 retirement date. Older rows no longer recommend deprecated
-`gpt-4.1` or `gpt-4o` as successors.
+The current snapshot contains 114 rows: 36 Anthropic, 73 OpenAI and five Gemini,
+all reviewed on the date stamped above. The GPT-4o, GPT-4o mini, GPT-4.1 and
+GPT-4.1 mini aliases follow the schedule of the dated snapshots their official
+model pages name, and name `gpt-6-luna` as the page does. No row names the
+retiring `gpt-4.1` or `gpt-4o` as a successor.
 
 Before a release, a maintainer reads the official sources against
 `llm_preflight/retirements.py`, updates changed rows, sets each reviewed row's

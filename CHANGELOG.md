@@ -33,6 +33,14 @@ All notable changes to this project are documented here.
   Flash and Qwen 3.8 Max, with deterministic streaming, usage and error
   checks. Native live results still require separate credentials and execution.
 
+### Changed
+
+- Retirement snapshot re-reviewed against the official Anthropic, OpenAI and
+  Gemini deprecation pages on October 16 UTC. No announcement since October 14
+  affects it: all 114 rows keep their status, shutdown date and replacement.
+  Non-retired rows now become stale on 2026-11-16, when their `--ci` verdict
+  becomes inconclusive (exit 3). Retired rows continue to fail (exit 1).
+
 ## 2.21.2 - 2026-10-14
 
 ### Fixed

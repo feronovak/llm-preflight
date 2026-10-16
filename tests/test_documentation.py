@@ -688,7 +688,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in guide
+    assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in guide
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide
@@ -726,6 +726,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
+    assert "stale from the 31st day after the review date stamped above" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 

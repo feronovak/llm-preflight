@@ -39,7 +39,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-10-13 | v2.21.0 |
 | [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-09-24 | v2.17.0 |
-| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-14 | v2.21.1 |
+| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-16 | — |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-15 | v2.21.2 |
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |

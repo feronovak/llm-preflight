@@ -69,16 +69,17 @@ described above.
   SVG card, uploads both as the `llm-preflight-record` artifact, and links the
   artifact from the job summary. The result, which holds the prompts, is not
   uploaded. A failed or inconclusive run is recorded as such, and the step
-  keeps the run's exit code. The paid smoke is a default run, so the record's
-  selection is the default one and a gate for it takes no selection flags;
-  the record names this repository, which is the only one whose gate counts
-  it. Use `package-version` 2.22.0 or later: an older package's result
-  records no selection, and the gate blocks its record as
-  `selection_changed`.
+  keeps the run's exit code. The paid smoke is a default `--smoke` run, one
+  repetition per prompt, so the record's selection is `--smoke` and a gate
+  for it takes `--smoke`. The record names the GitHub Actions run that made
+  the result, and this repository is the only one whose gate counts it. Use
+  `package-version` 2.22.0 or later: an older package's result records
+  neither its selection nor its run, so the record is local and the gate
+  never passes it.
 - `sign: "true"` needs `attest: "true"`. It also signs the record with
   `actions/attest`, using the record's test-result predicate, so
-  `gh attestation verify` can check that this repository's workflow produced
-  it. The job needs `id-token: write` and `attestations: write`. Signing is
+  `gh attestation verify --signer-workflow` can check that this workflow, on
+  the branch it ran on, produced it. The job needs `id-token: write` and `attestations: write`. Signing is
   available for public repositories, and for private or internal ones on
   GitHub Enterprise Cloud.
 
@@ -120,5 +121,12 @@ Save it as `.github/workflows/llm-preflight-record.yml`; the
 every file that shapes the contract under `paths`, such as prompt or schema
 files, or drop the filter. Drop `sign` and both write permissions on a private
 repository without GitHub Enterprise Cloud.
+
+A record is only as trustworthy as the workflow that produced it: whoever can
+edit this workflow or approve the environment can produce a passing record.
+Verify signed records with `gh attestation verify RECORD --repo OWNER/REPO
+--signer-workflow OWNER/REPO/.github/workflows/llm-preflight-record.yml`,
+adding `--source-ref refs/heads/main` for a record from `main`, as the
+[gate workflow](ci.md#proof-of-preflight-gate) does.
 
 It doesn't certify production behaviour. It proves the check was done.

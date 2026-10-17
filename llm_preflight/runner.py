@@ -16,8 +16,10 @@ from typing import Any
 from .catalog import resolve_models
 from .client import create_client, observed_model
 from .contracts import (
+    DEFAULT_REQUEST,
     check_contract,
     contract_fixtures_declared,
+    profile_request_options,
     provenance,
     validate_contract_config,
     validate_output_schema,
@@ -25,9 +27,10 @@ from .contracts import (
 )
 from .decision import build_decision, legacy_cost_evidence
 from .eligibility import IncompatibleCatalogTypeError, assert_text_smoke_models
+from .github_actions import ci_identity
 from .images import prepare_image_inputs
 from .metrics import summarize
-from .presets import expand_presets, preset_warnings
+from .presets import preset_warnings
 from .pricing import (
     estimate_sample_cost,
     pricing_coverage_report,
@@ -298,6 +301,37 @@ def select_test_profiles(config: dict[str, Any], selector: str) -> list[dict[str
     builtins = [profile for profile in builtins_all if profile["name"] in requested]
     customs = [custom_profiles[name] for name in requested if name in custom_profiles]
     return [*builtins, *customs]
+
+
+def selected_profiles(
+    config: dict[str, Any], profile_selector: str | None
+) -> list[dict[str, Any]]:
+    """The test profiles a run sends: the selector's, else the configured ones;
+    none for a run of the top-level prompt."""
+    configured = config.get("profiles")
+    if profile_selector is None and configured:
+        profile_selector = profile_selector_text(configured)
+    return select_test_profiles(config, profile_selector) if profile_selector else []
+
+
+def run_repetitions(config: dict[str, Any], profiles: list[dict[str, Any]]) -> int:
+    """How many times a run sends each prompt: `suite_repetitions` for test
+    profiles, `repetitions` for the top-level prompt."""
+    if profiles:
+        return int(config.get("suite_repetitions", 1))
+    return int(config.get("repetitions", 5))
+
+
+def _run_identity() -> dict[str, str] | None:
+    """The GitHub Actions run this run is part of, read before any request.
+
+    An incomplete or malformed identity is recorded as none, never guessed;
+    attest then explains why the record is local.
+    """
+    try:
+        return ci_identity(os.environ)
+    except ValueError:
+        return None
 
 
 def _validate(sample: dict[str, Any], validation: dict[str, Any]) -> None:
@@ -667,13 +701,7 @@ def _run_profiles(
     results = []
     for profile in profiles:
         progress_callback = _profile_progress_callback(on_complete, profile["name"])
-        options = dict(request_options)
-        profile_request = profile.get("request", {})
-        if profile.get("presets"):
-            profile_request = expand_presets(profile_request, profile["presets"])
-        options.update(profile_request)
-        if profile.get("system_prompt"):
-            options["system_prompt"] = profile["system_prompt"]
+        options = profile_request_options(request_options, profile)
         if options.get("input_images"):
             options["_image_base_dir"] = config.get("_config_dir")
         for _ in range(warmups):
@@ -786,9 +814,12 @@ def run_benchmark(
     """Run the benchmark and return its result.
 
     `selection` names the run flags that shaped `config`: `prompt`, `tests`,
-    `environment` and `migration_check`. The result records it so a gate can
-    tell which selection the run checked; it holds names only, never values.
+    `environment`, `migration_check` and `smoke`. The result records it, with
+    how many times each prompt was sent, so a gate can tell which selection the
+    run checked; it holds names only, never values. The result also records
+    the GitHub Actions run it ran in, if any.
     """
+    identity = _run_identity()
     validate_config_validations(config)
     if contract_fixtures_declared(config) and not check_contract(config)["ok"]:
         raise ValueError(
@@ -798,18 +829,11 @@ def run_benchmark(
     warmups = int(config.get("warmups", 1))
     concurrency = int(config.get("concurrency", 1))
     timeout = float(config.get("timeout_seconds", 120))
-    request_options = dict(
-        config.get("request", {"temperature": 0, "max_output_tokens": 256})
-    )
+    request_options = dict(config.get("request", DEFAULT_REQUEST))
     if request_options.get("input_images"):
         request_options["_image_base_dir"] = config.get("_config_dir")
     validation = config.get("validation", {})
-    configured_profiles = config.get("profiles")
-    if profile_selector is None and configured_profiles:
-        profile_selector = profile_selector_text(configured_profiles)
-    profiles = (
-        select_test_profiles(config, profile_selector) if profile_selector else []
-    )
+    profiles = selected_profiles(config, profile_selector)
     if "prompt" not in config and not profiles:
         raise ValueError("select a custom prompt before running the benchmark")
     prompt = config.get("prompt", "")
@@ -1023,8 +1047,11 @@ def run_benchmark(
             "tests": None,
             "environment": None,
             "migration_check": False,
+            "smoke": False,
             **(selection or {}),
+            "repetitions": run_repetitions(config, profiles),
         },
+        "ci": identity,
         "environment": {
             "hostname": platform.node(),
             "python": platform.python_version(),

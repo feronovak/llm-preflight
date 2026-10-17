@@ -46,7 +46,8 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 |---|---|
 | `run_id`, `timestamp`, `benchmark` | Unique run identifier, UTC timestamp, and config name. |
 | `prompt_name`, `prompt_sha256`, `prompt_chars` | Selected custom-prompt name when applicable, plus safe prompt identity metadata. |
-| `selection` | The run flags that shaped the config, by name only: `prompt` (`--prompt`), `tests` (`--tests` or `--profiles`, with legacy names mapped, each once, sorted and comma-joined), `environment` (`--env`) and `migration_check` (`--migration-check`). Unused flags are `null` or `false`. An env file only supplies credentials, so neither its path nor its contents appear. Results written before 2.22.0 do not have it. |
+| `selection` | The run flags that shaped the config, by name only: `prompt` (`--prompt`), `tests` (`--tests` or `--profiles`, with legacy names mapped, each once, sorted and comma-joined), `environment` (`--env`), `migration_check` (`--migration-check`) and `smoke` (`--smoke`), plus `repetitions`, how many times the run sent each prompt (`suite_repetitions` for test profiles, `repetitions` otherwise; 1 under `--smoke`). Unused flags are `null` or `false`. An env file only supplies credentials, so neither its path nor its contents appear. Results written before 2.22.0 do not have it. |
+| `ci` | The GitHub Actions run the check ran in, read from the environment when the run started: `repository`, `workflow`, `runId`, `runAttempt`, `commit` and `serverUrl`, from `GITHUB_REPOSITORY`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA` and `GITHUB_SERVER_URL`. Names and numbers only, never a token. `null` outside GitHub Actions or when the set is incomplete or malformed. Results written before 2.22.0 do not have it. |
 | `settings` | Effective repetitions, warmups, concurrency, timeout, request options, and selected profiles. |
 | `environment` | Hostname and Python version that produced the evidence. |
 | `models` | One result object per attempted model, in run order. |
@@ -58,7 +59,7 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 | `pricing_coverage` | Coverage for every selected direct model and OpenRouter route, including `priced`, `undated`, `stale`, or `unknown` status, source, source URL, as-of date, stable warning code, remediation, and whether a mock fixture is pricing-exempt. The summary separates all `selected` rows from `billable` rows and `exempt` mock fixtures, so `priced` never counts a mock. `ok` is false for stale or unknown pricing; `enforcement_ok` additionally becomes false for undated pricing when `require_current_pricing` is enabled, and is the paid-run/CI gate verdict. |
 | `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
 | `pricing_ledger`, `pricing_fingerprint` | Redacted resolved per-model prices/provenance used by this run and their stable SHA-256 identity. These are additive fields in schema version 1. |
-| `provenance` | Secret-safe evidence identity. It includes versioned hashes of the effective configuration, contract, and resolved routes; reuses the pricing fingerprint; records per-prompt hashes and declared request/cost caps; and combines these in `evidence_sha256`. It never exposes routes, headers, prompts, or secrets through this field. `provenance.prompts` lists the prompts the run sent, each once, and nothing else. A profile run lists every case of the selected profiles (a custom prompt is one case under its own name) and not the top-level prompt. Any other run lists only its top-level prompt, or under `--prompt` only the selected prompt; the configured `prompts` list is not listed when it did not run. |
+| `provenance` | Secret-safe evidence identity. It includes versioned hashes of the effective configuration, contract, and resolved routes; reuses the pricing fingerprint; records per-prompt hashes and declared request/cost caps; and combines these in `evidence_sha256`. It never exposes routes, headers, prompts, or secrets through this field. `provenance.prompts` lists the prompts the run sent, each once, and nothing else. A profile run lists every case of the selected profiles (a custom prompt is one case under its own name) and not the top-level prompt. Any other run lists only its top-level prompt, or under `--prompt` only the selected prompt; the configured `prompts` list is not listed when it did not run. Each entry has `name`, `sha256` and `chars` of the prompt text, and `request_sha256`, a canonical hash of the request options sent with it: the run's `request` (or the default `temperature` 0 and `max_output_tokens` 256), merged with a test's own `request` and expanded `presets`, and its `system_prompt`. Runtime-only keys are left out, secret-like values are redacted before hashing, and each input image counts by its content digest and MIME type, never its path. |
 | `decision` | Additive agent decision object with its own `decision.schema_version`. It exposes `pass`, `fail`, or `inconclusive`, an exact safe next command, and verbatim blocking warnings. See [Agent decision contract](decision.md). |
 | `source_config` | Redacted input configuration, retained for replay and audit. |
 | `source_config_path` | Absolute source configuration path when available; `--replay` uses its adjacent `.env.production` by default. |
@@ -221,12 +222,17 @@ a contract and its routes; it does not certify production behaviour.
 | `predicate.passedTests`, `warnedTests`, `failedTests` | One name per model and test, such as `openai:gpt-4.1-mini/strict-json-extraction`, or per model and prompt without tests (`provider:model/config-prompt`). In an inconclusive run every test that did not fail is listed as warned. |
 | `predicate.url` | The GitHub Actions run attempt, `SERVER/OWNER/REPO/actions/runs/ID/attempts/N`. Absent for a local record. |
 | `predicate.configuration` | Four ResourceDescriptors whose `sha256` digests are the result's `provenance` fingerprints: `llm-preflight/contract` (`annotations.validatorVersion`), `llm-preflight/routes` (`annotations.routes`: `provider`, `model`, `pricingAsOf` and `observedModel` for each resolved route; `observedModel` is the result's `observed_model` for that route, and `null` for a result without one), `llm-preflight/pricing`, and `llm-preflight/evidence`. |
-| `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `selection` (the result's `selection` as `prompt`, `tests`, `environment` and `migrationCheck`; `null` for a result without one), `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
-| `ci` | `repository`, `workflow`, `runId`, `runAttempt`, `commit` and `serverUrl`, read from `GITHUB_REPOSITORY`, `GITHUB_WORKFLOW`, `GITHUB_RUN_ID`, `GITHUB_RUN_ATTEMPT`, `GITHUB_SHA` and `GITHUB_SERVER_URL`. `null` when none is set. `attest` refuses a partial or malformed set. |
+| `llm-preflight/evidence` annotations | `checkedAt` (the run's timestamp, which freshness counts from), `runId`, `decision` (the result's decision without `safe_next_command`, which names a local path), the full `provenance`, `requests`, `selection` (the result's `selection` as `prompt`, `tests`, `environment`, `migrationCheck`, `smoke` and `repetitions`; `null` for a result without one), `costUsd`, `costConfidence`, `retirementSnapshot`, `claimsNotMade` (production behaviour, accuracy beyond the declared validators, safety, other accounts or regions), `origin` (`github-actions` or `local`), `ci` and `attestedBy`. |
+| `ci` | The result's run-time `ci`, copied only when `attest` runs in the same GitHub Actions run: the same `repository`, `serverUrl`, `runId` and `commit` in its own environment. Otherwise `null`, the origin is `local`, and `attest` says why: no identity at all, a result that records none (run outside GitHub Actions or before 2.22.0), a malformed one, another run, or an `attest` outside the run. `attest` refuses a partial or malformed set of `GITHUB_*` variables in its own environment. |
 
 `attest` refuses a result without schema-version-1 provenance, provenance that
 does not match its `evidence_sha256`, and a result it could not attest
 consistently, such as a `pass` decision without complete cost confidence.
+`attest --json` prints `path`, `record` and `origin_reason`, which says why
+a record is local and is `null` for a GitHub Actions record.
+
+`verify`, `gate` and the card read a record file of at most 1 MiB, nested at
+most 64 levels deep; any other file is refused before it is judged.
 
 ### Verify JSON
 
@@ -243,12 +249,17 @@ separate objects; neither implies the other.
   printable string of at most 256 characters. A record is untrusted input,
   so text output shows any non-printable character in a record string or
   file name as its backslash escape (`\x1b`, `\n`), even when integrity
-  fails; JSON output keeps the value, JSON-escaped.
+  fails; JSON output keeps the value, JSON-escaped. A string that is not
+  valid Unicode text, such as a lone surrogate written as `\udcff` or a file
+  name that is not UTF-8, is shown as its backslash escape in text, JSON and
+  MCP output alike, so every report encodes as strict UTF-8.
 - `integrity.subjects[]`: `name`, `role` and `state` (`matches`, `differs` or
   `absent`). Each subject is looked up relative to the working directory, then
   beside the record. A result that `differs` breaks integrity; a config that
   differs is reported only, because a later edit does not make the record
-  dishonest.
+  dishonest. Only `verify` and the card, which ask about a specific result
+  file, compare subjects; the gate never reads them, because a pull request
+  controls the files in its tree.
 - `freshness`: `state` (`fresh`, `stale`, `superseded` or `unknown`),
   `checked_at`, `age_days`, `max_age_days`, `valid_until` and
   `retired_routes`. A record stays fresh through `valid_until`, `checkedAt`
@@ -266,33 +277,41 @@ separate objects; neither implies the other.
 
 `llm-preflight gate [CONFIG] --records PATH... --json` decides offline whether
 the current tree has a fresh passing record. It fingerprints `CONFIG` as a run
-under the gate's selection flags would record it (`--env`, `--prompt`,
-`--tests` or `--profiles`, `--migration-check`; by default a default run),
+under the gate's selection flags would record it (`--env`, `--smoke`,
+`--prompt`, `--tests` or `--profiles`, `--migration-check`; by default a
+default run),
 with no credentials and no provider request, and reads each record file and
 every `*.preflight.json` under each directory.
 
 | Field | Meaning |
 |---|---|
 | `decision` | `pass` (exit 0), `blocked` (exit 1) or `undecided` (exit 3). |
-| `reason_code` | `fresh_pass`; when blocked, `no_record`, `foreign_record`, `selection_changed`, `contract_changed`, `routes_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error`, `repository_unknown` or `record_error`. |
+| `reason_code` | `fresh_pass`; when blocked, `no_record`, `foreign_record`, `selection_changed`, `contract_changed`, `routes_changed`, `prompt_changed`, `stale`, `superseded`, `inconclusive_record`, `failed_record`, `inconsistent_record`, `committed_record` or `local_record`; when undecided, `config_error`, `repository_unknown` or `record_error`. |
 | `why`, `next` | The reason in one sentence and the numbered next steps, identical to the text output. |
 | `records[]` | One entry per record with its own `verdict` (`pass` or a reason code), `reason`, `path`, `result`, `origin`, `run_id`, `repository`, `server_url`, `checked_at`, `age_days`, `valid_until`, `tests`, `blocking_warnings`, `retired_routes`, `routes` (as in verify JSON), `selection` (the record's, `null` when it has none), `contract_sha256` and `routes_sha256`. Fields the gate could not read are `null`, or empty lists. |
-| `selection` | The selection the gate requires, in the record's form. |
-| `repository`, `server_url` | The repository whose records count, from `--repository OWNER/NAME`, else `GITHUB_REPOSITORY`, and its server, from `GITHUB_SERVER_URL`, else `https://github.com`. Both are `null` when no repository is known; the gate is then `undecided` with `repository_unknown`. |
+| `selection` | The selection the gate requires, in the record's form, with `repetitions` from the current config under it (`null` when the config cannot be fingerprinted). |
+| `repository`, `server_url` | The repository whose records count, from `--repository OWNER/NAME`, else `GITHUB_REPOSITORY`, and its server, from `GITHUB_SERVER_URL`, else `https://github.com`. Both are `null` when no repository is known, or when `--repository` and `GITHUB_REPOSITORY` name different repositories; the gate is then `undecided` with `repository_unknown`. |
 | `contract_sha256`, `routes_sha256` | The current tree's fingerprints under that selection; `null` when the config cannot be fingerprinted. |
 | `config`, `max_age_days`, `retirement_snapshot`, `signature`, `network_accessed` | Inputs and the verifier's snapshot; `network_accessed` is always `false`. |
 
 The newest record by `checkedAt` that comes from the expected repository,
-ran the gate's selection, matches both fingerprints and carries a GitHub
-Actions identity decides; on equal age a
-non-passing record wins. A record tracked by Git, a local record, a record from another repository or
-server (`foreign_record`; owner, name and host compare without regard to
-case, as GitHub does), an inconsistent record, a record for another selection (or one that records
-none) and a record for other fingerprints never decides. The gate sets the
-selection, not the record: a record of a narrower run, such as `--tests` with
-one cheap test, cannot pass a gate that requires a default run, even though
-`--tests` changes no fingerprint. One unreadable record makes the gate
-`undecided`, because it could have been the newest. A config with `discovery`
+ran the gate's selection, matches both fingerprints and the prompts the
+config sends now (names, text and request options, in any order), and
+carries a GitHub Actions identity decides; on equal age a non-passing record
+wins. A record tracked by Git, a local record, a record from another
+repository or server (`foreign_record`; owner, name and host compare without
+regard to case, as GitHub does), an inconsistent record, a record for
+another selection or another number of repetitions per prompt (or one that
+records none), a record for other fingerprints and a record for other
+prompts (`prompt_changed`, also for a record whose prompts carry no
+`request_sha256`) never decides. The gate names the selection, and only a
+record that ran exactly that selection counts: a record of a narrower run,
+such as `--tests` with one cheap test or a `--smoke` run, cannot pass a gate
+that requires a default run. The gate judges a record by its internal
+consistency only, never by the files it names. One unreadable record makes
+the gate `undecided`, because it could have been the newest; so does a
+record that fails its integrity check when its unproven `checkedAt` is
+missing or not older than the record that would decide. A config with `discovery`
 cannot be fingerprinted offline and is `config_error`, as is a gate
 selection the config cannot satisfy, such as an unknown `--prompt`. Give the
 gate the selection flags CI passes to the run; an env file is not a selection

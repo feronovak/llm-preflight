@@ -22,6 +22,7 @@ import shlex
 
 # Only CalledProcessError is used; run_git starts Git.
 import subprocess  # nosec B404
+from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -36,16 +37,19 @@ from .features import (
     apply_migration_check,
     apply_model_aliases,
     apply_provider_presets,
+    apply_smoke_mode,
 )
 from .git import run_git
+from .github_actions import ci_identity, valid_ci_field, valid_ci_identity
 from .pricing import resolve_pricing
 from .redaction import redact_secrets
 from .retirements import retirement_verdict, snapshot_summary
 from .runner import (
     load_config,
     model_failed,
+    run_repetitions,
     select_custom_prompt,
-    select_test_profiles,
+    selected_profiles,
     validate_config_validations,
 )
 from .source_audit import display_path
@@ -54,6 +58,10 @@ STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PREDICATE_TYPE = "https://in-toto.io/attestation/test-result/v0.1"
 RECORD_SUFFIX = ".preflight.json"
 DEFAULT_MAX_AGE_DAYS = 30
+# A record is untrusted input: one larger or deeper than any attest writes is
+# refused before it can exhaust memory or the stack.
+MAX_RECORD_BYTES = 1 << 20
+_MAX_RECORD_DEPTH = 64
 DEFAULT_SERVER_URL = "https://github.com"
 SIGNATURE_NOTE = "not checked here — use gh attestation verify"
 CLAIMS_NOT_MADE = (
@@ -69,31 +77,19 @@ _RESULTS = {"pass": "PASSED", "inconclusive": "WARNED", "fail": "FAILED"}  # nos
 _FINGERPRINTS = ("contract", "routes", "pricing", "evidence")
 _TEST_FIELDS = ("passedTests", "warnedTests", "failedTests")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
-_GITHUB_VARIABLES = (
-    ("GITHUB_REPOSITORY", "repository"),
-    ("GITHUB_WORKFLOW", "workflow"),
-    ("GITHUB_RUN_ID", "runId"),
-    ("GITHUB_RUN_ATTEMPT", "runAttempt"),
-    ("GITHUB_SHA", "commit"),
-    ("GITHUB_SERVER_URL", "serverUrl"),
-)
-_CI_FIELDS = {
-    "repository": re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"),
-    "runId": re.compile(r"[1-9][0-9]{0,19}"),
-    "runAttempt": re.compile(r"[1-9][0-9]{0,5}"),
-    "commit": re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}"),
-    "serverUrl": re.compile(r"https://[A-Za-z0-9.-]+(:[0-9]{1,5})?"),
-}
-_MAX_WORKFLOW_LENGTH = 200
-# The run flags that shape the config a run fingerprints; names only, so a
-# record never carries a credential or an env-file path.
+# The run flags that shape what a run sends; names only, so a record never
+# carries a credential or an env-file path. A recorded selection adds
+# `repetitions`, how many times the run sent each prompt.
 DEFAULT_SELECTION: dict[str, Any] = {
     "prompt": None,
     "tests": None,
     "environment": None,
     "migrationCheck": False,
+    "smoke": False,
 }
+_SELECTION_KEYS = {*DEFAULT_SELECTION, "repetitions"}
 _MAX_SELECTION_LENGTH = 200
+_MAX_REPETITIONS = 1_000_000
 _MAX_ROUTE_NAME_LENGTH = 256
 # A gate decides on the newest of these; every other verdict cannot count.
 _CANDIDATE_VERDICTS = {
@@ -112,7 +108,10 @@ _BLOCKING_PRIORITY = (
     "selection_changed",
     "contract_changed",
     "routes_changed",
+    "prompt_changed",
 )
+# The run identity attest requires the result and its own job to share.
+_SAME_RUN = ("repository", "serverUrl", "runId", "commit")
 _ATTEST_NEXT = "llm-preflight attest results/<new>.json   (CI does this for you)"
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -122,49 +121,37 @@ def default_record_path(result_path: Path) -> Path:
     return result_path.with_suffix(RECORD_SUFFIX)
 
 
-def ci_identity(environ: Mapping[str, str]) -> dict[str, str] | None:
-    """The GitHub Actions run identity, or None outside CI.
-
-    A partial or malformed identity is refused rather than recorded as local,
-    so a misconfigured workflow cannot silently produce a record the gate
-    ignores.
-    """
-    values = {key: environ.get(name, "") for name, key in _GITHUB_VARIABLES}
-    if not any(values.values()):
-        return None
-    missing = [name for name, key in _GITHUB_VARIABLES if not values[key]]
-    if missing:
-        raise ValueError(
-            f"incomplete GitHub Actions identity: {', '.join(missing)} not set; "
-            "unset every GITHUB_* run variable to attest a local record"
-        )
-    malformed = [
-        name for name, key in _GITHUB_VARIABLES if not _valid_ci_field(key, values[key])
-    ]
-    if malformed:
-        raise ValueError(f"malformed GitHub Actions identity: {', '.join(malformed)}")
-    return values
-
-
 def expected_repository(
     flag: str | None, environ: Mapping[str, str]
 ) -> dict[str, str] | None:
     """The repository a gate accepts records from, or None when it is unknown.
 
-    `--repository OWNER/NAME` wins over GITHUB_REPOSITORY; the server is
-    GITHUB_SERVER_URL, else github.com. A malformed value is refused.
+    It is `--repository OWNER/NAME`, else GITHUB_REPOSITORY; the server is
+    GITHUB_SERVER_URL, else github.com. A malformed value is refused; a flag
+    that contradicts GITHUB_REPOSITORY is reported by `repository_conflict`.
     """
     repository = flag or environ.get("GITHUB_REPOSITORY") or None
     if repository is None:
         return None
     server = environ.get("GITHUB_SERVER_URL") or DEFAULT_SERVER_URL
-    if not _valid_ci_field("repository", repository):
+    if not valid_ci_field("repository", repository):
         raise ValueError(
             f"the expected repository {repository!r} is not OWNER/NAME, such as acme/app"
         )
-    if not _valid_ci_field("serverUrl", server):
+    if not valid_ci_field("serverUrl", server):
         raise ValueError(f"GITHUB_SERVER_URL {server!r} is not an https:// server URL")
     return {"repository": repository, "serverUrl": server}
+
+
+def repository_conflict(flag: str | None, environ: Mapping[str, str]) -> str | None:
+    """GITHUB_REPOSITORY when `--repository` names another repository, else None.
+
+    Names are compared without regard to case, as GitHub compares them.
+    """
+    environment = environ.get("GITHUB_REPOSITORY") or None
+    if flag is None or environment is None:
+        return None
+    return None if flag.casefold() == environment.casefold() else environment
 
 
 def run_url(ci: Mapping[str, str]) -> str:
@@ -180,8 +167,9 @@ def attest_result(
     config_path: Path | None,
     environ: Mapping[str, str],
     today: date,
-) -> dict[str, Any]:
-    """Read a saved result and its config, and return the record for them."""
+) -> tuple[dict[str, Any], str | None]:
+    """Read a saved result and its config; return their record and, for a local
+    record, why it carries no GitHub Actions run identity."""
     result_bytes = result_path.read_bytes()
     result = json.loads(result_bytes.decode("utf-8"))
     if not isinstance(result, dict):
@@ -193,15 +181,46 @@ def attest_result(
                 "result does not record its config path; pass --config CONFIG"
             )
         config_path = Path(source)
-    return build_record(
+    ci, local_reason = _run_origin(result, environ)
+    record = build_record(
         result,
         result_name=_subject_name(result_path),
         result_digest=hashlib.sha256(result_bytes).hexdigest(),
         config_name=_subject_name(config_path),
         config_digest=_file_sha256(config_path),
-        ci=ci_identity(environ),
+        ci=ci,
         today=today,
     )
+    return record, local_reason
+
+
+def _run_origin(
+    result: Mapping[str, Any], environ: Mapping[str, str]
+) -> tuple[dict[str, str] | None, str | None]:
+    """The run identity a record carries, or None and why the record is local.
+
+    A record names a GitHub Actions run only when the result recorded that run
+    as it ran and attest runs in the same run, so the identity of the job that
+    attests can never stand in for the run that checked.
+    """
+    attesting = ci_identity(environ)
+    recorded = result.get("ci")
+    if attesting is None and recorded is None:
+        return None, "no CI run identity"
+    if attesting is None:
+        return None, (
+            "it was attested outside the GitHub Actions run that made the result"
+        )
+    if recorded is None:
+        return None, (
+            "the result records no GitHub Actions run identity: it ran outside "
+            "GitHub Actions or with llm-preflight before 2.22.0"
+        )
+    if not valid_ci_identity(recorded):
+        return None, "the result's GitHub Actions run identity is malformed"
+    if any(recorded[key] != attesting[key] for key in _SAME_RUN):
+        return None, "the result was made in another GitHub Actions run"
+    return dict(recorded), None
 
 
 def build_record(
@@ -304,7 +323,34 @@ def build_record(
 
 
 def load_record(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    """Parse a record file as untrusted JSON, refusing one larger than
+    MAX_RECORD_BYTES or nested deeper than any record attest writes."""
+    with path.open("rb") as handle:
+        data = handle.read(MAX_RECORD_BYTES + 1)
+    if len(data) > MAX_RECORD_BYTES:
+        raise ValueError(f"the record is larger than {MAX_RECORD_BYTES:,} bytes")
+    too_deep = f"the record is nested more than {_MAX_RECORD_DEPTH} levels deep"
+    try:
+        record = json.loads(data.decode("utf-8"))
+    except RecursionError:
+        raise ValueError(too_deep) from None
+    if _too_deep(record):
+        raise ValueError(too_deep)
+    return record
+
+
+def _too_deep(value: Any) -> bool:
+    """Whether objects and arrays nest deeper than _MAX_RECORD_DEPTH, found
+    without recursion."""
+    stack = [(value, 1)]
+    while stack:
+        item, depth = stack.pop()
+        if isinstance(item, dict | list):
+            if depth > _MAX_RECORD_DEPTH:
+                return True
+            children = item.values() if isinstance(item, dict) else item
+            stack.extend((child, depth + 1) for child in children)
+    return False
 
 
 def integrity_problems(record: Any, today: date) -> list[str]:
@@ -395,16 +441,19 @@ def verify_record(
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     routes: Sequence[Mapping[str, Any]] | None = None,
     root: Path | None = None,
+    check_subjects: bool = True,
 ) -> dict[str, Any]:
     """Report integrity and freshness separately; they are never merged.
 
     `routes` overrides the record's own route list for the retirement check;
     the gate passes the routes it resolved from the current config. `root`
     (default: the working directory) is where subject names are looked up;
-    when given, a subject file that resolves outside it is not read.
+    when given, a subject file that resolves outside it is not read. Without
+    `check_subjects`, as in the gate, no file but the record is read: files in
+    a pull request's tree must not decide which record counts.
     """
     problems = integrity_problems(record, today)
-    subjects = _subject_checks(record, record_path, root)
+    subjects = _subject_checks(record, record_path, root) if check_subjects else []
     problems.extend(
         f"the result file {subject['name']} does not match its subject digest"
         for subject in subjects
@@ -420,23 +469,43 @@ def verify_record(
     origin = evidence.get("origin")
     ci = evidence.get("ci")
     url = predicate.get("url")
-    return {
-        "record": display_path(record_path),
-        "result": predicate.get("result")
-        if predicate.get("result") in _RESULTS.values()
-        else None,
-        "integrity": {"ok": not problems, "problems": problems, "subjects": subjects},
-        "routes": _checked_routes(recorded),
-        "freshness": _freshness(
-            _timestamp(evidence.get("checkedAt")), routes, today, max_age_days
-        ),
-        "retirement_snapshot": snapshot_summary()["newest_as_of"],
-        "origin": origin if origin in {"github-actions", "local"} else None,
-        "repository": ci.get("repository") if isinstance(ci, dict) else None,
-        "server_url": ci.get("serverUrl") if isinstance(ci, dict) else None,
-        "url": url if isinstance(url, str) else None,
-        "signature": SIGNATURE_NOTE,
-    }
+    return escaped(
+        {
+            "record": display_path(record_path),
+            "result": predicate.get("result")
+            if predicate.get("result") in _RESULTS.values()
+            else None,
+            "integrity": {
+                "ok": not problems,
+                "problems": problems,
+                "subjects": subjects,
+            },
+            "routes": _checked_routes(recorded),
+            "freshness": _freshness(
+                _timestamp(evidence.get("checkedAt")), routes, today, max_age_days
+            ),
+            "retirement_snapshot": snapshot_summary()["newest_as_of"],
+            "origin": origin if origin in {"github-actions", "local"} else None,
+            "repository": ci.get("repository") if isinstance(ci, dict) else None,
+            "server_url": ci.get("serverUrl") if isinstance(ci, dict) else None,
+            "url": url if isinstance(url, str) else None,
+            "signature": SIGNATURE_NOTE,
+        }
+    )
+
+
+def escaped(value: Any) -> Any:
+    """`value` with every string valid Unicode text, for a report built from an
+    untrusted record. A lone surrogate, from a JSON escape such as \\udcff or a
+    file name that is not UTF-8, becomes its backslash escape, so every
+    report encodes as strict UTF-8 JSON."""
+    if isinstance(value, str):
+        return value.encode("utf-8", "backslashreplace").decode("utf-8")
+    if isinstance(value, dict):
+        return {escaped(key): escaped(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [escaped(item) for item in value]
+    return value
 
 
 def printable(text: str) -> str:
@@ -464,11 +533,14 @@ def describe_route(route: Mapping[str, Any]) -> str:
 def current_fingerprints(
     config_path: Path, selection: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
-    """The contract and route fingerprints a run of this config records.
+    """The fingerprints a run of this config records: its contract, routes and
+    prompts, each with the request sent with it, and how many times it sends
+    each prompt.
 
-    It resolves the config exactly as a run under `selection` (`--env`,
-    `--migration-check`, `--prompt`, `--tests`; default: none) does before
-    `provenance`, without loading credentials or contacting a provider.
+    It resolves the config and its test profiles exactly as a run under
+    `selection` (`--env`, `--smoke`, `--migration-check`, `--prompt`,
+    `--tests`; default: none) does before `provenance`, without loading
+    credentials or contacting a provider.
     """
     selection = {**DEFAULT_SELECTION, **(selection or {})}
     config = load_config(config_path)
@@ -481,18 +553,23 @@ def current_fingerprints(
             "its routes come from provider catalogue discovery, which needs the "
             "network; list them under models so the offline gate can fingerprint them"
         )
+    if selection["smoke"]:
+        config = apply_smoke_mode(config)
     if selection["migrationCheck"]:
         config = apply_migration_check(config)
     if selection["prompt"]:
         config = select_custom_prompt(config, selection["prompt"])
-    if selection["tests"]:
-        # Tests change no fingerprint, but an unknown test is a config error.
-        select_test_profiles(config, selection["tests"])
+    profiles = selected_profiles(
+        config,
+        "quick-migration-check" if selection["migrationCheck"] else selection["tests"],
+    )
     models = resolve_pricing(resolve_models(config))["models"]
-    fingerprints = provenance(config, models, "")
+    fingerprints = provenance(config, models, "", profiles)
     return {
         "contract_sha256": fingerprints["contract_sha256"],
         "routes_sha256": fingerprints["routes_sha256"],
+        "prompts": fingerprints["prompts"],
+        "repetitions": run_repetitions(config, profiles),
         "routes": [
             {
                 "provider": model.get("provider", "openai_compatible"),
@@ -510,26 +587,55 @@ def gate(
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     selection: Mapping[str, Any] | None = None,
     root: Path | None = None,
-    repository: Mapping[str, str] | None = None,
+    repository: str | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Decide offline whether the current tree has a fresh passing record.
 
     Pass only on the newest CI record that ran the gate's `selection`
-    (default: a default run), matches the current contract and routes under
-    it, is PASSED, consistent, fresh and not superseded. The gate, not the
-    record, sets the selection: a record cannot lower the bar by having run
-    less. Only a record from the expected `repository` (see
-    `expected_repository`) counts; without one the gate cannot decide, since
-    another repository's record can carry the same fingerprints. A record
-    that cannot be read makes the gate unable to decide: it might be the
-    newest. With `root`, as for the MCP workspace, a record or
-    subject file that resolves outside it is never read.
+    (default: a default run), as many times per prompt as the config now asks,
+    matches the current contract, routes and prompts under it, and is PASSED,
+    consistent, fresh and not superseded. A record that ran another selection
+    or fewer repetitions never counts. Only a record from the expected
+    repository (`repository`, else GITHUB_REPOSITORY in `environ`; see
+    `expected_repository`) counts; without one, or when the two disagree, the
+    gate cannot decide, since another repository's record can carry the same
+    fingerprints. A record is judged by its own consistency, never by files in
+    the tree. One that cannot be read, or fails its integrity check, makes the
+    gate unable to decide when it might be the newest. With `root`, as for the
+    MCP workspace, a record that resolves outside it is never read.
     """
+    environ = environ if environ is not None else {}
+    expected = expected_repository(repository, environ)
+    conflict = repository_conflict(repository, environ)
+    return escaped(
+        _decide(
+            config_path,
+            record_paths,
+            today,
+            max_age_days,
+            {**DEFAULT_SELECTION, **(selection or {})},
+            root,
+            None if conflict else expected,
+            (repository, conflict) if conflict else None,
+        )
+    )
+
+
+def _decide(
+    config_path: Path,
+    record_paths: Sequence[Path],
+    today: date,
+    max_age_days: int,
+    selection: dict[str, Any],
+    root: Path | None,
+    repository: Mapping[str, str] | None,
+    conflict: tuple[str | None, str] | None,
+) -> dict[str, Any]:
     config = display_path(config_path)
-    required = {**DEFAULT_SELECTION, **(selection or {})}
     report: dict[str, Any] = {
         "config": config,
-        "selection": required,
+        "selection": {**selection, "repetitions": None},
         "repository": repository["repository"] if repository else None,
         "server_url": repository["serverUrl"] if repository else None,
         "contract_sha256": None,
@@ -541,14 +647,35 @@ def gate(
         "records": [],
     }
     try:
-        current = current_fingerprints(config_path, required)
+        current = current_fingerprints(config_path, selection)
     except (OSError, ValueError) as exc:
         reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else exc
         return _undecided_config(report, config, reason)
     except (AttributeError, KeyError, TypeError):
         return _undecided_config(report, config, "it is not a benchmark configuration")
+    # A record must have sent each prompt as many times as the config asks now.
+    required = {**selection, "repetitions": current["repetitions"]}
+    report["selection"] = required
     report["contract_sha256"] = current["contract_sha256"]
     report["routes_sha256"] = current["routes_sha256"]
+    if conflict is not None:
+        flag, environment = conflict
+        return {
+            "decision": "undecided",
+            "reason_code": "repository_unknown",
+            "why": (
+                "The gate cannot tell which repository this tree belongs to: "
+                f"--repository names {flag}, but GITHUB_REPOSITORY is "
+                f"{environment}."
+            ),
+            "next": [
+                (
+                    "drop --repository in GitHub Actions, or give the repository "
+                    "GITHUB_REPOSITORY names"
+                )
+            ],
+            **report,
+        }
     if repository is None:
         run = " ".join([_quote(config), *selection_flags(required)])
         searched = " ".join(_quote(display_path(path)) for path in record_paths)
@@ -570,7 +697,7 @@ def gate(
             **report,
         }
     entries = [
-        _evaluate(path, current, required, repository, today, max_age_days, root)
+        _evaluate(path, current, required, repository, today, max_age_days)
         if error is None
         else _entry(path, "record_error", error)
         for path, error in _record_files(record_paths, root)
@@ -600,6 +727,38 @@ def gate(
     if candidates:
         # On a tie the non-passing record wins: equal age cannot hide a failure.
         newest = max(candidates, key=lambda e: (e["_checked"], e["verdict"] != "pass"))
+        # A broken record's date is unproven; without one it might be newest.
+        broken = next(
+            (
+                e
+                for e in entries
+                if e["verdict"] == "inconsistent_record"
+                and (e["_checked"] is None or e["_checked"] >= newest["_checked"])
+            ),
+            None,
+        )
+        if broken is not None:
+            return {
+                "decision": "undecided",
+                "reason_code": "record_error",
+                "why": (
+                    f"{broken['path']} fails its integrity check "
+                    f"({broken['reason']}) and might be newer than "
+                    f"{_described(newest)}. The gate cannot decide while a "
+                    "record it cannot judge might be the newest."
+                ),
+                "next": [
+                    (
+                        f"llm-preflight verify {_quote(broken['path'])}   "
+                        "(free: every integrity problem)"
+                    ),
+                    (
+                        "discard the broken record or download it again intact, "
+                        "then rerun the gate"
+                    ),
+                ],
+                **report,
+            }
         code = "fresh_pass" if newest["verdict"] == "pass" else newest["verdict"]
     else:
         code, newest = "no_record", None
@@ -650,7 +809,6 @@ def _evaluate(
     repository: Mapping[str, str],
     today: date,
     max_age_days: int,
-    root: Path | None,
 ) -> dict[str, Any]:
     try:
         tracked = _tracked_by_git(path)
@@ -664,9 +822,14 @@ def _evaluate(
         record = load_record(path)
     except (OSError, ValueError) as exc:
         return _entry(path, "record_error", _read_error(exc))
-    report = verify_record(record, path, today, max_age_days, current["routes"], root)
+    report = verify_record(
+        record, path, today, max_age_days, current["routes"], check_subjects=False
+    )
     if not report["integrity"]["ok"]:
-        return _entry(path, "inconsistent_record", report["integrity"]["problems"][0])
+        entry = _entry(path, "inconsistent_record", report["integrity"]["problems"][0])
+        # Unproven, but the only hint of whether it might be the newest.
+        entry["_checked"] = _timestamp(report["freshness"]["checked_at"])
+        return entry
     descriptors = _descriptors(record["predicate"]["configuration"])
     evidence = descriptors["evidence"]["annotations"]
     freshness = report["freshness"]
@@ -691,6 +854,9 @@ def _evaluate(
         contract_sha256=_digest(descriptors["contract"]),
         routes_sha256=_digest(descriptors["routes"]),
         _checked=_timestamp(evidence["checkedAt"]),
+        _prompt_change=_prompt_change(
+            evidence["provenance"]["prompts"], current["prompts"]
+        ),
     )
     for verdict, reason, applies in (
         (
@@ -715,6 +881,11 @@ def _evaluate(
             "routes_changed",
             "checked different routes",
             entry["routes_sha256"] != current["routes_sha256"],
+        ),
+        (
+            "prompt_changed",
+            _prompt_reason(entry["_prompt_change"]),
+            entry["_prompt_change"] is not None,
         ),
         ("local_record", "no CI run identity", report["origin"] != "github-actions"),
         ("failed_record", "the run failed", report["result"] == "FAILED"),
@@ -758,7 +929,49 @@ def _entry(path: Path, verdict: str, reason: str) -> dict[str, Any]:
         "contract_sha256": None,
         "routes_sha256": None,
         "_checked": None,
+        "_prompt_change": None,
     }
+
+
+def _prompt_change(
+    recorded: Sequence[Mapping[str, Any]], current: Sequence[Mapping[str, Any]]
+) -> tuple[str, str | None] | None:
+    """How the prompts sent now differ from those a record checked, or None.
+
+    The kind is `unrecorded`, `text`, `request`, `both`, `added` or `removed`,
+    with the prompt it names. Order is not compared: a test selector is
+    canonical in a record, so custom tests may run in another order.
+    """
+    if not all("request_sha256" in entry for entry in recorded):
+        return ("unrecorded", None)
+
+    def key(entry: Mapping[str, Any]) -> tuple[str, str, str]:
+        return (entry["name"], entry["sha256"], entry["request_sha256"])
+
+    unchecked = Counter(map(key, current)) - Counter(map(key, recorded))
+    gone = Counter(map(key, recorded)) - Counter(map(key, current))
+    for name, text, request in (key(entry) for entry in current):
+        if (name, text, request) not in unchecked:
+            continue
+        before = next((item for item in gone if item[0] == name), None)
+        if before is None:
+            return ("added", name)
+        if before[1] != text and before[2] != request:
+            return ("both", name)
+        return ("text" if before[1] != text else "request", name)
+    return ("removed", next(iter(gone))[0]) if gone else None
+
+
+def _prompt_reason(change: tuple[str, str | None] | None) -> str:
+    kind, name = change or ("", None)
+    return {
+        "unrecorded": "does not record the request options of its prompts",
+        "text": f"the text of prompt {name} changed",
+        "request": f"the request options of prompt {name} changed",
+        "both": f"the text and the request options of prompt {name} changed",
+        "added": f"did not check prompt {name}",
+        "removed": f"checked prompt {name}, which is no longer sent",
+    }.get(kind, "")
 
 
 def _explain(
@@ -788,7 +1001,7 @@ def _explain(
         return (
             (
                 f"Run {newest['run_id']} on {newest['repository']} passed this "
-                f"contract and its routes on {newest['checked_at'][:10]} "
+                f"contract, its prompts and its routes on {newest['checked_at'][:10]} "
                 f"({_age(newest['age_days'])}); it stays fresh until "
                 f"{newest['valid_until']}. "
                 + "".join(f"{describe_route(route)}. " for route in newest["routes"])
@@ -825,8 +1038,22 @@ def _explain(
                 fresh_check,
             )
         ran = describe_selection(newest["selection"])
+        if ran == requires:
+            # Same flags, so the config now sends each prompt more or fewer times.
+            return (
+                (
+                    f"The latest record ({described}) ran {ran} with "
+                    f"{_counted(newest['selection']['repetitions'], 'repetition')} "
+                    f"per prompt; {config} now asks for {required['repetitions']} "
+                    "under the same selection."
+                ),
+                fresh_check,
+            )
         return (
-            f"The latest record ({described}) ran {ran}; this gate requires {requires}.",
+            (
+                f"The latest record ({described}) ran {_with_depth(newest['selection'])}; "
+                f"this gate requires {_with_depth(required)}."
+            ),
             [
                 *fresh_check,
                 f"if CI runs {ran} on purpose, give the gate the same selection",
@@ -851,6 +1078,30 @@ def _explain(
             ),
             fresh_check,
         )
+    if code == "prompt_changed":
+        kind, name = newest["_prompt_change"]
+        prompt = f"prompt {name}"
+        whys = {
+            "unrecorded": (
+                f"{latest} does not record the request options its prompts were "
+                "sent with (it was attested from a result written before "
+                "2.22.0), so it cannot show that it checked the current prompts."
+            ),
+            "text": f"The text of {prompt} changed since the latest record "
+            f"({described}) checked it.",
+            "request": (
+                f"The request options of {prompt} changed since the latest record "
+                f"({described}) checked it: its system prompt, temperature, token "
+                "limit, presets, provider options or images."
+            ),
+            "both": f"The text and the request options of {prompt} changed since "
+            f"the latest record ({described}) checked it.",
+            "added": f"{config} now sends {prompt}, which the latest record "
+            f"({described}) did not check.",
+            "removed": f"The latest record ({described}) checked {prompt}, which "
+            "is no longer sent.",
+        }
+        return whys[kind], fresh_check
     if code == "stale":
         return (
             (
@@ -963,6 +1214,8 @@ def selection_flags(selection: Mapping[str, Any]) -> list[str]:
     flags = []
     if selection.get("environment"):
         flags += ["--env", _quote(selection["environment"])]
+    if selection.get("smoke"):
+        flags.append("--smoke")
     if selection.get("migrationCheck"):
         flags.append("--migration-check")
     if selection.get("prompt"):
@@ -974,6 +1227,12 @@ def selection_flags(selection: Mapping[str, Any]) -> list[str]:
 
 def describe_selection(selection: Mapping[str, Any]) -> str:
     return " ".join(selection_flags(selection)) or "a default run"
+
+
+def _with_depth(selection: Mapping[str, Any]) -> str:
+    """The selection and how many times it sends each prompt."""
+    repetitions = _counted(selection["repetitions"], "repetition")
+    return f"{describe_selection(selection)} ({repetitions} per prompt)"
 
 
 def _described(entry: Mapping[str, Any]) -> str:
@@ -1170,11 +1429,7 @@ def _origin_problems(
         return []
     if origin != "github-actions":
         return ["origin is neither github-actions nor local"]
-    if (
-        not isinstance(ci, dict)
-        or set(ci) != {key for _, key in _GITHUB_VARIABLES}
-        or not all(_valid_ci_field(key, value) for key, value in ci.items())
-    ):
+    if not valid_ci_identity(ci):
         return ["the GitHub Actions identity is incomplete or malformed"]
     if predicate.get("url") != run_url(ci):
         return ["predicate.url does not match the GitHub Actions identity"]
@@ -1194,20 +1449,34 @@ def _result_selection(result: Mapping[str, Any]) -> Any:
         "tests": selection.get("tests"),
         "environment": selection.get("environment"),
         "migrationCheck": selection.get("migration_check"),
+        "smoke": selection.get("smoke"),
+        "repetitions": selection.get("repetitions"),
     }
 
 
 def _valid_selection(value: Any) -> bool:
-    """None, or the four selection names a run can combine.
+    """None, or the selection flags a run can combine and how many times it
+    sent each prompt.
 
     As on the command line, `--migration-check` excludes `--prompt` and
-    `--tests`, and `--prompt` excludes `--tests`.
+    `--tests`, and `--prompt` excludes `--tests`; `--smoke` sends each prompt
+    once.
     """
     if value is None:
         return True
-    if not isinstance(value, dict) or set(value) != set(DEFAULT_SELECTION):
+    if not isinstance(value, dict) or set(value) != _SELECTION_KEYS:
         return False
-    if not isinstance(value["migrationCheck"], bool) or not all(
+    repetitions = value["repetitions"]
+    if not (
+        isinstance(value["migrationCheck"], bool)
+        and isinstance(value["smoke"], bool)
+        and isinstance(repetitions, int)
+        and not isinstance(repetitions, bool)
+        and 1 <= repetitions <= _MAX_REPETITIONS
+        and (repetitions == 1 or not value["smoke"])
+    ):
+        return False
+    if not all(
         name is None
         or (
             isinstance(name, str)
@@ -1247,16 +1516,6 @@ def _same_repository(entry: Mapping[str, Any], expected: Mapping[str, str]) -> b
     )
 
 
-def _valid_ci_field(key: str, value: Any) -> bool:
-    if not isinstance(value, str):
-        return False
-    if key == "workflow":
-        return 0 < len(value) <= _MAX_WORKFLOW_LENGTH and value.isprintable()
-    if key == "repository" and {".", ".."} & set(value.split("/")):
-        return False
-    return _CI_FIELDS[key].fullmatch(value) is not None
-
-
 def _provenance_problems(evidence: Mapping[str, Any]) -> list[str]:
     problems = [
         f"provenance.{name}_sha256 is not a SHA-256 digest"
@@ -1265,6 +1524,8 @@ def _provenance_problems(evidence: Mapping[str, Any]) -> list[str]:
     ]
     if problems:
         return problems
+    if not _valid_prompts(evidence.get("prompts")):
+        return ["provenance.prompts is not a list of prompt fingerprints"]
     # contracts.provenance hashes every other field into evidence_sha256.
     unsealed = {
         key: value for key, value in evidence.items() if key != "evidence_sha256"
@@ -1272,6 +1533,18 @@ def _provenance_problems(evidence: Mapping[str, Any]) -> list[str]:
     if _fingerprint(unsealed) != evidence["evidence_sha256"]:
         return ["provenance does not match its evidence_sha256"]
     return []
+
+
+def _valid_prompts(value: Any) -> bool:
+    """Each prompt a run sent: its name, text digest and length, and the digest
+    of its request options, which results written before 2.22.0 lack."""
+    return isinstance(value, list) and all(
+        isinstance(entry, dict)
+        and isinstance(entry.get("name"), str)
+        and _is_sha256(entry.get("sha256"))
+        and ("request_sha256" not in entry or _is_sha256(entry["request_sha256"]))
+        for entry in value
+    )
 
 
 def _test_outcomes(
@@ -1445,4 +1718,6 @@ def _read_error(exc: Exception) -> str:
         return exc.strerror or "it cannot be read"
     if isinstance(exc, UnicodeDecodeError):
         return "it is not UTF-8 text"
-    return "it is not valid JSON"
+    if isinstance(exc, json.JSONDecodeError):
+        return "it is not valid JSON"
+    return str(exc)

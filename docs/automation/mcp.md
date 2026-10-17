@@ -110,15 +110,18 @@ or contact a provider, and `attest` stays a CI step. `verify` takes a
 workspace-relative `record` and an optional `max_age_days` (1 to 3650,
 default 30). `gate` takes `records` (one or more workspace-relative files or
 directories), an optional `config` (default `benchmark.json`),
-`max_age_days`, the selection CI runs (`prompt`, `tests`, `environment`
-and `migration_check`, with the same exclusions as the CLI flags) and the
-`repository` (OWNER/NAME) the workspace belongs to. Without `repository`, or
-`GITHUB_REPOSITORY` in the server's environment, the gate is undecided
-(`repository_unknown`): a record from another repository can carry the same
-fingerprints. Every path,
-and every record or subject file found under a directory, must resolve
-inside the workspace; a record file linked from outside makes the gate
-undecided, and a subject file linked from outside counts as absent.
+`max_age_days`, the selection CI runs (`prompt`, `tests`, `environment`,
+`migration_check` and `smoke`, with the same exclusions as the CLI flags) and
+the `repository` (OWNER/NAME) the workspace belongs to. Without `repository`
+or `GITHUB_REPOSITORY` in the server's environment, or when the two name
+different repositories, the gate is undecided (`repository_unknown`): a
+record from another repository can carry the same fingerprints. Every path,
+and every record file found under a directory, must resolve inside the
+workspace; a record file linked from outside makes the gate undecided.
+`verify` also compares the subject files a record names, and one linked
+from outside counts as absent; the gate never reads them. A record string
+that is not valid Unicode text, such as a lone surrogate, reaches the result
+as its backslash escape, so every message is strict UTF-8 JSON.
 
 Each returns the same object as `llm-preflight verify --json` or
 `llm-preflight gate --json` for the same absolute paths, with secret-like

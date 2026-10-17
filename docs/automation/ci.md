@@ -140,8 +140,8 @@ provider requests are independently idempotent and cancellation-safe.
 
 ## Proof-of-preflight gate
 
-From 2.22.0, a pull request can be blocked unless a fresh, passing CI record
-matches its contract and routes. The
+From 2.22.0, a required check can block a pull request unless a fresh,
+passing CI record matches its contract, routes and prompts. The
 [record workflow](github-action.md#proof-of-preflight) attests each approved
 paid smoke and uploads the record as the `llm-preflight-record` artifact. This
 workflow downloads the newest record, from the pull request's branch if a
@@ -178,6 +178,7 @@ jobs:
               --jq '.[0].databaseId // empty')"
             if [ -n "$run_id" ]; then
               echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+              echo "branch=$branch" >> "$GITHUB_OUTPUT"
               break
             fi
           done
@@ -191,37 +192,54 @@ jobs:
           run-id: ${{ steps.source.outputs.run-id }}
           github-token: ${{ github.token }}
       # Optional, for signed records (public repositories, or GitHub Enterprise Cloud).
+      # Only the record workflow, on the branch the run came from, signs it.
       - name: Verify the record's signature
         env:
           GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.source.outputs.branch }}
         run: |
           for record in records/*.preflight.json; do
             [ -e "$record" ] || continue
             gh attestation verify "$record" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/llm-preflight-record.yml" \
+              --source-ref "refs/heads/$BRANCH" \
               --predicate-type https://in-toto.io/attestation/test-result/v0.1
           done
       - name: Gate
-        # The record workflow runs a default smoke, so no selection flags;
-        # GITHUB_REPOSITORY names the repository whose records count.
+        # The record workflow runs one default --smoke repetition, so the gate
+        # requires --smoke; GITHUB_REPOSITORY names the repository whose
+        # records count.
         run: |
           mkdir -p records
-          llm-preflight gate benchmark.json --records records
+          llm-preflight gate benchmark.json --smoke --records records
 ```
 
 The gate step fails the check on exit 1 (blocked) and exit 3 (the gate cannot
 decide); its output starts with the reason, then numbered next steps. The gate
 fingerprints `benchmark.json` from the pull request's checkout, so a record
-for the previous contract blocks with `contract_changed`. It counts only
-records from `GITHUB_REPOSITORY`, which Actions sets in every job; a record
-from another repository blocks with `foreign_record`. Give the gate the same
-selection flags as the run that wrote the record (`--prompt`, `--tests`,
-`--env`, `--migration-check`): the Action runs a default smoke, so this gate
-takes none, and a workflow that runs `llm-preflight benchmark.json --smoke
---env staging` and attests its result needs `--env staging` here too,
-or the gate blocks with `selection_changed`. Remove the signature
-step on a private repository without GitHub Enterprise Cloud. The
-[proof-of-preflight guide](../guides/proof-of-preflight.md) lists every
-reason code and what to do when the gate blocks.
+for the previous contract, routes or prompts blocks with `contract_changed`,
+`routes_changed` or `prompt_changed`. It never reads the config or result
+file a record names, because the pull request controls the checkout. It
+counts only records from `GITHUB_REPOSITORY`, which Actions sets in every
+job; a record from another repository blocks with `foreign_record`. Give the
+gate the same selection flags as the run that wrote the record (`--prompt`,
+`--tests`, `--env`, `--migration-check`, `--smoke`): the Action runs a
+default `--smoke`, so this gate takes `--smoke`, and a workflow that runs
+`llm-preflight benchmark.json --smoke --env staging` and attests its result
+needs `--smoke --env staging` here, or the gate blocks with
+`selection_changed`.
+
+The gate is only as trustworthy as where it runs. Make this workflow a
+required status check that the pull request cannot edit: require it with a
+repository ruleset or a required workflow, or require code-owner review for
+`.github/workflows/`. A record is only as trustworthy as the workflow that
+produced it, so keep the record workflow behind an environment with required
+reviewers; `--signer-workflow` and `--source-ref` make the signature step
+accept only that workflow on the branch the run came from. The gate does not
+stop a maintainer who can edit these workflows or approve their own paid run.
+Remove the signature step on a private repository without GitHub Enterprise
+Cloud. The [proof-of-preflight guide](../guides/proof-of-preflight.md) lists
+every reason code and what to do when the gate blocks.
 
 ## Release documentation checklist
 

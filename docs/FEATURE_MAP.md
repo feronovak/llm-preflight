@@ -41,7 +41,7 @@ module names.
 | Terminal report — separate machine decision state and warnings from the executive ranking | live | `runner.py`, `docs/reference/decision.md` |
 | `report` — render saved schema-version-1 evidence as offline HTML or a privacy-filtered Markdown summary | live | `reporting.py`, `cli.py`, `action.yml` |
 | `report --format svg` — a deterministic, self-contained preflight card of a result and, optionally, its record: one verdict band, probe counts, latency, cost when complete, retirement status, and what it does not certify | live | `reporting.py`, `cli.py` |
-| Proof of preflight — `attest` writes an in-toto test-result record of a saved result, `verify` reports its integrity and freshness separately, and `gate` decides offline whether a fresh, passing CI record matches the current contract and routes | live | `attestation.py`, `git.py`, `cli.py`, `docs/guides/proof-of-preflight.md` |
+| Proof of preflight — `attest` writes an in-toto test-result record of a saved result, `verify` reports its integrity and freshness separately, and `gate` decides offline whether a fresh, passing CI record matches the current contract, routes and prompts | live | `attestation.py`, `github_actions.py`, `git.py`, `cli.py`, `docs/guides/proof-of-preflight.md` |
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 
 Nothing listed here is gated, partial or deprecated. Work proposed but not

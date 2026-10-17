@@ -13,7 +13,6 @@ from typing import Any
 from . import __version__
 from .attestation import (
     DEFAULT_MAX_AGE_DAYS,
-    expected_repository,
     gate,
     load_record,
     verify_record,
@@ -85,14 +84,14 @@ CI setup and report export are CLI workflows, not MCP tools.
 To check proof of preflight, call `verify` on a record CI attested and report
 its integrity and freshness separately, or call `gate` with the config, the
 downloaded records, the selection CI runs (`prompt`, `tests`,
-`environment`, `migration_check`) and the `repository` (OWNER/NAME) the
-workspace belongs to; without it, or GITHUB_REPOSITORY, the gate cannot
-decide. Both read only workspace files and never contact a provider. Report the gate's `decision`, `why` and each `next` step.
+`environment`, `migration_check`, `smoke`) and the `repository` (OWNER/NAME)
+the workspace belongs to; without it or GITHUB_REPOSITORY, or when the two
+disagree, the gate cannot decide. Both read only workspace files and never contact a provider. Report the gate's `decision`, `why` and each `next` step.
 A gate `pass` is not approval: it shows that a fresh passing record matches
 this contract, never that a model, a budget, a merge or paid work is
 approved. Never attest a record; that stays a CI step.
 """
-_SELECTION_ARGUMENTS = {"prompt", "tests", "environment", "migration_check"}
+_SELECTION_ARGUMENTS = {"prompt", "tests", "environment", "migration_check", "smoke"}
 
 
 class ProtocolError(ValueError):
@@ -205,10 +204,9 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         or not 1 <= arguments["max_age_days"] <= _MAX_AGE_DAYS
     ):
         raise ProtocolError(-32602, "max_age_days must be a whole number, 1 to 3650")
-    if "migration_check" in arguments and not isinstance(
-        arguments["migration_check"], bool
-    ):
-        raise ProtocolError(-32602, "migration_check must be a boolean")
+    for flag in ("migration_check", "smoke"):
+        if flag in arguments and not isinstance(arguments[flag], bool):
+            raise ProtocolError(-32602, f"{flag} must be a boolean")
     if "confirm_paid_run" in arguments and not isinstance(
         arguments["confirm_paid_run"], bool
     ):
@@ -255,6 +253,7 @@ def _gate_selection(arguments: dict[str, Any]) -> dict[str, Any]:
         else None,
         "environment": arguments.get("environment"),
         "migrationCheck": arguments.get("migration_check", False),
+        "smoke": arguments.get("smoke", False),
     }
 
 
@@ -532,8 +531,17 @@ def _tools() -> list[dict[str, Any]]:
             "tests": nullable_string,
             "environment": nullable_string,
             "migrationCheck": {"type": "boolean"},
+            "smoke": {"type": "boolean"},
+            "repetitions": {"type": ["integer", "null"], "minimum": 1},
         },
-        "required": ["prompt", "tests", "environment", "migrationCheck"],
+        "required": [
+            "prompt",
+            "tests",
+            "environment",
+            "migrationCheck",
+            "smoke",
+            "repetitions",
+        ],
         "additionalProperties": False,
     }
     blocked_codes = [
@@ -541,6 +549,7 @@ def _tools() -> list[dict[str, Any]]:
         "selection_changed",
         "contract_changed",
         "routes_changed",
+        "prompt_changed",
         "stale",
         "superseded",
         "inconclusive_record",
@@ -821,6 +830,7 @@ def _tools() -> list[dict[str, Any]]:
                     "tests": path_schema,
                     "environment": path_schema,
                     "migration_check": {"type": "boolean"},
+                    "smoke": {"type": "boolean"},
                     "repository": {
                         "type": "string",
                         "minLength": 1,
@@ -903,7 +913,8 @@ def _call(
             arguments.get("max_age_days", DEFAULT_MAX_AGE_DAYS),
             selection=selection,
             root=workspace,
-            repository=expected_repository(arguments.get("repository"), os.environ),
+            repository=arguments.get("repository"),
+            environ=os.environ,
         )
         summary = _format_gate(report).splitlines()[0]
         return _tool_result(report, standard=standard, summary=summary)

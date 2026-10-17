@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from llm_preflight import cli
+from llm_preflight import attestation, cli
 from llm_preflight.catalog import resolve_models
-from llm_preflight.contracts import provenance
+from llm_preflight.contracts import _fingerprint, provenance
 from llm_preflight.decision import build_decision
 from llm_preflight.pricing import resolve_pricing
 from llm_preflight.runner import load_config
@@ -38,6 +38,15 @@ GITHUB = {
     "GITHUB_RUN_ATTEMPT": "1",
     "GITHUB_SHA": "d20ace7968ba43c0219f62d71334c1095bab1602",
     "GITHUB_SERVER_URL": "https://github.com",
+}
+# The identity a run under GITHUB writes into its result.
+RUN_IDENTITY = {
+    "repository": "acme/app",
+    "workflow": "preflight",
+    "runId": "4425592351",
+    "runAttempt": "1",
+    "commit": "d20ace7968ba43c0219f62d71334c1095bab1602",
+    "serverUrl": "https://github.com",
 }
 
 
@@ -76,11 +85,13 @@ def _result(
     name="run.json",
     observed=OBSERVED,
     selection=None,
+    ci=None,
 ):
     """A billable single-model result whose decision comes from decision.py.
 
     `observed=UNRECORDED` or `selection=UNRECORDED` writes a result from before
-    that field existed; a default run's selection is the default.
+    that field existed; a default run's selection is the default. `ci` is the
+    run-time GitHub Actions identity the run recorded, None outside CI.
     """
     config = load_config(config_path)
     routes = resolve_pricing(resolve_models(config))["models"]
@@ -119,6 +130,7 @@ def _result(
         },
         "provenance": provenance(config, routes, "f" * 64),
         "source_config_path": str(config_path.resolve()),
+        "ci": ci,
     }
     if selection is not UNRECORDED:
         result["selection"] = selection or {
@@ -126,6 +138,8 @@ def _result(
             "tests": None,
             "environment": None,
             "migration_check": False,
+            "smoke": False,
+            "repetitions": 5,
         }
     if state == "fail":
         model["summary"]["valid_output_rate"] = 0.5
@@ -327,7 +341,7 @@ def test_attest_records_github_actions_identity_and_run_url(
     monkeypatch, capsys, tmp_path
 ):
     monkeypatch.chdir(tmp_path)
-    _result(tmp_path, _config(tmp_path))
+    _result(tmp_path, _config(tmp_path), ci=RUN_IDENTITY)
     for name, value in GITHUB.items():
         monkeypatch.setenv(name, value)
 
@@ -432,7 +446,10 @@ def _attest(
     name="run.json",
     selection=None,
 ):
-    """Attest one result in tmp_path, the working directory, and return the record path."""
+    """Attest one result in tmp_path, the working directory, and return the record path.
+
+    With `ci`, the result was run and is attested in the same GitHub Actions run.
+    """
     monkeypatch.chdir(tmp_path)
     config = tmp_path / "benchmark.json"
     if not config.exists():
@@ -444,6 +461,7 @@ def _attest(
         timestamp=timestamp,
         name=name,
         selection=selection,
+        ci=RUN_IDENTITY if ci else None,
     )
     with monkeypatch.context() as scoped:
         if ci:
@@ -659,7 +677,7 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
     assert code == 0
     assert out == (
         "Gate: pass — a fresh passing preflight matches this contract.\n"
-        "Why:  Run 4425592351 on acme/app passed this contract and its routes on "
+        "Why:  Run 4425592351 on acme/app passed this contract, its prompts and its routes on "
         "2026-10-10 (7 days old); it stays fresh until 2026-11-09. "
         f"openai:gpt-4.1-mini answered as {OBSERVED}. "
         "The signature is not checked here — use gh attestation verify.\n"
@@ -704,12 +722,7 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
             },
             "foreign_record",
         ),
-        (("--repository", "acme/app"), {"GITHUB_REPOSITORY": "fork/app"}, "fresh_pass"),
-        (
-            ("--repository", "fork/app"),
-            {"GITHUB_REPOSITORY": "acme/app"},
-            "foreign_record",
-        ),
+        (("--repository", "ACME/App"), {"GITHUB_REPOSITORY": "acme/app"}, "fresh_pass"),
     ],
     ids=[
         "flag",
@@ -720,8 +733,7 @@ def test_gate_passes_on_a_fresh_passing_ci_record(monkeypatch, capsys, tmp_path)
         "environment-case-insensitive",
         "environment-fork",
         "environment-other-server",
-        "flag-overrides-environment",
-        "flag-overrides-matching-environment",
+        "flag-agrees-with-environment",
     ],
 )
 def test_gate_counts_only_records_from_the_expected_repository(
@@ -1074,13 +1086,13 @@ def test_gate_fingerprints_match_the_provenance_of_a_real_run(
             "warmups": 0,
         },
     )
+    for variable, value in GITHUB.items():
+        monkeypatch.setenv(variable, value)
     code, _, err = _run(
         monkeypatch, capsys, "benchmark.json", "--output-dir", "results"
     )
     assert code == 3, err
     (result,) = (tmp_path / "results").glob("*-mock-*.json")
-    for variable, value in GITHUB.items():
-        monkeypatch.setenv(variable, value)
     assert _run(monkeypatch, capsys, "attest", result)[0] == 0
 
     code, report = _gate(monkeypatch, capsys, "--records", "results")
@@ -1117,23 +1129,29 @@ DEFAULT_SELECTION = {
     "tests": None,
     "environment": None,
     "migrationCheck": False,
+    "smoke": False,
 }
 
 
 def _selected_run(monkeypatch, capsys, tmp_path, *flags):
-    """Run SELECTION_CONFIG on the mock provider under flags, attest it in CI."""
+    """Run SELECTION_CONFIG, or the benchmark.json already there, on the mock
+    provider under flags, and attest it in the same GitHub Actions run."""
     monkeypatch.chdir(tmp_path)
     if not (tmp_path / "benchmark.json").exists():
         _config(tmp_path, SELECTION_CONFIG)
-    code, _, err = _run(
-        monkeypatch, capsys, "benchmark.json", *flags, "--output-dir", "results"
-    )
-    assert code in {1, 3}, err
-    (result,) = (tmp_path / "results").glob("*-selection*.json")
     with monkeypatch.context() as scoped:
         for variable, value in GITHUB.items():
             scoped.setenv(variable, value)
+        code, _, err = _run(
+            monkeypatch, capsys, "benchmark.json", *flags, "--output-dir", "results"
+        )
+        assert code in {1, 3}, err
+        (result,) = (tmp_path / "results").glob("*-selection*.json")
         assert _run(monkeypatch, capsys, "attest", result)[0] == 0
+    # The verifier's clock is the run's own date, so freshness never depends on
+    # when the suite runs.
+    ran = date.fromisoformat(json.loads(result.read_text())["timestamp"][:10])
+    monkeypatch.setattr(cli, "today_utc", lambda: ran)
     return result.with_suffix(".preflight.json")
 
 
@@ -1157,6 +1175,12 @@ def _selected_run(monkeypatch, capsys, tmp_path, *flags):
             {"prompt": "json", "environment": "staging"},
         ),
         (("--env-file", "ci.env"), (), {}),
+        (("--smoke",), ("--smoke",), {"smoke": True}),
+        (
+            ("--smoke", "--tests", "json"),
+            ("--tests", "json", "--smoke"),
+            {"smoke": True, "tests": "json"},
+        ),
     ],
     ids=[
         "default",
@@ -1168,6 +1192,8 @@ def _selected_run(monkeypatch, capsys, tmp_path, *flags):
         "environment",
         "environment-and-prompt",
         "env-file",
+        "smoke",
+        "smoke-and-tests",
     ],
 )
 def test_gate_matches_a_real_run_under_the_same_selection(
@@ -1182,7 +1208,8 @@ def test_gate_matches_a_real_run_under_the_same_selection(
     entry = report["records"][0]
     assert code == 1
     assert entry["verdict"] in {"failed_record", "inconclusive_record"}, entry
-    expected = {**DEFAULT_SELECTION, **selection}
+    # SELECTION_CONFIG runs one repetition per prompt, as does every test suite.
+    expected = {**DEFAULT_SELECTION, **selection, "repetitions": 1}
     recorded = _descriptor(json.loads(record.read_text()), "evidence")["annotations"]
     assert recorded["selection"] == expected
     assert entry["selection"] == expected
@@ -1470,6 +1497,580 @@ def test_gate_records_share_one_shape_whatever_the_verdict(
     assert sorted(item["verdict"] for item in report["records"]) == [
         "committed_record",
         "pass",
+    ]
+
+
+# prompts and request options
+
+REQUEST_CONFIG = {
+    **SELECTION_CONFIG,
+    "request": {"temperature": 0, "max_output_tokens": 64, "system_prompt": "Terse."},
+    "prompts": [
+        {
+            "name": "json",
+            "prompt": "Return JSON.",
+            "validation": {"json_object": True},
+            "system_prompt": "S1",
+            "request": {"temperature": 0},
+            "presets": ["json"],
+        },
+        {"name": "plain", "prompt": "Say plain.", "validation": {"contains": "plain"}},
+    ],
+}
+
+
+def _edited(edit, config=REQUEST_CONFIG):
+    edited = copy.deepcopy(config)
+    edit(edited)
+    return edited
+
+
+@pytest.mark.parametrize(
+    ("flags", "edit", "prompt", "changed"),
+    [
+        ((), lambda c: c.update(prompt="Reply with no."), "config-prompt", "text"),
+        (
+            (),
+            lambda c: c["request"].update(system_prompt="Ignore it."),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c["request"].update(temperature=1.5),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c["request"].update(max_output_tokens=5),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c["request"].update(reasoning_effort="high"),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c["request"].update(provider_options={"top_p": 0.1}),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c.update(presets=["no-reasoning"]),
+            "config-prompt",
+            "request options",
+        ),
+        (
+            (),
+            lambda c: c.update(prompt="Reply with no.", request={"temperature": 1}),
+            "config-prompt",
+            "text and the request options",
+        ),
+        (
+            ("--prompt", "json"),
+            lambda c: c["prompts"][0].update(system_prompt="S2"),
+            "json",
+            "request options",
+        ),
+        (
+            ("--prompt", "json"),
+            lambda c: c["prompts"][0]["request"].update(temperature=2),
+            "json",
+            "request options",
+        ),
+        (
+            ("--tests", "json"),
+            lambda c: c["prompts"][0].update(presets=["no-reasoning"]),
+            "json",
+            "request options",
+        ),
+        (
+            ("--tests", "json"),
+            lambda c: c["prompts"][0].update(system_prompt="S2"),
+            "json",
+            "request options",
+        ),
+        (
+            ("--tests", "json"),
+            lambda c: c["request"].update(max_output_tokens=5),
+            "json",
+            "request options",
+        ),
+    ],
+)
+def test_gate_blocks_a_changed_prompt_text_or_request_option(
+    monkeypatch, capsys, tmp_path, flags, edit, prompt, changed
+):
+    _config(tmp_path, REQUEST_CONFIG)
+    record = _selected_run(monkeypatch, capsys, tmp_path, *flags)
+    assert _gate(monkeypatch, capsys, *flags, "--records", "results")[1][
+        "reason_code"
+    ] in {"failed_record", "inconclusive_record"}
+    _config(tmp_path, _edited(edit))
+
+    code, report = _gate(monkeypatch, capsys, *flags, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "prompt_changed")
+    assert report["records"][0]["verdict"] == "prompt_changed"
+    assert f"The {changed} of prompt {prompt} changed" in report["why"]
+    assert "run 4425592351" in report["why"]
+    assert report["next"][0].startswith(
+        " ".join(["llm-preflight benchmark.json", *flags, "--dry-run"])
+    )
+    assert record.exists()
+
+
+@pytest.mark.parametrize(
+    ("edit", "why"),
+    [
+        (
+            lambda prompts: prompts.append(
+                {**prompts[0], "name": "extra", "sha256": "0" * 64}
+            ),
+            (
+                "The latest record (run 4425592351, checked today) checked "
+                "prompt extra, which is no longer sent."
+            ),
+        ),
+        (
+            lambda prompts: prompts[0].update(name="other"),
+            (
+                "benchmark.json now sends prompt json, which the latest record "
+                "(run 4425592351, checked today) did not check."
+            ),
+        ),
+    ],
+    ids=["no-longer-sent", "not-checked"],
+)
+def test_gate_blocks_a_prompt_the_record_did_not_check_or_no_longer_sends(
+    monkeypatch, capsys, tmp_path, edit, why
+):
+    _config(tmp_path, REQUEST_CONFIG)
+    record = _selected_run(monkeypatch, capsys, tmp_path, "--tests", "json")
+    _edit_record(record, lambda data: edit(_evidence(data)["provenance"]["prompts"]))
+    reseal(record)
+
+    code, report = _gate(monkeypatch, capsys, "--tests", "json", "--records", "results")
+
+    assert (code, report["reason_code"], report["why"]) == (1, "prompt_changed", why)
+
+
+def reseal(record):
+    """Re-hash an edited record's provenance, as a writer that meant it would."""
+
+    def seal(data):
+        evidence = _evidence(data)["provenance"]
+        unsealed = {k: v for k, v in evidence.items() if k != "evidence_sha256"}
+        evidence["evidence_sha256"] = _fingerprint(unsealed)
+        _descriptor(data, "evidence")["digest"]["sha256"] = evidence["evidence_sha256"]
+
+    _edit_record(record, seal)
+
+
+def test_gate_blocks_a_record_whose_prompts_carry_no_request_fingerprint(
+    monkeypatch, capsys, tmp_path
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(
+        record,
+        lambda data: [
+            entry.pop("request_sha256", None)
+            for entry in _evidence(data)["provenance"]["prompts"]
+        ],
+    )
+    reseal(record)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "prompt_changed")
+    assert (
+        "does not record the request options its prompts were sent with"
+        in (report["why"])
+    )
+
+
+PARITY_CONFIG = {
+    **REQUEST_CONFIG,
+    "environments": {
+        "staging": {
+            "models": [{"provider": "mock", "model": "staging", "response": "{}"}],
+            "request": {"temperature": 0.5},
+        }
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("config", "flags", "selection"),
+    [
+        (PARITY_CONFIG, (), {}),
+        (PARITY_CONFIG, ("--prompt", "json"), {"prompt": "json"}),
+        (PARITY_CONFIG, ("--tests", "json"), {"tests": "json"}),
+        (
+            PARITY_CONFIG,
+            ("--tests", "plain,classification,json"),
+            {"tests": "exact-routing-check,json,plain"},
+        ),
+        ({**PARITY_CONFIG, "profiles": ["plain", "json"]}, (), {}),
+        (
+            {**PARITY_CONFIG, "profiles": "json"},
+            ("--prompt", "plain"),
+            {"prompt": "plain"},
+        ),
+        (PARITY_CONFIG, ("--migration-check",), {"migrationCheck": True}),
+        (PARITY_CONFIG, ("--env", "staging"), {"environment": "staging"}),
+        (PARITY_CONFIG, ("--smoke",), {"smoke": True}),
+        (
+            PARITY_CONFIG,
+            ("--env", "staging", "--smoke", "--prompt", "json"),
+            {"environment": "staging", "smoke": True, "prompt": "json"},
+        ),
+    ],
+    ids=[
+        "default",
+        "prompt",
+        "tests",
+        "tests-built-in-and-custom",
+        "config-profiles",
+        "config-profiles-with-prompt",
+        "migration-check",
+        "environment",
+        "smoke",
+        "environment-smoke-prompt",
+    ],
+)
+def test_gate_fingerprints_every_prompt_and_request_exactly_as_the_run_sent_them(
+    monkeypatch, capsys, tmp_path, config, flags, selection
+):
+    _config(tmp_path, config)
+    record = _selected_run(monkeypatch, capsys, tmp_path, *flags)
+    result = json.loads(
+        record.with_name(record.name.replace(".preflight", "")).read_text()
+    )
+
+    current = attestation.current_fingerprints(tmp_path / "benchmark.json", selection)
+
+    # Every entry, in any order: a recorded --tests selector is canonical, so
+    # custom tests may run in another order, and the gate compares them so.
+    assert sorted(current["prompts"], key=json.dumps) == sorted(
+        result["provenance"]["prompts"], key=json.dumps
+    )
+    assert all(len(entry["request_sha256"]) == 64 for entry in current["prompts"])
+    assert current["contract_sha256"] == result["provenance"]["contract_sha256"]
+    assert current["routes_sha256"] == result["provenance"]["routes_sha256"]
+    assert current["repetitions"] == result["selection"]["repetitions"]
+
+
+# what a gate judges a record by
+
+
+def test_gate_judges_a_record_by_its_own_consistency_never_by_files_in_the_tree(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path, timestamp="2026-10-05T08:00:00+00:00")
+    newer = _attest(monkeypatch, capsys, tmp_path, state="fail", name="newer.json")
+    # A pull request plants other bytes where the newer record's result was.
+    (tmp_path / "results/newer.json").write_text("{}")
+    (tmp_path / "benchmark.json").write_text(json.dumps(CONFIG, indent=1))
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+    verify_code, verify_out, _ = _run(monkeypatch, capsys, "verify", newer, "--json")
+
+    assert (code, report["reason_code"]) == (1, "failed_record")
+    # verify, asked about this record and its files, still reports the change.
+    assert verify_code == 1
+    assert (
+        "the result file results/newer.json does not match its subject digest"
+        in (json.loads(verify_out)["integrity"]["problems"])
+    )
+
+
+@pytest.mark.parametrize(
+    ("broken", "edit", "outcome"),
+    [
+        (
+            "2026-10-12T08:00:00+00:00",
+            lambda data: _evidence(data).update(costConfidence="partial"),
+            (3, "undecided", "record_error"),
+        ),
+        (
+            "2026-10-05T08:00:00+00:00",
+            lambda data: _evidence(data).update(checkedAt="not a time"),
+            (3, "undecided", "record_error"),
+        ),
+        (
+            "2026-10-05T08:00:00+00:00",
+            lambda data: _evidence(data).update(costConfidence="partial"),
+            (0, "pass", "fresh_pass"),
+        ),
+    ],
+    ids=["broken-and-newer", "broken-without-a-date", "broken-and-older"],
+)
+def test_gate_cannot_decide_while_a_broken_record_might_be_the_newest(
+    monkeypatch, capsys, tmp_path, broken, edit, outcome
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    record = _attest(monkeypatch, capsys, tmp_path, timestamp=broken, name="b.json")
+    _edit_record(record, edit)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["decision"], report["reason_code"]) == outcome
+    if outcome[0] == 3:
+        assert report["why"].startswith(
+            "results/b.preflight.json fails its integrity check"
+        )
+        assert "might be newer than run 4425592351" in report["why"]
+        assert report["next"][0] == (
+            "llm-preflight verify results/b.preflight.json   "
+            "(free: every integrity problem)"
+        )
+
+
+# run-time identity
+
+
+def test_a_run_records_the_github_actions_identity_it_ran_in(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    _config(tmp_path, SELECTION_CONFIG)
+    with monkeypatch.context() as scoped:
+        for variable, value in GITHUB.items():
+            scoped.setenv(variable, value)
+        _run(monkeypatch, capsys, "benchmark.json", "--output-dir", "ci")
+    _run(monkeypatch, capsys, "benchmark.json", "--output-dir", "local")
+
+    (ci,) = (tmp_path / "ci").glob("*.json")
+    (local,) = (tmp_path / "local").glob("*.json")
+
+    assert json.loads(ci.read_text())["ci"] == RUN_IDENTITY
+    assert json.loads(local.read_text())["ci"] is None
+
+
+@pytest.mark.parametrize(
+    ("recorded", "environment", "reason"),
+    [
+        (
+            None,
+            GITHUB,
+            (
+                "the result records no GitHub Actions run identity: it ran "
+                "outside GitHub Actions or with llm-preflight before 2.22.0"
+            ),
+        ),
+        (
+            {**RUN_IDENTITY, "runId": "1"},
+            GITHUB,
+            "the result was made in another GitHub Actions run",
+        ),
+        (
+            {**RUN_IDENTITY, "repository": "acme/other"},
+            GITHUB,
+            "the result was made in another GitHub Actions run",
+        ),
+        (
+            {**RUN_IDENTITY, "commit": "0" * 40},
+            GITHUB,
+            "the result was made in another GitHub Actions run",
+        ),
+        (
+            RUN_IDENTITY,
+            {},
+            "it was attested outside the GitHub Actions run that made the result",
+        ),
+        (
+            {"repository": "acme/app"},
+            GITHUB,
+            "the result's GitHub Actions run identity is malformed",
+        ),
+    ],
+    ids=["none", "other-run", "other-repository", "other-commit", "outside", "bad"],
+)
+def test_attest_records_local_unless_it_runs_in_the_run_that_made_the_result(
+    monkeypatch, capsys, tmp_path, recorded, environment, reason
+):
+    monkeypatch.chdir(tmp_path)
+    _result(tmp_path, _config(tmp_path), ci=recorded)
+    with monkeypatch.context() as scoped:
+        for variable, value in environment.items():
+            scoped.setenv(variable, value)
+        code, out, err = _run(monkeypatch, capsys, "attest", "results/run.json")
+        _, payload, _ = _run(
+            monkeypatch, capsys, "attest", "results/run.json", "--force", "--json"
+        )
+
+    assert code == 0, err
+    record = json.loads((tmp_path / "results/run.preflight.json").read_text())
+    evidence = _descriptor(record, "evidence")["annotations"]
+    assert (evidence["origin"], evidence["ci"]) == ("local", None)
+    assert "url" not in record["predicate"]
+    assert f"origin: local — {reason}; the gate does not accept it" in out
+    assert json.loads(payload)["origin_reason"] == reason
+
+
+# untrusted record content
+
+
+def _strict(text):
+    """The parsed output re-encoded as strict UTF-8 JSON, which SDKs require."""
+    return json.dumps(json.loads(text), ensure_ascii=False).encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda data: data["predicate"].update(url="X\udcffY"),
+        lambda data: _evidence(data)["ci"].update(repository="acme/a\udcff"),
+        lambda data: _evidence(data)["ci"].update(serverUrl="https://\ud800"),
+        lambda data: _descriptor(data, "routes")["annotations"]["routes"][0].update(
+            provider="open\udcffai", model="gpt\ud800"
+        ),
+        lambda data: data["subject"][0].update(name="bench\udcffmark.json"),
+    ],
+    ids=["url", "repository", "server", "route", "subject"],
+)
+def test_record_strings_that_are_not_unicode_text_reach_every_output_escaped(
+    monkeypatch, capsys, tmp_path, edit
+):
+    record = _attest(monkeypatch, capsys, tmp_path)
+    _edit_record(record, edit)
+
+    _, verify_json, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    _, verify_text, _ = _run(monkeypatch, capsys, "verify", record)
+    _, gate_json, _ = _run(
+        monkeypatch, capsys, "gate", *REPO, "--records", "results", "--json"
+    )
+    _, gate_text, _ = _run(monkeypatch, capsys, "gate", *REPO, "--records", "results")
+
+    for report in (verify_json, gate_json):
+        _strict(report)
+    for text in (verify_text, gate_text):
+        text.encode("utf-8")
+    assert json.loads(gate_json)["reason_code"] == "inconsistent_record"
+
+
+def test_a_record_file_name_that_is_not_utf_8_reaches_every_output_escaped(
+    monkeypatch, capsys, tmp_path
+):
+    import os
+
+    record = _attest(monkeypatch, capsys, tmp_path)
+    hostile = record.with_name(os.fsdecode(b"evil\xff.preflight.json"))
+    record.rename(hostile)
+
+    _, verify_json, _ = _run(monkeypatch, capsys, "verify", hostile, "--json")
+    _, gate_json, _ = _run(
+        monkeypatch, capsys, "gate", *REPO, "--records", "results", "--json"
+    )
+    code, card, err = _card(monkeypatch, capsys, "--record", hostile)
+
+    assert json.loads(verify_json)["record"].endswith(
+        "results/evil\\xff.preflight.json"
+    )
+    _strict(gate_json)
+    assert code == 0, err
+    card.encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [
+        ("[" * 200_000, "nested more than"),
+        ("[" * 900 + "]" * 900, "nested more than"),
+        (json.dumps({"padding": "x" * (1 << 21)}), "larger than"),
+    ],
+    ids=["unbalanced", "deep", "large"],
+)
+def test_gate_cannot_decide_on_a_record_nested_too_deeply_or_too_large(
+    monkeypatch, capsys, tmp_path, content, reason
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    hostile = tmp_path / "results/hostile.preflight.json"
+    hostile.write_text(content)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+    verify_code, _, err = _run(monkeypatch, capsys, "verify", hostile)
+
+    assert (code, report["reason_code"]) == (3, "record_error")
+    assert reason in report["why"]
+    assert verify_code == 2
+    assert f"error: {reason}" in err or reason in err
+    assert "Traceback" not in err
+
+
+# sampling depth
+
+
+def test_a_smoke_record_satisfies_only_a_gate_that_expects_smoke(
+    monkeypatch, capsys, tmp_path
+):
+    record = _selected_run(monkeypatch, capsys, tmp_path, "--smoke")
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+    _, smoke = _gate(monkeypatch, capsys, "--smoke", "--records", "results")
+
+    assert _evidence(json.loads(record.read_text()))["selection"] == {
+        **DEFAULT_SELECTION,
+        "smoke": True,
+        "repetitions": 1,
+    }
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert "ran --smoke (1 repetition per prompt)" in report["why"]
+    assert (
+        "this gate requires a default run (1 repetition per prompt)" in (report["why"])
+    )
+    assert smoke["reason_code"] in {"failed_record", "inconclusive_record"}
+    assert smoke["selection"] == {**DEFAULT_SELECTION, "smoke": True, "repetitions": 1}
+
+
+def test_gate_blocks_a_record_that_ran_fewer_repetitions_than_the_config_asks(
+    monkeypatch, capsys, tmp_path
+):
+    _selected_run(monkeypatch, capsys, tmp_path)
+    _config(tmp_path, {**SELECTION_CONFIG, "repetitions": 3})
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert report["why"] == (
+        "The latest record (run 4425592351, checked today) ran a default run "
+        "with 1 repetition per prompt; benchmark.json now asks for 3 under "
+        "the same selection."
+    )
+
+
+# repository
+
+
+def test_gate_refuses_a_repository_flag_that_contradicts_github_repository(
+    monkeypatch, capsys, tmp_path
+):
+    _attest(monkeypatch, capsys, tmp_path)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "fork/app")
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["decision"], report["reason_code"]) == (
+        3,
+        "undecided",
+        "repository_unknown",
+    )
+    assert report["why"] == (
+        "The gate cannot tell which repository this tree belongs to: "
+        "--repository names acme/app, but GITHUB_REPOSITORY is fork/app."
+    )
+    assert report["repository"] is None
+    assert report["next"] == [
+        (
+            "drop --repository in GitHub Actions, or give the repository "
+            "GITHUB_REPOSITORY names"
+        )
     ]
 
 

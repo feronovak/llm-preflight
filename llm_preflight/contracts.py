@@ -9,12 +9,16 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from .presets import expand_presets
 from .profiles import (
     OUTPUT_VALIDATOR_VERSION,
     evaluate_consumer_response,
     evaluate_response,
 )
 from .redaction import redact_secrets, without_private_fields
+
+# The request a run sends with its prompt when the config names none.
+DEFAULT_REQUEST: dict[str, Any] = {"temperature": 0, "max_output_tokens": 256}
 
 _TOOL_NAME = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 _SCHEMA_TYPES = {"object", "array", "string", "number", "integer", "boolean"}
@@ -462,35 +466,70 @@ def provenance(
     return result
 
 
+def profile_request_options(
+    request: dict[str, Any], profile: dict[str, Any]
+) -> dict[str, Any]:
+    """The request options sent with every case of a profile: the run's request,
+    updated by the profile's own request with its presets expanded, then the
+    profile's system prompt."""
+    options = dict(request)
+    profile_request = profile.get("request", {})
+    if profile.get("presets"):
+        profile_request = expand_presets(profile_request, profile["presets"])
+    options.update(profile_request)
+    if profile.get("system_prompt"):
+        options["system_prompt"] = profile["system_prompt"]
+    return options
+
+
 def _prompt_fingerprints(
     config: dict[str, Any], profiles: Sequence[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Fingerprint each prompt the run sent, once."""
-    prompts: list[tuple[str, str]] = []
+    """Fingerprint each prompt the run sent, and the request sent with it, once."""
+    request = config.get("request", DEFAULT_REQUEST)
+    prompts: list[tuple[str, str, dict[str, Any]]] = []
     if profiles:
         # A profile run sends every case of every selected profile, a custom
         # prompt as one case under its own name, and never the top-level prompt.
         prompts = [
-            (case["id"], case["prompt"])
+            (case["id"], case["prompt"], profile_request_options(request, profile))
             for profile in profiles
             for case in profile["cases"]
         ]
     elif "prompt" in config:
-        # --prompt copies the selected prompt to the top level; otherwise the
-        # top-level prompt runs and the configured prompts list does not.
-        prompts = [(config.get("prompt_name") or "config-prompt", config["prompt"])]
-    return _hash_prompts(list(dict.fromkeys(prompts)))
-
-
-def _hash_prompts(prompts: list[tuple[str, str]]) -> list[dict[str, Any]]:
-    return [
+        # --prompt copies the selected prompt and its request to the top level;
+        # otherwise the top-level prompt runs and the prompts list does not.
+        name = config.get("prompt_name") or "config-prompt"
+        prompts = [(name, config["prompt"], request)]
+    entries = [
         {
             "name": name,
             "sha256": hashlib.sha256(text.encode()).hexdigest(),
             "chars": len(text),
+            "request_sha256": _request_fingerprint(options),
         }
-        for name, text in prompts
+        for name, text, options in prompts
     ]
+    unique = {
+        (entry["name"], entry["sha256"], entry["request_sha256"]): entry
+        for entry in entries
+    }
+    return list(unique.values())
+
+
+def _request_fingerprint(options: dict[str, Any]) -> str:
+    """Hash the request options as sent: runtime-only keys dropped, secret-like
+    values redacted, and each input image by its content digest, not its path."""
+    request = without_private_fields(options)
+    images = request.get("input_images")
+    if isinstance(images, list):
+        request["input_images"] = [
+            {key: image.get(key) for key in ("sha256", "mime_type")}
+            if isinstance(image, dict)
+            else image
+            for image in images
+        ]
+    return _fingerprint(redact_secrets(request))
 
 
 def _safe_base_url(value: Any) -> str | None:

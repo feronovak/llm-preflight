@@ -1235,32 +1235,33 @@ def _cli(monkeypatch, capsys, *arguments):
 
 @pytest.fixture
 def proof_workspace(tmp_path, monkeypatch, capsys):
-    """A workspace with a config and the CI record of a mock run of it."""
+    """A workspace with a config and the record of a mock run of it, run and
+    attested in the same GitHub Actions run."""
     from llm_preflight import cli
 
     for name in PROOF_GITHUB:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(tmp_path)
     (tmp_path / "benchmark.json").write_text(json.dumps(PROOF_CONFIG))
-    code, _ = _cli(
-        monkeypatch,
-        capsys,
-        "benchmark.json",
-        "--prompt",
-        "json",
-        "--output-dir",
-        "results",
-    )
-    assert code == 3
-    (result,) = (tmp_path / "results").glob("*.json")
-    # The verifier's clock is the run's own date, so freshness never depends on
-    # when the suite runs.
-    ran = date.fromisoformat(json.loads(result.read_text())["timestamp"][:10])
-    monkeypatch.setattr(cli, "today_utc", lambda: ran)
-    monkeypatch.setattr(mcp, "today_utc", lambda: ran)
     with monkeypatch.context() as scoped:
         for name, value in PROOF_GITHUB.items():
             scoped.setenv(name, value)
+        code, _ = _cli(
+            monkeypatch,
+            capsys,
+            "benchmark.json",
+            "--prompt",
+            "json",
+            "--output-dir",
+            "results",
+        )
+        assert code == 3
+        (result,) = (tmp_path / "results").glob("*.json")
+        # The verifier's clock is the run's own date, so freshness never
+        # depends on when the suite runs.
+        ran = date.fromisoformat(json.loads(result.read_text())["timestamp"][:10])
+        monkeypatch.setattr(cli, "today_utc", lambda: ran)
+        monkeypatch.setattr(mcp, "today_utc", lambda: ran)
         assert _cli(monkeypatch, capsys, "attest", result)[0] == 0
     return tmp_path
 
@@ -1485,6 +1486,7 @@ def test_proof_tools_open_no_network_connection(proof_workspace, monkeypatch):
             },
         ),
         ("gate", {"repository": "acme/app", "records": ["results"], "prompt": ""}),
+        ("gate", {"repository": "acme/app", "records": ["results"], "smoke": 1}),
         (
             "gate",
             {"repository": "acme/app", "records": ["results"], "profiles": "json"},
@@ -1575,3 +1577,80 @@ def test_gate_rejects_a_malformed_repository(proof_workspace, repository):
     else:
         assert response["result"]["isError"] is True
         assert "OWNER/NAME" in response["result"]["structuredContent"]["error"]
+
+
+def _strict_utf8(response):
+    """A JSON-RPC message as an SDK reads it: strict UTF-8, no lone surrogate."""
+    return json.dumps(response, ensure_ascii=False).encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda record: record["predicate"].update(url="X\udcffY"),
+        lambda record: next(
+            item["annotations"]["ci"]
+            for item in record["predicate"]["configuration"]
+            if item["name"] == "llm-preflight/evidence"
+        ).update(repository="acme/a\udcff", serverUrl="https://\ud800"),
+        lambda record: next(
+            item["annotations"]["routes"][0]
+            for item in record["predicate"]["configuration"]
+            if item["name"] == "llm-preflight/routes"
+        ).update(provider="mo\udcffck", model="lo\ud800cal"),
+    ],
+    ids=["url", "repository", "route"],
+)
+def test_proof_tools_answer_in_strict_utf8_for_record_strings_that_are_not_text(
+    proof_workspace, edit
+):
+    path = proof_workspace / _record_name(proof_workspace)
+    record = json.loads(path.read_text())
+    edit(record)
+    path.write_text(json.dumps(record))
+
+    verify = _tool(proof_workspace, "verify", {"record": _record_name(proof_workspace)})
+    gate = _tool(
+        proof_workspace,
+        "gate",
+        {"repository": "acme/app", "records": ["results"], "prompt": "json"},
+    )
+
+    for response in (verify, gate):
+        assert response["result"]["isError"] is False
+        _strict_utf8(response)
+    assert verify["result"]["structuredContent"]["integrity"]["ok"] is False
+    assert gate["result"]["structuredContent"]["reason_code"] == "inconsistent_record"
+
+
+def test_gate_tool_takes_the_smoke_selection(proof_workspace):
+    content = _tool(
+        proof_workspace,
+        "gate",
+        {
+            "repository": "acme/app",
+            "records": ["results"],
+            "prompt": "json",
+            "smoke": True,
+        },
+    )["result"]["structuredContent"]
+
+    assert content["reason_code"] == "selection_changed"
+    assert content["selection"]["smoke"] is True
+    assert "this gate requires --smoke --prompt json" in content["why"]
+
+
+def test_gate_tool_refuses_a_repository_that_contradicts_github_repository(
+    proof_workspace, monkeypatch
+):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "fork/app")
+
+    result = _tool(
+        proof_workspace,
+        "gate",
+        {"repository": "acme/app", "records": ["results"], "prompt": "json"},
+    )["result"]
+
+    assert result["isError"] is False
+    assert result["structuredContent"]["reason_code"] == "repository_unknown"
+    assert "GITHUB_REPOSITORY is fork/app" in result["structuredContent"]["why"]

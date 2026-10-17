@@ -492,11 +492,22 @@ def test_documented_gate_passes_on_the_record_the_action_wrote_and_only_then(
         if item["name"] == "llm-preflight/evidence"
     )
     assert record["predicate"]["result"] == "PASSED"
+    # The Action runs one --smoke repetition, and the documented gate says so.
     assert evidence["selection"] == {
         "prompt": None,
         "tests": None,
         "environment": None,
         "migrationCheck": False,
+        "smoke": True,
+        "repetitions": 1,
+    }
+    assert evidence["ci"] == {
+        "repository": "acme/app",
+        "workflow": "LLM preflight record",
+        "runId": "4425592351",
+        "runAttempt": "1",
+        "commit": "d20ace7968ba43c0219f62d71334c1095bab1602",
+        "serverUrl": "https://github.com",
     }
     _download_records(outputs, tmp_path)
 

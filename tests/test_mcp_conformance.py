@@ -261,7 +261,7 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     (tmp_path / "baseline.json").write_text(json.dumps(run["structuredContent"]))
     (tmp_path / "records").mkdir()
     ran = date.fromisoformat(run["structuredContent"]["timestamp"][:10])
-    record = attest_result(
+    record, _ = attest_result(
         tmp_path / "baseline.json",
         config_path=tmp_path / "mock.json",
         environ={},

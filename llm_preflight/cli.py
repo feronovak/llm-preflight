@@ -27,7 +27,6 @@ from .attestation import (
     attest_result,
     default_record_path,
     describe_route,
-    expected_repository,
     gate,
     load_record,
     printable,
@@ -1620,6 +1619,7 @@ def _watch_new_main(argv: list[str]) -> None:
         config["_source_config_path"] = str(args.config.resolve())
         config["_config_dir"] = str(args.config.resolve().parent)
         if smoke:
+            args.smoke = True
             config = apply_smoke_mode(config)
             config.setdefault("save_responses", "failures")
         final_selection = interactive_selection(
@@ -1669,7 +1669,10 @@ def _watch_new_main(argv: list[str]) -> None:
                 config,
                 profile_selector=args.tests,
                 selection={
-                    "tests": canonical_test_selector(args.tests) if args.tests else None
+                    "tests": canonical_test_selector(args.tests)
+                    if args.tests
+                    else None,
+                    "smoke": bool(args.smoke),
                 },
             )
         )
@@ -2263,22 +2266,22 @@ def _attest_main(argv: list[str]) -> None:
     output = args.output or default_record_path(args.result)
     if output.exists() and not args.force:
         raise ValueError(f"{output} already exists; refusing to overwrite it")
-    record = attest_result(
+    record, local_reason = attest_result(
         args.result, config_path=args.config, environ=os.environ, today=today_utc()
     )
     _write_starter_config(output, record, force=args.force)
     if args.json:
-        print(json.dumps({"path": str(output), "record": record}, indent=2))
+        print(
+            json.dumps(
+                {"path": str(output), "record": record, "origin_reason": local_reason},
+                indent=2,
+            )
+        )
         return
-    evidence = next(
-        item["annotations"]
-        for item in record["predicate"]["configuration"]
-        if item["name"] == "llm-preflight/evidence"
-    )
     origin = (
-        f"GitHub Actions {record['predicate']['url']}"
-        if evidence["origin"] == "github-actions"
-        else "local, no CI run identity; the gate does not accept it"
+        f"local — {local_reason}; the gate does not accept it"
+        if local_reason
+        else f"GitHub Actions {record['predicate']['url']}"
     )
     print(f"Saved preflight record to {output}")
     print(f"Result: {record['predicate']['result']} · origin: {origin}")
@@ -2434,7 +2437,7 @@ def _gate_main(argv: list[str]) -> None:
         metavar="OWNER/NAME",
         help=(
             "repository whose records count (default: GITHUB_REPOSITORY in CI); "
-            "without either the gate cannot decide"
+            "without either, or when they differ, the gate cannot decide"
         ),
     )
     selection = parser.add_argument_group(
@@ -2444,6 +2447,9 @@ def _gate_main(argv: list[str]) -> None:
     )
     selection.add_argument(
         "--env", dest="environment_name", help="named config environment"
+    )
+    selection.add_argument(
+        "--smoke", action="store_true", help="one repetition per prompt"
     )
     selection.add_argument("--prompt", dest="prompt_name", help="custom prompt")
     selection.add_argument("--tests", help="comma-separated built-in or custom tests")
@@ -2470,8 +2476,10 @@ def _gate_main(argv: list[str]) -> None:
             "tests": canonical_test_selector(tests) if tests else None,
             "environment": args.environment_name,
             "migrationCheck": args.migration_check,
+            "smoke": args.smoke,
         },
-        repository=expected_repository(args.repository, os.environ),
+        repository=args.repository,
+        environ=os.environ,
     )
     print(
         json.dumps(report, indent=2) if args.json else _format_gate(report),
@@ -3077,6 +3085,7 @@ def main() -> None:
                     else None,
                     "environment": args.environment_name,
                     "migration_check": bool(args.migration_check),
+                    "smoke": bool(args.smoke),
                 },
                 progress=(
                     (

@@ -22,8 +22,11 @@ All notable changes to this project are documented here.
   first line; `verify` text now starts with
   `Verify: integrity …; freshness ….`. `gate` takes `records`, an optional
   `config` (default `benchmark.json`), `max_age_days` and the CI selection
-  (`prompt`, `tests`, `environment`, `migration_check`). Every path, and every
-  record or subject file found through it, must resolve inside the workspace.
+  (`prompt`, `tests`, `environment`, `migration_check`, `smoke`). Every path,
+  and every record or subject file found through it, must resolve inside the
+  workspace. Every record string in their results that is not valid Unicode
+  text, such as a lone surrogate, is shown as its backslash escape, so the
+  Python and TypeScript SDKs always receive strict UTF-8 JSON.
   Both are read-only, idempotent and closed-world, and `attest` stays a CI
   step. The tool descriptions, server instructions, safe-workflow resource
   and plugin skill state that a gate `pass` is not approval of a model, a
@@ -36,17 +39,31 @@ All notable changes to this project are documented here.
   result (`RESULT` with `.preflight.json`; `--output` overrides, `--force`
   replaces). It copies the saved decision (`PASSED`, `WARNED` or `FAILED`)
   and the provenance fingerprints, never upgrades the decision, and refuses a
-  result without schema-version-1 provenance. In GitHub Actions it records the
-  run identity and URL; elsewhere the record says `local`. `verify RECORD`
-  reports integrity and freshness separately, prints its own
-  retirement-snapshot date and states that signatures are checked with
-  `gh attestation verify`, not here. `gate [CONFIG] --records PATH...` decides
-  offline: it passes only on the newest GitHub Actions record that matches the
-  current contract and routes and is `PASSED`, consistent, fresh
-  (`--max-age-days`, default 30) and not superseded. It rejects records tracked
-  by Git, never passes a local record, and exits 0 pass, 1 blocked, 3 when a
-  config or record cannot be read or no repository is known. Text and `--json` carry the same reason
-  code, why and numbered next steps. A record is untrusted input: integrity
+  result without schema-version-1 provenance. Each run writes its GitHub
+  Actions identity into the result (`ci`) when it starts; `attest` copies it,
+  with the run URL, only when it runs in that same run (same repository,
+  server, run and commit). Otherwise the record says `local` and `attest`
+  prints why (`origin_reason` in `--json`), so a later job or a laptop cannot
+  lend a result its own identity. `verify RECORD` reports integrity and
+  freshness separately, prints its own retirement-snapshot date and states
+  that signatures are checked with `gh attestation verify`, not here.
+  `gate [CONFIG] --records PATH...` decides offline: it passes only on the
+  newest GitHub Actions record that matches the current contract, routes and
+  prompts and is `PASSED`, consistent, fresh (`--max-age-days`, default 30)
+  and not superseded. A changed prompt text, including the top-level
+  `prompt`, or a changed request option sent with it (system prompt,
+  temperature, token limit, reasoning effort, provider options, presets or
+  input images) blocks as `prompt_changed`, naming the prompt and what
+  changed. The gate judges a record by its internal consistency only and
+  never reads the config or result file it names, so files planted in a pull
+  request cannot discard a newer failure; `verify` and the card still compare
+  them. A record that fails its integrity check makes the gate unable to
+  decide (exit 3, `record_error`) when it might be the newest. It rejects
+  records tracked by Git, never passes a local record, refuses a record file
+  larger than 1 MiB or nested more than 64 levels deep, and exits 0 pass, 1
+  blocked, 3 when a config or record cannot be read or no repository is
+  known. Text and `--json` carry the same reason code, why and numbered next
+  steps. A record is untrusted input: integrity
   requires every route's provider, model and observed model to be a
   non-empty, printable string of at most 256 characters, and text output
   shows any control character in a record string or file name, a newline or
@@ -63,16 +80,19 @@ All notable changes to this project are documented here.
   into each route as `observedModel`, `verify` prints it on a `Route:` line
   and in `routes`, and the gate names it when it passes.
 - Gate selection parity. Each new result records its run `selection`
-  (`--prompt`, `--tests` or `--profiles`, `--env`, `--migration-check`, by
-  name only) and `attest` copies it into the record. `gate` accepts the same
-  flags and fingerprints the current config as a run under them would, so a
-  record of a `--prompt`, `--env` or `--migration-check` run no longer reads
-  as `contract_changed` or `routes_changed`. A record that ran a different
-  selection, or records none, is blocked as `selection_changed`, naming both
-  selections: the gate sets the bar, so a narrower run such as one cheap
-  `--tests` choice cannot pass a gate that requires a default run. An env
-  file only supplies credentials; neither its path nor its contents enter a
-  result or a record.
+  (`--prompt`, `--tests` or `--profiles`, `--env`, `--migration-check`,
+  `--smoke`, by name only, and `repetitions`, how many times it sent each
+  prompt) and `attest` copies it into the record. `gate` accepts the same
+  flags and fingerprints the current config, its test profiles and its
+  prompts as a run under them would, so a record of a `--prompt`, `--env` or
+  `--migration-check` run no longer reads as `contract_changed` or
+  `routes_changed`. A record that ran a different selection, fewer or more
+  repetitions per prompt than the config now asks for, or records none, is
+  blocked as `selection_changed`, naming both: only a record that ran exactly
+  the gate's selection counts, so a narrower run such as one cheap `--tests`
+  choice or a `--smoke` run cannot pass a gate that requires a default run.
+  An env file only supplies credentials; neither its path nor its contents
+  enter a result or a record.
 - The gate counts only records from this repository. It takes the expected
   repository from `--repository OWNER/NAME`, else `GITHUB_REPOSITORY` on
   `GITHUB_SERVER_URL` (default `https://github.com`), and compares owner,
@@ -80,7 +100,8 @@ All notable changes to this project are documented here.
   another repository or server is blocked as `foreign_record`, so a borrowed
   pass with the same fingerprints no longer counts. Without an expected
   repository the gate cannot decide (exit 3, `repository_unknown`) and names
-  the `--repository` flag. `verify` shows the record's repository, and its
+  the `--repository` flag; it cannot decide either when `--repository` and
+  `GITHUB_REPOSITORY` name different repositories. `verify` shows the record's repository, and its
   JSON adds `repository` and `server_url`.
 - `report RESULT --format svg [--record RECORD]` renders a preflight card: a
   self-contained, deterministic SVG with no external fonts, scripts or
@@ -110,9 +131,12 @@ All notable changes to this project are documented here.
   also signs the record with `actions/attest`, pinned by commit SHA, using the
   record's test-result v0.1 predicate; the calling job needs `id-token: write`
   and `attestations: write`. Either input without its prerequisite stops the
-  job before anything is installed. The paid smoke is a default run, so its
-  record carries the default selection and this repository's identity, and
-  the documented pull-request gate passes on it without selection flags.
+  job before anything is installed. The paid smoke is a default `--smoke`
+  run, so its record carries that selection and the identity of the run that
+  made it, and the documented pull-request gate passes on it with `--smoke`.
+  The documented gate verifies a signed record with `--signer-workflow` and
+  `--source-ref`, and the guides state that the gate is only as trustworthy
+  as a required check the pull request cannot edit.
 
 ### Changed
 
@@ -126,10 +150,12 @@ All notable changes to this project are documented here.
   both a top-level `prompt` and a `prompts` list lists only the top-level
   prompt. A profile run (`profiles`, `--tests`, `--profiles` or
   `--migration-check`) lists every case of the selected profiles, built-in
-  ones included, and not the top-level prompt. `evidence_sha256` therefore
-  differs from 2.21.x for these three run shapes; a run without profiles
-  whose configuration has only a top-level prompt keeps identical provenance
-  and hashes. Baseline
+  ones included, and not the top-level prompt. Each entry adds
+  `request_sha256`, a canonical hash of the request options sent with that
+  prompt: the run's request merged with a test's own request and expanded
+  presets, and its system prompt, with runtime-only keys dropped, secret-like
+  values redacted and input images counted by content digest, not path.
+  `evidence_sha256` therefore differs from 2.21.x for every run. Baseline
   comparison is unaffected: it uses the contract hash and validator version,
   which do not change.
 - `--audit-source` text output now starts with the decision and its counts,

@@ -206,7 +206,7 @@ def test_result_has_secret_safe_provenance_fingerprints_for_contract_routes_and_
     provenance = result["provenance"]
 
     assert provenance["schema_version"] == 1
-    assert provenance["prompts"] == [
+    assert _listed(provenance["prompts"]) == [
         {
             "name": "config-prompt",
             "sha256": hashlib.sha256(b"Reply with ok.").hexdigest(),
@@ -519,7 +519,7 @@ def test_prompt_selection_lists_the_run_prompt_once_in_provenance():
     result = run_benchmark(select_custom_prompt(config, "p1"))
 
     assert result["prompt_name"] == "p1"
-    assert result["provenance"]["prompts"] == [
+    assert _listed(result["provenance"]["prompts"]) == [
         {
             "name": "p1",
             "sha256": result["prompt_sha256"],
@@ -534,6 +534,14 @@ def _prompt_entry(name, text):
         "sha256": hashlib.sha256(text.encode()).hexdigest(),
         "chars": len(text),
     }
+
+
+def _listed(prompts):
+    """Which prompts provenance lists; the request fingerprints are tested apart."""
+    return [
+        {key: value for key, value in entry.items() if key != "request_sha256"}
+        for entry in prompts
+    ]
 
 
 def _provenance_shapes():
@@ -560,10 +568,10 @@ CONTRACT_SHA256 = {
         "9fe974807587de00ee73269859d16bee30cb513975792eb9555bec4e247e97dc"
     ),
 }
-# Pinned from llm-preflight 2.21.2. A run whose config has only a top-level
-# prompt listed exactly that prompt, so its evidence hash must not move.
+# Pinned in 2.22.0, when each listed prompt gained the fingerprint of the
+# request sent with it. 2.21.2 recorded f4c54b5c… for the same run.
 TOP_LEVEL_ONLY_EVIDENCE_SHA256 = (
-    "f4c54b5cd7e4f4aaefcfb03974b356f7ff00ba5902f3c2ec44f8b6a720f845be"
+    "d48fb78356317bb908bfb3e474a0b45c0bd1a88bea3d1f430f68526b03ce3d3f"
 )
 # Pinned from llm-preflight 2.21.2, which also listed the configured prompts
 # that did not run.
@@ -595,7 +603,9 @@ def test_provenance_of_a_top_level_prompt_run_omits_the_configured_prompts():
 
     result = run_benchmark(config)
 
-    assert result["provenance"]["prompts"] == [_prompt_entry("config-prompt", "solo")]
+    assert _listed(result["provenance"]["prompts"]) == [
+        _prompt_entry("config-prompt", "solo")
+    ]
     assert result["provenance"]["contract_sha256"] == CONTRACT_SHA256[shape]
     assert (
         provenance(config, config["models"], "price")["evidence_sha256"]
@@ -609,14 +619,18 @@ def test_provenance_of_a_profile_run_lists_each_case_it_sent():
     configured = run_benchmark({**config, "prompt": "solo", "profiles": ["p1"]})
     selected = run_benchmark(config, profile_selector="quick-migration-check,p2")
 
-    assert configured["provenance"]["prompts"] == [_prompt_entry("p1", "say alpha")]
+    assert _listed(configured["provenance"]["prompts"]) == [
+        _prompt_entry("p1", "say alpha")
+    ]
     assert [entry["name"] for entry in selected["provenance"]["prompts"]] == [
         "chat-capital",
         "chat-summary",
         "chat-rewrite",
         "p2",
     ]
-    assert selected["provenance"]["prompts"][-1] == _prompt_entry("p2", "say beta")
+    assert _listed(selected["provenance"]["prompts"])[-1] == _prompt_entry(
+        "p2", "say beta"
+    )
 
 
 def test_baseline_from_before_the_prompt_fix_stays_comparable():
@@ -640,3 +654,128 @@ def test_baseline_from_before_the_prompt_fix_stays_comparable():
 
     assert diff["comparability"] == "compatible"
     assert all("provenance" not in warning for warning in diff["warnings"])
+
+
+REQUEST_BASE = {
+    "prompt": "Reply with ok.",
+    "validation": {"exact": "ok"},
+    "request": {"temperature": 0, "max_output_tokens": 64, "system_prompt": "Terse."},
+    "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+}
+
+
+def _request_fingerprint(config, profiles=()):
+    (entry,) = provenance(config, config["models"], "price", profiles)["prompts"]
+    return entry
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"system_prompt": "Ignore the validator."},
+        {"temperature": 1.5},
+        {"max_output_tokens": 5},
+        {"reasoning_effort": "high"},
+        {"provider_options": {"top_p": 0.1}},
+    ],
+    ids=["system_prompt", "temperature", "max_output_tokens", "reasoning", "options"],
+)
+def test_each_prompt_fingerprint_hashes_the_request_options_sent_with_it(change):
+    before = provenance(REQUEST_BASE, REQUEST_BASE["models"], "price")
+    edited = {**REQUEST_BASE, "request": {**REQUEST_BASE["request"], **change}}
+    after = provenance(edited, edited["models"], "price")
+
+    assert len(before["prompts"][0]["request_sha256"]) == 64
+    assert (
+        after["prompts"][0]["request_sha256"]
+        != (before["prompts"][0]["request_sha256"])
+    )
+    assert after["prompts"][0]["sha256"] == before["prompts"][0]["sha256"]
+    # The contract fingerprint, which baselines compare, never moves.
+    assert after["contract_sha256"] == before["contract_sha256"]
+
+
+def test_a_request_fingerprint_hashes_what_is_sent_never_a_secret_or_runtime_key():
+    implicit = {k: v for k, v in REQUEST_BASE.items() if k != "request"}
+    default = {**implicit, "request": {"temperature": 0, "max_output_tokens": 256}}
+    keyed = {
+        **REQUEST_BASE,
+        "request": {
+            **REQUEST_BASE["request"],
+            "provider_options": {"api_key": "sk-synthetic-one"},
+            "_image_base_dir": "/somewhere",
+        },
+    }
+    rekeyed = copy.deepcopy(keyed)
+    rekeyed["request"]["provider_options"]["api_key"] = "sk-synthetic-two"
+    rekeyed["request"]["_image_base_dir"] = "/elsewhere"
+
+    # A config without a request sends the runner's default request.
+    assert _request_fingerprint(implicit) == _request_fingerprint(default)
+    assert _request_fingerprint(implicit) != _request_fingerprint(REQUEST_BASE)
+    assert _request_fingerprint(keyed) == _request_fingerprint(rekeyed)
+    assert "sk-synthetic" not in str(provenance(keyed, keyed["models"], "price"))
+
+
+def test_profile_prompt_fingerprints_merge_profile_request_presets_and_system_prompt():
+    from llm_preflight.runner import select_test_profiles
+
+    config = {
+        **REQUEST_BASE,
+        "prompts": [
+            {
+                "name": "json",
+                "prompt": "Return JSON.",
+                "validation": {"json_object": True},
+                "request": {"max_output_tokens": 32},
+                "system_prompt": "S1",
+                "presets": ["json"],
+            }
+        ],
+    }
+
+    def fingerprint(edit):
+        edited = copy.deepcopy(config)
+        edit(edited)
+        profiles = select_test_profiles(edited, "json")
+        return _request_fingerprint(edited, profiles)["request_sha256"]
+
+    unchanged = fingerprint(lambda c: None)
+    for edit in (
+        lambda c: c["prompts"][0].update(system_prompt="S2"),
+        lambda c: c["prompts"][0].update(presets=["no-reasoning"]),
+        lambda c: c["prompts"][0]["request"].update(max_output_tokens=8),
+        lambda c: c["request"].update(temperature=1),
+    ):
+        assert fingerprint(edit) != unchanged
+
+
+def _png_bytes(marker):
+    return (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big") * 2
+        + b"\x08\x02\x00\x00\x00"
+        + marker
+    )
+
+
+def test_image_inputs_are_fingerprinted_by_content_never_by_path(tmp_path):
+    import json
+
+    def fingerprint(name, marker):
+        directory = tmp_path / name
+        directory.mkdir()
+        (directory / f"{name}.png").write_bytes(_png_bytes(marker))
+        config = {
+            **REQUEST_BASE,
+            "request": {
+                "input_images": [{"path": f"{name}.png", "mime_type": "image/png"}]
+            },
+        }
+        path = directory / "benchmark.json"
+        path.write_text(json.dumps(config))
+        loaded = load_config(path)
+        return _request_fingerprint(loaded)["request_sha256"]
+
+    assert fingerprint("first", b"a") == fingerprint("moved", b"a")
+    assert fingerprint("other", b"b") != fingerprint("again", b"a")

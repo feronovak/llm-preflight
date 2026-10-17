@@ -932,6 +932,29 @@ def test_proof_of_preflight_guide_explains_the_record_commands_and_reason_codes(
     assert "GitHub Enterprise Cloud" in guide
 
 
+def test_mcp_gate_schema_names_every_gate_reason_code():
+    from llm_preflight import mcp
+
+    tools = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, ROOT
+    )["result"]["tools"]
+    gate = next(tool for tool in tools if tool["name"] == "gate")
+    schema = gate["outputSchema"]["oneOf"][1]["properties"]
+    codes = _gate_reason_codes()
+
+    assert set(schema["reason_code"]["enum"]) == set(codes)
+    verdicts = schema["records"]["items"]["properties"]["verdict"]["enum"]
+    assert set(verdicts) == {
+        *(
+            code
+            for code, decision in codes.items()
+            if decision == "blocked" and code != "no_record"
+        ),
+        "pass",
+        "record_error",
+    }
+
+
 def test_proof_of_preflight_pages_avoid_the_forbidden_claims():
     for page in PROOF_OF_PREFLIGHT_PAGES:
         claim = FORBIDDEN_CLAIMS.search((ROOT / page).read_text())
@@ -974,7 +997,7 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     assert "run-id: ${{ steps.source.outputs.run-id }}" in gate
     assert "github-token: ${{ github.token }}" in gate
     assert 'python -m pip install "llm-preflight==2.22.0"' in gate
-    assert "llm-preflight gate benchmark.json --records records" in gate
+    assert "llm-preflight gate benchmark.json --smoke --records records" in gate
     assert "gh attestation verify" in gate
     assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
     assert 'attest: "true"' in record and 'sign: "true"' in record

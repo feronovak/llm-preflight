@@ -31,7 +31,8 @@ create it.
    its blocking warnings.
 
 To check proof of preflight, use `verify` on a record CI attested, or `gate`
-with the config, the downloaded records and the selection CI runs. Report the
+with the config, the downloaded records and the selection CI runs, `smoke`
+included. Report the
 gate's `decision`, `why` and next steps verbatim. A gate `pass` is not
 approval: it shows that a fresh passing CI record matches the contract, never
 that a model, a budget, a merge or paid work is approved. Never attest a

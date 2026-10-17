@@ -78,6 +78,7 @@ from .runner import (
     model_failed,
     profile_request_breakdown,
     profile_selector_text,
+    redact_result,
     result_failed,
     run_benchmark,
     save_result,
@@ -1664,7 +1665,7 @@ def _watch_new_main(argv: list[str]) -> None:
     if not args.interactive:
         check_budget(_budget_config(config, args.tests))
     with benchmark_run_lock(args.output_dir):
-        result = redact_secrets(
+        result = redact_result(
             run_benchmark(
                 config,
                 profile_selector=args.tests,
@@ -3103,7 +3104,7 @@ def main() -> None:
                     else None
                 ),
             )
-        result = redact_secrets(result)
+        result = redact_result(result)
         if not args.no_save:
             path = save_result(result, args.output_dir)
     except (KeyboardInterrupt, EOFError):

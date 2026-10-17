@@ -9,13 +9,14 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from .client import _supports_temperature
 from .presets import expand_presets
 from .profiles import (
     OUTPUT_VALIDATOR_VERSION,
     evaluate_consumer_response,
     evaluate_response,
 )
-from .redaction import redact_secrets, without_private_fields
+from .redaction import redact_secrets, without_credentials, without_private_fields
 
 # The request a run sends with its prompt when the config names none.
 DEFAULT_REQUEST: dict[str, Any] = {"temperature": 0, "max_output_tokens": 256}
@@ -417,7 +418,12 @@ def provenance(
     pricing_fingerprint: str,
     profiles: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Return non-secret, stable evidence fingerprints for a completed run."""
+    """Return non-secret, stable evidence fingerprints for a completed run.
+
+    A value kept only as a digest is hashed as written, credential-keyed
+    values masked; a string kept as text, such as a prompt name, is redacted
+    before it is hashed, so the evidence hash covers exactly what is stored.
+    """
     prompts = _prompt_fingerprints(config, profiles)
     clean_config = without_private_fields(config)
     contract = {
@@ -436,15 +442,20 @@ def provenance(
         "tools": config.get("tools", []),
         "profiles": config.get("profiles", []),
     }
+    # Each route setting the client reads to build a request, as it reads it:
+    # temperature support as sent, whether set directly or by capabilities.
     routes = [
         {
             "provider": model.get("provider", "openai_compatible"),
             "model": model.get("model"),
+            "adapter": model.get("adapter"),
             "base_url": _safe_base_url(model.get("base_url")),
             "api_version": model.get("api_version"),
             "max_tokens_parameter": model.get("max_tokens_parameter"),
-            "supports_temperature": model.get("supports_temperature"),
-            "header_names": sorted(str(key) for key in (model.get("headers") or {})),
+            "supports_temperature": _supports_temperature(model),
+            "headers": model.get("headers") or {},
+            # The mock provider answers with its configured response.
+            "response": model.get("response"),
         }
         for model in models
     ]
@@ -455,9 +466,9 @@ def provenance(
     result = {
         "schema_version": 1,
         "validator_version": OUTPUT_VALIDATOR_VERSION,
-        "config_sha256": _fingerprint(redact_secrets(clean_config)),
-        "contract_sha256": _fingerprint(redact_secrets(contract)),
-        "routes_sha256": _fingerprint(redact_secrets(routes)),
+        "config_sha256": _fingerprint(without_credentials(clean_config)),
+        "contract_sha256": _fingerprint(without_credentials(contract)),
+        "routes_sha256": _fingerprint(without_credentials(routes)),
         "pricing_sha256": pricing_fingerprint,
         "prompts": prompts,
         "limits": limits,
@@ -503,7 +514,7 @@ def _prompt_fingerprints(
         prompts = [(name, config["prompt"], request)]
     entries = [
         {
-            "name": name,
+            "name": redact_secrets(name),
             "sha256": hashlib.sha256(text.encode()).hexdigest(),
             "chars": len(text),
             "request_sha256": _request_fingerprint(options),
@@ -518,8 +529,9 @@ def _prompt_fingerprints(
 
 
 def _request_fingerprint(options: dict[str, Any]) -> str:
-    """Hash the request options as sent: runtime-only keys dropped, secret-like
-    values redacted, and each input image by its content digest, not its path."""
+    """Hash the request options as sent: runtime-only keys dropped,
+    credential-keyed values masked, and each input image by its content
+    digest, not its path."""
     request = without_private_fields(options)
     images = request.get("input_images")
     if isinstance(images, list):
@@ -529,7 +541,7 @@ def _request_fingerprint(options: dict[str, Any]) -> str:
             else image
             for image in images
         ]
-    return _fingerprint(redact_secrets(request))
+    return _fingerprint(without_credentials(request))
 
 
 def _safe_base_url(value: Any) -> str | None:

@@ -81,6 +81,39 @@ def redact_secrets(value: Any) -> Any:
     return value
 
 
+def without_credentials(value: Any) -> Any:
+    """`value` with each credential-keyed value masked, for a fingerprint.
+
+    Keys are matched as by `redact_secrets`; under `headers`, only a
+    credential header is masked, so a behaviour header such as
+    `anthropic-beta` still counts. Text is never matched: a digest of it
+    leaks nothing, and texts that differ only in a secret-like word, such as
+    `sk-SK` and `sk-IGNORE`, must hash apart.
+    """
+    if isinstance(value, dict):
+        masked: dict[Any, Any] = {}
+        for key, item in value.items():
+            if isinstance(key, str) and _is_sensitive_key(key):
+                masked[key] = REDACTED
+            elif (
+                isinstance(key, str)
+                and key.casefold() == "headers"
+                and isinstance(item, dict)
+            ):
+                masked[key] = {
+                    name: REDACTED
+                    if isinstance(name, str) and _is_sensitive_key(name)
+                    else header
+                    for name, header in item.items()
+                }
+            else:
+                masked[key] = without_credentials(item)
+        return masked
+    if isinstance(value, list | tuple):
+        return [without_credentials(item) for item in value]
+    return value
+
+
 def without_private_fields(value: Any) -> Any:
     """Remove runtime-only values before retaining configuration evidence."""
     if isinstance(value, dict):

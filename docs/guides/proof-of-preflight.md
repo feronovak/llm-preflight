@@ -174,23 +174,43 @@ configuration, and it is only as strong as the place it runs:
 - Keep the record workflow on protected branches and behind an environment
   with required reviewers. A record is only as trustworthy as the workflow
   that produced it.
-- Where records are signed, verify them before the gate with
+- Accept records from `main` only. A record made on a pull request's own
+  branch can come from a record workflow that branch edited and later
+  restored. Where records are signed, verify them before the gate with
   `gh attestation verify RECORD --repo OWNER/REPO --signer-workflow
-  OWNER/REPO/.github/workflows/llm-preflight-record.yml`, and add
-  `--source-ref refs/heads/main` for a record from `main`, so only that
-  workflow on that branch can have produced it.
+  OWNER/REPO/.github/workflows/llm-preflight-record.yml --source-ref
+  refs/heads/main`, so only that workflow, run from `main`, can have
+  produced them.
 
-The gate compares everything a run sends and every validator of the
-configuration: the contract, the routes, each prompt with its request options,
-the selection and the repetitions per prompt. It leaves out settings that
-change neither what is sent nor how answers are judged: warmups, which never
-count toward the decision, `concurrency`, `stop_on`, `save_responses`, request
-and cost limits, and prices. Three settings that can change an outcome are
-left out on purpose. `timeout_seconds` changes which slow requests fail, not
-what they ask. A model's `headers` count by name only, because their values
-can carry credentials. The validators of the built-in test packs ship with
-llm-preflight, so a record attested by another version may have judged those
-tests by other rules; only their prompts and request options are compared.
+The gate compares everything a run sends, except credentials, and every
+validator of the configuration: the contract, the routes, each prompt with its
+request options, the selection and the repetitions per prompt. A route counts
+each setting the client reads to build its requests: provider, model,
+`adapter`, base URL, `api_version`, `max_tokens_parameter`, whether a
+temperature is sent (as `supports_temperature`, `capabilities.temperature` and
+the built-in model list decide it), each header with its value, and a mock
+route's `response`. Fingerprints hash text as written, so prompts that differ
+only in a word that looks like a key, such as `sk-SK`, never collide. A
+digest leaks nothing, so only values under credential names are left out of
+it: `api_key`, `apikey`, `Authorization`, names ending in `api-key` or
+`api_key`, and names with a `token`, `secret` or `password` word, such as
+`x-auth-token`. A credential in a header with another name counts, and
+replacing it blocks until the next record.
+
+It leaves out settings that change neither what is sent nor how answers are
+judged: warmups, which never count toward the decision, `concurrency`,
+`stop_on`, `save_responses`, request and cost limits, prices, and a mock
+route's simulated latency. Some settings that can change an outcome are left
+out on purpose:
+
+- `timeout_seconds` changes which slow requests fail, not what they ask.
+- `api_key_env` and the credential itself choose the account a route uses; a
+  record makes no claim about other accounts.
+- A base URL's query string and fragment are dropped, because a query string
+  can carry a key.
+- The validators of the built-in test packs ship with llm-preflight, so a
+  record attested by another version may have judged those tests by other
+  rules; only their prompts and request options are compared.
 
 ## Private and public repositories
 
@@ -200,10 +220,10 @@ Every repository can use the unsigned flow. The
 with its card, as the `llm-preflight-record` artifact. The result itself,
 which holds the prompts, is not uploaded. The pull-request workflow in
 [CI and JSON output](../automation/ci.md#proof-of-preflight-gate) downloads
-the newest record from that workflow's runs and runs the gate. The gate accepts
-the record because it is not committed and carries the identity of the CI run
-that made its result; it does not check who started that run, so keep the
-paid workflow on protected branches and behind a reviewed environment.
+the records of that workflow's recent runs on `main` and runs the gate. The
+gate accepts a record because it is not committed and carries the identity of
+the CI run that made its result; it does not check who started that run, so
+keep the paid workflow behind a reviewed environment.
 
 Public repositories, and private or internal ones on GitHub Enterprise Cloud,
 can also sign the record. `sign: "true"` passes it to `actions/attest`, which
@@ -236,10 +256,11 @@ Read the `Why:` line, then follow the numbered `Next:` steps; they never
 include a paid request without a dry-run first. The common cases:
 
 1. `contract_changed`, `routes_changed` or `prompt_changed`: the pull request
-   changed what the record checked, which is the gate working. Review the plan with
-   `llm-preflight benchmark.json --dry-run`, approve it, then run the record
-   workflow on the pull request's branch; the gate workflow looks for that
-   branch's record before `main`'s.
+   changed what the record checked, which is the gate working. Review the
+   pull request's configuration, its routes and base URLs above all, and the
+   plan with `llm-preflight benchmark.json --dry-run`. Then start the record
+   workflow from `main` with the pull request's head commit as `commit`; that
+   run sends the provider credentials wherever the configuration points.
 2. `stale` or `superseded`: run the bounded check again. For a retired route,
    move to the replacement the dry-run names first.
 3. `inconclusive_record` or `failed_record`: run `llm-preflight verify` on the

@@ -144,9 +144,8 @@ From 2.22.0, a required check can block a pull request unless a fresh,
 passing CI record matches its contract, routes and prompts. The
 [record workflow](github-action.md#proof-of-preflight) attests each approved
 paid smoke and uploads the record as the `llm-preflight-record` artifact. This
-workflow downloads the newest record, from the pull request's branch if a
-maintainer ran the record workflow there and from `main` otherwise, then runs
-the gate offline:
+workflow downloads the records of that workflow's recent runs on `main`, and
+only those, then runs the gate offline:
 
 ```yaml
 name: LLM preflight gate
@@ -165,44 +164,37 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m pip install "llm-preflight==2.22.0"
-      - name: Find the newest record run
-        id: source
+      # Only runs on main count: a push to main, or a maintainer's dispatch
+      # from main. A run on any other branch, or for a pull request, is
+      # never downloaded, whatever its branch is called.
+      - name: Download the records of recent runs on main
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.head_ref }}
         run: |
-          for branch in "$HEAD_REF" main; do
-            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" \
-              --workflow llm-preflight-record.yml --branch "$branch" \
-              --status completed --limit 1 --json databaseId \
-              --jq '.[0].databaseId // empty')"
-            if [ -n "$run_id" ]; then
-              echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
-              echo "branch=$branch" >> "$GITHUB_OUTPUT"
-              break
+          mkdir -p records
+          for event in push workflow_dispatch; do
+            gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow llm-preflight-record.yml --branch main --event "$event" \
+              --status completed --limit 20 --json databaseId --jq '.[].databaseId'
+          done | while read -r run_id; do
+            artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+              --jq '[.artifacts[] | select(.name == "llm-preflight-record" and (.expired | not))] | length')"
+            if [ "$artifacts" != 0 ]; then
+              gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+                --name llm-preflight-record --dir "records/$run_id"
             fi
           done
-      - name: Download the record
-        if: steps.source.outputs.run-id != ''
-        continue-on-error: true  # a run without a record leaves the gate no_record
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: llm-preflight-record
-          path: records
-          run-id: ${{ steps.source.outputs.run-id }}
-          github-token: ${{ github.token }}
       # Optional, for signed records (public repositories, or GitHub Enterprise Cloud).
-      # Only the record workflow, on the branch the run came from, signs it.
-      - name: Verify the record's signature
+      # Only the record workflow, run from main, signs a record this accepts.
+      - name: Verify each record's signature
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.source.outputs.branch }}
         run: |
-          for record in records/*.preflight.json; do
+          for record in records/*/*.preflight.json; do
             [ -e "$record" ] || continue
             gh attestation verify "$record" --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/llm-preflight-record.yml" \
-              --source-ref "refs/heads/$BRANCH" \
+              --source-ref refs/heads/main \
               --predicate-type https://in-toto.io/attestation/test-result/v0.1
           done
       - name: Gate
@@ -218,24 +210,41 @@ The gate step fails the check on exit 1 (blocked) and exit 3 (the gate cannot
 decide); its output starts with the reason, then numbered next steps. The gate
 fingerprints `benchmark.json` from the pull request's checkout, so a record
 for the previous contract, routes or prompts blocks with `contract_changed`,
-`routes_changed` or `prompt_changed`. It never reads the config or result
-file a record names, because the pull request controls the checkout. It
-counts only records from `GITHUB_REPOSITORY`, which Actions sets in every
-job; a record from another repository blocks with `foreign_record`. Give the
-gate the same selection flags as the run that wrote the record (`--prompt`,
-`--tests`, `--env`, `--migration-check`, `--smoke`): the Action runs a
-default `--smoke`, so this gate takes `--smoke`, and a workflow that runs
+`routes_changed` or `prompt_changed`. It decides on the newest record that
+matches, so records of other pull requests' contracts among the downloads
+never count. It never compares the config or result file a record names,
+because the pull request controls the checkout. It counts only records from
+`GITHUB_REPOSITORY`, which Actions sets in every job; a record from another
+repository blocks with `foreign_record`. Give the gate the same selection
+flags as the run that wrote the record (`--prompt`, `--tests`, `--env`,
+`--migration-check`, `--smoke`): the Action runs a default `--smoke`, so this
+gate takes `--smoke`, and a workflow that runs
 `llm-preflight benchmark.json --smoke --env staging` and attests its result
 needs `--smoke --env staging` here, or the gate blocks with
 `selection_changed`.
+
+A pull request that changes the contract gets its record from `main`: a
+maintainer reviews its diff, then starts the record workflow from `main` with
+the pull request's head commit as the `commit` input (Actions → LLM
+preflight record → Run workflow, or
+`gh workflow run llm-preflight-record.yml --ref main -f commit=SHA`). That run
+sends the provider credentials to whatever the pull request's configuration
+names, so review its routes first: a changed `base_url` sends the key to
+another host, and a changed `api_key_env` can send any variable of the job,
+such as the token the signing step uses. `llm-preflight benchmark.json
+--doctor` checks for free that every route resolves, but it cannot tell
+whether a host is yours: the diff is the review. Records
+from a pull request's own branch never count: anyone who can push a branch
+could otherwise edit the record workflow in one commit, record, and restore
+it in the next.
 
 The gate is only as trustworthy as where it runs. Make this workflow a
 required status check that the pull request cannot edit: require it with a
 repository ruleset or a required workflow, or require code-owner review for
 `.github/workflows/`. A record is only as trustworthy as the workflow that
 produced it, so keep the record workflow behind an environment with required
-reviewers; `--signer-workflow` and `--source-ref` make the signature step
-accept only that workflow on the branch the run came from. The gate does not
+reviewers; `--signer-workflow` and `--source-ref refs/heads/main` make the
+signature step accept only that workflow, run from `main`. The gate does not
 stop a maintainer who can edit these workflows or approve their own paid run.
 Remove the signature step on a private repository without GitHub Enterprise
 Cloud. The [proof-of-preflight guide](../guides/proof-of-preflight.md) lists

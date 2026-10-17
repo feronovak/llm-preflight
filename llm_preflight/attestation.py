@@ -870,7 +870,9 @@ def _evaluate(
             "does not record its selection"
             if entry["selection"] is None
             else "ran a different selection",
-            entry["selection"] != required,
+            # A result stores a secret-like name, such as a prompt called
+            # sk-greeting, redacted, as provenance does; compare that form.
+            entry["selection"] != redact_secrets(required),
         ),
         (
             "contract_changed",

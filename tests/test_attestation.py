@@ -1331,6 +1331,7 @@ def test_gate_refuses_the_selections_a_run_refuses(
         {**DEFAULT_SELECTION, "prompt": "a\x1b[31m"},
         {**DEFAULT_SELECTION, "environment": "staging\n"},
         {**DEFAULT_SELECTION, "extra": None},
+        {**DEFAULT_SELECTION, "smoke": True, "repetitions": 5},
     ],
 )
 def test_verify_rejects_a_malformed_selection(monkeypatch, capsys, tmp_path, selection):
@@ -1853,6 +1854,59 @@ def test_a_run_records_the_github_actions_identity_it_ran_in(
     assert json.loads(local.read_text())["ci"] is None
 
 
+def test_a_repository_name_that_looks_like_a_key_keeps_its_ci_identity(
+    monkeypatch, capsys, tmp_path
+):
+    """`sk-…` in a repository name is a name: the result keeps it verbatim, so
+    attest names the run and the gate of that repository decides on it."""
+    monkeypatch.chdir(tmp_path)
+    _config(tmp_path, SELECTION_CONFIG)
+    repository = "ringier/aktuality-sk-web"
+    with monkeypatch.context() as scoped:
+        for variable, value in {**GITHUB, "GITHUB_REPOSITORY": repository}.items():
+            scoped.setenv(variable, value)
+        _run(monkeypatch, capsys, "benchmark.json", "--output-dir", "results")
+        (result,) = (tmp_path / "results").glob("*-selection-*.json")
+        code, out, err = _run(monkeypatch, capsys, "attest", result, "--json")
+    ran = date.fromisoformat(json.loads(result.read_text())["timestamp"][:10])
+    monkeypatch.setattr(cli, "today_utc", lambda: ran)
+
+    assert json.loads(result.read_text())["ci"]["repository"] == repository
+    assert (code, json.loads(out)["origin_reason"]) == (0, None), err
+    code, report = _gate(
+        monkeypatch,
+        capsys,
+        "--records",
+        "results",
+        repository=("--repository", repository),
+    )
+    # The mock answers {} to "Reply with ok.", so the run failed; what
+    # matters is that the record counts.
+    assert (code, report["reason_code"]) == (1, "failed_record")
+    assert report["records"][0]["repository"] == repository
+
+
+@pytest.mark.parametrize("flag", ["--prompt", "--tests"])
+def test_a_prompt_named_like_a_key_attests_and_matches_its_gate(
+    monkeypatch, capsys, tmp_path, flag
+):
+    _config(
+        tmp_path,
+        {
+            **SELECTION_CONFIG,
+            "prompts": [{**SELECTION_CONFIG["prompts"][0], "name": "sk-greeting"}],
+        },
+    )
+
+    record = _selected_run(monkeypatch, capsys, tmp_path, flag, "sk-greeting")
+    code, report = _gate(
+        monkeypatch, capsys, "--records", "results", flag, "sk-greeting"
+    )
+
+    assert record.exists()
+    assert (code, report["reason_code"]) == (1, "inconclusive_record")
+
+
 @pytest.mark.parametrize(
     ("recorded", "environment", "reason"),
     [
@@ -2002,6 +2056,18 @@ def test_gate_cannot_decide_on_a_record_nested_too_deeply_or_too_large(
     assert verify_code == 2
     assert f"error: {reason}" in err or reason in err
     assert "Traceback" not in err
+
+
+@pytest.mark.parametrize(("levels", "refused"), [(64, False), (65, True)])
+def test_a_record_may_nest_64_levels_deep_and_no_deeper(tmp_path, levels, refused):
+    path = tmp_path / "nested.preflight.json"
+    path.write_text("[" * levels + "]" * levels)
+
+    if refused:
+        with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+            attestation.load_record(path)
+    else:
+        assert attestation.load_record(path) is not None
 
 
 # sampling depth

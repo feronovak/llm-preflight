@@ -27,7 +27,7 @@ from .contracts import (
 )
 from .decision import build_decision, legacy_cost_evidence
 from .eligibility import IncompatibleCatalogTypeError, assert_text_smoke_models
-from .github_actions import ci_identity
+from .github_actions import ci_identity, valid_ci_identity
 from .images import prepare_image_inputs
 from .metrics import summarize
 from .presets import preset_warnings
@@ -1096,11 +1096,24 @@ def run_benchmark(
     if config.get("_source_config_path"):
         result["source_config_path"] = config["_source_config_path"]
     result["decision"] = build_decision(result)
-    return redact_secrets(result)
+    return redact_result(result)
+
+
+def redact_result(result: dict[str, Any]) -> dict[str, Any]:
+    """`result` with secret-like values redacted, except its run identity.
+
+    A well-formed `ci` holds names and numbers that github_actions checks
+    field by field, never a token; redacting it would turn a repository such
+    as acme/sk-app into one no record can name.
+    """
+    redacted = redact_secrets(result)
+    if valid_ci_identity(result.get("ci")):
+        redacted["ci"] = dict(result["ci"])
+    return redacted
 
 
 def save_result(result: dict[str, Any], output_dir: Path) -> Path:
-    result = redact_secrets(result)
+    result = redact_result(result)
     output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     output_dir.chmod(0o700)
     stamp = result["timestamp"].replace(":", "").replace("+00:00", "Z")

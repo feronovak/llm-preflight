@@ -44,7 +44,10 @@ All notable changes to this project are documented here.
   with the run URL, only when it runs in that same run (same repository,
   server, run and commit). Otherwise the record says `local` and `attest`
   prints why (`origin_reason` in `--json`), so a later job or a laptop cannot
-  lend a result its own identity. `verify RECORD` reports integrity and
+  lend a result its own identity. The identity is what the run reported
+  about itself; only a signed record proves which workflow made it. A
+  repository name that looks like a key, such as `acme/news-sk-web`, is
+  kept as written. `verify RECORD` reports integrity and
   freshness separately, prints its own retirement-snapshot date and states
   that signatures are checked with `gh attestation verify`, not here.
   `gate [CONFIG] --records PATH...` decides offline: it passes only on the
@@ -54,10 +57,11 @@ All notable changes to this project are documented here.
   `prompt`, or a changed request option sent with it (system prompt,
   temperature, token limit, reasoning effort, provider options, presets or
   input images) blocks as `prompt_changed`, naming the prompt and what
-  changed. The gate judges a record by its internal consistency only and
-  never reads the config or result file it names, so files planted in a pull
-  request cannot discard a newer failure; `verify` and the card still compare
-  them. A record that fails its integrity check makes the gate unable to
+  changed. The gate judges a record by its internal consistency only: it
+  reads the current config, such as `benchmark.json`, to fingerprint it, but
+  never compares the config or result file a record names, so files planted
+  in a pull request cannot discard a newer failure; `verify` and the card
+  still compare them. A record that fails its integrity check makes the gate unable to
   decide (exit 3, `record_error`) when it might be the newest. It rejects
   records tracked by Git, never passes a local record, refuses a record file
   larger than 1 MiB or nested more than 64 levels deep, and exits 0 pass, 1
@@ -134,9 +138,14 @@ All notable changes to this project are documented here.
   job before anything is installed. The paid smoke is a default `--smoke`
   run, so its record carries that selection and the identity of the run that
   made it, and the documented pull-request gate passes on it with `--smoke`.
-  The documented gate verifies a signed record with `--signer-workflow` and
-  `--source-ref`, and the guides state that the gate is only as trustworthy
-  as a required check the pull request cannot edit.
+  The documented gate downloads records only from the record workflow's runs
+  on `main` and verifies a signed record with `--signer-workflow` and
+  `--source-ref refs/heads/main`. A pull request that changes the contract is
+  recorded by a maintainer who reviews its configuration and starts the
+  record workflow from `main` with the pull request's head commit as
+  `commit`; the guides state that this run sends the credentials wherever
+  that configuration points, and that the gate is only as trustworthy as a
+  required check the pull request cannot edit.
 
 ### Changed
 
@@ -153,11 +162,24 @@ All notable changes to this project are documented here.
   ones included, and not the top-level prompt. Each entry adds
   `request_sha256`, a canonical hash of the request options sent with that
   prompt: the run's request merged with a test's own request and expanded
-  presets, and its system prompt, with runtime-only keys dropped, secret-like
-  values redacted and input images counted by content digest, not path.
+  presets, and its system prompt, with runtime-only keys dropped,
+  credential-keyed values masked and input images counted by content digest,
+  not path. A prompt name that looks like a key, such as `sk-greeting`, is
+  stored redacted and hashed as stored, so `attest` and the gate accept it.
   `evidence_sha256` therefore differs from 2.21.x for every run. Baseline
   comparison is unaffected: it uses the contract hash and validator version,
   which do not change.
+- Provenance fingerprints hash text as written and mask only values under
+  credential key names (`api_key`, `Authorization`, `x-api-key` and the like).
+  2.21.x redacted secret-like words first, so a request, validator or base
+  URL that differed only in such a word, such as `Reply in sk-SK.` and
+  `Reply in sk-IGNORE-ALL-RULES.`, hashed the same. The contract hash of a
+  configuration without such words is unchanged. `routes_sha256` now covers
+  each route setting the client reads to build a request: `adapter`, whether a
+  temperature is sent, as `supports_temperature`, `capabilities.temperature`
+  and the built-in model list decide it, each header's value except a
+  credential's (2.21.x counted header names only), and a mock route's
+  `response`.
 - `--audit-source` text output now starts with the decision and its counts,
   then the exit code with and without `--ci`. Findings are grouped by model
   ID, retired first, with capped locations and one `Next:` line each.

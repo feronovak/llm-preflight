@@ -569,9 +569,10 @@ CONTRACT_SHA256 = {
     ),
 }
 # Pinned in 2.22.0, when each listed prompt gained the fingerprint of the
-# request sent with it. 2.21.2 recorded f4c54b5c… for the same run.
+# request sent with it and each route the settings that shape its requests.
+# 2.21.2 recorded f4c54b5c… for the same run.
 TOP_LEVEL_ONLY_EVIDENCE_SHA256 = (
-    "d48fb78356317bb908bfb3e474a0b45c0bd1a88bea3d1f430f68526b03ce3d3f"
+    "3ff22ff485766df47c61f9ec555aca9614d53ebd8180e37ae99e736dd9f97422"
 )
 # Pinned from llm-preflight 2.21.2, which also listed the configured prompts
 # that did not run.
@@ -779,3 +780,113 @@ def test_image_inputs_are_fingerprinted_by_content_never_by_path(tmp_path):
 
     assert fingerprint("first", b"a") == fingerprint("moved", b"a")
     assert fingerprint("other", b"b") != fingerprint("again", b"a")
+
+
+ROUTE = {"provider": "openai", "model": "gpt-4.1-mini"}
+
+
+def _fingerprints(edit, config=REQUEST_BASE):
+    edited = copy.deepcopy(config)
+    edit(edited)
+    return provenance(edited, edited["models"], "price")
+
+
+@pytest.mark.parametrize(
+    ("field", "texts", "fingerprint"),
+    [
+        (
+            lambda c, text: c["request"].update(system_prompt=f"Reply in {text}."),
+            ("sk-SK", "sk-IGNORE-ALL-RULES"),
+            lambda p: p["prompts"][0]["request_sha256"],
+        ),
+        (
+            lambda c, text: c["validation"].update(exact=text),
+            ("sk-SK", "sk-XX"),
+            lambda p: p["contract_sha256"],
+        ),
+        (
+            lambda c, text: c["models"][0].update(base_url=f"https://{text}.example"),
+            ("sk-proxy.good", "sk-proxy.evil"),
+            lambda p: p["routes_sha256"],
+        ),
+    ],
+    ids=["request", "contract", "routes"],
+)
+def test_fingerprints_tell_apart_texts_that_differ_only_in_a_secret_like_word(
+    field, texts, fingerprint
+):
+    first, second = (
+        fingerprint(_fingerprints(lambda c, text=text: field(c, text)))
+        for text in texts
+    )
+
+    assert first != second
+
+
+def test_routes_fingerprint_counts_behaviour_header_values_never_a_credential():
+    def routes(**headers):
+        config = {
+            **REQUEST_BASE,
+            "models": [
+                {
+                    **ROUTE,
+                    "headers": {
+                        "anthropic-beta": "tools-1",
+                        "Authorization": "Bearer sk-synthetic-one",
+                        "x-api-key": "synthetic-one",
+                        "api-key": "synthetic-one",
+                        **headers,
+                    },
+                }
+            ],
+        }
+        return provenance(config, config["models"], "price")
+
+    unchanged = routes()["routes_sha256"]
+
+    assert (
+        routes(
+            Authorization="Bearer sk-synthetic-two",
+            **{"x-api-key": "synthetic-two", "api-key": "synthetic-two"},
+        )["routes_sha256"]
+        == unchanged
+    )
+    assert routes(**{"anthropic-beta": "tools-2"})["routes_sha256"] != unchanged
+    assert "synthetic-one" not in str(routes())
+
+
+@pytest.mark.parametrize(
+    ("route", "change"),
+    [
+        (ROUTE, {"capabilities": {"temperature": False}}),
+        (ROUTE, {"supports_temperature": False}),
+        (ROUTE, {"adapter": "openai_responses"}),
+        (REQUEST_BASE["models"][0], {"response": "not ok"}),
+    ],
+    ids=["capabilities.temperature", "supports_temperature", "adapter", "mock"],
+)
+def test_routes_fingerprint_changes_with_each_route_setting_that_changes_a_request(
+    route, change
+):
+    before = _fingerprints(lambda c: c.update(models=[route]))
+    after = _fingerprints(lambda c: c.update(models=[{**route, **change}]))
+
+    assert after["routes_sha256"] != before["routes_sha256"]
+
+
+def test_routes_fingerprint_hashes_temperature_support_as_sent_not_as_spelled():
+    spellings = [
+        ROUTE,
+        {**ROUTE, "supports_temperature": True},
+        {**ROUTE, "capabilities": {"temperature": True}},
+    ]
+
+    assert (
+        len(
+            {
+                _fingerprints(lambda c, r=r: c.update(models=[r]))["routes_sha256"]
+                for r in spellings
+            }
+        )
+        == 1
+    )

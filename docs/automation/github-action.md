@@ -84,9 +84,11 @@ described above.
   GitHub Enterprise Cloud.
 
 The Action pins `actions/upload-artifact` and `actions/attest` to commit
-SHAs. This workflow records the contract on `main` and, when a maintainer
-starts it, on a pull request's branch. The protected environment's required
-reviewers approve each paid run:
+SHAs. This workflow records the contract on each push to `main`. For a pull
+request that changes the contract, a maintainer starts it from `main` with
+the pull request's head commit as `commit`; it then checks that commit's
+configuration with the workflow and credentials of `main`. The protected
+environment's required reviewers approve each paid run:
 
 ```yaml
 name: LLM preflight record
@@ -95,6 +97,10 @@ on:
     branches: [main]
     paths: [benchmark.json]
   workflow_dispatch:
+    inputs:
+      commit:
+        description: "Pull request head commit to record (empty: main)"
+        required: false
 permissions:
   contents: read
   id-token: write      # sign: "true" only
@@ -105,6 +111,9 @@ jobs:
     environment: llm-preflight-paid  # required reviewers approve the spend
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+          persist-credentials: false
       - uses: feronovak/llm-preflight@v2.22.0
         with:
           config: benchmark.json
@@ -117,16 +126,24 @@ jobs:
 ```
 
 Save it as `.github/workflows/llm-preflight-record.yml`; the
-[gate workflow](ci.md#proof-of-preflight-gate) looks for that file name. List
-every file that shapes the contract under `paths`, such as prompt or schema
-files, or drop the filter. Drop `sign` and both write permissions on a private
-repository without GitHub Enterprise Cloud.
+[gate workflow](ci.md#proof-of-preflight-gate) looks for that file name and
+counts only its runs on `main`. List every file that shapes the contract
+under `paths`, such as prompt or schema files, or drop the filter. Drop `sign`
+and both write permissions on a private repository without GitHub Enterprise
+Cloud.
+
+Review a pull request's configuration before you start a run with its
+`commit`: that run sends the provider credentials wherever the pull request's
+routes point. A changed `base_url` sends the key to another host, and a
+changed `api_key_env` can send any variable of the job, such as the token the
+signing step uses. Approve the environment only for a diff you have read.
 
 A record is only as trustworthy as the workflow that produced it: whoever can
 edit this workflow or approve the environment can produce a passing record.
 Verify signed records with `gh attestation verify RECORD --repo OWNER/REPO
---signer-workflow OWNER/REPO/.github/workflows/llm-preflight-record.yml`,
-adding `--source-ref refs/heads/main` for a record from `main`, as the
-[gate workflow](ci.md#proof-of-preflight-gate) does.
+--signer-workflow OWNER/REPO/.github/workflows/llm-preflight-record.yml
+--source-ref refs/heads/main`, as the
+[gate workflow](ci.md#proof-of-preflight-gate) does; a dispatched run for a
+pull request also runs from `main`.
 
 It doesn't certify production behaviour. It proves the check was done.

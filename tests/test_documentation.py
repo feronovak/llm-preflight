@@ -990,12 +990,6 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate
-    assert (
-        "uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4"
-        in gate
-    )
-    assert "run-id: ${{ steps.source.outputs.run-id }}" in gate
-    assert "github-token: ${{ github.token }}" in gate
     assert 'python -m pip install "llm-preflight==2.22.0"' in gate
     assert "llm-preflight gate benchmark.json --smoke --records records" in gate
     assert "gh attestation verify" in gate
@@ -1004,3 +998,28 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     assert 'package-version: "2.22.0"' in record
     assert "id-token: write" in record and "attestations: write" in record
     assert HONESTY_LINE in record
+
+
+def test_documented_gate_takes_records_from_main_only():
+    """A branch anyone can push must never produce a record the gate accepts:
+    the gate reads only runs of the record workflow on `main`, and a pull
+    request is recorded by a maintainer dispatching that workflow from `main`
+    against the pull request's head commit."""
+    ci = (ROOT / "docs/automation/ci.md").read_text()
+    action_guide = (ROOT / "docs/automation/github-action.md").read_text()
+    gate = ci.split("## Proof-of-preflight gate", 1)[1].split("\n## ", 1)[0]
+    record = action_guide.split("## Proof of preflight", 1)[1].split("\n## ", 1)[0]
+
+    assert "head_ref" not in gate and "HEAD_REF" not in gate
+    assert "for event in push workflow_dispatch; do" in gate
+    assert '--branch main --event "$event"' in gate
+    assert "--source-ref refs/heads/main" in gate
+    assert (
+        '--signer-workflow "$GITHUB_REPOSITORY/.github/workflows/'
+        'llm-preflight-record.yml"'
+    ) in gate
+    assert "  workflow_dispatch:\n    inputs:\n      commit:" in record
+    assert "ref: ${{ inputs.commit || github.sha }}" in record
+    assert "persist-credentials: false" in record
+    # The risk of a dispatched run is stated where a maintainer starts it.
+    assert "base_url" in record and "api_key_env" in record

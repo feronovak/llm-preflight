@@ -530,6 +530,39 @@ def test_documented_gate_passes_on_the_record_the_action_wrote_and_only_then(
     assert "different contract" in changed.stdout
 
 
+def test_documented_gate_passes_for_a_repository_whose_name_looks_like_a_key(
+    tmp_path,
+):
+    """`sk-web` reads like an OpenAI key to the redactor; the run identity is
+    a name, so the Action's record keeps it and that repository's gate passes."""
+    run = {**ACTIONS_RUN, "GITHUB_REPOSITORY": "ringier/aktuality-sk-web"}
+    action = (ROOT / "action.yml").read_text()
+    script = _action_script(action, "Run explicitly authorized paid smoke")
+
+    result, outputs, _ = _run_action_script(
+        tmp_path,
+        script,
+        config=LIVE_CONFIG,
+        transport=True,
+        ATTEST="true",
+        SIGN="false",
+        ACME_API_KEY="sk-synthetic-secret",
+        **run,
+    )
+
+    assert result.returncode == 0, result.stderr
+    record = json.loads(Path(outputs["record"]).read_text())
+    assert record["predicate"]["url"].startswith(
+        "https://github.com/ringier/aktuality-sk-web/actions/runs/"
+    )
+    _download_records(outputs, tmp_path)
+
+    gate = _documented_gate(tmp_path, **run)
+
+    assert gate.returncode == 0, gate.stdout + gate.stderr
+    assert gate.stdout.startswith("Gate: pass")
+
+
 def test_documented_gate_decides_on_the_mock_record_the_action_wrote(tmp_path):
     action = (ROOT / "action.yml").read_text()
     script = _action_script(action, "Run explicitly authorized paid smoke")

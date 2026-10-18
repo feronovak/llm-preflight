@@ -491,7 +491,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
-        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
+        assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in page.read_text()
 
     for page in (ROOT / "docs/automation/change-plans.md",):
         assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
@@ -511,7 +511,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
-        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
+        assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
@@ -937,7 +937,7 @@ def test_proof_of_preflight_guide_explains_the_record_commands_and_reason_codes(
     guide = (ROOT / "docs/guides/proof-of-preflight.md").read_text()
     table = guide.split("## Gate reason codes", 1)[1].split("\n## ", 1)[0]
 
-    assert "**Last reviewed:** 2026-10-17 · **As of:** v2.22.0" in guide
+    assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in guide
     assert HONESTY_LINE in guide
     assert "pilot signs the preflight" in guide
     for command in (

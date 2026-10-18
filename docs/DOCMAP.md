@@ -38,8 +38,8 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/observed-model-comparison.md`](guides/observed-model-comparison.md) | Observed model comparison: support-routing example | stamped | 2026-10-15 | v2.21.2 |
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-10-13 | v2.21.0 |
-| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-17 | v2.22.0 |
-| [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-09-24 | v2.17.0 |
+| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-18 | v2.22.1 |
+| [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-10-18 | v2.22.1 |
 | [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-16 | v2.22.0 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-15 | v2.21.2 |
@@ -47,9 +47,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/product/positioning.md`](product/positioning.md) | Product positioning | stamped | 2026-08-30 | v2.7.5 |
 | [`docs/product/when-to-use.md`](product/when-to-use.md) | When to use LLM Preflight | stamped | 2026-08-31 | v2.10.0 |
 | [`docs/reference/cli.md`](reference/cli.md) | CLI reference | stamped | 2026-10-13 | v2.21.0 |
-| [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-09-09 | v2.14.0 |
-| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-09 | v2.19.2 |
+| [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-10-18 | v2.22.1 |
+| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-18 | v2.22.1 |
 | [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract | stamped | 2026-08-30 | v2.7.5 |
-| [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-10-09 | v2.19.2 |
+| [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-10-18 | v2.22.1 |
 | [`examples/reports/README.md`](../examples/reports/README.md) | Reviewable report gallery | unstamped | — | — |
 | [`plugins/llm-preflight/skills/llm-preflight/SKILL.md`](../plugins/llm-preflight/skills/llm-preflight/SKILL.md) | LLM Preflight | unstamped | — | — |

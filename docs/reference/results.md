@@ -1,6 +1,6 @@
 # Result JSON schema
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
 
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is

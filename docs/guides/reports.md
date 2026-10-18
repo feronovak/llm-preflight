@@ -1,6 +1,6 @@
 # Reviewable reports
 
-**Last reviewed:** 2026-09-24 · **As of:** v2.17.0
+**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
 
 From the repository root, render an existing result without repeating the
 benchmark or contacting a provider:

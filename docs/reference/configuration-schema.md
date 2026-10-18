@@ -1,6 +1,6 @@
 # Configuration reference
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
 
 Configurations are JSON. A config requires `models` or `discovery`, and either
 one top-level `prompt` or one or more named `prompts`.

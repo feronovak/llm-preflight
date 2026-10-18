@@ -204,7 +204,7 @@ disagrees with its validator.
 
 Presets translate intent into provider-aware options. Available presets are
 `json`, `no-reasoning`, `low-latency`, and `structured`. Explicit request
-values always win over preset defaults. A prompt or test preset fills only keys left unset, under both `--prompt` and `--tests`. A prompt or test `provider_options` object replaces that dict; top-level presets then fill only the defaults that object left unset.
+values win over top-level and prompt preset defaults. A config with neither `request` nor `presets` sends temperature 0 and 256 output tokens; with presets and no `request`, presets expand onto an empty request, so temperature is the provider default unless a preset such as `low-latency` sets it. A prompt preset fills only keys left unset, under both `--prompt` and `--tests`. A prompt `provider_options` object replaces that dict; top-level presets then fill only the defaults that object left unset. A built-in test runs the same every time: its own presets expand into its own request, which replaces those keys of the run request, a `provider_options` object as a whole. So `strict-json-extraction` sends temperature 0, 256 output tokens and reasoning off whatever the run request sets.
 
 All native providers use a safe default output limit of 256 tokens when neither
 `max_output_tokens` nor `max_tokens` is set. Set an explicit limit for tasks

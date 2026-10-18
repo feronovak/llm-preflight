@@ -487,21 +487,30 @@ def profile_request_options(
 ) -> dict[str, Any]:
     """The request options sent with every case of a profile.
 
-    Profile request fields replace the run request. Profile presets and
-    top-level presets then fill only keys that the merged request left unset, so
-    a profile preset cannot overwrite an explicit parent value and a profile
-    ``provider_options`` object does not drop top-level preset defaults. The
-    profile system prompt wins last.
+    A built-in test, or any profile not marked ``_custom_prompt``, runs the
+    same every time: its presets expand into its own request, which then
+    replaces the run request's keys. Top-level presets reach it only through
+    the run request.
+
+    A custom prompt (marked ``_custom_prompt``) keeps explicit values: its
+    request fields replace the run request, then its presets and top-level
+    presets fill only keys still unset, so a prompt preset cannot overwrite an
+    explicit parent temperature and a prompt ``provider_options`` object does
+    not drop top-level preset defaults. The profile system prompt wins last.
     """
     options = dict(request)
-    options.update(dict(profile.get("request") or {}))
-    # Preset defaults fill only keys the merged request left unset. Expanding
-    # a profile preset before the update would turn those defaults into
-    # profile fields and overwrite an explicit parent value such as temperature.
-    if profile.get("presets"):
-        options = expand_presets(options, [str(item) for item in profile["presets"]])
-    if presets:
-        options = expand_presets(options, [str(item) for item in presets])
+    profile_request = dict(profile.get("request") or {})
+    profile_presets = [str(item) for item in profile.get("presets") or []]
+    if profile.get("_custom_prompt"):
+        options.update(profile_request)
+        if profile_presets:
+            options = expand_presets(options, profile_presets)
+        if presets:
+            options = expand_presets(options, [str(item) for item in presets])
+    else:
+        if profile_presets:
+            profile_request = expand_presets(profile_request, profile_presets)
+        options.update(profile_request)
     if profile.get("system_prompt"):
         options["system_prompt"] = profile["system_prompt"]
     return options

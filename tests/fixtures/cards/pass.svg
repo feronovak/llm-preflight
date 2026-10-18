@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="496" viewBox="0 0 600 496" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <title id="card-title">LLM Preflight: PASS · support-routing</title>
-<desc id="card-desc">PASS; checked 2026-10-14; Config: support-routing; Model: claude-haiku-5-5 (anthropic); Observed: claude-haiku-5-5-20261001; Probes: 16 probes, all passed; p95 latency: 0.934 s; Cost: $0.0299 per 1,000 calls; Retirement: active in the bundled snapshot; Model: gpt-4.1-mini (openai); Probes: 16 probes, all passed; p95 latency: 1.412 s; Cost: $0.0382 per 1,000 calls; Retirement: retiring on 2027-01-14; Does not certify: accuracy · safety · production behaviour; evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
+<desc id="card-desc">PASS; checked 2026-10-14; Config: support-routing; Model: claude-haiku-5-5 (anthropic); Observed: claude-haiku-5-5-20261001; Probes: 16 probes, all passed; p95 latency: 0.934 s; Cost: $0.0299 per 1,000 calls; Retirement: active in the bundled snapshot; Model: gpt-4.1-mini (openai); Probes: 16 probes, all passed; p95 latency: 1.412 s; Cost: $0.0382 per 1,000 calls; Retirement: retiring on 2027-01-14; Does not certify: accuracy · safety · production behaviour; result evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
 <rect x="1" y="1" width="598" height="494" fill="#ffffff" stroke="#000000" stroke-width="2"/>
 <text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
 <text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-10-14</text>
@@ -34,6 +34,6 @@
 <text x="132" y="396" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">retiring on 2027-01-14</text>
 <line x1="20" y1="404" x2="580" y2="404" stroke="#000000" stroke-width="1"/>
 <text x="20" y="436" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
-<text x="20" y="456" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 3f9a1c000000</text>
+<text x="20" y="456" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">result evidence 3f9a1c000000</text>
 <text x="20" y="476" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">Not attested: no preflight record was given</text>
 </svg>

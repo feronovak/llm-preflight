@@ -66,7 +66,9 @@ the step that clears it; a failed card adds the failure reason. A record adds
 its valid-until date and the repository whose CI run wrote it, or "none" for a
 local record. Every card ends with the line "Does not certify:
 accuracy · safety · production behaviour", the first 12 characters of the
-evidence fingerprint and the `llm-preflight verify` command for the record.
+result's evidence fingerprint, labelled `result evidence` because a record's
+`llm-preflight/evidence` digest also seals the selection and the verdict,
+and the `llm-preflight verify` command for the record.
 
 The card is generated from saved evidence and is not evidence itself; keep the
 record, not the picture. `--record` refuses a record that fails verification

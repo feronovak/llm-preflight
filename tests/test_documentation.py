@@ -658,11 +658,20 @@ def test_configuration_reference_documents_fixtures_at_both_levels():
     assert "same level as the `validation`" in configuration
     assert "inside that prompt" in configuration
     assert (
-        "A prompt or test preset fills only keys left unset, under both "
-        "`--prompt` and `--tests`. A prompt or test `provider_options` object "
-        "replaces that dict; top-level presets then fill only the defaults "
-        "that object left unset."
+        "A prompt preset fills only keys left unset, under both `--prompt` and "
+        "`--tests`. A prompt `provider_options` object replaces that dict; "
+        "top-level presets then fill only the defaults that object left unset."
     ) in configuration
+    assert (
+        "A built-in test runs the same every time: its own presets expand into "
+        "its own request, which replaces those keys of the run request"
+    ) in configuration
+    assert "presets fill the default request" not in configuration
+    schema = (ROOT / "docs/reference/configuration-schema.md").read_text()
+    assert (
+        "| `temperature` | `0` without `request` and `presets`; otherwise "
+        "provider default |"
+    ) in schema
     assert "inside the prompt" in contracts_guide
     assert "top level or inside a custom prompt" in cli_reference
 
@@ -712,8 +721,12 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     results_reference = (ROOT / "docs/reference/results.md").read_text()
     assert "`file_selection`" in results_reference.split("## Source audit JSON")[1]
     assert (
-        "A test `provider_options` object replaces that dict, and top-level "
-        "presets fill only the defaults the test left unset"
+        "A built-in test's presets expand into its own request, which replaces "
+        "those keys of the run request"
+    ) in results_reference
+    assert (
+        "A custom prompt's `provider_options` object replaces that dict, and "
+        "top-level presets fill only the defaults the prompt left unset"
     ) in results_reference
     assert (
         "Under `--tests`, `settings.request` and the dry-run request stay the "
@@ -954,6 +967,32 @@ def test_proof_of_preflight_guide_explains_the_record_commands_and_reason_codes(
         assert f"`{flag}" in guide, flag
     assert "`--repository OWNER/NAME`" in guide and "`GITHUB_REPOSITORY`" in guide
     assert "GitHub Enterprise Cloud" in guide
+
+
+def test_record_docs_separate_the_result_and_the_sealed_evidence_digests():
+    results = " ".join((ROOT / "docs/reference/results.md").read_text().split())
+    guide = " ".join((ROOT / "docs/guides/proof-of-preflight.md").read_text().split())
+    reports = " ".join((ROOT / "docs/guides/reports.md").read_text().split())
+    configuration_row = results.split("| `predicate.configuration` |", 1)[1]
+    configuration_row = configuration_row.split("| `", 1)[0]
+
+    assert "whose `sha256` digests are the result's `provenance`" not in results
+    assert (
+        "`llm-preflight/contract`, `llm-preflight/routes` and "
+        "`llm-preflight/pricing` digests are the result's `provenance` fingerprints"
+    ) in configuration_row
+    assert (
+        "`selection_sha256`, `decision_state`, `blocking_warnings` and "
+        "`cost_confidence`"
+    ) in configuration_row
+    assert "the full `provenance`" not in results
+    assert "`selectionSha256`" in results
+    assert "| `selection_sha256` |" in results
+    assert "does not make the gate pass" not in guide
+    assert "without recomputing the checksum fails integrity" in guide
+    assert "does not cover `checkedAt`" in guide
+    assert "Only a signature checked with `gh attestation verify`" in guide
+    assert "labelled `result evidence`" in reports
 
 
 def test_mcp_gate_schema_names_every_gate_reason_code():

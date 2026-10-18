@@ -230,12 +230,13 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     selected = dict(config)
     selected["prompt_name"] = name
     selected["prompt"] = prompt["prompt"]
-    # Same merge as a profile run: prompt fields replace the parent request,
-    # then prompt presets and top-level presets fill only keys left unset.
+    # Same merge as the prompt under --tests: prompt fields replace the parent
+    # request, then prompt presets and top-level presets fill only keys left unset.
     if "request" in prompt or prompt.get("presets") or prompt.get("system_prompt"):
         selected["request"] = profile_request_options(
             dict(selected.get("request") or {}),
             {
+                "_custom_prompt": True,
                 "request": prompt.get("request") or {},
                 "presets": prompt.get("presets"),
                 "system_prompt": prompt.get("system_prompt"),
@@ -252,6 +253,9 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
 
 def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
     profile = {
+        # Explicit request values win over this prompt's presets; a built-in
+        # test's presets replace them instead (see profile_request_options).
+        "_custom_prompt": True,
         "name": prompt["name"],
         "description": prompt.get("description", "Custom prompt test."),
         "cases": [
@@ -839,8 +843,10 @@ def run_benchmark(
     warmups = int(config.get("warmups", 1))
     concurrency = int(config.get("concurrency", 1))
     timeout = float(config.get("timeout_seconds", 120))
-    request_options = dict(config.get("request", DEFAULT_REQUEST))
     presets = [str(preset) for preset in config.get("presets") or []]
+    # Presets without a request expand onto an empty one, as the CLI, the MCP
+    # server and the gate do; the default request applies only without either.
+    request_options = dict(config.get("request", {} if presets else DEFAULT_REQUEST))
     if presets:
         request_options = expand_presets(request_options, presets)
     # Fingerprints must cover the options actually sent. Callers that already

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="432" viewBox="0 0 600 432" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <title id="card-title">LLM Preflight: INCONCLUSIVE · support-routing</title>
-<desc id="card-desc">INCONCLUSIVE; checked 2026-10-14; Config: support-routing; Model: gpt-4.1-mini (openai); Probes: 16 probes, all passed; p95 latency: 1.412 s; Cost: cost unknown; Retirement: retiring on 2027-01-14; Why: Cost confidence is partial; complete cost evidence is required; To pass: rerun with every route priced and every request reporting usage; Does not certify: accuracy · safety · production behaviour; evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
+<desc id="card-desc">INCONCLUSIVE; checked 2026-10-14; Config: support-routing; Model: gpt-4.1-mini (openai); Probes: 16 probes, all passed; p95 latency: 1.412 s; Cost: cost unknown; Retirement: retiring on 2027-01-14; Why: Cost confidence is partial; complete cost evidence is required; To pass: rerun with every route priced and every request reporting usage; Does not certify: accuracy · safety · production behaviour; result evidence 3f9a1c000000; Not attested: no preflight record was given</desc>
 <rect x="1" y="1" width="598" height="430" fill="#ffffff" stroke="#000000" stroke-width="2"/>
 <text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
 <text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-10-14</text>
@@ -27,6 +27,6 @@
 <text x="132" y="326" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">rerun with every route priced and every request</text>
 <text x="132" y="344" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">reporting usage</text>
 <text x="20" y="372" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
-<text x="20" y="392" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">evidence 3f9a1c000000</text>
+<text x="20" y="392" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">result evidence 3f9a1c000000</text>
 <text x="20" y="412" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">Not attested: no preflight record was given</text>
 </svg>

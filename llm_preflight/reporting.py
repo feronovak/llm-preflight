@@ -616,10 +616,12 @@ def render_card_svg(
     evidence = (
         provenance.get("evidence_sha256") if isinstance(provenance, dict) else None
     )
+    # The result's digest: a record's evidence digest also seals the selection
+    # hash and the verdict, so it differs and must not be read as this one.
     footer = [
-        f"evidence {evidence[:12]}"
+        f"result evidence {evidence[:12]}"
         if isinstance(evidence, str) and re.fullmatch(r"[0-9a-f]{64}", evidence)
-        else "evidence: no provenance fingerprint",
+        else "result evidence: no provenance fingerprint",
         f"llm-preflight verify {_card_text(PurePath(record['record']).name)}"
         if record is not None
         else "Not attested: no preflight record was given",

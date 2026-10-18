@@ -721,6 +721,157 @@ def test_a_prompt_preset_does_not_overwrite_an_explicit_parent_temperature(
     )
 
 
+def test_a_builtin_test_applies_its_own_presets_over_the_parent_request(
+    tmp_path, monkeypatch
+):
+    """A built-in test runs the same every time: its presets and request
+    replace the parent request, as before 2.22.0. A custom prompt in the same
+    run keeps the explicit parent temperature. Dry-run, run and gate agree."""
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append((prompt, dict(options)))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    parent = {
+        "temperature": 0.7,
+        "max_output_tokens": 4000,
+        "provider_options": {
+            "openrouter": {"reasoning": {"enabled": True, "effort": "high"}}
+        },
+    }
+    config = {
+        "name": "builtin",
+        "request": parent,
+        "prompts": [{"name": "review", "prompt": "Review", "presets": ["json"]}],
+        "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+        "suite_repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    from llm_preflight.attestation import current_fingerprints
+    from llm_preflight.contracts import _request_fingerprint
+    from llm_preflight.features import _budget_work, apply_provider_presets
+    from llm_preflight.presets import expand_presets
+
+    selector = "strict-json-extraction,review"
+    prepared = apply_provider_presets(load_config(path))
+    result = run_benchmark(prepared, selector)
+    builtin = next(options for prompt, options in captured if prompt != "Review")
+    custom = next(options for prompt, options in captured if prompt == "Review")
+
+    # v2.21.2: the test's presets expand into its own request, which then
+    # replaces the parent keys, so the parent provider_options do not survive.
+    assert builtin == {
+        **parent,
+        **expand_presets({}, ["structured"]),
+        "system_prompt": "Return only valid JSON with no Markdown formatting.",
+    }
+    assert builtin["temperature"] == 0
+    assert builtin["max_output_tokens"] == 256
+    assert builtin["provider_options"]["openrouter"]["reasoning"] == {"enabled": False}
+    assert custom["temperature"] == 0.7
+    assert custom["max_output_tokens"] == 4000
+    assert custom["provider_options"]["openrouter"]["reasoning"]["enabled"] is True
+    sent = {_request_fingerprint(options) for _, options in captured}
+    recorded = {entry["request_sha256"] for entry in result["provenance"]["prompts"]}
+    gated = {
+        entry["request_sha256"]
+        for entry in current_fingerprints(path, {"tests": selector})["prompts"]
+    }
+    budgeted = {
+        _request_fingerprint(options)
+        for _, options in _budget_work({**prepared, "profiles": selector})
+    }
+    assert sent == recorded == gated == budgeted
+    assert len(sent) == 2
+
+
+def test_a_library_run_with_presets_and_no_request_sends_what_the_cli_sends(
+    tmp_path, monkeypatch
+):
+    """Top-level presets without a request expand onto an empty request, as the
+    CLI, MCP server and gate do, so a direct run_benchmark caller sends no
+    temperature and records the hash the gate computes. Without presets, the
+    default request still applies."""
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    config = {
+        "name": "defaults",
+        "prompt": "hi",
+        "presets": ["json"],
+        "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    from llm_preflight.attestation import current_fingerprints
+    from llm_preflight.contracts import _request_fingerprint
+    from llm_preflight.features import apply_provider_presets
+
+    direct = run_benchmark(load_config(path))
+    direct_sent = captured[0]
+    captured.clear()
+    prepared = run_benchmark(apply_provider_presets(load_config(path)))
+    prepared_sent = captured[0]
+
+    from llm_preflight.presets import expand_presets
+
+    # The CLI, MCP and gate shape is unchanged from 2.22.0.
+    assert apply_provider_presets(load_config(path))["request"] == expand_presets(
+        {}, ["json"]
+    )
+    assert "temperature" not in direct_sent
+    assert "max_output_tokens" not in direct_sent
+    assert prepared_sent == direct_sent
+    fingerprint = _request_fingerprint(direct_sent)
+    assert direct["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert prepared["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert current_fingerprints(path)["prompts"][0]["request_sha256"] == fingerprint
+    captured.clear()
+    run_benchmark({k: v for k, v in config.items() if k != "presets"})
+    assert captured[0]["temperature"] == 0
+    assert captured[0]["max_output_tokens"] == 256
+
+
 def test_run_benchmark_expands_top_level_presets_into_the_request(monkeypatch):
     captured = []
 

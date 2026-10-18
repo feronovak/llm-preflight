@@ -1329,6 +1329,32 @@ def test_gate_blocks_a_record_that_does_not_record_its_selection(
     assert "does not record which selection it ran" in report["why"]
 
 
+def test_gate_explains_a_record_without_the_hash_of_its_raw_selection(
+    monkeypatch, capsys, tmp_path
+):
+    """A record with the same flags but no selection hash ran no other
+    selection: the why names the missing hash and the version that records it."""
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    result = _result(tmp_path, config, ci=RUN_IDENTITY)
+    data = json.loads(result.read_text())
+    del data["selection_sha256"]
+    result.write_text(json.dumps(data, indent=2))
+    with monkeypatch.context() as scoped:
+        for variable, value in GITHUB.items():
+            scoped.setenv(variable, value)
+        code, _, err = _run(monkeypatch, capsys, "attest", "results/run.json")
+    assert code == 0, err
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert report["records"][0]["reason"] == "does not record its raw selection"
+    assert "does not carry the hash of its raw selection" in report["why"]
+    assert "attest with llm-preflight 2.22.0 or later" in report["why"]
+    assert "not the selection this gate requires" not in report["why"]
+
+
 def test_gate_under_a_selection_detects_a_change_to_the_selected_prompt(
     monkeypatch, capsys, tmp_path
 ):
@@ -2344,7 +2370,12 @@ def test_card_with_a_fresh_record_shows_valid_until_and_the_verify_command(
     assert ">PASS<" in out and ">EXPIRED<" not in out
     assert "2026-11-09" in out and ">Valid until<" in out
     assert "llm-preflight verify run.preflight.json" in out
-    assert f"evidence {evidence['evidence_sha256'][:12]}" in out
+    # The result's digest, labelled so it is not read as the record's own
+    # evidence digest, which also seals the selection hash and the verdict.
+    assert f"result evidence {evidence['evidence_sha256'][:12]}" in out
+    record = json.loads((tmp_path / "results/run.preflight.json").read_text())
+    sealed = _descriptor(record, "evidence")["digest"]["sha256"]
+    assert sealed != evidence["evidence_sha256"]
     assert "Not attested" not in out
 
 

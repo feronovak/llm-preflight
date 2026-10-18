@@ -2,6 +2,52 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Built-in tests run the same every time again, as before 2.22.0: a built-in
+  test's own presets expand into its own request, which replaces those keys
+  of the run request, a `provider_options` object as a whole. In 2.22.0 a
+  built-in test's presets filled only keys the run request left unset. With a
+  run request of `temperature` 0.7, `max_output_tokens` 4000 and OpenRouter
+  reasoning enabled, `strict-json-extraction` sent 0.7, 4000 tokens and
+  reasoning enabled alongside `include_reasoning: false`; 2.21.x and this
+  release send temperature 0, 256 tokens and reasoning disabled. Custom
+  prompts keep the 2.22.0 rule under `--prompt` and `--tests`: an explicit
+  value wins and their presets fill only keys left unset. The run, the
+  dry-run budget and the gate share this merge. A 2.22.0 record of a built-in
+  test under such a run request reads `prompt_changed` until it is re-run and
+  attested.
+- In 2.22.0, `run_benchmark` called directly with top-level presets and no
+  `request` sent temperature 0 and 256 output tokens and recorded a
+  `request_sha256` the gate never matched. It now sends what the CLI sends:
+  the presets expanded onto an empty request. The CLI, the MCP server and the
+  gate are unchanged.
+- In 2.22.0, the gate explained a record that ran the required flags but does
+  not carry the hash of its raw selection as "not the selection this gate
+  requires". It now says the record does not carry that hash and to re-run and
+  attest with llm-preflight 2.22.0 or later.
+- The 2.22.0 notes said baseline comparison is unaffected by the new
+  provenance hashing. That holds only for a contract without secret-like
+  words. A contract containing one, such as `Reply in sk-SK.`, hashes
+  differently from 2.21.x, so a 2.21.x baseline of it reads `incompatible`
+  (`contract_changed`) until a new baseline is saved.
+- The preflight card labels its digest `result evidence`. A record's
+  `llm-preflight/evidence` digest also seals the selection hash and the
+  verdict, so it differs from the result's `evidence_sha256`.
+- The result reference no longer says all four record descriptor digests are
+  the result's provenance fingerprints: the contract, routes and pricing
+  digests are, and the evidence digest seals that provenance with
+  `selection_sha256`, the decision state, the blocking warnings and the cost
+  confidence. It documents `selection_sha256` and `selectionSha256`. The proof
+  of preflight guide now says the seal is a checksum that does not cover
+  `checkedAt`: editing a record without recomputing it fails integrity, and
+  only a signature checked with `gh attestation verify` stops a resealed
+  record. The configuration schema now says temperature defaults to 0, with
+  256 output tokens, only when a config has neither `request` nor `presets`;
+  otherwise it is the provider default unless set.
+
 ## 2.22.0 - 2026-10-18
 
 ### Added

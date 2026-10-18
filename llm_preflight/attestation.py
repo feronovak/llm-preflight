@@ -1060,6 +1060,17 @@ def _explain(
                 fresh_check,
             )
         ran = describe_selection(newest["selection"])
+        if not _is_sha256(newest.get("selection_sha256")):
+            # The gate compares the hash of the raw selection, not the redacted names.
+            return (
+                (
+                    f"{latest} recorded {ran}, but does not carry the hash of its "
+                    "raw selection, so it cannot show that it ran what this gate "
+                    f"requires: {requires}. Re-run and attest with llm-preflight "
+                    "2.22.0 or later."
+                ),
+                fresh_check,
+            )
         if ran == requires:
             if newest["selection"].get("repetitions") != required.get("repetitions"):
                 # Same flags, so the config now sends each prompt more or fewer times.

@@ -40,7 +40,7 @@ one top-level `prompt` or one or more named `prompts`.
 
 | Key | Default | Meaning |
 |---|---:|---|
-| `temperature` | provider default | Sampling temperature, unless the model disables it. |
+| `temperature` | `0` without `request` and `presets`; otherwise provider default | Sampling temperature, unless the model disables it. Without `request` and `presets` a run sends temperature 0 with `max_output_tokens` 256; otherwise it is sent only when set, by the request or a preset such as `low-latency`. |
 | `max_output_tokens` | `256` | Maximum generated tokens for native providers. `max_tokens` is accepted for compatibility. |
 | `system_prompt` | — | Shared system instructions. |
 | `input_images` | — | Explicit local PNG, JPEG, WEBP, or GIF fixtures for supported image-to-text routes. |

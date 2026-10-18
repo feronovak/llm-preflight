@@ -108,9 +108,11 @@ prompt names that differ only by a word such as `sk-alpha` and `sk-beta` do
 not match. A record without that hash is blocked. `attest` copies the hash,
 the decision state, the blocking warnings and the cost confidence into the
 record's sealed provenance. `verify` rejects a record whose annotations
-disagree with that seal, so editing them does not make the gate pass. The
-seal is a checksum of those fields. It is not a signature. `gh attestation
-verify` remains a separate check.
+disagree with that seal, so editing them without recomputing the checksum
+fails integrity. The seal is a checksum of those fields, not a signature,
+and it does not cover `checkedAt`: anyone who edits a record can reseal it.
+Only a signature checked with `gh attestation verify` stops a resealed
+record.
 A record that ran another selection, such as one cheap `--tests` choice or a
 `--smoke` run where the gate requires a default run, or fewer repetitions per
 prompt than the configuration now asks for, is blocked as

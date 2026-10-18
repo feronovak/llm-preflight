@@ -1,6 +1,6 @@
 # Proof of preflight: the record and the merge gate
 
-**Last reviewed:** 2026-10-17 · **As of:** unreleased source
+**Last reviewed:** 2026-10-17 · **As of:** v2.22.0
 
 Proof of preflight lets a required check block a pull request that changes an
 LLM contract until a fresh, passing check of that contract ran in this

@@ -59,8 +59,8 @@ The example uses one request per model, no retries or warmups, low reasoning,
 a 4,096-token combined output setting and a $0.10 estimated-cost cap. It sets
 Qwen's `max_tokens_parameter` explicitly to `max_completion_tokens`, so that
 setting also works with installed 2.21.2. The automatic Qwen default correction
-is currently an unreleased source change.
-In that source change, planner, doctor and transport also reject overrides of
+ships in 2.22.0.
+In that release, planner, doctor and transport also reject overrides of
 model, messages, streaming and token-limit fields in provider options for all
 three native routes. Set `request.max_output_tokens` instead. A legacy
 `max_tokens` model parameter is accepted only with explicitly disabled thinking.

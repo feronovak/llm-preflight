@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in page
+    assert "**Last reviewed:** 2026-10-16 · **As of:** v2.22.0" in page
     assert "Package version: **2.22.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
@@ -523,7 +523,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-17 · **As of:** unreleased source"
+        "**Last reviewed:** 2026-10-17 · **As of:** v2.22.0"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -706,7 +706,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in guide
+    assert "**Last reviewed:** 2026-10-16 · **As of:** v2.22.0" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
@@ -924,7 +924,7 @@ def test_proof_of_preflight_guide_explains_the_record_commands_and_reason_codes(
     guide = (ROOT / "docs/guides/proof-of-preflight.md").read_text()
     table = guide.split("## Gate reason codes", 1)[1].split("\n## ", 1)[0]
 
-    assert "**Last reviewed:** 2026-10-17 · **As of:** unreleased source" in guide
+    assert "**Last reviewed:** 2026-10-17 · **As of:** v2.22.0" in guide
     assert HONESTY_LINE in guide
     assert "pilot signs the preflight" in guide
     for command in (

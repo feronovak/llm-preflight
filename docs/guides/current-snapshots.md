@@ -1,11 +1,11 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-16 · **As of:** unreleased source
+**Last reviewed:** 2026-10-16 · **As of:** v2.22.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
 direct-provider snapshots in the current source checkout, based on **2.22.0**.
-The native Qwen 3.8 price-source/cache corrections below are unreleased; an
+The native Qwen 3.8 price-source/cache corrections below ship in 2.22.0; an
 installed 2.21.2 still has the earlier QwenCloud-derived cache rates. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
@@ -107,7 +107,7 @@ must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed
 override is supplied. QwenCloud cache prices are not substituted.
 
-The unreleased source also uses `max_completion_tokens` for native Qwen 3.8
+2.22.0 also uses `max_completion_tokens` for native Qwen 3.8
 Max, Max-0902 and Flash, covering reasoning plus answer. Planner, doctor and
 transport reject token-limit fields in provider options. An explicit legacy
 `max_tokens` setting requires explicitly disabled thinking. The

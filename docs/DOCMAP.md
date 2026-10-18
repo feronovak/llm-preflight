@@ -14,7 +14,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`AGENTS.md`](../AGENTS.md) | Development Contract | unstamped | — | — |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | unstamped | — | — |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
-| [`README.md`](../README.md) | LLM Preflight | stamped | 2026-10-17 | — |
+| [`README.md`](../README.md) | LLM Preflight | stamped | 2026-10-17 | v2.22.0 |
 | [`SECURITY.md`](../SECURITY.md) | Security policy | unstamped | — | — |
 | [`docs/DECISIONS.md`](DECISIONS.md) | Product decisions | stamped | 2026-10-14 | v2.21.1 |
 | [`docs/FEATURE_MAP.md`](FEATURE_MAP.md) | Product map | stamped | 2026-10-13 | v2.21.0 |
@@ -30,7 +30,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-09-09 | v2.14.0 |
-| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-10-16 | — |
+| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-10-16 | v2.22.0 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-10-13 | v2.21.0 |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |
@@ -38,9 +38,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/observed-model-comparison.md`](guides/observed-model-comparison.md) | Observed model comparison: support-routing example | stamped | 2026-10-15 | v2.21.2 |
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-10-13 | v2.21.0 |
-| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-17 | — |
+| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-17 | v2.22.0 |
 | [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-09-24 | v2.17.0 |
-| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-16 | — |
+| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-10-16 | v2.22.0 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-15 | v2.21.2 |
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |

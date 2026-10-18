@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -21,6 +22,7 @@ from .contracts import (
     contract_fixtures_declared,
     profile_request_options,
     provenance,
+    selection_fingerprint,
     validate_contract_config,
     validate_output_schema,
     validation_evaluator,
@@ -30,7 +32,7 @@ from .eligibility import IncompatibleCatalogTypeError, assert_text_smoke_models
 from .github_actions import ci_identity, valid_ci_identity
 from .images import prepare_image_inputs
 from .metrics import summarize
-from .presets import preset_warnings
+from .presets import expand_presets, preset_warnings
 from .pricing import (
     estimate_sample_cost,
     pricing_coverage_report,
@@ -228,12 +230,18 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     selected = dict(config)
     selected["prompt_name"] = name
     selected["prompt"] = prompt["prompt"]
-    if "request" in prompt:
-        selected["request"] = dict(prompt["request"])
-    if prompt.get("system_prompt"):
-        selected.setdefault("request", {})
-        selected["request"] = dict(selected["request"])
-        selected["request"]["system_prompt"] = prompt["system_prompt"]
+    # Same merge as a profile run: prompt fields replace the parent request,
+    # then prompt presets and top-level presets fill only keys left unset.
+    if "request" in prompt or prompt.get("presets") or prompt.get("system_prompt"):
+        selected["request"] = profile_request_options(
+            dict(selected.get("request") or {}),
+            {
+                "request": prompt.get("request") or {},
+                "presets": prompt.get("presets"),
+                "system_prompt": prompt.get("system_prompt"),
+            },
+            selected.get("presets"),
+        )
     if "validation" in prompt:
         selected["validation"] = dict(prompt["validation"])
         selected.pop("validation_fixtures", None)
@@ -701,7 +709,9 @@ def _run_profiles(
     results = []
     for profile in profiles:
         progress_callback = _profile_progress_callback(on_complete, profile["name"])
-        options = profile_request_options(request_options, profile)
+        options = profile_request_options(
+            request_options, profile, config.get("presets")
+        )
         if options.get("input_images"):
             options["_image_base_dir"] = config.get("_config_dir")
         for _ in range(warmups):
@@ -830,7 +840,16 @@ def run_benchmark(
     concurrency = int(config.get("concurrency", 1))
     timeout = float(config.get("timeout_seconds", 120))
     request_options = dict(config.get("request", DEFAULT_REQUEST))
+    presets = [str(preset) for preset in config.get("presets") or []]
+    if presets:
+        request_options = expand_presets(request_options, presets)
+    # Fingerprints must cover the options actually sent. Callers that already
+    # expanded presets, such as the CLI, keep the same request object.
+    provenance_config = config
+    if config.get("request", DEFAULT_REQUEST) != request_options:
+        provenance_config = {**config, "request": copy.deepcopy(request_options)}
     if request_options.get("input_images"):
+        request_options = dict(request_options)
         request_options["_image_base_dir"] = config.get("_config_dir")
     validation = config.get("validation", {})
     profiles = selected_profiles(config, profile_selector)
@@ -1060,7 +1079,7 @@ def run_benchmark(
         "pricing_ledger": pricing_resolution["ledger"],
         "pricing_fingerprint": pricing_resolution["fingerprint"],
         "provenance": provenance(
-            config, models, pricing_resolution["fingerprint"], profiles
+            provenance_config, models, pricing_resolution["fingerprint"], profiles
         ),
         "pricing_warnings": pricing_freshness_report(
             models,
@@ -1096,6 +1115,17 @@ def run_benchmark(
     if config.get("_source_config_path"):
         result["source_config_path"] = config["_source_config_path"]
     result["decision"] = build_decision(result)
+    recorded = result["selection"]
+    result["selection_sha256"] = selection_fingerprint(
+        {
+            "prompt": recorded["prompt"],
+            "tests": recorded["tests"],
+            "environment": recorded["environment"],
+            "migrationCheck": recorded["migration_check"],
+            "smoke": recorded["smoke"],
+            "repetitions": recorded["repetitions"],
+        }
+    )
     return redact_result(result)
 
 

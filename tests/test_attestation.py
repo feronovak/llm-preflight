@@ -5,14 +5,14 @@ import shutil
 import socket
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from llm_preflight import attestation, cli
+from llm_preflight import attestation, cli, runner
 from llm_preflight.catalog import resolve_models
-from llm_preflight.contracts import _fingerprint, provenance
+from llm_preflight.contracts import _fingerprint, provenance, selection_fingerprint
 from llm_preflight.decision import build_decision
 from llm_preflight.pricing import resolve_pricing
 from llm_preflight.runner import load_config
@@ -52,10 +52,26 @@ RUN_IDENTITY = {
 
 @pytest.fixture(autouse=True)
 def local_clock_and_environment(monkeypatch):
-    """No GitHub identity unless a test sets one, and a pinned verifier clock."""
+    """No GitHub identity unless a test sets one, and a pinned verifier clock.
+
+    The run stamp uses that same day. A later wall clock must not make attest
+    reject a run this suite just produced.
+    """
     for name in GITHUB:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(cli, "today_utc", lambda: TODAY)
+    wall_now = datetime.now
+
+    class Pinned(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            wall = wall_now(timezone.utc)
+            pinned = wall.replace(year=TODAY.year, month=TODAY.month, day=TODAY.day)
+            if tz is None:
+                return pinned.replace(tzinfo=None)
+            return pinned.astimezone(tz)
+
+    monkeypatch.setattr(runner, "datetime", Pinned)
 
 
 def _run(monkeypatch, capsys, *arguments):
@@ -133,7 +149,7 @@ def _result(
         "ci": ci,
     }
     if selection is not UNRECORDED:
-        result["selection"] = selection or {
+        recorded = selection or {
             "prompt": None,
             "tests": None,
             "environment": None,
@@ -141,6 +157,18 @@ def _result(
             "smoke": False,
             "repetitions": 5,
         }
+        result["selection"] = recorded
+        # The same digest run_benchmark stores before redaction.
+        result["selection_sha256"] = selection_fingerprint(
+            {
+                "prompt": recorded["prompt"],
+                "tests": recorded["tests"],
+                "environment": recorded["environment"],
+                "migrationCheck": recorded["migration_check"],
+                "smoke": recorded["smoke"],
+                "repetitions": recorded["repetitions"],
+            }
+        )
     if state == "fail":
         model["summary"]["valid_output_rate"] = 0.5
         model["samples"][1]["valid_output"] = False
@@ -218,7 +246,7 @@ def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
         "llm-preflight/pricing",
         "llm-preflight/evidence",
     ]
-    for name in ("contract", "routes", "pricing", "evidence"):
+    for name in ("contract", "routes", "pricing"):
         assert _descriptor(record, name)["digest"] == {
             "sha256": saved["provenance"][f"{name}_sha256"]
         }
@@ -238,7 +266,23 @@ def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
         for key, value in saved["decision"].items()
         if key != "safe_next_command"
     }
-    assert evidence["provenance"] == saved["provenance"]
+    sealed = evidence["provenance"]
+    assert _descriptor(record, "evidence")["digest"] == {
+        "sha256": sealed["evidence_sha256"]
+    }
+    for key, value in saved["provenance"].items():
+        if key != "evidence_sha256":
+            assert sealed[key] == value
+    # The record seals the selection hash and the verdict. The result file
+    # keeps the run's provenance, so its evidence digest differs.
+    assert sealed["selection_sha256"] == saved.get("selection_sha256")
+    assert sealed["decision_state"] == saved["decision"]["state"]
+    assert sealed["blocking_warnings"] == saved["decision"]["blocking_warnings"]
+    assert sealed["cost_confidence"] == saved["cost_confidence"]
+    assert sealed["evidence_sha256"] == _fingerprint(
+        {key: value for key, value in sealed.items() if key != "evidence_sha256"}
+    )
+    assert sealed["evidence_sha256"] != saved["provenance"]["evidence_sha256"]
     assert evidence["checkedAt"] == CHECKED
     assert evidence["runId"] == saved["run_id"]
     assert evidence["requests"] == 3
@@ -1133,6 +1177,23 @@ DEFAULT_SELECTION = {
 }
 
 
+def test_a_run_is_stamped_on_the_verifier_day_not_a_later_wall_clock(
+    monkeypatch, capsys, tmp_path
+):
+    """The suite's verifier is TODAY. A later wall clock must not date the run
+    after that day, or attest rejects the run the suite just produced."""
+    monkeypatch.chdir(tmp_path)
+    _config(tmp_path, SELECTION_CONFIG)
+    code, _, err = _run(
+        monkeypatch, capsys, "benchmark.json", "--output-dir", "results"
+    )
+    assert code in {1, 3}, err
+    (result,) = (tmp_path / "results").glob("*-selection*.json")
+    stamped = json.loads(result.read_text())["timestamp"]
+    assert stamped[:10] == TODAY.isoformat(), stamped
+    assert _run(monkeypatch, capsys, "attest", result)[0] == 0
+
+
 def _selected_run(monkeypatch, capsys, tmp_path, *flags):
     """Run SELECTION_CONFIG, or the benchmark.json already there, on the mock
     provider under flags, and attest it in the same GitHub Actions run."""
@@ -1884,6 +1945,126 @@ def test_a_repository_name_that_looks_like_a_key_keeps_its_ci_identity(
     # matters is that the record counts.
     assert (code, report["reason_code"]) == (1, "failed_record")
     assert report["records"][0]["repository"] == repository
+
+
+def _forge_selection(record, prompt):
+    """Point the evidence annotation at another selection, leaving the seal."""
+    required = {
+        "prompt": prompt,
+        "tests": None,
+        "environment": None,
+        "migrationCheck": False,
+        "smoke": False,
+        "repetitions": 1,
+    }
+
+    def swap(data):
+        _evidence(data)["selectionSha256"] = selection_fingerprint(required)
+
+    _edit_record(record, swap)
+
+
+def test_gate_rejects_a_selection_hash_swapped_outside_the_seal(
+    monkeypatch, capsys, tmp_path
+):
+    """An edited selectionSha256 is not the selection the run sealed."""
+    _config(
+        tmp_path,
+        {
+            **SELECTION_CONFIG,
+            "prompts": [
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-alpha"},
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-beta"},
+            ],
+        },
+    )
+    record = _selected_run(monkeypatch, capsys, tmp_path, "--prompt", "sk-alpha")
+    _forge_selection(record, "sk-beta")
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    problems = json.loads(out)["integrity"]["problems"]
+    gate_code, report = _gate(
+        monkeypatch, capsys, "--records", "results", "--prompt", "sk-beta"
+    )
+
+    assert code == 1
+    assert "selectionSha256 does not match the sealed selection" in problems
+    assert (gate_code, report["decision"], report["reason_code"]) == (
+        1,
+        "blocked",
+        "inconsistent_record",
+    )
+
+
+def test_gate_rejects_a_rewritten_pass_whose_verdict_was_not_sealed(
+    monkeypatch, capsys, tmp_path
+):
+    """A WARNED record rewritten to look like PASSED still fails the seal."""
+    _config(
+        tmp_path,
+        {
+            **SELECTION_CONFIG,
+            "prompts": [
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-alpha"},
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-beta"},
+            ],
+        },
+    )
+    record = _selected_run(monkeypatch, capsys, tmp_path, "--prompt", "sk-alpha")
+    _forge_selection(record, "sk-beta")
+
+    def rewrite(data):
+        evidence = _evidence(data)
+        evidence["decision"]["state"] = "pass"
+        evidence["decision"]["blocking_warnings"] = []
+        evidence["decision"]["reason_code"] = "benchmark_passed"
+        evidence["costConfidence"] = "complete"
+        predicate = data["predicate"]
+        predicate["result"] = "PASSED"
+        predicate["passedTests"] = list(predicate.get("warnedTests") or [])
+        predicate["warnedTests"] = []
+        predicate["failedTests"] = []
+
+    _edit_record(record, rewrite)
+    code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
+    problems = json.loads(out)["integrity"]["problems"]
+    gate_code, report = _gate(
+        monkeypatch, capsys, "--records", "results", "--prompt", "sk-beta"
+    )
+
+    assert code == 1
+    assert "the decision does not match the sealed decision" in problems
+    assert "cost confidence does not match the sealed cost confidence" in problems
+    assert "selectionSha256 does not match the sealed selection" in problems
+    assert (gate_code, report["decision"], report["reason_code"]) == (
+        1,
+        "blocked",
+        "inconsistent_record",
+    )
+
+
+def test_gate_rejects_a_prompt_whose_redacted_name_matches_another(
+    monkeypatch, capsys, tmp_path
+):
+    _config(
+        tmp_path,
+        {
+            **SELECTION_CONFIG,
+            "prompts": [
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-alpha"},
+                {**SELECTION_CONFIG["prompts"][0], "name": "sk-beta"},
+            ],
+        },
+    )
+
+    _selected_run(monkeypatch, capsys, tmp_path, "--prompt", "sk-alpha")
+    code, report = _gate(
+        monkeypatch, capsys, "--records", "results", "--prompt", "sk-beta"
+    )
+
+    assert (code, report["reason_code"]) == (1, "selection_changed")
+    assert "under the same selection" not in report["why"]
+    assert "sk-beta" in report["why"]
 
 
 @pytest.mark.parametrize("flag", ["--prompt", "--tests"])

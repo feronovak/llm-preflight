@@ -102,6 +102,15 @@ wrote the record: `--prompt NAME`, `--tests LIST` (or its alias
 `--profiles`), `--env NAME`, `--migration-check` and `--smoke`. Without them
 the gate requires a default run. It fingerprints the configuration as a run
 under those flags would, including how many times that run sends each prompt.
+The comparison is a hash of the raw selection, stored before the result is
+redacted. Credential-keyed values are masked and every other word is kept, so
+prompt names that differ only by a word such as `sk-alpha` and `sk-beta` do
+not match. A record without that hash is blocked. `attest` copies the hash,
+the decision state, the blocking warnings and the cost confidence into the
+record's sealed provenance. `verify` rejects a record whose annotations
+disagree with that seal, so editing them does not make the gate pass. The
+seal is a checksum of those fields. It is not a signature. `gh attestation
+verify` remains a separate check.
 A record that ran another selection, such as one cheap `--tests` choice or a
 `--smoke` run where the gate requires a default run, or fewer repetitions per
 prompt than the configuration now asks for, is blocked as
@@ -188,14 +197,16 @@ request options, the selection and the repetitions per prompt. A route counts
 each setting the client reads to build its requests: provider, model,
 `adapter`, base URL, `api_version`, `max_tokens_parameter`, whether a
 temperature is sent (as `supports_temperature`, `capabilities.temperature` and
-the built-in model list decide it), each header with its value, and a mock
-route's `response`. Fingerprints hash text as written, so prompts that differ
-only in a word that looks like a key, such as `sk-SK`, never collide. A
-digest leaks nothing, so only values under credential names are left out of
-it: `api_key`, `apikey`, `Authorization`, names ending in `api-key` or
-`api_key`, and names with a `token`, `secret` or `password` word, such as
-`x-auth-token`. A credential in a header with another name counts, and
-replacing it blocks until the next record.
+the built-in model list decide it), the value of a behaviour header
+(`anthropic-beta` and `anthropic-version`), the name of every other header,
+and a mock route's `response`. Replacing the value of any other header,
+including one that holds a credential under a name that is not a credential
+key, does not change the route hash. Fingerprints hash text as written, so
+prompts that differ only in a word that looks like a key, such as `sk-SK`,
+never collide. A digest leaks nothing, so only values under credential names
+are left out of it: `api_key`, `apikey`, `Authorization`, names ending in
+`api-key` or `api_key`, and names with a `token`, `secret` or `password`
+word, such as `x-auth-token`.
 
 It leaves out settings that change neither what is sent nor how answers are
 judged: warmups, which never count toward the decision, `concurrency`,

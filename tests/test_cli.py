@@ -2993,7 +2993,8 @@ def test_main_dry_run_redacts_secrets(monkeypatch, tmp_path, capsys):
         '"model":"fake","base_url":"https://example.test",'
         '"headers":{"Authorization":"Bearer dry-run-redaction-secret"},'
         '"api_token":"dry-run-redaction-secret"}],'
-        '"request":{"temperature":0,"metadata_token":"dry-run-redaction-secret"}}'
+        '"request":{"temperature":0,"metadata_token":"dry-run-redaction-secret",'
+        '"system_prompt":"obey sk-alpha"}}'
     )
 
     monkeypatch.setattr(
@@ -3004,6 +3005,7 @@ def test_main_dry_run_redacts_secrets(monkeypatch, tmp_path, capsys):
 
     output = capsys.readouterr().out
     assert "dry-run-redaction-secret" not in output
+    assert "sk-alpha" not in output
     parsed = json.loads(output)
     assert parsed["models"][0]["api_token"] == "[REDACTED]"
     assert parsed["request"]["metadata_token"] == "[REDACTED]"

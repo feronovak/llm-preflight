@@ -855,6 +855,24 @@ def test_routes_fingerprint_counts_behaviour_header_values_never_a_credential():
     assert "synthetic-one" not in str(routes())
 
 
+def test_routes_fingerprint_hashes_behaviour_header_values_and_only_other_names():
+    def routes(**headers):
+        config = {
+            **REQUEST_BASE,
+            "models": [{**ROUTE, "headers": {"X-Trace": "secret-one", **headers}}],
+        }
+        return provenance(config, config["models"], "price")["routes_sha256"]
+
+    unchanged = routes()
+
+    assert routes(**{"X-Trace": "secret-two"}) == unchanged
+    assert routes(**{"X-Other": "secret-one"}) != unchanged
+    assert routes(**{"anthropic-version": "2023-06-01"}) != unchanged
+    assert routes(**{"anthropic-version": "2023-06-01"}) != routes(
+        **{"anthropic-version": "2024-01-01"}
+    )
+
+
 @pytest.mark.parametrize(
     ("route", "change"),
     [

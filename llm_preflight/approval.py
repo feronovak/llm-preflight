@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .redaction import redact_secrets
+from .redaction import without_credentials
 
 
 def create_approval_receipt(
@@ -23,7 +23,7 @@ def create_approval_receipt(
     expiry = _timestamp(expires_at, "approval expiry")
     if expiry <= current:
         raise ValueError("approval expiry must be in the future")
-    safe_plan = redact_secrets(plan)
+    safe_plan = without_credentials(plan)
     return {
         "schema_version": 1,
         "kind": "llm-preflight-approval-receipt",
@@ -53,7 +53,7 @@ def verify_approval_receipt(
     current = now or datetime.now(timezone.utc)
     if expiry <= current:
         return _verification("expired", "receipt has expired")
-    if receipt.get("plan_sha256") != _fingerprint(redact_secrets(plan)):
+    if receipt.get("plan_sha256") != _fingerprint(without_credentials(plan)):
         return _verification(
             "mismatch", "receipt does not match the current no-spend plan"
         )

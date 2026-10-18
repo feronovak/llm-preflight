@@ -126,8 +126,12 @@ llm-preflight benchmark.json --change-plan HEAD --json
 
 After reviewing a dry-run plan, record—not grant—a bounded human decision in a
 private local receipt. The receipt contains a review note, expiry, exact plan
-hash, and retry-expanded request/cost bounds. No CLI or MCP command accepts it
-as paid-run authorization; the user must still explicitly authorize a live run.
+hash, and retry-expanded request/cost bounds. The hash covers that plan with
+credential-keyed values masked, including the request and each model's id,
+base URL and mock response. It does not cover the prompt body, which is not
+in the plan. Printed plans stay redacted. No CLI or MCP command accepts the
+receipt as paid-run authorization; the user must still explicitly authorize a
+live run.
 
 ```bash
 llm-preflight benchmark.json --dry-run --no-env-file \

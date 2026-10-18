@@ -10,6 +10,7 @@ from unicodedata import east_asian_width
 
 from .catalog import resolve_models
 from .client import PROVIDER_DEFAULTS, validate_native_request_options
+from .contracts import profile_request_options
 from .decision import legacy_cost_evidence
 from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
@@ -126,13 +127,7 @@ def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     work: list[tuple[str, dict[str, Any]]] = []
     repetitions = int(config.get("suite_repetitions", 1))
     for profile in select_test_profiles(config, profile_selector_text(selector)):
-        options = dict(request)
-        profile_request = dict(profile.get("request", {}))
-        if profile.get("presets"):
-            profile_request = expand_presets(profile_request, profile["presets"])
-        options.update(profile_request)
-        if profile.get("system_prompt"):
-            options["system_prompt"] = profile["system_prompt"]
+        options = profile_request_options(request, profile, config.get("presets"))
         work.extend([(profile["cases"][0]["prompt"], options)] * warmups)
         if "concurrency_levels" in profile:
             for level in profile["concurrency_levels"]:

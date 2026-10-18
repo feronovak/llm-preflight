@@ -90,8 +90,16 @@ All notable changes to this project are documented here.
   flags and fingerprints the current config, its test profiles and its
   prompts as a run under them would, so a record of a `--prompt`, `--env` or
   `--migration-check` run no longer reads as `contract_changed` or
-  `routes_changed`. A record that ran a different selection, fewer or more
-  repetitions per prompt than the config now asks for, or records none, is
+  `routes_changed`. The result stores `selection_sha256` before redaction:
+  a hash of that selection with credential-keyed values masked and every
+  other word kept. The gate compares the hash, and a record without one is
+  blocked. Two prompt names that differ only by a word such as `sk-alpha`
+  and `sk-beta` do not count as the same selection. `attest` copies that
+  hash, the decision state, the blocking warnings and the cost confidence
+  into the record's evidence digest. A record whose annotations disagree
+  with that digest fails integrity and cannot pass the gate. A record that ran a
+  different selection, fewer or more repetitions per prompt than the config
+  now asks for, or records none, is
   blocked as `selection_changed`, naming both: only a record that ran exactly
   the gate's selection counts, so a narrower run such as one cheap `--tests`
   choice or a `--smoke` run cannot pass a gate that requires a default run.
@@ -177,9 +185,10 @@ All notable changes to this project are documented here.
   configuration without such words is unchanged. `routes_sha256` now covers
   each route setting the client reads to build a request: `adapter`, whether a
   temperature is sent, as `supports_temperature`, `capabilities.temperature`
-  and the built-in model list decide it, each header's value except a
-  credential's (2.21.x counted header names only), and a mock route's
-  `response`.
+  and the built-in model list decide it, the value of a behaviour header
+  (`anthropic-beta`, `anthropic-version`), the name of every other header
+  (2.21.x counted header names only), and a mock route's `response`. A
+  credential-keyed header value is masked and does not change the hash.
 - `--audit-source` text output now starts with the decision and its counts,
   then the exit code with and without `--ci`. Findings are grouped by model
   ID, retired first, with capped locations and one `Next:` line each.
@@ -201,6 +210,32 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Approval receipts hash the dry-run plan with credential-keyed values masked,
+  not with secret-like words rewritten. A request, or a model entry's model
+  id, base URL or mock response, that differs only by a word such as
+  `sk-alpha` and `sk-beta` no longer shares a receipt. The prompt body is
+  not part of the plan, so the receipt does not bind it. Printed plans stay
+  redacted. A receipt still does not authorize a paid run.
+- `--prompt` keeps the top-level request, including its temperature, and sends
+  both the top-level presets and the selected prompt's presets. A prompt
+  field overrides a preset default. A prompt `provider_options` object does
+  not drop top-level preset defaults the prompt left unset, and the gate
+  hashes the same request the run sends. `run_benchmark` expands top-level
+  presets when its caller has not already expanded them, and the recorded
+  request hash is the options that were sent.
+- `--tests` and any other profile run do the same for a profile
+  `provider_options` object: it replaces that dict, then top-level presets
+  fill only the defaults the profile left unset. The gate hashes the request
+  the run sends. A profile field still overrides a preset default.
+- A prompt preset fills only keys the merged request left unset, under
+  `--prompt` and under `--tests`. It does not overwrite an explicit parent
+  value such as `temperature`. Both flags send that same request, and the
+  gate hashes it.
+- The result reference now says that under `--tests`, `settings.request` and
+  the dry-run request stay the parent request after top-level presets. A
+  profile's own request and presets are not copied into those fields. The
+  options sent with each prompt remain the per-prompt `request_sha256`. Under
+  `--prompt`, those fields are that merged send.
 - Native Qwen 3.8 Max, Max-0902 and Flash use `max_completion_tokens` by
   default so the output limit includes reasoning and the visible answer.
 - A config whose `profiles` is a list, such as

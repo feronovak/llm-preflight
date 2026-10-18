@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -20,6 +20,9 @@ from .redaction import redact_secrets, without_credentials, without_private_fiel
 
 # The request a run sends with its prompt when the config names none.
 DEFAULT_REQUEST: dict[str, Any] = {"temperature": 0, "max_output_tokens": 256}
+# Header values that change what a provider does. Every other header counts
+# by name only, so a secret in an ordinary header is not in the route hash.
+_BEHAVIOUR_HEADERS = frozenset({"anthropic-beta", "anthropic-version"})
 
 _TOOL_NAME = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 _SCHEMA_TYPES = {"object", "array", "string", "number", "integer", "boolean"}
@@ -453,7 +456,7 @@ def provenance(
             "api_version": model.get("api_version"),
             "max_tokens_parameter": model.get("max_tokens_parameter"),
             "supports_temperature": _supports_temperature(model),
-            "headers": model.get("headers") or {},
+            "headers": _route_headers(model.get("headers") or {}),
             # The mock provider answers with its configured response.
             "response": model.get("response"),
         }
@@ -478,16 +481,27 @@ def provenance(
 
 
 def profile_request_options(
-    request: dict[str, Any], profile: dict[str, Any]
+    request: dict[str, Any],
+    profile: dict[str, Any],
+    presets: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """The request options sent with every case of a profile: the run's request,
-    updated by the profile's own request with its presets expanded, then the
-    profile's system prompt."""
+    """The request options sent with every case of a profile.
+
+    Profile request fields replace the run request. Profile presets and
+    top-level presets then fill only keys that the merged request left unset, so
+    a profile preset cannot overwrite an explicit parent value and a profile
+    ``provider_options`` object does not drop top-level preset defaults. The
+    profile system prompt wins last.
+    """
     options = dict(request)
-    profile_request = profile.get("request", {})
+    options.update(dict(profile.get("request") or {}))
+    # Preset defaults fill only keys the merged request left unset. Expanding
+    # a profile preset before the update would turn those defaults into
+    # profile fields and overwrite an explicit parent value such as temperature.
     if profile.get("presets"):
-        profile_request = expand_presets(profile_request, profile["presets"])
-    options.update(profile_request)
+        options = expand_presets(options, [str(item) for item in profile["presets"]])
+    if presets:
+        options = expand_presets(options, [str(item) for item in presets])
     if profile.get("system_prompt"):
         options["system_prompt"] = profile["system_prompt"]
     return options
@@ -503,7 +517,11 @@ def _prompt_fingerprints(
         # A profile run sends every case of every selected profile, a custom
         # prompt as one case under its own name, and never the top-level prompt.
         prompts = [
-            (case["id"], case["prompt"], profile_request_options(request, profile))
+            (
+                case["id"],
+                case["prompt"],
+                profile_request_options(request, profile, config.get("presets")),
+            )
             for profile in profiles
             for case in profile["cases"]
         ]
@@ -551,8 +569,32 @@ def _safe_base_url(value: Any) -> str | None:
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
 
+def _route_headers(headers: Any) -> dict[Any, Any]:
+    """Names of every header, and values only for behaviour headers.
+
+    Credential-keyed values are masked later by ``without_credentials``.
+    """
+    if not isinstance(headers, dict):
+        return {}
+    return {
+        name: value
+        if isinstance(name, str) and name.casefold() in _BEHAVIOUR_HEADERS
+        else None
+        for name, value in headers.items()
+    }
+
+
 def _fingerprint(value: Any) -> str:
     encoded = json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     )
     return hashlib.sha256(encoded.encode()).hexdigest()
+
+
+def selection_fingerprint(selection: Mapping[str, Any]) -> str:
+    """Hash a run selection with credential-keyed values masked.
+
+    Text is kept, so two names that differ only after an ``sk-`` token do not
+    share a digest. A saved result may still store the selection redacted.
+    """
+    return _fingerprint(without_credentials(dict(selection)))

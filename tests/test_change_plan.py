@@ -13,6 +13,8 @@ from llm_preflight.approval import (
     write_approval_receipt,
 )
 from llm_preflight.change_plan import git_change_plan
+from llm_preflight.cli import dry_run_plan
+from llm_preflight.redaction import redact_secrets
 
 
 def _git(workspace, *args):
@@ -310,6 +312,94 @@ def test_git_change_plan_reports_a_name_that_is_not_utf8_as_utf8_text(
     ]
     # A lone surrogate cannot be encoded, so this fails on any escaped byte.
     json.dumps(plan, ensure_ascii=False).encode("utf-8")
+
+
+def test_approval_receipt_distinguishes_plans_that_differ_after_a_secret_shaped_word():
+    def plan(token, api_key="sk-synthetic-one"):
+        return dry_run_plan(
+            {
+                "name": "checkout",
+                "prompt": "Reply with ok.",
+                "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+                "request": {
+                    "temperature": 0,
+                    "system_prompt": f"obey {token}",
+                    "api_key": api_key,
+                },
+                "repetitions": 1,
+                "warmups": 0,
+            }
+        )
+
+    now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+    expires_at = "2026-11-17T00:00:00+00:00"
+    first = plan("sk-alpha")
+    second = plan("sk-beta")
+    same_key = plan("sk-alpha", api_key="sk-synthetic-two")
+    receipt = create_approval_receipt(
+        first,
+        note="Reviewed the bounded checkout.",
+        expires_at=expires_at,
+        now=now,
+    )
+
+    assert "sk-alpha" not in json.dumps(receipt)
+    assert verify_approval_receipt(receipt, first, now=now)["state"] == "recorded"
+    assert verify_approval_receipt(receipt, second, now=now)["state"] == "mismatch"
+    assert verify_approval_receipt(receipt, same_key, now=now)["state"] == "recorded"
+
+
+@pytest.mark.parametrize(
+    ("field", "left", "right"),
+    [
+        ("model", "sk-alpha", "sk-beta"),
+        ("base_url", "https://sk-alpha.example/v1", "https://sk-beta.example/v1"),
+        ("response", "sk-alpha", "sk-beta"),
+    ],
+)
+def test_approval_receipt_distinguishes_model_fields_that_differ_by_a_secret_shaped_word(
+    field, left, right
+):
+    """The receipt hashes model id, base URL and mock response as written.
+
+    Display redacts those strings. The prompt body is not in the plan.
+    """
+
+    def plan(token):
+        model = {"provider": "mock", "model": "local", "response": "ok"}
+        if field == "base_url":
+            model = {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "base_url": token,
+            }
+        else:
+            model[field] = token
+        return dry_run_plan(
+            {
+                "name": "checkout",
+                "prompt": "Reply with ok.",
+                "models": [model],
+                "repetitions": 1,
+                "warmups": 0,
+            }
+        )
+
+    now = datetime(2026, 10, 17, tzinfo=timezone.utc)
+    first = plan(left)
+    second = plan(right)
+    receipt = create_approval_receipt(
+        first,
+        note="Reviewed the bounded checkout.",
+        expires_at="2026-11-17T00:00:00+00:00",
+        now=now,
+    )
+
+    assert first["models"][0][field] == left
+    assert left not in json.dumps(redact_secrets(first))
+    assert left not in json.dumps(receipt)
+    assert verify_approval_receipt(receipt, first, now=now)["state"] == "recorded"
+    assert verify_approval_receipt(receipt, second, now=now)["state"] == "mismatch"
 
 
 def test_approval_receipt_is_bound_to_one_plan_and_expires():

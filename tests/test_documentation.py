@@ -16,7 +16,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
     assert "**Last reviewed:** 2026-10-16 · **As of:** unreleased source" in page
-    assert "Package version: **2.21.2**" in page
+    assert "Package version: **2.22.0**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     assert "no live Gemini 4 result has been measured" not in page
@@ -343,7 +343,9 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
     assert "## Common jobs" in readme
-    assert "The pre-merge check for LLM changes." in readme
+    assert "No preflight, no merge." in readme
+    assert "A signed record" not in readme
+    assert "The pre-merge check for LLM changes." not in readme
     assert "## CLI, CI, and MCP" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
@@ -521,7 +523,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-15 · **As of:** v2.21.2"
+        "**Last reviewed:** 2026-10-17 · **As of:** unreleased source"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -595,7 +597,12 @@ def test_positioning_and_decisions_are_public_and_current():
 
     assert "## Choose your path" in readme
     assert "Review a new model" in readme
-    assert "The pre-merge check for LLM changes." in readme
+    assert "No preflight, no merge." in readme
+    assert "A signed record" not in readme
+    assert (
+        "It doesn't certify production behaviour. It proves the check was done."
+        in readme
+    )
     assert "local CLI and CI tool that checks an\napplication's LLM contract" in readme
     assert "[North star](../NORTH_STAR.md)" in positioning
     assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
@@ -650,6 +657,12 @@ def test_configuration_reference_documents_fixtures_at_both_levels():
     assert "## Contract fixtures" in configuration
     assert "same level as the `validation`" in configuration
     assert "inside that prompt" in configuration
+    assert (
+        "A prompt or test preset fills only keys left unset, under both "
+        "`--prompt` and `--tests`. A prompt or test `provider_options` object "
+        "replaces that dict; top-level presets then fill only the defaults "
+        "that object left unset."
+    ) in configuration
     assert "inside the prompt" in contracts_guide
     assert "top level or inside a custom prompt" in cli_reference
 
@@ -698,6 +711,17 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
     assert "`file_selection`" in results_reference.split("## Source audit JSON")[1]
+    assert (
+        "A test `provider_options` object replaces that dict, and top-level "
+        "presets fill only the defaults the test left unset"
+    ) in results_reference
+    assert (
+        "Under `--tests`, `settings.request` and the dry-run request stay the "
+        "parent request after top-level presets. A profile's own request and "
+        "presets are not copied into those fields. The options sent with each "
+        "prompt are the per-prompt `request_sha256`. Under `--prompt`, "
+        "`settings.request` and the dry-run request are that merged send."
+    ) in results_reference
     for status in ("`retired`", "`retiring`", "`stale`", "`active`", "`unknown`"):
         assert status in guide
     assert "30 days" in guide
@@ -986,16 +1010,22 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     for workflow in (gate, record):
         for reference in re.findall(r"uses: (\S+)", workflow):
             assert re.fullmatch(
-                r"feronovak/llm-preflight@v2\.22\.0|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                r"feronovak/llm-preflight@v2\.21\.2|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate
-    assert 'python -m pip install "llm-preflight==2.22.0"' in gate
+    assert 'python -m pip install "llm-preflight==2.21.2"' in gate
+    assert "not an available package or tag yet" in gate
+    assert "not an available package or tag yet" in record
+    gate_fence = gate.split("```yaml", 1)[1].split("```", 1)[0]
+    record_fence = record.split("```yaml", 1)[1].split("```", 1)[0]
+    assert "2.22.0" not in gate_fence
+    assert "2.22.0" not in record_fence
     assert "llm-preflight gate benchmark.json --smoke --records records" in gate
     assert "gh attestation verify" in gate
     assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
     assert 'attest: "true"' in record and 'sign: "true"' in record
-    assert 'package-version: "2.22.0"' in record
+    assert 'package-version: "2.21.2"' in record
     assert "id-token: write" in record and "attestations: write" in record
     assert HONESTY_LINE in record
 

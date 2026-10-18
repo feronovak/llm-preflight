@@ -234,6 +234,8 @@ def _retry_delay(config: dict[str, Any], retry_index: int) -> float:
     )
     delay = min(delay, config["max_delay_seconds"])
     jitter = min(config["jitter_seconds"], config["max_delay_seconds"] - delay)
+    # Retry jitter is not a secret or a token. Bandit B311 flags random.uniform
+    # as a cryptographic generator; without the suppression, `make audit` fails.
     return delay + random.uniform(0, jitter) if jitter else delay  # nosec B311
 
 

@@ -4,13 +4,13 @@
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover any ID a supported provider lists. The table below records the
-direct-provider snapshots in the current source checkout, based on **2.21.2**.
+direct-provider snapshots in the current source checkout, based on **2.22.0**.
 The native Qwen 3.8 price-source/cache corrections below are unreleased; an
 installed 2.21.2 still has the earlier QwenCloud-derived cache rates. The
 `gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
 official-source review date. Discover and probe the IDs you actually run.
 
-Package version: **2.21.2**. Each pricing row retains its recorded UTC review
+Package version: **2.22.0**. Each pricing row retains its recorded UTC review
 date. Version 2.21.0 adds Gemini 4 Argon and Gemini 3.6 Flash, refreshes 3.8
 Flash, and removes prices for redirected 3.5/3.7 aliases. Gemini 4 has
 deterministic protocol coverage and a native **16/16** observation on October

@@ -88,7 +88,9 @@ SHAs. This workflow records the contract on each push to `main`. For a pull
 request that changes the contract, a maintainer starts it from `main` with
 the pull request's head commit as `commit`; it then checks that commit's
 configuration with the workflow and credentials of `main`. The protected
-environment's required reviewers approve each paid run:
+environment's required reviewers approve each paid run.
+
+The workflow below is the Action you can run today: `v2.21.2` with `package-version` `2.21.2`. The `v2.22.0` ref is not an available package or tag yet.
 
 ```yaml
 name: LLM preflight record
@@ -114,10 +116,10 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
-      - uses: feronovak/llm-preflight@v2.22.0
+      - uses: feronovak/llm-preflight@v2.21.2
         with:
           config: benchmark.json
-          package-version: "2.22.0"
+          package-version: "2.21.2"
           run-paid: "true"
           attest: "true"
           sign: "true"

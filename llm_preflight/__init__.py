@@ -1,3 +1,3 @@
 """Local, cross-provider preflight checks for LLM integration changes."""
 
-__version__ = "2.21.2"
+__version__ = "2.22.0"

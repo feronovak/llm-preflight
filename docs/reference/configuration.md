@@ -204,7 +204,7 @@ disagrees with its validator.
 
 Presets translate intent into provider-aware options. Available presets are
 `json`, `no-reasoning`, `low-latency`, and `structured`. Explicit request
-values always win over preset defaults.
+values always win over preset defaults. A prompt or test preset fills only keys left unset, under both `--prompt` and `--tests`. A prompt or test `provider_options` object replaces that dict; top-level presets then fill only the defaults that object left unset.
 
 All native providers use a safe default output limit of 256 tokens when neither
 `max_output_tokens` nor `max_tokens` is set. Set an explicit limit for tasks

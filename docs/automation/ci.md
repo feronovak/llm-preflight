@@ -145,7 +145,9 @@ passing CI record matches its contract, routes and prompts. The
 [record workflow](github-action.md#proof-of-preflight) attests each approved
 paid smoke and uploads the record as the `llm-preflight-record` artifact. This
 workflow downloads the records of that workflow's recent runs on `main`, and
-only those, then runs the gate offline:
+only those, then runs the gate offline.
+
+The install in the workflow below is the published package, `llm-preflight==2.21.2`. `llm-preflight==2.22.0` is not an available package or tag yet.
 
 ```yaml
 name: LLM preflight gate
@@ -163,7 +165,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "llm-preflight==2.22.0"
+      - run: python -m pip install "llm-preflight==2.21.2"
       # Only runs on main count: a push to main, or a maintainer's dispatch
       # from main. A run on any other branch, or for a pull request, is
       # never downloaded, whatever its branch is called.

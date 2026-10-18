@@ -31,7 +31,7 @@ from typing import Any
 from . import __version__
 from .catalog import resolve_models
 from .client import observed_model, reported_model
-from .contracts import _fingerprint, provenance
+from .contracts import _fingerprint, provenance, selection_fingerprint
 from .features import (
     apply_environment,
     apply_migration_check,
@@ -259,6 +259,10 @@ def build_record(
         requests = _request_count(result)
     except (AttributeError, KeyError, TypeError) as exc:
         raise ValueError("result models are malformed; cannot attest it") from exc
+    # The result's provenance seals what the run sent. Copy the selection hash
+    # and the verdict into that seal here, so an annotation edit cannot make
+    # a different selection or a rewritten pass verify.
+    sealed = _seal_verdict(evidence, result, decision)
     predicate: dict[str, Any] = {
         "result": _RESULTS[decision["state"]],
         "configuration": [
@@ -271,7 +275,7 @@ def build_record(
             _descriptor("pricing", evidence["pricing_sha256"]),
             _descriptor(
                 "evidence",
-                evidence["evidence_sha256"],
+                sealed["evidence_sha256"],
                 {
                     "checkedAt": result.get("timestamp"),
                     "runId": result.get("run_id"),
@@ -281,9 +285,10 @@ def build_record(
                         for key, value in decision.items()
                         if key != "safe_next_command"
                     },
-                    "provenance": copy.deepcopy(evidence),
+                    "provenance": sealed,
                     "requests": requests,
                     "selection": _result_selection(result),
+                    "selectionSha256": result.get("selection_sha256"),
                     "costUsd": result.get("total_estimated_cost_usd"),
                     "costConfidence": result.get("cost_confidence"),
                     "retirementSnapshot": snapshot_summary()["newest_as_of"],
@@ -421,6 +426,14 @@ def integrity_problems(record: Any, today: date) -> list[str]:
         problems.append("the evidence carries no pass, inconclusive or fail decision")
     elif result in _RESULTS.values() and _RESULTS[state] != result:
         problems.append(f"{result} does not match the {state} decision")
+    # Records attested before the verdict was sealed have no decision_state.
+    # A checksum is not a signature: a writer who reseals the digest and the
+    # descriptor can still substitute a verdict. This catches an edit that
+    # leaves the seal behind.
+    if isinstance(fingerprints, dict) and "decision_state" in fingerprints:
+        problems.extend(
+            _sealed_annotation_problems(evidence, fingerprints, decision, state)
+        )
     if result == "PASSED":
         if evidence.get("costConfidence") != "complete":
             problems.append("a PASSED record needs complete cost confidence")
@@ -851,6 +864,7 @@ def _evaluate(
         retired_routes=freshness["retired_routes"],
         routes=report["routes"],
         selection=evidence.get("selection"),
+        selection_sha256=evidence.get("selectionSha256"),
         contract_sha256=_digest(descriptors["contract"]),
         routes_sha256=_digest(descriptors["routes"]),
         _checked=_timestamp(evidence["checkedAt"]),
@@ -869,10 +883,15 @@ def _evaluate(
             "selection_changed",
             "does not record its selection"
             if entry["selection"] is None
+            else "does not record its raw selection"
+            if not _is_sha256(entry.get("selection_sha256"))
             else "ran a different selection",
-            # A result stores a secret-like name, such as a prompt called
-            # sk-greeting, redacted, as provenance does; compare that form.
-            entry["selection"] != redact_secrets(required),
+            # Compare a digest of the selection as chosen. The stored names are
+            # redacted, so two prompts called sk-alpha and sk-beta would match
+            # as text.
+            entry["selection"] is None
+            or not _is_sha256(entry.get("selection_sha256"))
+            or entry["selection_sha256"] != selection_fingerprint(required),
         ),
         (
             "contract_changed",
@@ -928,6 +947,7 @@ def _entry(path: Path, verdict: str, reason: str) -> dict[str, Any]:
         "retired_routes": [],
         "routes": [],
         "selection": None,
+        "selection_sha256": None,
         "contract_sha256": None,
         "routes_sha256": None,
         "_checked": None,
@@ -1041,13 +1061,21 @@ def _explain(
             )
         ran = describe_selection(newest["selection"])
         if ran == requires:
-            # Same flags, so the config now sends each prompt more or fewer times.
+            if newest["selection"].get("repetitions") != required.get("repetitions"):
+                # Same flags, so the config now sends each prompt more or fewer times.
+                return (
+                    (
+                        f"The latest record ({described}) ran {ran} with "
+                        f"{_counted(newest['selection']['repetitions'], 'repetition')} "
+                        f"per prompt; {config} now asks for {required['repetitions']} "
+                        "under the same selection."
+                    ),
+                    fresh_check,
+                )
             return (
                 (
-                    f"The latest record ({described}) ran {ran} with "
-                    f"{_counted(newest['selection']['repetitions'], 'repetition')} "
-                    f"per prompt; {config} now asks for {required['repetitions']} "
-                    "under the same selection."
+                    f"The latest record ({described}) recorded {ran}, but that "
+                    "is not the selection this gate requires."
                 ),
                 fresh_check,
             )
@@ -1516,6 +1544,45 @@ def _same_repository(entry: Mapping[str, Any], expected: Mapping[str, str]) -> b
         and str(entry["server_url"]).rstrip("/").casefold()
         == expected["serverUrl"].rstrip("/").casefold()
     )
+
+
+def _seal_verdict(
+    evidence: Mapping[str, Any], result: Mapping[str, Any], decision: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Provenance plus the selection hash and verdict, resealed.
+
+    The result file keeps the run's provenance. The record's copy also binds
+    the hash and the verdict the gate reads, so changing either annotation
+    without this seal fails integrity.
+    """
+    sealed = copy.deepcopy(dict(evidence))
+    sealed.pop("evidence_sha256", None)
+    sealed["selection_sha256"] = result.get("selection_sha256")
+    sealed["decision_state"] = decision.get("state")
+    sealed["blocking_warnings"] = copy.deepcopy(decision.get("blocking_warnings"))
+    sealed["cost_confidence"] = result.get("cost_confidence")
+    sealed["evidence_sha256"] = _fingerprint(sealed)
+    return sealed
+
+
+def _sealed_annotation_problems(
+    evidence: Mapping[str, Any],
+    fingerprints: Mapping[str, Any],
+    decision: Any,
+    state: Any,
+) -> list[str]:
+    """Annotation fields that disagree with the sealed provenance."""
+    problems = []
+    if evidence.get("selectionSha256") != fingerprints.get("selection_sha256"):
+        problems.append("selectionSha256 does not match the sealed selection")
+    if state != fingerprints.get("decision_state"):
+        problems.append("the decision does not match the sealed decision")
+    warnings = decision.get("blocking_warnings") if isinstance(decision, dict) else None
+    if warnings != fingerprints.get("blocking_warnings"):
+        problems.append("blocking warnings do not match the sealed decision")
+    if evidence.get("costConfidence") != fingerprints.get("cost_confidence"):
+        problems.append("cost confidence does not match the sealed cost confidence")
+    return problems
 
 
 def _provenance_problems(evidence: Mapping[str, Any]) -> list[str]:

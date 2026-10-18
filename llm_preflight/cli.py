@@ -67,7 +67,7 @@ from .interactive import InteractiveServices, select_interactively
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
-from .redaction import redact_secrets
+from .redaction import redact_secrets, without_credentials
 from .reporting import render_card_svg, render_job_summary, render_report_html
 from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
@@ -642,7 +642,15 @@ def dry_run_plan(
     retirements["next_commands"] = unique_next_commands(retirements["models"])
     plan = {
         "benchmark": config.get("name", "llm-benchmark"),
-        "models": catalog_output(models),
+        # The receipt hashes this plan. Keep model id, base URL and mock
+        # response with only credential values masked. catalog_output is the
+        # redacted form printed by --catalog; do not use it here.
+        "models": [
+            without_credentials(
+                {key: value for key, value in model.items() if key != "headers"}
+            )
+            for model in models
+        ],
         "tests": _selected_test_names(config, profile_selector),
         "test_breakdown": _test_breakdown(config, profile_selector),
         "requests": budget["requests"],
@@ -661,7 +669,7 @@ def dry_run_plan(
         "retirements": retirements,
         "configuration_warnings": preset_warnings(config, models),
         "presets": config.get("presets", []),
-        "request": redact_secrets(
+        "request": without_credentials(
             config.get("request", {"temperature": 0, "max_output_tokens": 256})
         ),
         "save_responses": config.get("save_responses", False),
@@ -1660,7 +1668,11 @@ def _watch_new_main(argv: list[str]) -> None:
     if args.dry_run:
         plan = dry_run_plan(config, args.tests)
         plan["catalog_candidates"] = catalog_output(candidates)
-        print(json.dumps(plan, indent=2) if args.json else _format_dry_run_plan(plan))
+        print(
+            json.dumps(redact_secrets(plan), indent=2)
+            if args.json
+            else redact_secrets(_format_dry_run_plan(plan))
+        )
         return
     if not args.interactive:
         check_budget(_budget_config(config, args.tests))
@@ -3064,9 +3076,9 @@ def main() -> None:
                 )
                 payload = {"plan": plan, "approval_verification": verification}
             print(
-                json.dumps(payload, indent=2)
+                json.dumps(redact_secrets(payload), indent=2)
                 if args.json
-                else _format_dry_run_plan(plan),
+                else redact_secrets(_format_dry_run_plan(plan)),
                 end="" if not args.json else "\n",
             )
             if verification is not None and not verification["ok"]:

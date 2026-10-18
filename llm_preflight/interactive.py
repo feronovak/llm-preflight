@@ -444,7 +444,7 @@ def _select_once(
     plan = dry_run_plan(selected_config, profile_selector)
     output_fn("")
     output_fn(_stage_heading("Run Plan", "36", color))
-    for line in _format_dry_run_plan(plan).splitlines()[1:]:
+    for line in redact_secrets(_format_dry_run_plan(plan)).splitlines()[1:]:
         output_fn(line)
     output_fn(
         "  "

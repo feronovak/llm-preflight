@@ -475,6 +475,297 @@ def test_mock_provider_reads_verified_image_inputs(tmp_path):
     assert result["models"][0]["samples"][0]["ok"] is False
 
 
+def test_select_custom_prompt_keeps_top_level_temperature_and_both_preset_sets():
+    from llm_preflight.features import apply_provider_presets
+
+    config = apply_provider_presets(
+        {
+            "presets": ["json"],
+            "request": {"temperature": 0.2},
+            "prompts": [
+                {
+                    "name": "review",
+                    "prompt": "Review",
+                    "presets": ["no-reasoning"],
+                    "request": {"max_output_tokens": 50},
+                }
+            ],
+            "models": [{"model": "fake"}],
+        }
+    )
+
+    request = select_custom_prompt(config, "review")["request"]
+
+    assert request["temperature"] == 0.2
+    assert request["max_output_tokens"] == 50
+    assert request["provider_options"]["openai"]["response_format"] == {
+        "type": "json_object"
+    }
+    assert request["provider_options"]["openrouter"]["include_reasoning"] is False
+
+
+def test_prompt_provider_options_keep_top_level_preset_defaults_for_the_gate(
+    tmp_path, monkeypatch
+):
+    """A prompt provider_options object must not drop top-level preset defaults.
+
+    The gate fingerprints the request after select_custom_prompt. The run must
+    send that same request, including preset defaults the prompt did not set.
+    """
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    config = {
+        "name": "wipe",
+        "presets": ["json"],
+        "request": {"temperature": 0.2},
+        "prompts": [
+            {
+                "name": "review",
+                "prompt": "Review",
+                "request": {
+                    "provider_options": {"openrouter": {"models": ["only-this"]}}
+                },
+            }
+        ],
+        "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    from llm_preflight.attestation import current_fingerprints
+    from llm_preflight.contracts import _request_fingerprint
+    from llm_preflight.features import apply_provider_presets
+
+    prepared = select_custom_prompt(apply_provider_presets(load_config(path)), "review")
+    result = run_benchmark(prepared)
+    sent = captured[0]
+    fingerprint = _request_fingerprint(sent)
+    current = current_fingerprints(path, {"prompt": "review"})
+
+    assert sent["temperature"] == 0.2
+    assert sent["provider_options"]["openai"]["response_format"] == {
+        "type": "json_object"
+    }
+    assert sent["provider_options"]["openrouter"]["models"] == ["only-this"]
+    assert result["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert current["prompts"][0]["request_sha256"] == fingerprint
+
+
+def test_test_provider_options_keep_top_level_preset_defaults_for_the_gate(
+    tmp_path, monkeypatch
+):
+    """A --tests provider_options object must not drop top-level preset defaults.
+
+    The gate fingerprints that profile request. The run must send it, including
+    preset defaults the test left unset.
+    """
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    config = {
+        "name": "wipe",
+        "presets": ["json"],
+        "request": {"temperature": 0.2},
+        "prompts": [
+            {
+                "name": "review",
+                "prompt": "Review",
+                "request": {
+                    "provider_options": {"openrouter": {"models": ["only-this"]}}
+                },
+            }
+        ],
+        "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    from llm_preflight.attestation import current_fingerprints
+    from llm_preflight.contracts import _request_fingerprint
+    from llm_preflight.features import apply_provider_presets
+
+    prepared = apply_provider_presets(load_config(path))
+    result = run_benchmark(prepared, "review")
+    sent = captured[0]
+    fingerprint = _request_fingerprint(sent)
+    current = current_fingerprints(path, {"tests": "review"})
+
+    assert sent["temperature"] == 0.2
+    assert sent["provider_options"]["openai"]["response_format"] == {
+        "type": "json_object"
+    }
+    assert sent["provider_options"]["openrouter"]["models"] == ["only-this"]
+    assert result["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert current["prompts"][0]["request_sha256"] == fingerprint
+
+
+def test_a_prompt_preset_does_not_overwrite_an_explicit_parent_temperature(
+    tmp_path, monkeypatch
+):
+    """A prompt preset fills only unset keys. It must not replace a temperature
+    the parent request already set, under --prompt or under --tests."""
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    config = {
+        "name": "wipe",
+        "presets": ["json"],
+        "request": {"temperature": 0.9},
+        "prompts": [
+            {
+                "name": "review",
+                "prompt": "Review",
+                "presets": ["low-latency"],
+                "request": {
+                    "provider_options": {"openrouter": {"models": ["only-this"]}}
+                },
+            }
+        ],
+        "models": [{"provider": "openai", "model": "gpt-4.1-mini"}],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    from llm_preflight.attestation import current_fingerprints
+    from llm_preflight.contracts import _request_fingerprint
+    from llm_preflight.features import apply_provider_presets
+
+    loaded = load_config(path)
+    prompt_run = run_benchmark(
+        select_custom_prompt(apply_provider_presets(loaded), "review")
+    )
+    prompt_sent = captured[0]
+    captured.clear()
+    tests_run = run_benchmark(apply_provider_presets(load_config(path)), "review")
+    tests_sent = captured[0]
+
+    for sent in (prompt_sent, tests_sent):
+        assert sent["temperature"] == 0.9
+        assert sent["max_output_tokens"] == 256
+        assert sent["provider_options"]["openai"]["response_format"] == {
+            "type": "json_object"
+        }
+        assert sent["provider_options"]["openrouter"]["models"] == ["only-this"]
+    assert _request_fingerprint(prompt_sent) == _request_fingerprint(tests_sent)
+    fingerprint = _request_fingerprint(tests_sent)
+    assert prompt_run["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert tests_run["provenance"]["prompts"][0]["request_sha256"] == fingerprint
+    assert (
+        current_fingerprints(path, {"prompt": "review"})["prompts"][0]["request_sha256"]
+        == fingerprint
+    )
+    assert (
+        current_fingerprints(path, {"tests": "review"})["prompts"][0]["request_sha256"]
+        == fingerprint
+    )
+
+
+def test_run_benchmark_expands_top_level_presets_into_the_request(monkeypatch):
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+
+    result = run_benchmark(
+        {
+            "prompt": "hi",
+            "presets": ["low-latency"],
+            "request": {"temperature": 0.2},
+            "models": [{"provider": "openai", "model": "fake"}],
+            "repetitions": 1,
+            "warmups": 0,
+        }
+    )
+
+    assert captured[0]["temperature"] == 0.2
+    assert captured[0]["max_output_tokens"] == 256
+    assert result["settings"]["request"]["max_output_tokens"] == 256
+    from llm_preflight.contracts import _request_fingerprint
+
+    assert result["provenance"]["prompts"][0]["request_sha256"] == _request_fingerprint(
+        captured[0]
+    )
+
+
 def test_select_custom_prompt_applies_named_request_and_validation():
     config = {
         "prompts": [

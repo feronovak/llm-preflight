@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-15 · **As of:** v2.21.2
+**Last reviewed:** 2026-10-17 · **As of:** unreleased source
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -10,9 +10,10 @@
 
 ![llm-preflight running the no-key demo: init, benchmark run, results table, quality gate, and decision block](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/readme-demo.gif)
 
-**The pre-merge check for LLM changes.** Catch model, prompt, schema, and
-provider-route regressions against your application's contract, then review
-latency, usage, and price evidence.
+**No preflight, no merge.** A record that your LLM contract passed on
+this route, recently, in CI. The merge gate rejects stale or borrowed passes.
+
+It doesn't certify production behaviour. It proves the check was done.
 
 ## Try it in 60 seconds
 

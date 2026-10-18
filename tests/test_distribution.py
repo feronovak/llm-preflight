@@ -31,14 +31,14 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.21.2"' in workflow
+    assert 'package-version: "2.22.0"' in workflow
     assert "run-paid" not in workflow
 
 
 def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.21.2"' in action
+    assert 'default: "2.22.0"' in action
     assert 'python -m pip install "llm-preflight==${version}"' in action
     assert "sleep 20" in action
 
@@ -152,7 +152,7 @@ def test_testpypi_install_wait_tolerates_propagation_and_stops_at_its_bound(tmp_
                 "COUNTER": str(counter),
                 "SLEEPS": str(sleeps),
                 "SUCCEED_ON": str(success_on),
-                "VERSION": "2.21.2",
+                "VERSION": "2.22.0",
             },
             timeout=5,
             check=False,

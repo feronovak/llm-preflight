@@ -329,8 +329,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Common jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in readme
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.21.2" in workflow
-    assert "starter workflow pins the latest published package, 2.21.2" in ci
+    assert "llm-preflight==2.22.0" in workflow
+    assert "starter workflow pins the latest published package, 2.22.0" in ci
     assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
 
 
@@ -428,7 +428,7 @@ def test_readme_provider_starter_has_runnable_local_contract_fixtures(tmp_path):
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.21.2"' in action
+    assert 'default: "2.22.0"' in action
     assert "GITHUB_STEP_SUMMARY" in action
     assert "No generation requests were made by the default checks." in action
     assert 'python -m llm_preflight report "$result_file" --format markdown' in action
@@ -483,7 +483,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2"
+        "**Last reviewed:** 2026-10-14 · **As of:** v2.22.0"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
@@ -549,11 +549,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in action_guide
-    assert 'package-version: "2.21.2"' in action_guide
-    assert "source defaults to `2.21.2`" in action_guide
-    assert "`v2.21.2` release tag retains the `2.21.1`" in action_guide
-    assert "latest published package (`2.21.2`)" in action_guide
+    assert "**Last reviewed:** 2026-10-14 · **As of:** v2.22.0" in action_guide
+    assert 'package-version: "2.22.0"' in action_guide
+    assert "source defaults to `2.22.0`" in action_guide
+    assert "`v2.22.0` release tag retains the `2.21.2`" in action_guide
+    assert "latest published package (`2.22.0`)" in action_guide
     assert "under development" not in action_guide
 
 
@@ -1010,22 +1010,23 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     for workflow in (gate, record):
         for reference in re.findall(r"uses: (\S+)", workflow):
             assert re.fullmatch(
-                r"feronovak/llm-preflight@v2\.21\.2|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                r"feronovak/llm-preflight@v2\.22\.0|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate
-    assert 'python -m pip install "llm-preflight==2.21.2"' in gate
-    assert "not an available package or tag yet" in gate
-    assert "not an available package or tag yet" in record
+    assert 'python -m pip install "llm-preflight==2.22.0"' in gate
+    assert "not an available package or tag yet" not in gate
+    assert "not an available package or tag yet" not in record
     gate_fence = gate.split("```yaml", 1)[1].split("```", 1)[0]
     record_fence = record.split("```yaml", 1)[1].split("```", 1)[0]
-    assert "2.22.0" not in gate_fence
-    assert "2.22.0" not in record_fence
+    assert "2.21.2" not in gate_fence
+    assert "2.21.2" not in record_fence
+    assert "`v2.22.0` release tag retains the `2.21.2` default" in record
     assert "llm-preflight gate benchmark.json --smoke --records records" in gate
     assert "gh attestation verify" in gate
     assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
     assert 'attest: "true"' in record and 'sign: "true"' in record
-    assert 'package-version: "2.21.2"' in record
+    assert 'package-version: "2.22.0"' in record
     assert "id-token: write" in record and "attestations: write" in record
     assert HONESTY_LINE in record
 

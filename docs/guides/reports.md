@@ -2,18 +2,19 @@
 
 **Last reviewed:** 2026-10-18 · **As of:** v2.22.1
 
-From the repository root, render an existing result without repeating the
-benchmark or contacting a provider:
+With the installed CLI, render an existing result without repeating the
+benchmark or contacting a provider. Replace `results/run.json` with the actual
+JSON path printed by your run:
 
 ```bash
-python3 -m llm_preflight report results/run.json --output report.html
+llm-preflight report results/run.json --output report.html
 ```
 
 The standalone HTML opens offline. To print a compact GitHub-flavored Markdown
 summary, use:
 
 ```bash
-python3 -m llm_preflight report results/run.json --format markdown
+llm-preflight report results/run.json --format markdown
 ```
 
 The report starts with the run decision and, when present, a separate baseline
@@ -42,8 +43,8 @@ a universal ranking.
 The card is a small SVG for a pull request, a release note or a README:
 
 ```bash
-python3 -m llm_preflight report results/run.json --format svg --output card.svg
-python3 -m llm_preflight report results/run.json --format svg \
+llm-preflight report results/run.json --format svg --output card.svg
+llm-preflight report results/run.json --format svg \
   --record results/run.preflight.json --output card.svg
 ```
 

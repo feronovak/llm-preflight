@@ -1,10 +1,12 @@
 # CLI reference
 
-**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 Run `llm-preflight --help` for the installed version. The options below match this
-release. `config` is a benchmark JSON path and is required unless `init` or `--init`,
-`--quick`, `--diff`, or `--replay` is used.
+release. A normal benchmark takes `config`, a benchmark JSON path. Standalone
+commands such as `init`, `catalog`, `models`, `report`, `attest`, `verify` and
+`gate`, plus `--audit-source`, `--quick`, `--diff` and `--replay`, have their own
+inputs; see their `--help`.
 
 `llm-preflight` is the primary command. From a source checkout, use
 `python3 -m llm_preflight`. Use `--help` for the installed command surface and
@@ -23,7 +25,7 @@ schema-version-1 results and omits prompt/response content, local paths, and
 identifying run metadata; the SVG card alone names the configuration, so a
 shared card says which check it shows.
 
-For 2.17.2 source builds, unsupported output-schema keywords stop validation
+Unsupported output-schema keywords stop validation
 before requests. Missing usage or unobserved retry usage keeps billable cost
 incomplete and the decision inconclusive. Reports and comparisons flag legacy
 artifacts without coverage; they do not convert missing cost into zero or

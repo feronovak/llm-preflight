@@ -7,7 +7,7 @@ produce text: OCR, classification labels, extraction, routing, or a structured
 answer. It verifies the same things as a text preflight—request compatibility,
 the application's text/schema contract, latency, and reported token cost.
 
-Start from the checked-in [Qwen Model Studio example](../../examples/vision/qwen-vl-model-studio.json)
+From a **source checkout**, start with the checked-in [Qwen Model Studio example](../../examples/vision/qwen-vl-model-studio.json)
 or [Gemini example](../../examples/vision/gemini-image-to-text.json); both use
 the same checked-in, non-sensitive `ORDER-4821` PNG fixture and assert that
 mechanical OCR value.
@@ -46,7 +46,7 @@ encoded bytes. Replay that run from the original configuration, not result JSON.
 
 OpenRouter and an explicitly configured OpenAI-compatible endpoint use
 multipart `image_url` content. Gemini uses inline image data. This lets a Qwen
-image-capable Qwen model hosted through Model Studio be configured as an
+image-capable model hosted through Model Studio be configured as an
 `openai_compatible` model with its workspace endpoint and `DASHSCOPE_API_KEY`.
 
 Keep the contract mechanical. For example, check an OCR response against a

@@ -74,7 +74,8 @@ adapter evidence before it is eligible for a paid smoke.
 
 ### 2. Probe only the text candidates you care about
 
-If refresh reports **Needs one probe**, review those models first:
+If refresh reports **Needs one probe**, review those models first. This
+**potentially paid** command sends a request only after selection and confirmation:
 
 ```bash
 llm-preflight catalog probe benchmarks/watch.json
@@ -147,17 +148,22 @@ llm-preflight catalog prepare benchmarks/watch.json \
 ### 4. Run the response-and-contract comparison
 
 Start with the three-case migration check. It makes the smallest useful paid
-comparison: can each model respond through your account, meet a basic response
-contract, and respond quickly enough from this host?
+comparison through your account, using a capital-city answer, summary and
+rewrite. These generic cases do not substitute for the application contract.
 
 ```bash
 llm-preflight benchmarks/candidates.json --migration-check --dry-run
+```
+
+**Paid requests:** after reviewing and authorizing that plan, execute:
+
+```bash
 llm-preflight benchmarks/candidates.json --migration-check \
   --output-dir benchmarks/results
 ```
 
-Then use interactive mode for the task-specific contract that matters to your
-application—for example structured output or exact routing:
+Then use interactive mode for the application contract. It previews the work
+and asks for confirmation before any **paid requests**:
 
 ```bash
 llm-preflight benchmarks/candidates.json --interactive \

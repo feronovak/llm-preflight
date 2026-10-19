@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-10-14 · **As of:** v2.21.2
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 Connect a coding agent to an existing project contract, validate it without
 provider access, then review a bounded plan. The local stdio server exposes
@@ -202,6 +202,10 @@ workspace path absolute. The server reads only paths below it.
 
 ### Codex
 
+The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+and [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+describe the CLI, project config and approval settings.
+
 From the repository you want to validate:
 
 ```bash
@@ -226,6 +230,9 @@ live preflight remains visible for review.
 
 ### Claude Code
 
+See the [official MCP guide](https://code.claude.com/docs/en/mcp) for scope
+and project approval behavior.
+
 From the repository you want to validate, add a project-scoped server:
 
 ```bash
@@ -239,6 +246,9 @@ configuration before committing it. Use `--scope user` instead when the same
 server should be available across projects.
 
 ### Cursor
+
+See the [official MCP guide](https://cursor.com/docs/mcp) for configuration
+locations and client controls.
 
 Create `.cursor/mcp.json` in the repository (or `~/.cursor/mcp.json` for a
 personal global installation):

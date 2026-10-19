@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.
@@ -133,11 +133,15 @@ in the plan. Printed plans stay redacted. No CLI or MCP command accepts the
 receipt as paid-run authorization; the user must still explicitly authorize a
 live run.
 
+The example below expires one hour from now; choose a duration matching the
+reviewed plan. The timestamp is computed, not a historical date to copy.
+
 ```bash
+receipt_expires_at=$(python3 -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=1)).isoformat())')
 llm-preflight benchmark.json --dry-run --no-env-file \
   --approval-receipt .llm-preflight/approvals/checkout.json \
   --approval-note "Reviewed checkout smoke." \
-  --approval-expires-at 2026-09-05T12:00:00+00:00 --json
+  --approval-expires-at "$receipt_expires_at" --json
 llm-preflight benchmark.json --dry-run --no-env-file \
   --verify-approval-receipt .llm-preflight/approvals/checkout.json --json
 ```

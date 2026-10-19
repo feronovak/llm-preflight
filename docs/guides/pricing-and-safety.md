@@ -30,8 +30,9 @@ responded.
 ## Fair comparisons and retries
 
 Keep the prompt, system prompt, temperature, and maximum output fixed. Run from
-the same host, pin dated model IDs where possible, and use at least 20 measured
-repetitions for meaningful latency comparison.
+the same host and pin dated model IDs where possible. Choose repetitions based
+on the variability observed and the precision your decision needs. A fixed
+number of requests does not guarantee a stable latency percentile.
 
 Retryable rate limits, selected 5xx responses, temporary network failures, and
 timeouts retry once by default. Configure `request.retry` to change attempts,
@@ -90,7 +91,9 @@ Estimates still exclude taxes, cache-storage fees, tool
 fees, and account-specific discounts not reported in usage.
 
 An explicit override is reviewed evidence, not a timeless number. Include a
-source and date so the coverage gate can assess it:
+source and date so the coverage gate can assess it. The fragment below uses
+illustrative rates and a historical date; replace them with actually reviewed
+evidence for your route. Do not advance the date without checking the source:
 
 ```json
 {

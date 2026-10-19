@@ -29,10 +29,10 @@ otherwise break production.
 ```
 
 Put one or more of these objects in the top-level `prompts` list of your
-benchmark config. Run one by name:
+benchmark config. Preview one by name without generation:
 
 ```bash
-llm-preflight benchmark.json --tests ticket-extraction
+llm-preflight benchmark.json --tests ticket-extraction --dry-run
 ```
 
 To compare a current model and a candidate, put both models in `models`. The
@@ -41,13 +41,14 @@ can replace the incumbent for that rule.
 
 ## Start with these runnable examples
 
-These examples use the local `mock` provider, so they need no API key and cost
-nothing. Run one to see the result shape:
+From a **source checkout**, these examples use the local `mock` provider and
+make no provider requests. Each local test passes but the benchmark is
+intentionally inconclusive (exit `3`). Run one to see the result:
 
 ```bash
-llm-preflight examples/custom-contracts/ticket-extraction.json --no-save
-llm-preflight examples/custom-contracts/intent-routing.json --no-save
-llm-preflight examples/custom-contracts/content-rule.json --no-save
+llm-preflight examples/custom-contracts/ticket-extraction.json --no-save --no-env-file
+llm-preflight examples/custom-contracts/intent-routing.json --no-save --no-env-file
+llm-preflight examples/custom-contracts/content-rule.json --no-save --no-env-file
 ```
 
 Each example also carries accepted and rejected fixtures, so the contract
@@ -89,14 +90,16 @@ wording changes. Conversely, do not use a loose `contains` rule for an output
 your code parses—validate the JSON structure instead.
 
 Rules in one `validation` object are combined: every supplied rule must pass.
-For example, this accepts only a raw JSON array with two items, at most 240
-characters long:
+Merge the following `validation` field into your existing config, keeping its
+other fields. It accepts a raw JSON array with two items, at most 240 characters:
 
 ```json
-"validation": {
-  "json_array": true,
-  "exact_count": 2,
-  "max_chars": 240
+{
+  "validation": {
+    "json_array": true,
+    "exact_count": 2,
+    "max_chars": 240
+  }
 }
 ```
 
@@ -155,20 +158,27 @@ JSON. This is a complete prompt object:
 }
 ```
 
-Run a cheap first comparison:
+Preview a small comparison without generation:
 
 ```bash
 llm-preflight benchmark.json --tests ticket-contract --smoke --dry-run
+```
+
+**Paid requests:** after reviewing and authorizing that plan, run:
+
+```bash
 llm-preflight benchmark.json --tests ticket-contract --smoke
 ```
 
-When the candidate passes, repeat the contract from the same host before making
-a cost or latency decision:
+When the candidate passes, choose a reviewed repetition count and preview the
+full plan before deciding whether the sample supports a cost or latency comparison:
 
 ```bash
 llm-preflight benchmark.json --tests ticket-contract --dry-run
-llm-preflight benchmark.json --tests ticket-contract
 ```
+
+**Paid requests:** only after separately authorizing this plan, execute
+`llm-preflight benchmark.json --tests ticket-contract`.
 
 ## Match the deployed JSON parser
 
@@ -180,9 +190,16 @@ JSON block, make that acceptance explicit instead of treating a fenced response
 as a model-quality failure:
 
 ```json
-"validation": {
-  "json_schema": {"type": "object", "required": ["product"]},
-  "allow_fenced_json": true
+{
+  "validation": {
+    "json_schema": {
+      "type": "object",
+      "required": [
+        "product"
+      ]
+    },
+    "allow_fenced_json": true
+  }
 }
 ```
 
@@ -199,9 +216,16 @@ response rejected by the declared consumer fails the run even if the configured
 validator accepts it:
 
 ```json
-"validation": {
-  "consumer": "fenced_ok",
-  "json_schema": {"type": "object", "required": ["product"]}
+{
+  "validation": {
+    "consumer": "fenced_ok",
+    "json_schema": {
+      "type": "object",
+      "required": [
+        "product"
+      ]
+    }
+  }
 }
 ```
 
@@ -216,8 +240,17 @@ When an object contains an unordered list whose values must be unique, use
 `json_set` instead of comparing array order:
 
 ```json
-"validation": {
-  "json_set": {"key": "exclude", "expected": [2, 3, 4]}
+{
+  "validation": {
+    "json_set": {
+      "key": "exclude",
+      "expected": [
+        2,
+        3,
+        4
+      ]
+    }
+  }
 }
 ```
 
@@ -227,7 +260,11 @@ Use `golden` for a deterministic known-answer case when structure alone is not
 enough to rank candidates:
 
 ```json
-"validation": {"golden": "billing"}
+{
+  "validation": {
+    "golden": "billing"
+  }
+}
 ```
 
 It compares case-insensitively after trimming whitespace, then reports

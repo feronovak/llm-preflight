@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Revalidate setup and reference examples: isolate first installs in a virtual
+  environment, keep unknown live-model costs unavailable, make JSON fragments
+  directly parseable, compute receipt expiry from the current time, and pin
+  third-party Actions in the documented workflows. Expand troubleshooting and
+  distinguish installed-package commands, source examples and paid execution.
 - Organize the README and documentation around first use, application contracts,
   change review and automation. Restore measured model observations as a
   reproducible SVG image with accessible text results and explicit route/date

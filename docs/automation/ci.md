@@ -4,6 +4,10 @@
 
 ## JSON output and exit status
 
+Use an existing reviewed configuration. Benchmark commands below can make
+**paid provider requests**; authorize their bounds before a trusted CI job
+executes them. For no-key validation, use the mock starter later on this page.
+
 `--json` writes a machine-readable result to stdout. Result saving notices go to
 stderr, so redirecting stdout is safe. A benchmark exits 0 only for a `pass`
 decision, 1 for `fail`, and 3 for `inconclusive` evidence. Cancellation exits

@@ -11,10 +11,16 @@ API key or provider request; installation needs access to the package index.
 Use a new directory so an existing benchmark cannot be mistaken for the demo:
 
 ```bash
+python3 -m venv .venv
+. .venv/bin/activate
 python3 -m pip install llm-preflight
 llm-preflight init
 llm-preflight benchmark.json --no-save --no-env-file
 ```
+
+The activation command is for POSIX shells; in PowerShell use
+`.\.venv\Scripts\Activate.ps1`. See the [Python venv guide](https://docs.python.org/3/library/venv.html)
+for activation in other shells.
 
 `init` creates one mock model and the prompt `Reply with ok.`, validated as
 exactly `ok`. It refuses to overwrite an existing file. `--no-env-file` skips

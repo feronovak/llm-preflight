@@ -1,18 +1,17 @@
 # Configuration
 
-**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 ## Models and providers
 
-Every `models` entry has the same basic shape:
+Every `models` entry has the same basic shape. Replace `provider-model-id`
+with the exact reviewed ID your application uses:
 
 ```json
 {
   "name": "label-in-reports",
   "provider": "openai",
-  "model": "provider-model-id",
-  "input_cost_per_million": 0,
-  "output_cost_per_million": 0
+  "model": "provider-model-id"
 }
 ```
 
@@ -54,6 +53,10 @@ For normal benchmarks, enter only the provider and model ID you intend to use.
 Do not copy catalogue internals such as `catalog_type`, `catalog_confidence`,
 or `adapter` into your JSON. The catalogue workflow discovers those details and
 keeps its compatibility evidence under `benchmarks/.llm-preflight/` automatically.
+
+Bundled prices are resolved when available. An unlisted model stays unpriced
+until reviewed rate evidence is supplied; do not copy zero prices into a live
+model merely to silence a warning. See [pricing and safety](../guides/pricing-and-safety.md).
 
 ## Reuse an existing project env file
 
@@ -156,6 +159,9 @@ Custom prompts are named, reusable tests:
   }]
 }
 ```
+
+**Paid requests:** the following commands can contact every selected provider.
+Preview each selection with `--dry-run` and authorize its bounds first.
 
 ```bash
 llm-preflight benchmark.json --prompt csv-review

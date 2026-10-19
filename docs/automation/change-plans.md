@@ -1,6 +1,6 @@
 # Git-aware change plans
 
-**Last reviewed:** 2026-09-04 · **As of:** v2.12.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 Use a change plan after an agent or engineer edits an LLM integration and before
 the ordinary no-spend checks:
@@ -29,11 +29,15 @@ approval for a live benchmark.
 
 After a person reviews a dry-run, they can preserve the decision locally:
 
+The example below expires one hour from now; choose a duration matching the
+reviewed plan. The timestamp is computed, not a historical date to copy.
+
 ```bash
+receipt_expires_at=$(python3 -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=1)).isoformat())')
 llm-preflight benchmark.json --dry-run --no-env-file \
   --approval-receipt .llm-preflight/approvals/checkout.json \
   --approval-note "Reviewed checkout smoke." \
-  --approval-expires-at 2026-09-05T12:00:00+00:00 --json
+  --approval-expires-at "$receipt_expires_at" --json
 ```
 
 Receipts are owner-only local JSON files. They contain the plan hash, expiry,
@@ -46,4 +50,5 @@ llm-preflight benchmark.json --dry-run --no-env-file \
 ```
 
 A receipt is audit evidence only. It never raises a cap, promotes a model, or
-authorizes a provider call; explicit user approval remains required at runtime.
+authorizes a provider call. A direct CLI run does not check a receipt or ask
+for separate approval; authorize the reviewed plan before invoking it.

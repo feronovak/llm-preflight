@@ -36,10 +36,15 @@ In a new directory, install the tool and run the local mock—no API key or
 provider request:
 
 ```bash
+python3 -m venv .venv
+. .venv/bin/activate
 python3 -m pip install llm-preflight
 llm-preflight init
 llm-preflight benchmark.json --no-save --no-env-file
 ```
+
+The activation command above is for POSIX shells; PowerShell uses
+`.\.venv\Scripts\Activate.ps1`.
 
 `init` refuses to overwrite an existing config. Look for `local-mock` with
 `PASS` in the quality gate: the mock replied `ok` and passed the exact-output

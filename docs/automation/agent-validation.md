@@ -69,7 +69,9 @@ An agent must not:
 
 ## CI handoff
 
-Store a reviewed baseline and fail CI on configured regressions:
+Store a reviewed baseline and fail CI on configured regressions. The first
+command below makes **paid requests** for live models; use it only in a trusted
+job after authorizing the same reviewed request/cost bounds:
 
 ```bash
 llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save > current.json

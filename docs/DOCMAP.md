@@ -22,17 +22,17 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/PROJECT_MAP.md`](PROJECT_MAP.md) | Code map | stamped | 2026-09-09 | v2.14.0 |
 | [`docs/README.md`](README.md) | LLM Preflight documentation | unstamped | — | — |
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |
-| [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-09-04 | v2.12.0 |
+| [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-10-14 | v2.22.1 |
-| [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-10-13 | v2.21.0 |
+| [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-10-14 | v2.22.1 |
-| [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-10-14 | v2.21.2 |
+| [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/development/documentation.md`](development/documentation.md) | Writing documentation | unstamped | — | — |
 | [`docs/development/visual-assets.md`](development/visual-assets.md) | Visual asset specification | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-10-19 | v2.22.1 |
-| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-10-16 | v2.22.0 |
+| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |
@@ -48,9 +48,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |
 | [`docs/product/positioning.md`](product/positioning.md) | Product positioning | stamped | 2026-08-30 | v2.7.5 |
 | [`docs/product/when-to-use.md`](product/when-to-use.md) | When to use LLM Preflight | stamped | 2026-08-31 | v2.10.0 |
-| [`docs/reference/cli.md`](reference/cli.md) | CLI reference | stamped | 2026-10-13 | v2.21.0 |
+| [`docs/reference/cli.md`](reference/cli.md) | CLI reference | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-10-18 | v2.22.1 |
-| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-18 | v2.22.1 |
+| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract | stamped | 2026-08-30 | v2.7.5 |
 | [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-10-18 | v2.22.1 |
 | [`examples/reports/README.md`](../examples/reports/README.md) | Reviewable report gallery | unstamped | — | — |

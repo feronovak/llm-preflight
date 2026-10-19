@@ -33,6 +33,15 @@ For every reviewable build, record the evidence and rating defined in
 code quality, integrity, product direction and documentation; a high score
 cannot override a failed correctness or artifact gate.
 
+Install the additional tools before audit or package checks:
+
+```bash
+python3 -m pip install -e ".[audit,release]"
+make audit
+make package
+make check-dist
+```
+
 ## Code map
 
 - `llm_preflight/cli.py` owns commands, interactive prompts, and output boundaries.

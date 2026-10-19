@@ -13,7 +13,7 @@ contract-preflight gate, not an evaluation platform or deployment approval.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
   - uses: feronovak/llm-preflight@v2.22.1
     with:
       config: benchmark.json
@@ -39,7 +39,7 @@ environment; do not commit an environment file or put a key in action inputs.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
   - uses: feronovak/llm-preflight@v2.22.1
     with:
       config: benchmark.json

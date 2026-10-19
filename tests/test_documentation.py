@@ -15,8 +15,10 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-16 · **As of:** v2.22.0" in page
-    assert "Package version: **2.22.0**" in page
+    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page
+    from llm_preflight import __version__
+
+    assert f"Package version: **{__version__}**" in page
     assert "not a ranking" in page
     assert "Gemini 4" in page
     assert "no live Gemini 4 result has been measured" not in page
@@ -489,24 +491,24 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in page.read_text()
 
     for page in (ROOT / "docs/automation/change-plans.md",):
-        assert "**Last reviewed:** 2026-09-04 · **As of:** v2.12.0" in page.read_text()
+        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
 
     coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
-    assert "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0" in coding_agents
+    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in coding_agents
     for step in coding_agents.split("## ")[1:]:
         if "Run `--doctor`, `--pricing-check`, and `--dry-run`" in step:
             assert "`retirements` decision" in step
 
     assert (
-        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
+        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.2" in page.read_text()
+        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
-        assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in page.read_text()
+        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"

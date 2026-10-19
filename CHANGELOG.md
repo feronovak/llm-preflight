@@ -6,9 +6,11 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- Lead the README with a reproducible synthetic contract-failure card and
-  explain workflow protection and separate signature verification alongside
-  the merge-gate promise. Keep detailed model results in the linked guides.
+- Embed both current terminal recordings in the README: a synthetic response
+  regression and the interactive default template with CLI JSON communication.
+  Explain workflow protection and separate signature verification alongside
+  the merge-gate promise. Keep the static synthetic card in the report gallery
+  and detailed model results in the linked guides.
 - Add a no-provider report-gallery gate example that intentionally blocks
   without a CI record, plus a setup/help and contract-example issue form.
 - Add a default-template interactive recording and executable CLI JSON

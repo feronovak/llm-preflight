@@ -1179,3 +1179,19 @@ def test_default_template_interactive_and_cli_communication_examples(tmp_path):
         result = execute(command)
         assert result.returncode == status, result.stdout + result.stderr
         assert_excerpt(json.loads(result.stdout), excerpt)
+
+
+def test_readme_embeds_both_current_terminal_recordings():
+    readme = (ROOT / "README.md").read_text()
+    introduction = readme.split("## Purpose", 1)[0]
+    embedded = re.findall(
+        r"!\[[^\]]*\]\(https://raw\.githubusercontent\.com/feronovak/"
+        r"llm-preflight/main/docs/images/([^)]+)\)",
+        introduction,
+    )
+    assert embedded == ["terminal-demo.gif", "default-template-interactive.gif"]
+    for name in embedded:
+        assert (ROOT / "docs/images" / name).read_bytes().startswith(b"GIF89a")
+    assert "contract-break.svg" not in introduction
+    gallery = (ROOT / "examples/reports/README.md").read_text()
+    assert "../../docs/images/contract-break.svg" in gallery

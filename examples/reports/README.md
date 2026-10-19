@@ -63,9 +63,12 @@ For signed records, run `gh attestation verify` before `gate`; the gate itself
 does not authenticate signatures. No live run or CI setup is performed by
 this gallery.
 
-## Rebuild the README card
+## Example failure card
 
-The README displays the failing synthetic fixture, rendered by the same CLI:
+![Synthetic contract-failure card: two of three probes passed; no attested record](../../docs/images/contract-break.svg)
+
+This static card uses invented measurements from the failing synthetic
+fixture. Rebuild it with the same CLI renderer:
 
 ```bash
 python3 -m llm_preflight report examples/reports/schema-break.json \

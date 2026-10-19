@@ -10,9 +10,9 @@
 
 **No preflight, no merge.**
 
-Check your application's LLM output contract before merging model, prompt,
-schema, or provider changes. Require fresh CI evidence for the contract
-you're shipping.
+Catch responses your application cannot use before merging model, prompt,
+schema, or provider changes. Declare the JSON shape, routing labels, or exact
+output your feature needs, then check whether responses meet those rules.
 
 Built for small engineering teams maintaining an LLM feature. Runs locally
 as a CLI, GitHub Action, or MCP server, with no runtime dependencies.
@@ -25,7 +25,7 @@ as a CLI, GitHub Action, or MCP server, with no runtime dependencies.
 ![Real terminal session: billing passes, sales fails the same validator, and restoring billing passes again](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/contract-check-session.gif)
 
 *Continuous shell session with synthetic response fixtures and full CLI output.
-Captions explain each outcome below the terminal. No provider calls or attested CI pass.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
+No provider calls or attested CI pass.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
 A required gate checks that a fresh passing record matches the configured
 contract, routes, prompts, and run selection. Protect the workflows that
@@ -36,32 +36,21 @@ It doesn't certify production behaviour. It proves the check was done.
 
 ## Try it in 60 seconds
 
-Start with a free repository audit: find literal model IDs that the bundled
-provider snapshot marks retired or scheduled for retirement. No configuration,
-API key, or provider request is needed:
+Python 3.10+ is required. In a new directory, install the tool and run the
+local mock—no API key or provider request:
 
 ```bash
 python3 -m pip install llm-preflight
-llm-preflight --audit-source .
-```
-
-The first line is the decision with its counts, the second the exit code;
-add `--ci` to fail a pipeline on it. Findings follow, grouped by model ID:
-retired first, each with its date, the provider-stated replacement and a
-ready `--dry-run` command. In a Git checkout only tracked and unignored files
-are read. `--all` lists every model and location; see
-[model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
-Then create and run a deterministic local benchmark—no API key or network request:
-
-```bash
 llm-preflight init
-llm-preflight benchmark.json --no-save
+llm-preflight benchmark.json --no-save --no-env-file
 ```
 
 `init` never overwrites an existing config. It creates a mock benchmark so
 you can see the report and exit behavior before making a paid request.
-Its result is intentionally `inconclusive` (exit code `3`): a local mock
-validates configuration and output handling, but cannot approve a live model.
+Look for `local-mock` with `PASS` in the quality gate: the mock replied `ok`
+and passed the exact-output test. The overall result is intentionally
+`inconclusive` (exit `3`), because a local mock cannot establish whether a live model meets your contract.
+`--no-save` avoids result files; `--no-env-file` skips local credential files.
 
 ### Watch the interactive default template (29 seconds)
 
@@ -74,6 +63,18 @@ no real provider was tested. The session also reads that decision as CLI JSON:
 *The mock test passes; the overall decision stays inconclusive (exit `3`).
 No API keys or provider calls.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/default-template-session.mp4)
 or follow the [interactive walkthrough and CLI JSON example](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md#default-template-walkthrough).
+
+For benchmark runs, read the decision before acting on the result:
+
+| Decision | Exit | What it means |
+|---|---|---|
+| `pass` | `0` | The configured checks passed with the required evidence. Review before approving a change. |
+| `fail` | `1` | A configured check failed. Inspect the failure before proceeding. |
+| `inconclusive` | `3` | Evidence is missing or insufficient. This includes the mock-only demo. |
+
+**Use it on your application next:** adapt one existing rule with the
+[project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md),
+validate accepted and rejected examples locally, then preview a bounded live run.
 
 ## See a contract change fail
 
@@ -107,14 +108,12 @@ the contract and latency/cost regressions; all its measurements are synthetic.
 ## Purpose
 
 LLM Preflight is a local CLI and CI tool that checks an
-application's LLM contract before a change ships. Its mission is to help
-engineers catch integration regressions, with compatibility, latency, and
-estimated-cost evidence a reviewer can inspect.
-
-Coding agents can run the same checks; engineers own the decision. The
+application's LLM contract and gives reviewers latency, usage, and
+estimated-cost evidence before an integration change ships. Coding agents can run
+the same checks; engineers own the decision. The
 [north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
-defines the scope and the [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
-shows the workflow.
+and [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
+explain that workflow.
 
 ## Choose your path
 
@@ -158,9 +157,11 @@ Its results apply to your account, network, prompts, and validation rules.
 
 ## CLI, CI, and MCP
 
-Works as a CLI, GitHub Action, and local MCP server. Every path starts with
-no-spend validation and planning; a live provider run remains an explicit,
-bounded human-approved step. See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
+Works as a CLI, GitHub Action, and local MCP server. Start with no-spend
+validation and planning, then review the bounds before authorizing a live run.
+The Action defaults to no generation requests; MCP requires explicit live-run
+confirmation. A direct CLI run can send paid requests without an approval prompt.
+See the [GitHub Action guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
 or the [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
 
 Native routes and release-reviewed official pricing snapshots are listed in
@@ -171,6 +172,13 @@ Release notes for every version are in the [changelog](https://github.com/ferono
 
 ## Common jobs
 
+- **Audit existing model IDs:** `llm-preflight --audit-source .` finds literal
+  IDs marked retired or scheduled for retirement in the bundled snapshot.
+  No config, key or provider request is needed. Add `--ci` to make the retirement
+  decision affect the exit code; without it, the command reports findings and
+  exits `0`. In Git, the scan reads tracked, unignored files. See
+  [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md)
+  for snapshot coverage, freshness and `--all` output.
 - **Switch a model or provider:** preview the [migration check](#change-a-model-safely).
 - **Change a prompt, schema, or tool:** declare an [output contract](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md),
   then run `llm-preflight benchmark.json --contract-check` on local fixtures.
@@ -209,18 +217,9 @@ That evidence applies to your account, network, prompts, and validator at one
 time—not a universal model ranking. For a complete interactive example, see
 [interactive runs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md).
 
-## Measured example
-
-The [support-routing comparison](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
-retains dated model results, failures, request settings, and pricing limits.
-Use it to understand the evidence, then test your own contract. It is one
-workload on specific accounts and routes; passing it does not establish
-quality on your application.
-
 ## First live run
 
-Python 3.10+ is required. The installed CLI and MCP server have no third-party
-runtime dependencies. Create a bounded provider starter from any directory:
+Create a bounded provider starter from any directory:
 
 ```bash
 llm-preflight init live.json --template provider \
@@ -254,28 +253,31 @@ llm-preflight live.json
 The starter uses one short exact-output check, a three-request limit and a
 $0.05 estimated-cost cap. Adapt it to a representative application contract
 before using its result to review a model. The checks above make no generation
-requests; the final command does.
+requests; the final command does and has no separate approval prompt.
 
 The CLI reads `.env.production` beside the config without overriding shell
 variables. Select an existing file with `--env-file PATH`, or use
 `--no-env-file`. Results are saved as JSON and Markdown under `results/`
 unless you use `--no-save`. See [project integration](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md)
-for an application example and a no-spend CI gate.
+for an application example and a no-spend CI gate. The provider starter saves
+failed responses by default; review saved artifacts before sharing them.
 
 ## Change a model safely
 
 This is the core workflow. Put your approved model and candidate model in one
-config, review the combined request and cost limits, then preview the small
-response-and-contract preflight:
+config, review the combined request and cost limits, then preview the built-in
+compatibility checks:
 
 ```bash
 llm-preflight benchmark.json --migration-check --dry-run
 llm-preflight benchmark.json --migration-check
 ```
 
-It sends three short representative cases to each selected model, once each.
-It answers: did the API work, did each response meet the basic contract, and
-how quickly did the provider start and finish responding? It is a cheap
+It sends three short built-in cases to each selected model, once each, before
+any configured retries. These check a capital-city answer, summary and rewrite;
+they do not substitute for your application contract.
+The checks answer: did the API work, did each response meet the basic contract,
+and how quickly did the provider start and finish responding? It is a cheap
 compatibility check, not a statistical performance conclusion.
 
 When that passes, run the task-specific checks that match your application—for

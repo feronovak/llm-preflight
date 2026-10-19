@@ -743,7 +743,8 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "developers.openai.com/api/docs/deprecations" in guide
     assert "guides/retirements.md" in docs_index
     assert "llm-preflight --audit-source ." in readme
-    assert readme.index("--audit-source .") < readme.index("llm-preflight init")
+    assert readme.index("llm-preflight init") < readme.index("## Common jobs")
+    assert "llm-preflight --audit-source ." in readme.split("## Common jobs", 1)[1]
     assert "docs/guides/retirements.md" in readme
     assert (
         "retirement" in cli_reference.split("`--audit-source PATH`")[1].split("\n")[0]
@@ -1195,3 +1196,39 @@ def test_readme_embeds_both_current_terminal_recordings():
     assert "contract-break.svg" not in introduction
     gallery = (ROOT / "examples/reports/README.md").read_text()
     assert "../../docs/images/contract-break.svg" in gallery
+
+
+def test_readme_first_run_is_the_isolated_mock_contract_demo(tmp_path):
+    readme = (ROOT / "README.md").read_text()
+    quickstart = readme.split("## Try it in 60 seconds", 1)[1].split("\n### ", 1)[0]
+    block = re.search(r"```bash\n(.*?)\n```", quickstart, re.DOTALL)
+    assert block is not None
+    commands = [
+        line
+        for line in block.group(1).splitlines()
+        if line.startswith("llm-preflight ")
+    ]
+    assert commands == [
+        "llm-preflight init",
+        "llm-preflight benchmark.json --no-save --no-env-file",
+    ]
+    # The no-key walkthrough must not read an existing project's env file.
+    (tmp_path / ".env.production").write_text("not a valid environment assignment\n")
+    for command, expected in zip(commands, (0, 3)):
+        result = subprocess.run(
+            [sys.executable, "-m", "llm_preflight", *command.split()[1:]],
+            cwd=tmp_path,
+            env={"PATH": str(Path(sys.executable).parent), "PYTHONPATH": str(ROOT)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == expected, result.stdout + result.stderr
+    assert re.search(r"local-mock\s*│\s*PASS\s*│\s*-", result.stdout)
+    assert "Decision: inconclusive (exit 3)" in result.stdout
+    assert "Mock-only runs do not provide live-provider evidence." in result.stdout
+    config = json.loads((tmp_path / "benchmark.json").read_text())
+    assert config["validation"] == {"exact": "ok"}
+    assert config["models"][0]["response"] == "ok"
+    assert not list((tmp_path / "results").glob("*.json"))
+    assert not list((tmp_path / "results").glob("*.md"))

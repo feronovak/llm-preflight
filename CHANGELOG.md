@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Make the README quickstart follow the mock contract demo, explain benchmark
+  verdicts and distinguish CLI paid requests from MCP/Action confirmation.
+  Clarify built-in migration checks and saved-response privacy.
 - Replace both README demos with continuous shell recordings, native terminal
   output and captions explaining each outcome: an accepted response, rejection
   and fix; and the interactive default mock test with CLI JSON communication.

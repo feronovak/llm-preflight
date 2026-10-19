@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.22.1"
-    assert 'version = "2.22.1"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.22.2"
+    assert 'version = "2.22.2"' in Path("pyproject.toml").read_text()
     server = json.loads(Path("server.json").read_text())
     assert server["version"] == __version__
     assert {package["version"] for package in server["packages"]} == {__version__}

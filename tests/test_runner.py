@@ -1078,10 +1078,7 @@ def test_plain_prompt_validation_failure_cannot_pass_or_be_recommended():
     assert "invalid-but-fast" in rendered
     assert "FAIL" in rendered
     assert "| invalid-but-fast | FAIL | config prompt |" in report(result)
-    assert (
-        "Recommended: unavailable; no priced model passed every selected test."
-        in rendered
-    )
+    assert "Recommended: unavailable; mock results are local test data." in rendered
     assert (
         "Excluded from recommendations: **invalid-but-fast** (failed: config prompt)."
         in report(result)
@@ -1625,7 +1622,7 @@ def test_benchmark_reports_partial_cost_and_unpriced_models():
         {"name": "unpriced", "provider": "mock", "model": "unpriced-model"}
     ]
     assert (
-        "- Total spent: unavailable; one or more models lack pricing. Priced spend: "
+        "- Estimated cost: unavailable; one or more models lack pricing. Known cost subtotal: "
         "**$0.000003** including warmups."
     ) in report(result)
 
@@ -2405,6 +2402,7 @@ def test_report_ends_with_executive_summary_categories():
         }
 
     result = {
+        "cost_confidence": "complete",
         "benchmark": "ranked",
         "run_id": "abc",
         "timestamp": "2026-01-01T00:00:00Z",
@@ -2420,7 +2418,7 @@ def test_report_ends_with_executive_summary_categories():
     rendered = report(result)
     assert "## Executive summary" in rendered
     assert "- Fastest: **fast** — 1.000s mean latency." in rendered
-    assert "- Cheapest: **balanced** — $0.001000 total." in rendered
+    assert "- Cheapest: **balanced** — $0.001000 estimated total." in rendered
     assert "- Best value: **balanced**" in rendered
     assert (
         "- Recommended: **balanced** — passed every selected test and led the "
@@ -2429,7 +2427,7 @@ def test_report_ends_with_executive_summary_categories():
     assert (
         "- Excluded from recommendations: **cheap-unreliable** (failed: config prompt)."
     ) in rendered
-    assert "- Total spent: **$0.004500** including warmups." in rendered
+    assert "- Estimated cost: **$0.004500** including warmups." in rendered
     assert rendered.rstrip().endswith(
         "Value equally weights reliability, relative speed, and relative cost "
         "among models that passed every selected test."
@@ -2454,6 +2452,7 @@ def test_executive_summary_excludes_models_that_fail_any_selected_profile():
         }
 
     result = {
+        "cost_confidence": "complete",
         "benchmark": "profile-gate",
         "run_id": "abc",
         "timestamp": "2026-01-01T00:00:00Z",
@@ -2485,7 +2484,7 @@ def test_executive_summary_excludes_models_that_fail_any_selected_profile():
     rendered = report(result)
 
     assert "- Fastest: **qualified** — 1.000s mean latency." in rendered
-    assert "- Cheapest: **qualified** — $0.000200 total." in rendered
+    assert "- Cheapest: **qualified** — $0.000200 estimated total." in rendered
     assert "- Best value: **qualified**" in rendered
     assert (
         "- Excluded from recommendations: **fast-cheap-but-failed** "
@@ -2546,6 +2545,7 @@ def test_report_includes_pricing_warnings():
 
 def test_zero_reliability_model_cannot_rank_as_cheapest():
     result = {
+        "cost_confidence": "complete",
         "benchmark": "failed-cheap",
         "run_id": "abc",
         "timestamp": "2026-01-01T00:00:00Z",
@@ -2580,7 +2580,7 @@ def test_zero_reliability_model_cannot_rank_as_cheapest():
         ],
     }
     rendered = report(result)
-    assert "- Cheapest: **working** — $0.001000 total." in rendered
+    assert "- Cheapest: **working** — $0.001000 estimated total." in rendered
 
 
 def test_low_reliability_model_cannot_rank_as_best_value():
@@ -2600,6 +2600,7 @@ def test_low_reliability_model_cannot_rank_as_best_value():
         }
 
     result = {
+        "cost_confidence": "complete",
         "benchmark": "ranked",
         "run_id": "abc",
         "timestamp": "2026-01-01T00:00:00Z",
@@ -2656,10 +2657,10 @@ def test_console_report_visually_separates_results_quality_and_decision():
         "timestamp": "2026-01-01T00:00:00Z",
         "prompt_sha256": "1234567890abcdef",
         "models": [],
-        "decision": {
-            "state": "inconclusive",
-            "blocking_warnings": ["Pricing is unknown for provider:model."],
+        "pricing_coverage": {
+            "models": [{"provider": "provider", "model": "model", "status": "unknown"}]
         },
+        "cost_confidence": "unknown",
     }
 
     rendered = console_report(result, color=True)
@@ -2668,7 +2669,10 @@ def test_console_report_visually_separates_results_quality_and_decision():
     assert "=== QUALITY GATE ===" in rendered
     assert "=== DECISION ===" in rendered
     assert "Decision: inconclusive (exit 3)" in rendered
-    assert "Pricing is unknown for provider:model." in rendered
+    assert (
+        "Pricing is unknown for provider:model; resolve its pricing before using this result."
+        in rendered
+    )
     assert "=== EXECUTIVE SUMMARY ===" in rendered
     assert rendered.index("=== DECISION ===") < rendered.index(
         "=== EXECUTIVE SUMMARY ==="
@@ -3214,8 +3218,9 @@ def test_console_report_profile_mode_renders_quality_and_reliability_columns():
     assert "100%" in rendered
 
 
-def test_executive_summary_handles_zero_latency_mock_results():
+def test_executive_summary_handles_zero_latency_observations():
     result = {
+        "cost_confidence": "complete",
         "benchmark": "mock",
         "run_id": "zero",
         "timestamp": "2026-01-01T00:00:00Z",
@@ -3223,6 +3228,7 @@ def test_executive_summary_handles_zero_latency_mock_results():
         "models": [
             {
                 "name": "instant",
+                "provider": "openai_compatible",
                 "summary": {
                     "requests": 1,
                     "successful": 1,

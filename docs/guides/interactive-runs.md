@@ -1,6 +1,6 @@
 # Interactive benchmark mode
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
 
 Interactive mode helps you choose models and workload from an existing project
 configuration, review local evidence, and decide what to do next. Version
@@ -49,15 +49,17 @@ The plan shows one nominal request and up to two attempts, both local mock
 work. No API key, env file, or provider call is used. No result files are
 saved by these flags.
 
-![Interactive default mock template: select the model and configured test, review the plan, confirm the local run, and read the inconclusive decision](../images/default-template-session.gif)
+![Interactive default mock template: select the model and configured test, review the plan, confirm the local run, and read the inconclusive decision](../images/default-template-evidence-session.gif)
 
-[MP4 version](../images/default-template-session.mp4).
-The 29-second recording is a continuous shell session with full native menus
+[MP4 version](../images/default-template-evidence-session.mp4).
+The recording shows the upcoming **2.22.2** summary; the latest PyPI **2.22.1**
+still includes the older mock ranking. The 30-second recording is a continuous shell session with full native menus
 and output. Explanatory captions sit below the terminal. Its last commands
 save CLI JSON to `result.json` and inspect the decision fields. Mock timing and token
 figures are simulated. `API OK / TEST OK` means the mock's response met the
 configured rule; the overall decision stays **inconclusive** (exit `3`)
-because a mock supplies no live-provider evidence.
+because a mock supplies no live-provider evidence. The new summary reports
+local checks and excludes the mock from provider recommendations.
 
 ## CLI JSON communication
 

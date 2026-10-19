@@ -1225,7 +1225,24 @@ def _ranking_metrics(model: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _mock_evidence_note(result: dict[str, Any]) -> str:
+    models = result.get("models", [])
+    if models and (
+        all(model.get("provider") == "mock" for model in models)
+        or result.get("pricing_coverage", {}).get("summary", {}).get("billable") == 0
+    ):
+        return (
+            "Local mock data: no live provider was tested. "
+            "Timings are not live-model latency."
+        )
+    if any(model.get("provider") == "mock" for model in models):
+        return "Mock rows are local test data, excluded from provider rankings."
+    return ""
+
+
 def _executive_summary(result: dict[str, Any]) -> list[str]:
+    decision = build_decision(result)
+    warnings = decision["blocking_warnings"]
     metrics = [_ranking_metrics(model) for model in result["models"]]
     if legacy_cost_evidence(result):
         for item in metrics:
@@ -1234,18 +1251,37 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         warmup = model.get("warmup_summary", {})
         if warmup.get("requests", 0) and warmup.get("estimated_cost_usd") is None:
             item["cost"] = None
+    live_metrics = [
+        item
+        for model, item in zip(result["models"], metrics)
+        if model.get("provider") != "mock"
+        and result.get("pricing_coverage", {}).get("summary", {}).get("billable") != 0
+    ]
     timed = [
         item
-        for item in metrics
+        for item in live_metrics
         if item["qualified"] and item["latency"] is not None and item["requests"]
     ]
     priced = [
         item
-        for item in metrics
-        if item["qualified"] and item["cost"] is not None and item["requests"]
+        for item in live_metrics
+        if item["qualified"]
+        and item["cost"] is not None
+        and item["requests"]
+        and not warnings
     ]
-    lines = ["", "## Executive summary", ""]
-    if timed:
+    lines = ["", "## Executive summary", "", f"- Decision: **{decision['state']}**."]
+    if note := _mock_evidence_note(result):
+        lines.append(f"- {note}")
+    mock_only = bool(metrics) and not live_metrics
+    if not mock_only:
+        lines.extend(f"- Blocking evidence: {warning}" for warning in warnings)
+    if mock_only:
+        passed = sum(item["qualified"] for item in metrics)
+        lines.append(
+            f"- Local tests: {passed}/{len(metrics)} models passed every selected test."
+        )
+    elif timed:
         fastest = min(timed, key=lambda item: item["latency"])
         lines.append(
             f"- Fastest: **{fastest['name']}** — "
@@ -1253,15 +1289,18 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         )
     else:
         lines.append("- Fastest: unavailable; no model passed every selected test.")
-    if priced:
-        cheapest = min(priced, key=lambda item: item["cost"])
-        lines.append(
-            f"- Cheapest: **{cheapest['name']}** — ${cheapest['cost']:.6f} total."
-        )
-    else:
-        lines.append(
-            "- Cheapest: unavailable; no priced model passed every selected test."
-        )
+    if not mock_only:
+        if warnings:
+            lines.append("- Cheapest: unavailable; resolve blocking evidence warnings.")
+        elif priced:
+            cheapest = min(priced, key=lambda item: item["cost"])
+            lines.append(
+                f"- Cheapest: **{cheapest['name']}** — ${cheapest['cost']:.6f} estimated total."
+            )
+        else:
+            lines.append(
+                "- Cheapest: unavailable; no priced model passed every selected test."
+            )
     value_candidates = [item for item in priced if item["latency"] is not None]
     if value_candidates:
         min_latency = min(item["latency"] for item in value_candidates)
@@ -1284,6 +1323,15 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         lines.append(
             f"- Recommended: **{best['name']}** — passed every selected test and "
             "led the qualified value ranking."
+        )
+    elif mock_only:
+        lines.append("- Recommended: unavailable; mock results are local test data.")
+    elif warnings:
+        lines.extend(
+            [
+                "- Best value: unavailable; resolve blocking evidence warnings.",
+                "- Recommended: unavailable; evidence is incomplete.",
+            ]
         )
     else:
         lines.append(
@@ -1317,7 +1365,7 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         else "one or more models lack pricing"
     )
     lines.append(
-        "- Total spent: "
+        "- Estimated cost: "
         + (
             (
                 f"**${total_cost:.6f}** including warmups; partial because pricing is "
@@ -1327,22 +1375,29 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
             )
             if total_cost is not None
             else (
-                f"unavailable; {unavailable_reason}. Priced spend: "
+                f"unavailable; {unavailable_reason}. Known cost subtotal: "
                 f"**${priced_cost:.6f}** including warmups."
                 if priced_cost is not None
                 else f"unavailable; {unavailable_reason}."
             )
         )
     )
-    lines.extend(
-        [
-            "",
-            (
-                "Value equally weights reliability, relative speed, and relative cost "
-                "among models that passed every selected test."
-            ),
-        ]
-    )
+    if mock_only:
+        lines.append(
+            "- Next: create a provider config, then review --contract-check and --dry-run."
+        )
+    elif warnings:
+        lines.append(f"- Next (no requests): {decision['safe_next_command']}")
+    if value_candidates:
+        lines.extend(
+            [
+                "",
+                (
+                    "Value equally weights reliability, relative speed, and relative cost "
+                    "among models that passed every selected test."
+                ),
+            ]
+        )
     return lines
 
 
@@ -1441,17 +1496,19 @@ def report(result: dict[str, Any]) -> str:
         f"Prompt: {prompt_label}",
         "",
     ]
+    if note := _mock_evidence_note(result):
+        lines.extend([note, ""])
     if profile_mode:
         lines.extend(
             [
-                "| Model | Profile | Quality | Success | Latency p95 | TTFT p50 | Tokens/s p50 | Cost |",
+                "| Model | Profile | Quality | Success | Latency p95 | TTFT p50 | Tokens/s p50 | Est. cost |",
                 "|---|---|---:|---:|---:|---:|---:|---:|",
             ]
         )
     else:
         lines.extend(
             [
-                "| Model | Success | Latency p50 | Latency p95 | TTFT p50 | Tokens/s p50 | Cost |",
+                "| Model | Success | Latency p50 | Latency p95 | TTFT p50 | Tokens/s p50 | Est. cost |",
                 "|---|---:|---:|---:|---:|---:|---:|",
             ]
         )
@@ -1571,7 +1628,7 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
             "Latency p95",
             "TTFT p50",
             "Tok/s",
-            "Cost",
+            "Est. cost",
         ]
         for model in result["models"]:
             for profile in model["profiles"]:
@@ -1604,7 +1661,7 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
             "Latency p95",
             "TTFT p50",
             "Tok/s",
-            "Cost",
+            "Est. cost",
         ]
         for model in result["models"]:
             summary = model["summary"]
@@ -1636,9 +1693,7 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
         text = f"=== {title} ==="
         return f"\x1b[1;36m{text}\x1b[0m" if color else text
 
-    decision = result.get("decision")
-    if not isinstance(decision, dict):
-        decision = build_decision(result)
+    decision = build_decision(result)
     state = decision.get("state", "unknown")
     if state == "pass":
         exit_code = 0
@@ -1655,11 +1710,13 @@ def console_report(result: dict[str, Any], color: bool = False) -> str:
     else:
         decision_lines.append("Blocking warnings: none.")
 
+    mock_note = _mock_evidence_note(result)
     lines = [
         f"\x1b[1m{result['benchmark']}\x1b[0m" if color else result["benchmark"],
         f"Run {result['run_id']}  •  {result['timestamp']}",
         *([f"Prompt {result['prompt_name']}"] if result.get("prompt_name") else []),
         "",
+        *([mock_note, ""] if mock_note else []),
         section("RESULTS"),
         *_terminal_table(headers, rows, colors),
         "",

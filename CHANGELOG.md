@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- In the 2.22.2 candidate, label mock results as local test data and exclude
+  them from provider rankings in terminal and saved Markdown summaries.
+  In 2.22.1 those summaries could recommend the mock after correctly reporting
+  an inconclusive benchmark. Blocking pricing, usage, retry and legacy-cost
+  warnings now withhold cost/value recommendations, while complete passing
+  candidates remain comparable when another candidate fails its contract.
+  Recompute displayed verdicts from evidence, label cost figures as estimates,
+  and show no-spend next steps. JSON/MCP decision schemas and exits are unchanged.
+- Refresh the default-template GIF and MP4 from a real terminal session showing
+  the corrected local-test summary and unchanged inconclusive JSON decision.
+
 ### Changed
 
 - Revalidate setup and reference examples: isolate first installs in a virtual

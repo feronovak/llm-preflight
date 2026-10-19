@@ -1,6 +1,6 @@
 # Getting started
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
 
 Run a local mock check, interpret its result, then choose a path for your own
 application. This walkthrough requires Python 3.10+ and a terminal. It uses no
@@ -38,8 +38,11 @@ Blocking warnings:
 ```
 
 **This is the expected result.** The local test passed; no provider was tested.
-The executive recommendation is a summary of selected test results, not
-permission to spend money or approve production.
+In the upcoming **2.22.2**, the summary labels local mock data, counts the
+models passing their local checks, and withholds provider rankings and
+recommendations. It also labels token-based costs as estimates. The latest
+PyPI **2.22.1** still prints the older mock ranking; use the decision and
+blocking warning above when reading that version.
 
 For a benchmark, `pass` exits `0`, `fail` exits `1`, and `inconclusive` exits `3`.
 A provider can return a usable API response that fails your output rule. A

@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page
+    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -500,7 +500,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
             assert "`retirements` decision" in step
 
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
+        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
@@ -520,7 +520,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
+        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -529,7 +529,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in safe_demo
+    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2" in safe_demo
     assert "llm-preflight init live.json --template provider --interactive" in safe_demo
     assert safe_demo.count("**Last reviewed:**") == 1
     ci = (ROOT / "docs/automation/ci.md").read_text()
@@ -1192,7 +1192,10 @@ def test_readme_embeds_both_current_terminal_recordings():
         r"llm-preflight/main/docs/images/([^)]+)\)",
         introduction,
     )
-    assert embedded == ["contract-check-session.gif", "default-template-session.gif"]
+    assert embedded == [
+        "contract-check-session.gif",
+        "default-template-evidence-session.gif",
+    ]
     for name in embedded:
         assert (ROOT / "docs/images" / name).read_bytes().startswith(b"GIF89a")
     assert "contract-break.svg" not in introduction

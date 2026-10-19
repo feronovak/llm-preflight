@@ -1,6 +1,6 @@
 # Visual asset specification
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
 
 Use this specification when creating or regenerating project images. Measured
 results, terminal recordings and exported report cards have distinct profiles
@@ -187,7 +187,7 @@ new illustrations.
 |---|---|---|
 | `docs/images/measured-models.svg` | Measured results, 1280 × 946 | `scripts/render_measured_models.py`; canonical aggregates and historical text rows |
 | `docs/images/contract-check-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 23 seconds | Actual local contract-check pass/reject/fix session; follow terminal rules above |
-| `docs/images/default-template-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 29 seconds | Actual init/default interactive mock and CLI JSON session |
+| `docs/images/default-template-evidence-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 30 seconds | Actual init/default interactive mock and CLI JSON session; refreshed for 2.22.2 evidence-aware summary |
 | `docs/images/contract-break.svg` | Product report card, 600 × 392 | `python3 -m llm_preflight report examples/reports/schema-break.json --format svg` |
 | `docs/images/readme-demo.gif` | Legacy terminal, 1100 × 720 | Historical mock recording; preserve bytes, use the approved current demo for new placements |
 | `docs/images/interactive-demo.gif` | Legacy terminal, 1100 × 720 | Historical paid comparison; preserve its original scope and bytes |

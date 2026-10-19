@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -32,6 +32,10 @@ it makes no provider requests and does not execute your application's parser.*
 
 ## Try it in 60 seconds
 
+The recording below shows the upcoming **2.22.2** summary. The latest PyPI
+release is **2.22.1**; the local test and inconclusive exit are the same,
+but its older summary still ranks the mock.
+
 In a new directory, install the tool and run the local mock—no API key or
 provider request:
 
@@ -52,15 +56,15 @@ test. The overall decision is `inconclusive` (exit `3`) because a local mock
 provides no live-provider evidence. The demo worked; it cannot approve a model.
 `--no-save` skips JSON/Markdown result artifacts; `--no-env-file` skips credential files.
 
-### Watch the interactive default template (29 seconds)
+### Watch the interactive default template (30 seconds)
 
 Select the mock and default `Reply with ok` test, review the plan, and confirm
 the local run. The session also reads the same decision through CLI JSON:
 
-![Interactive default-template demo: select the mock and configured test, review the plan, run locally, and inspect the expected inconclusive result as JSON](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/default-template-session.gif)
+![Interactive default-template demo: select the mock and configured test, review the plan, run locally, and inspect the expected inconclusive result as JSON](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/default-template-evidence-session.gif)
 
 *Local test: passed. Live provider: not tested. No API keys or provider calls.*
-[Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/default-template-session.mp4)
+[Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/default-template-evidence-session.mp4)
 or start with the [text walkthrough](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/safe-demo.md)
 and [interactive CLI JSON example](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md#default-template-walkthrough).
 

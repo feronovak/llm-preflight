@@ -1,6 +1,13 @@
 # CLI reference
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
+
+The main branch prepares **2.22.2**; the latest published package is **2.22.1**.
+The new terminal/Markdown summary labels mocks, excludes them from provider
+rankings, withholds cost/value recommendations when evidence warnings block
+a conclusion, and calls monetary figures estimates. A complete passing
+candidate can still be compared when another candidate fails its tests.
+Machine decision schemas and benchmark exit codes are unchanged.
 
 Run `llm-preflight --help` for the installed version. The options below match this
 release. A normal benchmark takes `config`, a benchmark JSON path. Standalone

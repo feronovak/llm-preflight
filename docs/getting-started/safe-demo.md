@@ -1,135 +1,59 @@
 # Getting started
 
-**Last reviewed:** 2026-09-09 · **As of:** v2.14.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
-## Reuse a project env file safely
-
-To prepare a provider config without copying a key, use the guided provider
-starter. It asks for a config path, provider, model, environment-variable name,
-and an optional existing env file; it never asks for the secret value.
-
-```bash
-llm-preflight init --template provider --interactive
-llm-preflight benchmark.json --doctor --json
-llm-preflight benchmark.json --dry-run --json
-```
-
-The env-file reference is relative to the benchmark config and cannot escape
-that directory. A shell variable wins over the file, `--env-file` wins over the
-config reference, and `--no-env-file` disables file loading. Review the
-no-spend dry run before separately deciding to make a paid provider request.
-
-LLM Preflight answers a practical question before you change production:
-
-> Can this candidate model replace our current model without breaking the
-> response contract, latency expectations, or budget?
-
-It runs locally against the providers you choose. It is not a hosted dashboard
-or a public leaderboard. Results describe your prompt, account, host, and test
-settings.
+Run a local mock check, interpret its result, then choose a path for your own
+application. This walkthrough requires Python 3.10+ and a terminal. It uses no
+API key or provider request; installation needs access to the package index.
 
 ## First, see a safe local run
 
-This creates a deterministic mock benchmark. It needs no API key, network, or
-paid request:
+Use a new directory so an existing benchmark cannot be mistaken for the demo:
 
 ```bash
+python3 -m pip install llm-preflight
 llm-preflight init
-llm-preflight benchmark.json --no-save
+llm-preflight benchmark.json --no-save --no-env-file
 ```
 
-The terminal report separates provider failures from failed output validation.
-`--init` refuses to overwrite an existing config. Press Ctrl-C at any prompt or
-run to cancel; the command exits 130 and saves no partial artifact.
-
-`llm-preflight --init` remains a compatibility alias. To create a conservative
-live-provider starter without ever putting a key in a file, supply the provider,
-model, and *environment-variable name* explicitly:
-
-```bash
-llm-preflight init benchmark.json --template provider \
-  --provider openai --model your-model-id --api-key-env OPENAI_API_KEY \
-  --write-env-example
-llm-preflight benchmark.json --doctor
-llm-preflight benchmark.json --smoke --dry-run
-```
-
-The generated live starter limits requests and estimated spend, saves only
-failed responses, and excludes the opt-in `load` test. Add the actual key to
-your shell, secret manager, or an uncommitted `.env.production` file; never put
-it in the configuration.
-
-## Then run a quick migration check
-
-Use the checked-in example as your starting point:
-
-```bash
-cp benchmark.example.json benchmark.json
-cp .env.example .env.production
-```
-
-Open `benchmark.json` and keep only the model entries you want. Put the matching
-provider key—such as `OPENAI_API_KEY`—in `.env.production`. Never put keys in
-the JSON file or commit the env file.
-
-Always inspect a live plan before you run it:
-
-```bash
-llm-preflight benchmark.json --doctor
-llm-preflight benchmark.json --dry-run
-llm-preflight benchmark.json --migration-check
-```
-
-`--doctor` checks configuration and required credentials without generation.
-`--dry-run` shows models, tests, nominal and retry-expanded request counts,
-estimated cost, stop behaviour, and response retention. The final command sends
-three short response-contract cases to every selected model, once each.
-
-Use `--migration-check` when comparing a current model with a candidate. It
-sets the quick `quick-migration-check` test, one repetition, no warmups, and
-concurrency one.
-It tells you whether the provider worked, whether responses were valid, and
-their first-token/end-to-end latency. It does not prove a stable performance
-ranking; run a repeated task-specific test after it passes.
-
-For an easier first paid run, use the guided terminal screen instead:
-
-```bash
-llm-preflight benchmark.json --interactive
-```
-
-It asks what to test, previews the paid plan, and requires confirmation before
-requests are made.
+`init` creates one mock model and the prompt `Reply with ok.`, validated as
+exactly `ok`. It refuses to overwrite an existing file. `--no-env-file` skips
+credential files; `--no-save` skips JSON/Markdown result artifacts.
 
 ## Read the result
 
-Unless `--no-save` is used, each run creates JSON evidence and a readable
-Markdown report under `results/`. The report compares:
+In the quality gate, `local-mock` shows `PASS`: its response met the exact-output
+rule. The decision then explains why the run cannot approve a live model:
 
-- **Quality/reliability** — did the output satisfy the chosen rule?
-- **Latency** — how long requests took from your host.
-- **Tokens and estimated cost** — only when providers expose usable usage and
-  pricing data.
+```text
+Decision: inconclusive (exit 3)
+Blocking warnings:
+- Mock-only runs do not provide live-provider evidence.
+```
 
-A fast response that fails JSON, exact-label, or numeric validation is a failed
-result. A model with `n/a` cost has unknown pricing; it is not free.
+**This is the expected result.** The local test passed; no provider was tested.
+The executive recommendation is a summary of selected test results, not
+permission to spend money or approve production.
 
-### A first report, explained
+For a benchmark, `pass` exits `0`, `fail` exits `1`, and `inconclusive` exits `3`.
+A provider can return a usable API response that fails your output rule. A
+missing cost is unknown, not zero. Automation should read JSON or the saved
+JSON artifact rather than parse terminal output.
 
-The mock demo produces the same local contract evidence as a paid run, but it
-does not provide live-provider evidence. Its decision is therefore
-`inconclusive` and the command exits 3 even when every mock response validates.
-The terminal report is for people; automation must read the JSON output or a
-saved JSON artifact. For a no-save JSON run, check the process status and then
-read the decision object:
+### Read the same decision as JSON
+
+This remains a local mock run. The following shell sequence captures stdout
+and checks that the expected inconclusive status was returned:
 
 ```bash
 set +e
-llm-preflight benchmark.json --json --no-save > mock-result.json
+llm-preflight benchmark.json --json --no-save --no-env-file > mock-result.json
 status=$?
 set -e
 test "$status" -eq 3
 ```
+
+The result contains these fields (an excerpt):
 
 ```json
 {
@@ -142,46 +66,66 @@ test "$status" -eq 3
 }
 ```
 
-Without `--no-save`, the result file under `results/` contains the same
-decision object. Its terminal report has a results table, quality gate, explicit
-decision, and separate executive summary:
+`mock-result.json` exists because the shell redirected stdout; `--no-save`
+prevents the tool's normal saved-result artifacts. See the
+[interactive walkthrough](../guides/interactive-runs.md#default-template-walkthrough)
+for the same template with menus and a terminal recording.
 
-```text
-Model  | Valid | Latency p95 | Cost
-local  | 100%  | 0.010s      | $0.000000
+### If your result differs
 
-QUALITY GATE
-local  PASS  -
+- **Config already exists:** use a fresh directory or choose a new filename.
+  Keep an existing project config intact.
+- **A key or provider is mentioned:** inspect `benchmark.json`; this walkthrough
+  expects only `provider: mock`. An existing live config is a different task.
+- **A script stops on exit 3:** capture the status explicitly as above. Accept
+  `3` only when testing a known mock fixture; never treat unknown live evidence
+  as a successful production gate.
 
-=== DECISION ===
-Decision: inconclusive (exit 3)
-Blocking warnings:
-- Mock-only runs do not provide live-provider evidence.
+## Reuse a project env file safely
 
-=== EXECUTIVE SUMMARY ===
-Recommended: unavailable; no priced model passed every selected test.
+For a real application, use the
+[project integration guide](project-integration.md) to adapt one request and a
+rule its consumer enforces. It provides accepted/rejected response fixtures and
+a no-generation CI check. Local fixtures check the validator; keep your
+application's parser tests separately.
+
+For a minimal provider starter, use a different config path from the mock:
+
+```bash
+llm-preflight init live.json --template provider --interactive
+llm-preflight live.json --doctor --json
+llm-preflight live.json --pricing-check
+llm-preflight live.json --dry-run --json
 ```
 
-`API OK` means the provider returned a response. `TEST OK` means that response
-also passed your rule; `API OK / TEST FAIL` is usable API connectivity but an
-invalid application result. `Recommended` compares only models that passed
-every selected test. It says `unavailable` when no model qualified, pricing is
-unknown for every qualified model, or there is no comparable latency evidence.
-Open the saved `.md` report for a readable record and the matching `.json` file
-when a script needs the detailed evidence.
+The setup asks for the provider, model, credential variable name and optional
+existing env-file reference, never a secret value. The live starter limits
+requests and estimated cost and saves failed responses by default. Keep the
+actual key in your shell or an uncommitted env file; review saved artifacts
+before sharing them.
+
+A config-relative env file must stay within the config directory. Shell values
+win over file values, `--env-file` overrides the configured reference, and
+`--no-env-file` disables file loading. The commands above make no generation
+requests. A direct `llm-preflight live.json` command can make paid requests
+without a separate approval prompt; run it only after reviewing and authorizing
+the plan.
+
+## Then run a quick migration check
+
+When comparing an approved model with a candidate, the optional
+`--migration-check` pack runs three built-in cases: a capital-city answer,
+summary and rewrite. Preview that exact selection with
+`llm-preflight live.json --migration-check --dry-run`, resolving any request or
+cost-limit errors before execution. These generic cases do not establish your
+application's contract. Follow the [model-change guide](../guides/model-change.md)
+for the complete review sequence.
 
 ## Choose your next path
 
-**You already know the models you want to compare.** Continue with
-[Configuration](../reference/configuration.md), then write one [custom contract test](../guides/output-contracts.md)
-that represents the output your feature must preserve.
-
-**You want help finding newly released models.** Follow [Model catalogue](../guides/model-catalog.md).
-It creates a local list, classifies provider models, asks before any small
-compatibility probe, and lets you approve only models that pass your tests.
-
-**You are automating a known benchmark.** Start with [CI and JSON output](../automation/ci.md).
-
-The [Workflows](../guides/model-change.md) page collects the common commands, and
-[Tests, pricing, and safety](../guides/pricing-and-safety.md) explains how to interpret
-the numbers safely.
+- **Check an application:** adapt a [custom contract test](../guides/output-contracts.md)
+  with the [project integration guide](project-integration.md).
+- **Compare a change:** use [model-change workflows](../guides/model-change.md).
+- **Find candidates:** follow the [model catalogue](../guides/model-catalog.md).
+- **Automate:** use [CI and JSON output](../automation/ci.md) or
+  [MCP for coding agents](../automation/mcp.md).

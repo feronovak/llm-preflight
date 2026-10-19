@@ -2,110 +2,87 @@
 
 **Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
-LLM Preflight is the local evidence gate for an LLM integration change. Use it
-to check the contract your application actually needs, the latency and cost
-from your environment, and the paid-work plan before production.
+Check a declared application output rule before changing an LLM integration.
+Choose a task below; each path explains the inputs, expected result and next step.
 
-It is not a hosted evaluation platform, tracing system, or public leaderboard.
-Results stay local unless you decide to attach or publish them.
+## Start here
 
-## Start safely
+- **Try it without an API key.** [Run the local demo](getting-started/safe-demo.md)
+  and understand why a passing mock test still produces `inconclusive`.
+- **Check my application.** [Set up one real contract](getting-started/project-integration.md)
+  with accepted/rejected examples, existing credentials and request bounds.
+- **Review a change.** [Compare approved and candidate configurations](guides/model-change.md)
+  while preserving the application rule and reviewing the paid-work plan.
+- **Automate an established check.** Use [CI and JSON output](automation/ci.md)
+  for pipelines or [MCP](automation/mcp.md) for a coding agent.
 
-For a no-provider demonstration, [render the synthetic report gallery and try
-the blocked gate](../examples/reports/README.md). Then use one of the setup
-paths below. [Ask for setup help or a contract example](https://github.com/feronovak/llm-preflight/issues/new?template=setup-help.yml)
-if you get stuck.
+<a id="start-safely"></a>
 
-- [Safe demo](getting-started/safe-demo.md) — run the no-key mock benchmark,
-  then create a conservative provider starter.
-- [Project integration](getting-started/project-integration.md) — adapt one
-  application contract, reuse a project env file, and add a no-spend CI check.
-- [Official snapshots](guides/current-snapshots.md) — native routes and the
-  dated direct-provider prices, Gemini 4 Argon request settings and scheduled
-  price changes; also Kimi native, Z.ai native discovery and Jev gaps.
-- [Model retirements](guides/retirements.md) — bundled retirement snapshot, the three-state verdict, and the next command.
-- [A new model appeared](guides/model-catalog.md) — refresh provider metadata,
-  then deliberately probe, benchmark, and approve a small candidate set.
-- [Model change](guides/model-change.md) — compare an approved model and a
-  candidate before changing production.
-- [Output contracts](guides/output-contracts.md) — validate JSON, routing,
-  parser behavior, and deterministic golden answers.
-- [Image-to-text contract inputs](guides/vision-inputs.md) — validate an image-to-text
-  integration contract without scoring image quality.
-- [Configuration](reference/configuration.md) — reuse an explicitly selected
-  project env file without copying credentials.
+## Understand the result
+
+- [Interactive walkthrough](guides/interactive-runs.md) — native menu choices,
+  a local test, and a CLI JSON request/result example.
+- [Reviewable reports](guides/reports.md) — export saved evidence without
+  another provider request; understand what a report omits.
+- [Synthetic report gallery](../examples/reports/README.md) — reproduce a
+  passing result, a contract failure and a blocked gate from a source checkout.
+- [Decision contract](reference/decision.md) — interpret pass, fail,
+  inconclusive and blocking warnings in automation.
+- [Troubleshooting](operations/troubleshooting.md) — diagnose a failed request,
+  incomplete evidence or unexpected verdict.
+
+<a id="tested-models"></a>
+
+## Observed provider results
+
+Read the [support-routing comparison](guides/observed-model-comparison.md) for
+**27 measured API model IDs** across retained study dates, including a later
+12-model run with API errors and contract failures. The
+[README results image](../README.md#observed-results-on-a-support-routing-contract)
+summarizes 14 selected models. The comparison guide retains the accessible text
+results, request settings, dates, route pins, missing-cost evidence and limits.
+
+These observations do not establish how a model performs on your application.
+For supported routes and dated price coverage, use
+[official snapshots](guides/current-snapshots.md); for native endpoint setup,
+see [direct GLM, DeepSeek and Qwen checks](guides/native-chinese-models.md).
 
 ## Run and maintain preflights
 
-- [Model catalogue](guides/model-catalog.md) — discover, probe, compare, and
-  deliberately approve provider models.
-- [Model comparison](guides/observed-model-comparison.md) — dated
-  results for **27 measured API model IDs**, including Haiku 5.5, Sonnet 5.5,
-  GPT-6.1 Sol and GLM-5.3 through Relace, with request limits and failure analysis.
-- [Interactive runs](guides/interactive-runs.md) — select models and tests at
-  the terminal, then review the paid-work plan.
-- [Pricing and safety](guides/pricing-and-safety.md) — limits, pricing
-  confidence, retries, response retention, and sensitive-data handling.
-- [Direct GLM, DeepSeek and Qwen checks](guides/native-chinese-models.md) —
-  native endpoints, credentials and a bounded three-model smoke.
-
-## Tested models
-
-| Model | Checks passed | Mean latency | Est. cost / 16 | Last tested | Connection |
-|---|---:|---:|---:|---|---|
-| GPT-6 Astra | 16/16 | 2.184s | $0.024610 | 2026-09-28 | OpenAI |
-| GPT-6.1 Sol | 16/16 | 1.674s | $0.005112 | 2026-10-14 | OpenAI |
-| GPT-6 Luna | 16/16 | 2.150s | $0.000353 | 2026-10-14 | OpenAI |
-| Claude Opus 5.5 | 16/16 | 1.985s | $0.013220 | 2026-10-14 | Anthropic |
-| Claude Sonnet 5.5 | 16/16 | 1.095s | $0.005740 | 2026-10-14 | Anthropic |
-| Claude Haiku 5.5 | 16/16 | 0.934s | $0.000479 | 2026-10-14 | Anthropic |
-| Gemini 4 Argon | 16/16 | 2.376s | $0.005546 | 2026-10-14 | Gemini |
-| Gemini 3.8 Flash | 16/16 | 2.255s | $0.005666 | 2026-10-14 | Gemini |
-| Gemini 3.1 Flash-Lite | 16/16 | 0.977s | $0.000588 | 2026-09-28 | Gemini |
-| GLM 5.3 | 11/16 | 1.221s | — | 2026-10-14 | OpenRouter / Relace |
-| GLM 5.3 Flash | 16/16 | 1.535s | $0.000178 | 2026-10-14 | OpenRouter / Relace |
-| DeepSeek V4.1 Flash | 16/16 | 2.342s | $0.000745 | 2026-10-14 | OpenRouter / Relace |
-| Qwen 3.8 Max 0902 | Request rejected | — | — | 2026-10-14 | OpenRouter / Alibaba US |
-| Qwen 3.8 Flash | 5/16 | 1.077s | — | 2026-10-14 | OpenRouter / Alibaba US |
-
-[Test details](guides/observed-model-comparison.md).
+- [Output contracts](guides/output-contracts.md) — declare JSON shapes, exact
+  labels and other supported rules; prove accepted/rejected examples locally.
+- [Model catalogue](guides/model-catalog.md) — discover metadata, deliberately
+  probe candidates and prepare bounded plans.
+- [Model retirements](guides/retirements.md) — audit literal IDs and understand
+  snapshot freshness, replacements and exit behavior.
+- [Pricing and safety](guides/pricing-and-safety.md) — review retries, estimated
+  cost, unknown usage and response retention before provider work.
+- [Image-to-text inputs](guides/vision-inputs.md) — check local inputs and
+  response contracts; image generation is outside this workflow.
 
 ## Automate with confidence
 
-- [CI and JSON output](automation/ci.md) — baselines, regression gates, and
-  stable machine-readable evidence.
-- [Reviewable reports](guides/reports.md) — render saved results as offline
-  HTML or a privacy-filtered GitHub job summary.
-- [GitHub Actions starter](automation/ci.md#github-actions-starter) — a
-  fork-safe mock workflow that uploads redacted evidence.
-- [Marketplace Action](automation/github-action.md) — run no-spend doctor,
-  pricing, and dry-run checks in a repository workflow.
-- [Proof of preflight](guides/proof-of-preflight.md) — attest an approved run
-  in CI, verify the record, and block merges without a fresh pass for the
-  current contract.
-- [Coding agents](automation/coding-agents.md) — a safe command sequence and
-  decision rules for agents.
-- [Git-aware change plans](automation/change-plans.md) — inspect local changes,
-  then retain a bounded review receipt without granting execution authority.
-- [MCP server](automation/mcp.md) — give a coding agent local, bounded access
-  to validation, planning, execution, and baseline diffs; includes registry
-  metadata and the repository plugin skill.
+- [GitHub Action](automation/github-action.md) — no-generation checks by
+  default, with an explicit opt-in for provider requests.
+- [GitHub Actions starter](automation/ci.md#github-actions-starter) — a fork-safe
+  mock workflow that retains JSON and expects the mock's inconclusive exit.
+- [Proof of preflight](guides/proof-of-preflight.md) — configure a required
+  gate for fresh matching CI evidence, workflow protection and signature checks.
+- [Coding-agent workflow](automation/coding-agents.md) — preserve validators,
+  inspect bounded plans and keep paid-run authority with the user.
+- [Git-aware change plans](automation/change-plans.md) — inspect static change
+  signals and proposed checks without authorizing execution.
 
 ## Reference and help
 
-- [Product map](FEATURE_MAP.md) — the source-verified capabilities in this
-  release.
-- [Changelog](../CHANGELOG.md) — shipped changes by version.
 - [CLI reference](reference/cli.md)
-- [Agent decision contract](reference/decision.md)
-- [Configuration](reference/configuration.md) and
-  [configuration schema](reference/configuration-schema.md)
-- [Result JSON schema](reference/results.md)
-- [Troubleshooting](operations/troubleshooting.md)
-- [North star](NORTH_STAR.md) — mission, niche, boundaries, and product
-  promise.
-- [Product positioning](product/positioning.md) — stable pointer for older
-  links.
-- [When to use LLM Preflight](product/when-to-use.md) — choose it versus an
-  evaluation suite, observability platform, or provider CLI.
-- [Product decisions](DECISIONS.md)
+- [Configuration](reference/configuration.md) and [configuration reference](reference/configuration-schema.md)
+- [Result JSON](reference/results.md) and [decision contract](reference/decision.md)
+- [When to use this tool](product/when-to-use.md), [north star](NORTH_STAR.md) and [product decisions](DECISIONS.md)
+- [Product map](FEATURE_MAP.md) and [code map](PROJECT_MAP.md)
+- [Changelog](../CHANGELOG.md), [contributing](../CONTRIBUTING.md) and [documentation writing guide](development/documentation.md)
+- [Security reporting](../SECURITY.md)
+
+[Ask for setup help or a contract example](https://github.com/feronovak/llm-preflight/issues/new?template=setup-help.yml)
+with the version, intended check and redacted output. Keep credentials, private
+prompts and provider responses out of public issues.

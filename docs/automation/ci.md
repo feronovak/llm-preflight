@@ -64,10 +64,15 @@ For the complete stable result structure, see [Result JSON schema](../reference/
 
 ## Safe CI starter
 
+Use an existing reviewed config. The first three commands make no generation
+requests. The final command can spend money; run it only in a trusted job after
+authorizing the request/cost bounds. For a no-key job, use the mock starter below.
+
 ```bash
 llm-preflight benchmark.json --doctor --json
 llm-preflight benchmark.json --pricing-check
 llm-preflight benchmark.json --smoke --dry-run --json
+# Paid requests after approval:
 llm-preflight benchmark.json --smoke --json --no-save > current.json
 ```
 

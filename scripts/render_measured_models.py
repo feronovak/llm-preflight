@@ -1,0 +1,226 @@
+"""Render the README's dated observations from the retained comparison evidence.
+
+Run `python3 scripts/render_measured_models.py`; use --check in verification.
+This documentation utility uses only the standard library and makes no requests.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import re
+from html import escape
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_OUTPUT = ROOT / "docs/images/measured-models.svg"
+MODEL_NAMES = {
+    "gpt-6-astra": "GPT-6 Astra",
+    "gpt-6.1-sol": "GPT-6.1 Sol",
+    "gpt-6-luna": "GPT-6 Luna",
+    "claude-opus-5-5": "Claude Opus 5.5",
+    "claude-sonnet-5-5": "Claude Sonnet 5.5",
+    "claude-haiku-5-5": "Claude Haiku 5.5",
+    "gemini-4-argon": "Gemini 4 Argon",
+    "gemini-3.8-flash": "Gemini 3.8 Flash",
+    "gemini-3.1-flash-lite": "Gemini 3.1 Flash-Lite",
+    "z-ai/glm-5.3": "GLM 5.3",
+    "z-ai/glm-5.3-flash": "GLM 5.3 Flash",
+    "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
+    "qwen/qwen3.8-max-0902": "Qwen 3.8 Max 0902",
+    "qwen/qwen3.8-flash": "Qwen 3.8 Flash",
+}
+
+
+def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
+    data = json.loads(
+        (data_path or ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    current = data["rows"]
+    request_counts = {row["requests"] for row in current}
+    if len(request_counts) != 1 or next(iter(request_counts)) <= 0:
+        raise ValueError("All rows must have the same positive request count")
+    rows = []
+    for row in current:
+        cost = row["estimated_cost_usd"]
+        if cost is not None and (not math.isfinite(cost) or cost < 0):
+            raise ValueError("Cost must be finite nonnegative evidence or null")
+        if not 0 <= row["valid"] <= row["api_successful"] <= row["requests"]:
+            raise ValueError("Invalid passing/API/request counts")
+        rows.append(
+            (
+                row.get("display_name", MODEL_NAMES.get(row["model"], row["model"])),
+                row.get("api_failure_summary", f"0/{row['requests']}")
+                if not row["api_successful"]
+                else f"{row['valid']}/{row['requests']}",
+                f"{row['mean_latency_seconds']:.3f}s"
+                if row["mean_latency_seconds"] is not None
+                else "—",
+                f"${row['estimated_cost_usd']:.6f}"
+                if row["estimated_cost_usd"] is not None
+                else "—",
+                row["observed_on"],
+                row["route"],
+            )
+        )
+    if data_path is None:
+        # Only the existing summary combines the later study with these two
+        # historical observations. A new dataset never silently inherits them.
+        study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+        historical = study.split("## Comparison results", 1)[1].split("\n## ", 1)[0]
+        older = re.findall(
+            r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
+            historical,
+            re.MULTILINE,
+        )
+        for provider, model, date, valid, latency, cost in older:
+            if model in {"gpt-6-astra", "gemini-3.1-flash-lite"}:
+                rows.append(
+                    (MODEL_NAMES[model], f"{valid}/16", latency, cost, date, provider)
+                )
+        order = {name: index for index, name in enumerate(MODEL_NAMES.values())}
+        rows.sort(key=lambda row: order[row[0]])
+    return rows
+
+
+def render(data_path: Path | None = None) -> str:
+    style = json.loads((ROOT / "docs/images/style.json").read_text())
+    colors = style["colors"]
+    layout = style["measured_models"]
+    rows = observed_rows(data_path)
+    if len(rows) > layout["max_rows"]:
+        raise ValueError("Split more than 16 rows into separate evidence files/images")
+    data = json.loads(
+        (data_path or ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    title = (
+        data.get("display_title", "Observed model results")
+        if data_path
+        else "Observed results on a support-routing contract"
+    )
+    request_count = data["rows"][0]["requests"]
+    dates = sorted(row[4] for row in rows)
+    date_range = dates[0] if dates[0] == dates[-1] else f"{dates[0]}–{dates[-1]}"
+    width = layout["width"]
+    height = (
+        layout["table_top"] + len(rows) * layout["row_height"] + layout["footer_height"]
+    )
+
+    def text(
+        x: int, y: int, value: str, size: int, color: str = "text", bold: bool = False
+    ) -> str:
+        return (
+            f'<text x="{x}" y="{y}" font-size="{size}" '
+            f'fill="{colors[color]}" font-weight="{700 if bold else 400}">{escape(value)}</text>'
+        )
+
+    parts = [
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+            f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title description" '
+            f'font-family="{escape(style["fonts"]["sans"], quote=True)}">'
+        ),
+        "<!-- Generated by scripts/render_measured_models.py. Do not edit values here. -->",
+        f'<title id="title">{escape(title)}</title>',
+        (
+            '<desc id="description">Selected dated observations. '
+            "Latency includes API successes, including contract failures, and excludes API errors. "
+            "An em dash means unavailable; total cost is unknown where usage is missing. "
+            "Routes, request settings and dates differ. This is not a ranking or production approval."
+            "</desc>"
+        ),
+        f'<rect width="{width}" height="{height}" rx="16" fill="{colors["background"]}"/>',
+        text(32, 52, title, layout["title_size"], bold=True),
+        text(
+            32,
+            86,
+            f"{len(rows)} selected models · {request_count} requests each · observed {date_range}",
+            layout["subtitle_size"],
+            "muted",
+        ),
+        f'<rect x="16" y="112" width="{width - 32}" height="48" rx="6" fill="{colors["header"]}"/>',
+    ]
+    columns = layout["columns"]
+    headers = (
+        "Model",
+        "Checks passed",
+        "Mean latency",
+        f"Est. cost / {request_count}",
+        "Last tested",
+        "Connection route",
+    )
+    for x, header in zip(columns, headers):
+        parts.append(text(x, 143, header, layout["header_size"], bold=True))
+    for index, row in enumerate(rows):
+        top = layout["table_top"] + index * layout["row_height"]
+        if index % 2 == 0:
+            parts.append(
+                f'<rect x="16" y="{top}" width="{width - 32}" height="{layout["row_height"]}" fill="{colors["surface"]}"/>'
+            )
+        parts.append(f'<g data-model="{escape(row[0], quote=True)}">')
+        for column, (x, value) in enumerate(zip(columns, row)):
+            color = "text"
+            if column == 1:
+                color = (
+                    "pass_text"
+                    if value == f"{request_count}/{request_count}"
+                    else "fail_text"
+                    if value in {"Request rejected", f"0/{request_count}"}
+                    else "warning_text"
+                )
+            size = layout["model_size"] if column == 0 else layout["cell_size"]
+            parts.append(text(x, top + 31, value, size, color))
+        parts.append("</g>")
+    footer_top = height - layout["footer_height"] + 16
+    parts.extend(
+        [
+            f'<path d="M32 {footer_top}H{width - 32}" stroke="{colors["border"]}"/>',
+            text(
+                32,
+                footer_top + 31,
+                "Latency excludes API errors. — means unavailable; missing usage keeps total cost unknown.",
+                layout["footnote_size"],
+                "muted",
+            ),
+            text(
+                32,
+                footer_top + 62,
+                "One workload; routes and settings differ. See the linked method and failure analysis before comparing.",
+                layout["footnote_size"],
+                "muted",
+            ),
+            "</svg>",
+        ]
+    )
+    return "\n".join(parts) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--data",
+        type=Path,
+        help="New aggregate JSON; uses only its rows, without historical additions",
+    )
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    try:
+        content = render(args.data).encode()
+    except (ValueError, KeyError, OSError) as error:
+        parser.error(str(error))
+    if args.check:
+        if not args.output.is_file() or args.output.read_bytes() != content:
+            print(f"Outdated image: {args.output}")
+            return 1
+        print(f"Current image: {args.output}")
+        return 0
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_bytes(content)
+    print(f"Wrote {args.output}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1128,7 +1128,8 @@
         "max_estimated_cost_usd": 0.051401
       },
       "config_sha256": "200708cb6136626bf7feb6349c08767afd1414400347a563bdcdae743df84b9a",
-      "result_sha256": "ee171f2921467d091de90d3f4268671fd3d6919d007448c8a4b5b0682482ea23"
+      "result_sha256": "ee171f2921467d091de90d3f4268671fd3d6919d007448c8a4b5b0682482ea23",
+      "api_failure_summary": "Request rejected"
     },
     {
       "provider": "openrouter",

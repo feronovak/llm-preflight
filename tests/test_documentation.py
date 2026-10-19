@@ -101,40 +101,36 @@ def test_documented_model_list_matches_comparison_evidence():
             row for row in historical_rows if row[1] == historical_model
         )
         expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
-    assert "## Tested models" not in readme
+    import xml.etree.ElementTree as ET
+
+    assert "docs/images/measured-models.svg" in readme
     assert "docs/guides/observed-model-comparison.md" in readme
-    for page in (docs_index,):
-        section = page.split("## Tested models\n", 1)[1].split("\n## ", 1)[0]
-        table = [line for line in section.splitlines() if line.startswith("|")]
-        assert table[0] == (
-            "| Model | Checks passed | Mean latency | Est. cost / 16 | Last tested | Connection |"
-        )
-        rows = [
-            tuple(cell.strip() for cell in line.split("|")[1:-1]) for line in table[2:]
-        ]
-        assert len(rows) == len(expected) == 14
-        assert {row[0] for row in rows} == set(expected)
-        for name, *values in rows:
-            assert tuple(values) == expected[name], name
-        for provider in ("OpenAI", "Anthropic", "Gemini"):
-            assert sum(row[-1] == provider for row in rows) >= 3, provider
-        for row in rows:
-            if row[0].startswith(("GLM", "DeepSeek", "Qwen")):
-                assert row[-1].startswith("OpenRouter /"), row[0]
-        qwen_max = next(row for row in rows if row[0] == "Qwen 3.8 Max 0902")
-        assert qwen_max[1:4] == ("Request rejected", "—", "—")
-        prose = [
-            line
-            for line in section.splitlines()
-            if line.strip() and not line.startswith("|")
-        ]
-        assert len(prose) == 1
-        assert (
-            "[Test details]" in prose[0] and "observed-model-comparison.md" in prose[0]
-        )
-        assert len(section.splitlines()) <= 21
-        assert "Current passing shortlist" not in page
-        assert "Earlier evidence stays visible" not in page
+    assert "| Model | Checks passed |" not in readme
+    assert "| Model | Checks passed |" not in docs_index
+    assert "observed-model-comparison.md" in docs_index
+    svg = ET.fromstring((ROOT / "docs/images/measured-models.svg").read_bytes())
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    rows = [
+        tuple("".join(cell.itertext()) for cell in row.findall("svg:text", ns))
+        for row in svg.findall("svg:g[@data-model]", ns)
+    ]
+    assert len(rows) == len(expected) == 14
+    assert {row[0] for row in rows} == set(expected)
+    for name, *values in rows:
+        assert tuple(values) == expected[name], name
+    assert svg.find("svg:title", ns) is not None
+    description = svg.find("svg:desc", ns).text
+    assert "API errors" in description
+    assert "unknown" in description
+    assert "not a ranking" in description
+    assert not svg.findall(".//svg:script", ns)
+    for provider in ("OpenAI", "Anthropic", "Gemini"):
+        assert sum(row[-1] == provider for row in rows) >= 3, provider
+    for row in rows:
+        if row[0].startswith(("GLM", "DeepSeek", "Qwen")):
+            assert row[-1].startswith("OpenRouter /"), row[0]
+    qwen_max = next(row for row in rows if row[0] == "Qwen 3.8 Max 0902")
+    assert qwen_max[1:4] == ("Request rejected", "—", "—")
     for detail in (
         "password-reset",
         "5/6",
@@ -348,22 +344,22 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "## CLI, CI, and MCP" in readme
     assert "## Delivered in 2.8.0" not in readme
     assert "## Delivered in 2.7.5" not in readme
+    assert readme.index("## Try it in 60 seconds") < readme.index("## First live run")
     assert (
         readme.index("## Try it in 60 seconds")
-        < readme.index("## Choose your path")
-        < readme.index("## Safety boundary")
+        < readme.index("## Observed results on a support-routing contract")
+        < readme.index("## First live run")
     )
-    assert (
-        readme.index("## See a contract change fail")
-        < readme.index("## Purpose")
-        < readme.index("## Choose your path")
-    )
-    assert readme.index("## Safety boundary") < readme.index("## CLI, CI, and MCP")
+    paths = readme.split("## Choose your path", 1)[1].split("\n## ", 1)[0]
+    for destination in (
+        "docs/getting-started/project-integration.md",
+        "docs/guides/model-change.md",
+        "docs/automation/ci.md",
+        "docs/automation/mcp.md",
+    ):
+        assert destination in paths
     assert "Version **2." not in readme
-    assert readme.count("## Purpose") == 1
-    assert readme.index("## What live evidence looks like") < readme.index(
-        "## First live run"
-    )
+    assert "Version 2." not in readme
     live_section = readme.split("## First live run", 1)[1].split("\n## ", 1)[0]
     assert "llm-preflight init live.json --template provider" in live_section
     assert "cp benchmark.example.json" not in live_section
@@ -531,14 +527,14 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     safe_demo = (ROOT / "docs/getting-started/safe-demo.md").read_text()
-    assert "**Last reviewed:** 2026-09-09 · **As of:** v2.14.0" in safe_demo
-    assert "llm-preflight init --template provider --interactive" in safe_demo
+    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in safe_demo
+    assert "llm-preflight init live.json --template provider --interactive" in safe_demo
     assert safe_demo.count("**Last reviewed:**") == 1
     ci = (ROOT / "docs/automation/ci.md").read_text()
     north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
 
     assert '"state": "inconclusive"' in safe_demo
-    assert "saved JSON artifact" in safe_demo
+    assert "saved JSON artifact" in " ".join(safe_demo.split())
     assert "## Release documentation checklist" in ci
     assert "examples/github-actions/preflight.yml" in ci
     assert "tests/test_package.py" in ci
@@ -595,14 +591,17 @@ def test_positioning_and_decisions_are_public_and_current():
     metadata = (ROOT / "pyproject.toml").read_text()
 
     assert "## Choose your path" in readme
-    assert "Review a new model" in readme
+    assert "docs/guides/model-catalog.md" in readme
     assert "No preflight, no merge." in readme
     assert "A signed record" not in readme
     assert (
         "It doesn't certify production behaviour. It proves the check was done."
         in readme
     )
-    assert "local CLI and CI tool that checks an\napplication's LLM contract" in readme
+    assert (
+        "Check LLM responses against the output rules your application depends on"
+        in readme
+    )
     assert "[North star](../NORTH_STAR.md)" in positioning
     assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
     assert "## Mission" in north_star
@@ -1029,13 +1028,12 @@ def test_proof_of_preflight_guide_is_linked_from_every_entry_point():
     index = (ROOT / "docs/index.md").read_text()
     feature_map = (ROOT / "docs/FEATURE_MAP.md").read_text()
     docmap = (ROOT / "docs/DOCMAP.md").read_text()
-    choose = readme.split("## Choose your path", 1)[1].split("\n## ", 1)[0]
-
-    assert choose.count("docs/guides/proof-of-preflight.md") == 1
-    opening = readme.split("## Try it in 60 seconds", 1)[0]
-    assert "proof-of-preflight" in opening
-    assert "gh attestation verify" in opening
-    assert "synthetic" in opening.lower()
+    gate = readme.split("## CLI, CI, and MCP", 1)[1].split("\n## ", 1)[0]
+    assert "docs/guides/proof-of-preflight.md" in gate
+    assert "gh attestation verify" in gate
+    assert "Protect the producer and gate workflows" in gate
+    assert "merge policy" in gate
+    assert "synthetic" in readme.split("## Try it in 60 seconds", 1)[0].lower()
     assert "(guides/proof-of-preflight.md)" in index
     assert "`attestation.py`" in feature_map and "`report --format svg`" in feature_map
     action_row = feature_map.split("GitHub Marketplace Action", 1)[1].split("\n")[0]
@@ -1184,7 +1182,9 @@ def test_default_template_interactive_and_cli_communication_examples(tmp_path):
 
 def test_readme_embeds_both_current_terminal_recordings():
     readme = (ROOT / "README.md").read_text()
-    introduction = readme.split("## Purpose", 1)[0]
+    introduction = readme.split("## Observed results on a support-routing contract", 1)[
+        0
+    ]
     embedded = re.findall(
         r"!\[[^\]]*\]\(https://raw\.githubusercontent\.com/feronovak/"
         r"llm-preflight/main/docs/images/([^)]+)\)",
@@ -1232,3 +1232,190 @@ def test_readme_first_run_is_the_isolated_mock_contract_demo(tmp_path):
     assert config["models"][0]["response"] == "ok"
     assert not list((tmp_path / "results").glob("*.json"))
     assert not list((tmp_path / "results").glob("*.md"))
+
+
+def test_measured_model_image_is_reproducible(tmp_path):
+    output = tmp_path / "models.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--output",
+            str(output),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (
+        output.read_bytes() == (ROOT / "docs/images/measured-models.svg").read_bytes()
+    )
+    output.write_text("outdated image")
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--output",
+            str(output),
+            "--check",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert output.read_text() == "outdated image"
+
+
+def test_docs_home_routes_to_runnable_first_tasks():
+    home = (ROOT / "docs/index.md").read_text()
+    start = home.split("## Start here", 1)[1].split("\n## ", 1)[0]
+    targets = re.findall(r"\]\(([^)]+)\)", start)
+    assert set(targets) == {
+        "getting-started/safe-demo.md",
+        "getting-started/project-integration.md",
+        "guides/model-change.md",
+        "automation/ci.md",
+        "automation/mcp.md",
+    }
+    for target in targets:
+        assert (ROOT / "docs" / target).is_file()
+
+
+def test_measured_image_accepts_new_native_and_routed_evidence(tmp_path):
+    import xml.etree.ElementTree as ET
+
+    source = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    row = source["rows"][0].copy()
+    row.update(
+        model="deepseek-flash",
+        display_name="DeepSeek Flash",
+        route="DeepSeek (native)",
+        observed_on="2026-10-20",
+        valid=10,
+        api_successful=12,
+        api_failures=4,
+        contract_failures=2,
+        estimated_cost_usd=None,
+    )
+    routed = {**row, "route": "OpenRouter / Relace"}
+    source.update(display_title="Native & routed <checks>", rows=[row, routed])
+    data = tmp_path / "new-comparison.json"
+    data.write_text(json.dumps(source))
+    output = tmp_path / "new-models.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--data",
+            str(data),
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    image = ET.fromstring(output.read_bytes())
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    rows = image.findall("svg:g[@data-model]", ns)
+    assert len(rows) == 2
+    cells = [[cell.text for cell in row.findall("svg:text", ns)] for row in rows]
+    assert {row[-1] for row in cells} == {"DeepSeek (native)", "OpenRouter / Relace"}
+    assert all(
+        row[0] == "DeepSeek Flash" and row[1] == "10/16" and row[3] == "—"
+        for row in cells
+    )
+    assert all(row[4] == "2026-10-20" for row in cells)
+    assert image.find("svg:title", ns).text == "Native & routed <checks>"
+
+
+def test_measured_image_refuses_a_misleading_common_cost_denominator(tmp_path):
+    source = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    source["rows"][0]["requests"] = 8
+    data = tmp_path / "mixed-request-counts.json"
+    data.write_text(json.dumps(source))
+    output = tmp_path / "models.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--data",
+            str(data),
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert "same positive request count" in result.stderr
+    assert not output.exists()
+
+
+def test_mcp_first_plan_example_matches_the_server(tmp_path):
+    from llm_preflight import mcp
+    from llm_preflight.cli import _starter_config
+
+    page = (ROOT / "docs/automation/mcp.md").read_text()
+    section = page.split("## Try a local planning request", 1)[1].split("\n## ", 1)[0]
+    request, excerpt = [
+        json.loads(block)
+        for block in re.findall(r"```json\n(.*?)\n```", section, re.DOTALL)
+    ]
+    (tmp_path / "benchmark.json").write_text(json.dumps(_starter_config()))
+    response = mcp._response(request, tmp_path)["result"]["structuredContent"]
+    assert {key: response[key] for key in excerpt} == excerpt
+    assert response["ok"] is True
+
+
+def test_visual_specification_covers_images_and_machine_style():
+    import xml.etree.ElementTree as ET
+
+    spec = (ROOT / "docs/development/visual-assets.md").read_text()
+    for folder in ("docs/images", "tests/fixtures/cards", "examples/vision"):
+        for path in (ROOT / folder).iterdir():
+            if path.suffix in {".svg", ".gif", ".png", ".mp4"}:
+                assert path.stem in spec, path
+    style = json.loads((ROOT / "docs/images/style.json").read_text())
+    image = ET.parse(ROOT / "docs/images/measured-models.svg").getroot()
+    assert image.get("width") == str(style["measured_models"]["width"])
+    assert image.get("font-family") == style["fonts"]["sans"]
+    assert "scripts/render_measured_models.py" in spec
+    assert "native" in spec and "OpenRouter" in spec
+
+
+def test_measured_image_rejects_invalid_cost_evidence(tmp_path):
+    source = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    data = tmp_path / "invalid-cost.json"
+    output = tmp_path / "models.svg"
+    for invalid in (-0.01, float("nan"), float("inf")):
+        source["rows"][0]["estimated_cost_usd"] = invalid
+        data.write_text(json.dumps(source))
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/render_measured_models.py"),
+                "--data",
+                str(data),
+                "--output",
+                str(output),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 2
+        assert "finite nonnegative" in result.stderr
+        assert not output.exists()

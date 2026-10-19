@@ -83,7 +83,9 @@ coverage is known and before a paid run.
 ## 3. Save evidence after approval
 
 After reviewing the plan and authorizing a bounded provider request, capture
-the JSON result and render a standalone report:
+the JSON result and render a standalone report. The benchmark command below
+can spend money and has no separate approval prompt. With `save_responses: false`
+the example omits saved response text; its JSON still contains run metadata:
 
 ```bash
 mkdir -p results
@@ -112,11 +114,11 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "llm-preflight==2.19.0"
+      - run: python -m pip install "llm-preflight==2.22.1"
       - run: llm-preflight benchmark.json --contract-check
       - run: llm-preflight benchmark.json --dry-run --no-env-file --json
 ```
@@ -162,6 +164,4 @@ different from the expected queue for a particular ticket.
 
 For a live adaptation, use the application's reviewed route and price evidence
 and choose approved request and cost caps. The mock's zero rates are not live
-model prices. Shared generation removes duplicate definitions; it does not
-prove production parser execution or semantic answer quality, so keep the
-application's parser tests as their own gate.
+model prices. Keep application parser tests as a separate gate.

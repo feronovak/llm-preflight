@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "fonts": {
+    "sans": "Liberation Sans, Arial, Helvetica, sans-serif",
+    "mono": "Liberation Mono, DejaVu Sans Mono, monospace"
+  },
+  "colors": {
+    "background": "#0d1117",
+    "surface": "#161b22",
+    "header": "#21262d",
+    "border": "#30363d",
+    "text": "#e6edf3",
+    "muted": "#aeb9c7",
+    "pass_text": "#7ee787",
+    "fail_text": "#ff7b72",
+    "warning_text": "#f2cc60",
+    "info": "#58a6ff"
+  },
+  "measured_models": {
+    "width": 1280,
+    "table_top": 160,
+    "row_height": 48,
+    "footer_height": 114,
+    "max_rows": 16,
+    "columns": [32, 302, 480, 626, 802, 968],
+    "title_size": 31,
+    "subtitle_size": 20,
+    "header_size": 19,
+    "model_size": 21,
+    "cell_size": 19,
+    "footnote_size": 18
+  },
+  "terminal": {
+    "width": 1248,
+    "height": 996,
+    "columns": 90,
+    "rows": 28,
+    "font_size": 22,
+    "line_height": 1.2,
+    "caption_size": 22,
+    "caption_title_size": 24,
+    "badge_size": 19,
+    "small_size": 17,
+    "gif_fps": 12,
+    "mp4_fps": 24,
+    "colors": {
+      "desktop": "#080c12",
+      "chrome": "#252b34",
+      "outline": "#434a54",
+      "pass_badge": "#3fb950",
+      "fail_badge": "#f85149",
+      "warning_badge": "#d29922",
+      "badge_ink": "#081018"
+    }
+  }
+}

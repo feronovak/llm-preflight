@@ -6,6 +6,14 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Organize the README and documentation around first use, application contracts,
+  change review and automation. Restore measured model observations as a
+  reproducible SVG image with accessible text results and explicit route/date
+  limits; preserve both approved continuous terminal demonstrations.
+- Add contributor writing and visual asset specifications, shared figure style
+  tokens, and an offline renderer for future measured datasets, including
+  separate native and routed observations. Correct setup examples and pin the
+  project-integration workflow to reviewed Actions and package versions.
 - Make the README quickstart follow the mock contract demo, explain benchmark
   verdicts and distinguish CLI paid requests from MCP/Action confirmation.
   Clarify built-in migration checks and saved-response privacy.

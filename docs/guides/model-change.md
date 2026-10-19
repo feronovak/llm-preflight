@@ -1,7 +1,9 @@
 # Workflows
 
-Use this page after choosing a path in [Getting started](../getting-started/safe-demo.md).
-It is the command reference for repeatable work; it is not a required sequence.
+Review a model, prompt or route change against an existing application rule.
+Start with a reviewed config from [project integration](../getting-started/project-integration.md).
+Keep approved and candidate routes, request settings, fixtures and spend limits
+explicit. Commands below marked as live can incur provider cost.
 
 - **Known models:** start with the migration check below, then use a custom
   contract for your feature.
@@ -11,31 +13,43 @@ It is the command reference for repeatable work; it is not a required sequence.
 
 ## Decide whether a model change is safe
 
-Put your current approved model and candidate model in the same configuration,
-then run the smallest meaningful preflight:
+First check the declared validator and preview the actual application workload
+without generation:
+
+```bash
+llm-preflight benchmark.json --contract-check
+llm-preflight benchmark.json --doctor
+llm-preflight benchmark.json --pricing-check
+llm-preflight benchmark.json --dry-run
+```
+
+Resolve warnings, preserve accepted and rejected fixtures, and review the
+retry-expanded request bound. **Live requests:** only after authorizing that
+plan, run `llm-preflight benchmark.json`. A direct CLI run has no separate
+approval prompt. Keep its JSON decision and compare it with the reviewed
+baseline; a successful API call alone is insufficient.
+
+For a preliminary API compatibility check, preview the optional built-in pack:
 
 ```bash
 llm-preflight benchmark.json --migration-check --dry-run
-llm-preflight benchmark.json --migration-check
 ```
 
-This runs three short response cases once per model. It checks real account/API
-compatibility, basic response validity, TTFT, end-to-end latency, token use, and
-estimated cost when available. It is the right first step after a provider
-release or model switch—not a statistical latency claim.
+After reviewing its separate plan, the live command is
+`llm-preflight benchmark.json --migration-check`. It sends three built-in cases
+once per model before configured retries: a capital-city answer, summary and
+rewrite. These cases do not substitute for your application's rule.
 
-If it passes, run the contract that matters to your feature:
+Built-in `structured-output-check` and `exact-routing-check` provide additional
+examples. Use [custom contract tests](output-contracts.md) for the specific
+request and output your feature must preserve. Latency and cost reflect this
+host, account, route and sample; small runs do not establish stable rankings.
 
-```bash
-llm-preflight benchmark.json --tests structured-output-check
-llm-preflight benchmark.json --tests exact-routing-check
-```
-
-See [Custom contract tests](output-contracts.md) for copyable examples and guidance
-on choosing strict JSON, exact-routing, or content rules.
-
-Use several repetitions only when you need a dependable performance comparison;
-run `concurrency-health-check` separately when you need concurrency evidence.
+If the result fails, distinguish API errors from rejected responses. Inspect
+the failed case, retain the validator and fix the integration or request. If
+it is inconclusive, resolve the blocking warnings and missing evidence before
+proposing approval. Use [CI and JSON output](../automation/ci.md) for baseline
+comparison commands and exits.
 
 ## Maintain approved models
 
@@ -51,7 +65,8 @@ llm-preflight catalog refresh benchmarks/watch.json
 llm-preflight catalog probe benchmarks/watch.json
 llm-preflight catalog prepare benchmarks/watch.json \
   --against benchmarks/approved.json --output benchmarks/candidates.json
-llm-preflight benchmarks/candidates.json --migration-check
+llm-preflight benchmarks/candidates.json --migration-check --dry-run
+# Paid only after reviewing the interactive plan and confirming:
 llm-preflight benchmarks/candidates.json --interactive \
   --approve-to benchmarks/approved.json
 ```
@@ -96,15 +111,16 @@ tutorial.
 ## Fast checks
 
 ```bash
-# Reduced live run: one repetition, no warmups, normal concurrency one.
+# No generation: inspect the reduced run before deciding to spend.
 llm-preflight benchmark.json --smoke --dry-run
+# Paid: only after separately reviewing and authorizing that plan.
 llm-preflight benchmark.json --smoke
 
 # Configuration and pricing checks without generation.
 llm-preflight benchmark.json --doctor
 llm-preflight benchmark.json --pricing-check
 
-# One prompt without a config file.
+# Local mock prompt without a config file; inconclusive exit 3 is expected.
 llm-preflight --quick "Reply with ok." --models mock:local --no-save
 ```
 

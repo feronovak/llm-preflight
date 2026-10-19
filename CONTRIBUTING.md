@@ -59,3 +59,10 @@ cannot override a failed correctness or artifact gate.
 - Before a release, run `make release-freshness`. The unit suite pins its clock
   to the snapshot review day, so only this target checks on the real date that
   the bundled examples are still priced and free of retired models.
+
+## Documentation and visual changes
+
+Follow the [documentation writing guide](docs/development/documentation.md) and
+[visual asset specification](docs/development/visual-assets.md). Supply executable
+examples and evidence for displayed measurements. Regenerate images from their
+source rather than changing numerical labels by hand.

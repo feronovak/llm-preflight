@@ -1,22 +1,17 @@
 # MCP server for coding agents
 
-`run_preflight` preserves missing usage as unavailable cost and
-reports a passing contract with incomplete cost as inconclusive. Read its
-decision and coverage fields; do not turn null totals into zero. Output-schema
-keywords outside the documented subset are rejected recursively by validation,
-planning, and run tools. Strict pricing uses review dates for every billable
-source label.
-
 **Last reviewed:** 2026-10-14 · **As of:** v2.21.2
 
-`validate_config` and `dry_run_plan` also inspect configured local image inputs
-without reading credentials or calling a provider. Their pre-run image cost is
-reported as unavailable rather than guessed. Image generation remains outside
-the MCP workflow.
+Connect a coding agent to an existing project contract, validate it without
+provider access, then review a bounded plan. The local stdio server exposes
+structured results without granting arbitrary shell execution. A live run
+requires explicit confirmation; keep client-side tool approval enabled.
 
-LLM Preflight includes a local stdio MCP server so a coding agent can collect
-the same preflight evidence without parsing shell output or gaining arbitrary
-command execution. It is a local validation gate, not a hosted service.
+Missing usage remains unavailable cost. A passing contract with incomplete
+cost can be inconclusive; read the decision and coverage fields. Supported
+output-schema constraints are enforced recursively, and strict price evidence
+uses its review date. Local image inputs are checked without credentials;
+pre-run image cost stays unavailable and image generation is outside this workflow.
 
 ## Configure a workspace
 
@@ -50,6 +45,42 @@ results are immediately stale and never shared across authorization contexts.
 The required fields let Claude Code and other strict clients validate the
 responses. Standard `2025-06-18` list/read responses retain their legacy shape.
 See the [MCP cache-field migration guide](https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28#cache-fields-and-cache-hints).
+
+## Try a local planning request
+
+In a new directory, run `llm-preflight init` to create the default mock config,
+then use that directory as the server workspace. After the client initializes
+the MCP connection, call:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "dry_run_plan",
+    "arguments": {"config": "benchmark.json"}
+  }
+}
+```
+
+The response's `result.structuredContent` includes these fields (an excerpt):
+
+```json
+{
+  "ok": true,
+  "tests": ["config prompt"],
+  "requests": 1,
+  "possible_requests": 2
+}
+```
+
+This built a plan without reading credentials or calling a provider. `ok`
+means the plan was produced, not that a model passed. To exercise the mock,
+call `run_preflight` with the same config and inspect its structured decision:
+its local test passes, but `decision.state` remains `inconclusive` because no
+live provider was tested. The [CLI walkthrough](../guides/interactive-runs.md#cli-json-communication)
+shows the equivalent JSON exchange.
 
 ## Start in a repository with no benchmark config
 

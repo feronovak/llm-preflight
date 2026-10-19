@@ -1,6 +1,6 @@
 # Interactive benchmark mode
 
-**Last reviewed:** 2026-10-13 · **As of:** v2.21.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 Interactive mode helps you choose models and workload from an existing project
 configuration, review local evidence, and decide what to do next. Version
@@ -21,6 +21,83 @@ choose `4` for never. `--dry-run` then prints the plan without asking for a run
 or retry-risk acceptance. The local fixtures prove only that the declared
 validator accepts and rejects those examples. They do not execute your
 application's parser or prove that a model meets the contract.
+
+## Default template walkthrough
+
+Start in a new directory with the installed CLI:
+
+```bash
+llm-preflight init
+llm-preflight benchmark.json --interactive --no-save --no-env-file
+```
+
+The default template uses a local mock and one configured test: `Reply with
+ok.`, validated as exactly `ok`. Follow these choices:
+
+| Prompt | Input | What it selects |
+|---|---|---|
+| Models | `all` | The template's one local mock |
+| Tests | Enter | The template's configured prompt |
+| Repetitions | Enter | One repetition |
+| Stop mode | `4` | Never stop early |
+| Next action | `r` | Review a local mock run |
+| Run local mock benchmark? | `y` | Start that local run |
+
+Enter at the test menu selects the configured prompt; `all` selects the
+built-in functional test pack. The recording uses the default configured test.
+The plan shows one nominal request and up to two attempts, both local mock
+work. No API key, env file, or provider call is used. No result files are
+saved by these flags.
+
+![Interactive default mock template: select the model and configured test, review the plan, confirm the local run, and read the inconclusive decision](../images/default-template-interactive.gif)
+
+[MP4 version](../images/default-template-interactive.mp4).
+The recording uses real terminal input and output, with edited timing,
+colour emphasis, and labelled menu/result excerpts. Its last scene shows the
+same mock decision through a CLI JSON request. Mock timing and token
+figures are simulated. `API OK / TEST OK` means the mock's response met the
+configured rule; the overall decision stays **inconclusive** (exit `3`)
+because a mock supplies no live-provider evidence.
+
+## CLI JSON communication
+
+Automation can use the same template without menus. After `init`, send these
+two CLI requests; the first returns exit `0`, the local run returns exit `3`:
+
+```bash
+llm-preflight benchmark.json --dry-run --json --no-env-file
+llm-preflight benchmark.json --json --no-save --no-env-file
+```
+
+The first response includes this plan excerpt:
+
+```json
+{
+  "tests": ["config prompt"],
+  "requests": 1,
+  "possible_requests": 2
+}
+```
+
+The second response includes this decision excerpt:
+
+```json
+{
+  "decision": {
+    "state": "inconclusive",
+    "reason_code": "degraded_evidence",
+    "blocking_warnings": [
+      "Mock-only runs do not provide live-provider evidence."
+    ]
+  }
+}
+```
+
+Both commands return larger JSON objects; these are selected fields, not
+complete messages. Consume the JSON decision and process exit code together.
+Handle the expected exit `3` explicitly in automation; a successful mock test
+is not approval of a provider or a merge. Use the [MCP guide](../automation/mcp.md)
+when an agent needs structured tool requests instead of CLI commands.
 
 ## Select and review
 

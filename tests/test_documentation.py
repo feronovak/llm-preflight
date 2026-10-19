@@ -53,7 +53,7 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
     assert (ROOT / "docs/automation/mcp.md").is_file()
 
 
-def test_homepage_model_list_matches_comparison_evidence():
+def test_documented_model_list_matches_comparison_evidence():
     readme = (ROOT / "README.md").read_text()
     docs_index = (ROOT / "docs/index.md").read_text()
     study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
@@ -101,10 +101,10 @@ def test_homepage_model_list_matches_comparison_evidence():
             row for row in historical_rows if row[1] == historical_model
         )
         expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
-    sections = []
-    for page in (readme, docs_index):
+    assert "## Tested models" not in readme
+    assert "docs/guides/observed-model-comparison.md" in readme
+    for page in (docs_index,):
         section = page.split("## Tested models\n", 1)[1].split("\n## ", 1)[0]
-        sections.append(section)
         table = [line for line in section.splitlines() if line.startswith("|")]
         assert table[0] == (
             "| Model | Checks passed | Mean latency | Est. cost / 16 | Last tested | Connection |"
@@ -135,7 +135,6 @@ def test_homepage_model_list_matches_comparison_evidence():
         assert len(section.splitlines()) <= 21
         assert "Current passing shortlist" not in page
         assert "Earlier evidence stays visible" not in page
-    assert sections[0].split("\n\n[", 1)[0] == sections[1].split("\n\n[", 1)[0]
     for detail in (
         "password-reset",
         "5/6",
@@ -519,11 +518,11 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-15 · **As of:** v2.21.2"
+        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-17 · **As of:** v2.22.0"
+        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -1032,7 +1031,10 @@ def test_proof_of_preflight_guide_is_linked_from_every_entry_point():
     choose = readme.split("## Choose your path", 1)[1].split("\n## ", 1)[0]
 
     assert choose.count("docs/guides/proof-of-preflight.md") == 1
-    assert "proof-of-preflight" not in readme.split("## Choose your path", 1)[0]
+    opening = readme.split("## Try it in 60 seconds", 1)[0]
+    assert "proof-of-preflight" in opening
+    assert "gh attestation verify" in opening
+    assert "synthetic" in opening.lower()
     assert "(guides/proof-of-preflight.md)" in index
     assert "`attestation.py`" in feature_map and "`report --format svg`" in feature_map
     action_row = feature_map.split("GitHub Marketplace Action", 1)[1].split("\n")[0]
@@ -1093,3 +1095,87 @@ def test_documented_gate_takes_records_from_main_only():
     assert "persist-credentials: false" in record
     # The risk of a dispatched run is stated where a maintainer starts it.
     assert "base_url" in record and "api_key_env" in record
+
+
+def test_report_gallery_gate_demo_blocks_without_ci_evidence(monkeypatch):
+    """Execute the advertised offline gate demo, including its nonzero exit."""
+    gallery = (ROOT / "examples/reports/README.md").read_text()
+    section = gallery.split("## Try the merge gate without a provider", 1)[1]
+    command = re.search(r"```bash\n(.*?)\n```", section, re.DOTALL).group(1)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/app")
+    monkeypatch.setenv("GITHUB_SERVER_URL", "https://github.com")
+    result = subprocess.run(
+        ["bash", "-c", command], cwd=ROOT, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 1, result.stderr + result.stdout
+    decision = json.loads(result.stdout)
+    assert decision["decision"] == "blocked"
+    assert decision["reason_code"] == "no_record"
+    assert decision["records"] == []
+
+
+def test_default_template_interactive_and_cli_communication_examples(tmp_path):
+    import shlex
+
+    guide = (ROOT / "docs/guides/interactive-runs.md").read_text()
+    walkthrough = guide.split("## Default template walkthrough", 1)[1].split(
+        "\n## ", 1
+    )[0]
+    communication = guide.split("## CLI JSON communication", 1)[1].split("\n## ", 1)[0]
+    config_path = tmp_path / "benchmark.json"
+
+    def execute(command, *, answers=None):
+        arguments = shlex.split(command)
+        assert arguments.pop(0) == "llm-preflight"
+        if arguments == ["init"]:
+            arguments.append(str(config_path))
+        else:
+            assert arguments[0] == "benchmark.json"
+            arguments[0] = str(config_path)
+        return subprocess.run(
+            [sys.executable, "-m", "llm_preflight", *arguments],
+            cwd=ROOT,
+            input=answers,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    commands = (
+        re.search(r"```bash\n(.*?)\n```", walkthrough, re.DOTALL).group(1).splitlines()
+    )
+    initialized = execute(commands[0])
+    assert initialized.returncode == 0, initialized.stderr
+    config = json.loads(config_path.read_text())
+    assert config["prompt"] == "Reply with ok."
+    assert config["validation"] == {"exact": "ok"}
+    assert {model["provider"] for model in config["models"]} == {"mock"}
+    interactive = execute(commands[1], answers="all\n\n\n4\nr\ny\n")
+    assert interactive.returncode == 3, interactive.stdout + interactive.stderr
+    assert "Tests: config prompt" in interactive.stdout
+    assert "Run local mock benchmark?" in interactive.stdout
+    assert "API OK / TEST OK" in interactive.stdout
+    assert "Decision: inconclusive (exit 3)" in interactive.stdout
+
+    commands = (
+        re.search(r"```bash\n(.*?)\n```", communication, re.DOTALL)
+        .group(1)
+        .splitlines()
+    )
+    excerpts = [
+        json.loads(block)
+        for block in re.findall(r"```json\n(.*?)\n```", communication, re.DOTALL)
+    ]
+    assert len(commands) == len(excerpts) == 2
+
+    def assert_excerpt(actual, expected):
+        for key, value in expected.items():
+            if isinstance(value, dict):
+                assert_excerpt(actual[key], value)
+            else:
+                assert actual[key] == value
+
+    for command, excerpt, status in zip(commands, excerpts, (0, 3), strict=True):
+        result = execute(command)
+        assert result.returncode == status, result.stdout + result.stderr
+        assert_excerpt(json.loads(result.stdout), excerpt)

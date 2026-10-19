@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="392" viewBox="0 0 600 392" role="img" aria-labelledby="card-title card-desc" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<title id="card-title">LLM Preflight: FAIL · synthetic-schema-check</title>
+<desc id="card-desc">FAIL; checked 2026-09-24; Config: synthetic-schema-check; Model: approved-model (example); Probes: 2 of 3 passed; p95 latency: 0.430 s; Cost: $0.0833 per 1,000 calls; Retirement: not in the bundled snapshot; Why: One or more requested models failed the configured output contract; Does not certify: accuracy · safety · production behaviour; result evidence: no provenance fingerprint; Not attested: no preflight record was given</desc>
+<rect x="1" y="1" width="598" height="390" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+<text x="20" y="32" font-size="16" font-weight="700">LLM Preflight</text>
+<text x="580" y="32" font-size="13" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace" text-anchor="end">checked 2026-09-24</text>
+<rect x="2" y="46" width="596" height="56" fill="#cf222e"/>
+<text x="20" y="84" font-size="28" font-weight="700" fill="#ffffff">FAIL</text>
+<text x="20" y="130" font-size="13" font-weight="700">Config</text>
+<text x="132" y="130" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">synthetic-schema-check</text>
+<line x1="20" y1="138" x2="580" y2="138" stroke="#000000" stroke-width="1"/>
+<text x="20" y="164" font-size="13" font-weight="700">Model</text>
+<text x="132" y="164" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">approved-model (example)</text>
+<text x="20" y="186" font-size="13" font-weight="700">Probes</text>
+<text x="132" y="186" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">2 of 3 passed</text>
+<text x="20" y="208" font-size="13" font-weight="700">p95 latency</text>
+<text x="132" y="208" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">0.430 s</text>
+<text x="20" y="230" font-size="13" font-weight="700">Cost</text>
+<text x="132" y="230" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">$0.0833 per 1,000 calls</text>
+<text x="20" y="252" font-size="13" font-weight="700">Retirement</text>
+<text x="132" y="252" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">not in the bundled snapshot</text>
+<line x1="20" y1="260" x2="580" y2="260" stroke="#000000" stroke-width="1"/>
+<text x="20" y="286" font-size="13" font-weight="700">Why:</text>
+<text x="132" y="286" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">One or more requested models failed the configured</text>
+<text x="132" y="304" font-size="14" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">output contract.</text>
+<text x="20" y="332" font-size="13" font-weight="700">Does not certify: accuracy · safety · production behaviour</text>
+<text x="20" y="352" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">result evidence: no provenance fingerprint</text>
+<text x="20" y="372" font-size="12" font-family="ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace">Not attested: no preflight record was given</text>
+</svg>

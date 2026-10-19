@@ -1,0 +1,41 @@
+name: Setup help or contract example
+description: Get help with a first run, CI gate, or application contract example.
+title: "setup: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a small, redacted example. Never include API keys, authorization headers, account identifiers, private prompts, or provider responses. Use the security policy to report vulnerabilities privately.
+  - type: dropdown
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      options:
+        - Run a first local check
+        - Define an application output contract
+        - Set up a CI record or merge gate
+        - Connect a coding agent or MCP client
+        - Request a contract example
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: LLM Preflight version
+      description: Run llm-preflight --version. Include your Python version and operating system if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Intended check and expected result
+      description: Describe the output shape or workflow you need. Invent sample content instead of sharing private data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Redacted command, configuration shape, and observed result
+      description: Include the exit code and safe error text if available. Link the guide you followed. For an example request, describe the missing example.
+    validations:
+      required: true

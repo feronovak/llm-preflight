@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- Lead the README with a reproducible synthetic contract-failure card and
+  explain workflow protection and separate signature verification alongside
+  the merge-gate promise. Keep detailed model results in the linked guides.
+- Add a no-provider report-gallery gate example that intentionally blocks
+  without a CI record, plus a setup/help and contract-example issue form.
+- Add a default-template interactive recording and executable CLI JSON
+  request/response examples, preserving the mock-only inconclusive verdict.
+
 ## 2.22.1 - 2026-10-18
 
 ### Fixed

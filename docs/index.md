@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-10-15 · **As of:** v2.21.2
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
 LLM Preflight is the local evidence gate for an LLM integration change. Use it
 to check the contract your application actually needs, the latency and cost
@@ -10,6 +10,11 @@ It is not a hosted evaluation platform, tracing system, or public leaderboard.
 Results stay local unless you decide to attach or publish them.
 
 ## Start safely
+
+For a no-provider demonstration, [render the synthetic report gallery and try
+the blocked gate](../examples/reports/README.md). Then use one of the setup
+paths below. [Ask for setup help or a contract example](https://github.com/feronovak/llm-preflight/issues/new?template=setup-help.yml)
+if you get stuck.
 
 - [Safe demo](getting-started/safe-demo.md) — run the no-key mock benchmark,
   then create a conservative provider starter.

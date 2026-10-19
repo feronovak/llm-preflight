@@ -31,7 +31,7 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.22.1"' in workflow
+    assert 'package-version: "2.22.2"' in workflow
     assert "run-paid" not in workflow
 
 

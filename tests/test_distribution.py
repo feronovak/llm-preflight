@@ -38,7 +38,7 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
 def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.22.1"' in action
+    assert 'default: "2.22.2"' in action
     assert 'python -m pip install "llm-preflight==${version}"' in action
     assert "sleep 20" in action
 

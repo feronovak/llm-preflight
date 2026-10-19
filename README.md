@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -31,10 +31,6 @@ it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
 ## Try it in 60 seconds
-
-The recording below shows the upcoming **2.22.2** summary. The latest PyPI
-release is **2.22.1**; the local test and inconclusive exit are the same,
-but its older summary still ranks the mock.
 
 In a new directory, install the tool and run the local mock—no API key or
 provider request:

@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-16 · **As of:** v2.22.0
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -64,6 +64,11 @@ including in submodules. Global and system Git configuration still apply.
 
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
+
+The bundled retirement rows were rechecked on **2026-10-19**. Their statuses,
+retirement dates and replacements are unchanged. Non-retired rows become stale
+on **2026-11-19** (day 31), and `--ci` then returns `3`; retired models still
+return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## Verdicts
 

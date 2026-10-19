@@ -59,7 +59,9 @@ def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys)
     script = _script()
     script.EXAMPLES = ()
 
-    assert script.main(["--today", "2026-11-16"]) == 1
+    assert script.main(["--today", "2026-11-18"]) == 0
+    capsys.readouterr()
+    assert script.main(["--today", "2026-11-19"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL audit-source examples: inconclusive" in output

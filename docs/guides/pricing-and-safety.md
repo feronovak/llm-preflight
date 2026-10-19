@@ -170,11 +170,10 @@ responses. See [SECURITY.md](../../SECURITY.md) to report a vulnerability.
 
 ## Executive summaries
 
-The upcoming **2.22.2** labels monetary figures as estimated cost, including
+From **2.22.2**, summaries label monetary figures as estimated cost, including
 warmups. A known cost subtotal is not a complete total. Mock rows are local
 test data and cannot win a provider comparison. Blocking pricing, usage,
 retry or legacy-evidence warnings withhold cost/value recommendations;
 observed live timing can still be shown with its scope. A failing candidate
 does not hide a fully evidenced passing candidate. Read the overall decision
-and every warning before using a scoped comparison. Published **2.22.1**
-retains the older executive-summary wording.
+and every warning before using a scoped comparison. Earlier versions retain the older executive-summary wording.

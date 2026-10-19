@@ -2,11 +2,11 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## 2.22.2 - 2026-10-19
 
 ### Fixed
 
-- In the 2.22.2 candidate, label mock results as local test data and exclude
+- Label mock results as local test data and exclude
   them from provider rankings in terminal and saved Markdown summaries.
   In 2.22.1 those summaries could recommend the mock after correctly reporting
   an inconclusive benchmark. Blocking pricing, usage, retry and legacy-cost
@@ -18,6 +18,15 @@ All notable changes to this project are documented here.
   the corrected local-test summary and unchanged inconclusive JSON decision.
 
 ### Changed
+
+- Recheck all 114 bundled retirement rows against official sources on
+  2026-10-19; statuses, retirement dates and replacements are unchanged.
+  Non-retired rows now become stale on 2026-11-19 rather than 2026-11-16;
+  `--ci` then returns 3, while retired rows remain failures. Pricing data and
+  its review dates are unchanged. The retirement snapshot date is part of
+  no-spend plans, so earlier local approval receipts must be reviewed and
+  recreated; receipts still never authorize paid runs.
+- Set the versioned Marketplace Action default to package 2.22.2.
 
 - Revalidate setup and reference examples: isolate first installs in a virtual
   environment, keep unknown live-model costs unavailable, make JSON fragments

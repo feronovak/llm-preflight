@@ -284,33 +284,33 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "status": "deprecated",
         "retirement_date": "2026-11-30",
         "replacement": "claude-sonnet-5-5",
-        "as_of": "2026-10-16",
+        "as_of": "2026-10-19",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-mythos-preview")] == {
         "status": "deprecated",
-        "as_of": "2026-10-16",
+        "as_of": "2026-10-19",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-sonnet-5-5")]["status"] == "active"
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.4-cyber")] == {
         "status": "deprecated",
         "retirement_date": "2026-10-01",
-        "as_of": "2026-10-16",
+        "as_of": "2026-10-19",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.1")] == {
         "status": "deprecated",
         "retirement_date": "2027-04-01",
         "replacement": "gpt-6-sol",
-        "as_of": "2026-10-16",
+        "as_of": "2026-10-19",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-4-1106-preview")] == {
         "status": "deprecated",
         "retirement_date": "2026-10-23",
         "replacement": "gpt-5.6-sol",
-        "as_of": "2026-10-16",
+        "as_of": "2026-10-19",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
@@ -417,21 +417,21 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
-    assert summary["oldest_as_of"] == summary["newest_as_of"] == "2026-10-16"
+    assert summary["oldest_as_of"] == summary["newest_as_of"] == "2026-10-19"
     assert (
-        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 11, 15))[
+        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 11, 18))[
             "decision"
         ]
         == "pass"
     )
     assert (
-        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 11, 16))[
+        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 11, 19))[
             "decision"
         ]
         == "inconclusive"
     )
     assert (
-        retirement_verdict("anthropic", "claude-3-haiku-20240307", date(2026, 11, 16))[
+        retirement_verdict("anthropic", "claude-3-haiku-20240307", date(2026, 11, 19))[
             "decision"
         ]
         == "fail"

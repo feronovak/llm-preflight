@@ -1,6 +1,6 @@
 # Reviewable reports
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
 
 With the installed CLI, render an existing result without repeating the
 benchmark or contacting a provider. Replace `results/run.json` with the actual
@@ -10,12 +10,12 @@ JSON path printed by your run:
 llm-preflight report results/run.json --output report.html
 ```
 
-The standalone HTML opens offline. The upcoming **2.22.2** also corrects the
-terminal and automatically saved `.md`/`.summary.md` executive summaries:
+The standalone HTML opens offline. From **2.22.2**, the terminal and
+automatically saved `.md`/`.summary.md` executive summaries use corrected wording:
 mock data is labelled and excluded from provider rankings, evidence warnings
 withhold cost/value recommendations, and costs are labelled estimates.
-Those summaries recompute the decision from the saved evidence. The latest
-published **2.22.1** retains the older executive summary wording.
+Those summaries recompute the decision from the saved evidence. Earlier
+versions retain the older executive-summary wording.
 
 Automatically saved Markdown can include the local config path in a recovery
 command. Review it before sharing. For a compact GitHub-flavored Markdown

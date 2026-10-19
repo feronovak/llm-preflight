@@ -1,6 +1,6 @@
 # Visual asset specification
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2 (unreleased)
+**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
 
 Use this specification when creating or regenerating project images. Measured
 results, terminal recordings and exported report cards have distinct profiles

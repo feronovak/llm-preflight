@@ -1189,7 +1189,7 @@ def test_readme_embeds_both_current_terminal_recordings():
         r"llm-preflight/main/docs/images/([^)]+)\)",
         introduction,
     )
-    assert embedded == ["terminal-demo.gif", "default-template-interactive.gif"]
+    assert embedded == ["contract-check-session.gif", "default-template-session.gif"]
     for name in embedded:
         assert (ROOT / "docs/images" / name).read_bytes().startswith(b"GIF89a")
     assert "contract-break.svg" not in introduction

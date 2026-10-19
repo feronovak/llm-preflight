@@ -6,8 +6,9 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- Embed both current terminal recordings in the README: a synthetic response
-  regression and the interactive default template with CLI JSON communication.
+- Replace both README demos with continuous shell recordings, native terminal
+  output and captions explaining each outcome: an accepted response, rejection
+  and fix; and the interactive default mock test with CLI JSON communication.
   Explain workflow protection and separate signature verification alongside
   the merge-gate promise. Keep the static synthetic card in the report gallery
   and detailed model results in the linked guides.

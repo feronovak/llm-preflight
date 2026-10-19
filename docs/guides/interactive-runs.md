@@ -49,12 +49,12 @@ The plan shows one nominal request and up to two attempts, both local mock
 work. No API key, env file, or provider call is used. No result files are
 saved by these flags.
 
-![Interactive default mock template: select the model and configured test, review the plan, confirm the local run, and read the inconclusive decision](../images/default-template-interactive.gif)
+![Interactive default mock template: select the model and configured test, review the plan, confirm the local run, and read the inconclusive decision](../images/default-template-session.gif)
 
-[MP4 version](../images/default-template-interactive.mp4).
-The recording uses real terminal input and output, with edited timing,
-colour emphasis, and labelled menu/result excerpts. Its last scene shows the
-same mock decision through a CLI JSON request. Mock timing and token
+[MP4 version](../images/default-template-session.mp4).
+The 29-second recording is a continuous shell session with full native menus
+and output. Explanatory captions sit below the terminal. Its last commands
+save CLI JSON to `result.json` and inspect the decision fields. Mock timing and token
 figures are simulated. `API OK / TEST OK` means the mock's response met the
 configured rule; the overall decision stays **inconclusive** (exit `3`)
 because a mock supplies no live-provider evidence.

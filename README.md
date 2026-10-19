@@ -17,12 +17,15 @@ you're shipping.
 Built for small engineering teams maintaining an LLM feature. Runs locally
 as a CLI, GitHub Action, or MCP server, with no runtime dependencies.
 
-**Watch a contract change fail (27 seconds).**
+**Watch an invalid response get caught and fixed (23 seconds).**
 
-![Terminal demo: a synthetic response changes from billing to sales, the unchanged validator rejects it, and the gate blocks without CI evidence](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/terminal-demo.gif)
+`billing` passes → change the response to `sales` → check fails → restore
+`billing` → check passes. The allowed labels stay unchanged.
 
-*Synthetic response fixtures with real CLI output. No provider calls or
-attested CI pass.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/terminal-demo.mp4).
+![Real terminal session: billing passes, sales fails the same validator, and restoring billing passes again](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/contract-check-session.gif)
+
+*Continuous shell session with synthetic response fixtures and full CLI output.
+Captions explain each outcome below the terminal. No provider calls or attested CI pass.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
 A required gate checks that a fresh passing record matches the configured
 contract, routes, prompts, and run selection. Protect the workflows that
@@ -60,15 +63,16 @@ you can see the report and exit behavior before making a paid request.
 Its result is intentionally `inconclusive` (exit code `3`): a local mock
 validates configuration and output handling, but cannot approve a live model.
 
-### Watch the interactive default template (32 seconds)
+### Watch the interactive default template (29 seconds)
 
-Select the local model and template test, review the plan, confirm the mock
-run, then read the same decision through a CLI JSON request:
+Select the local mock and default `Reply with ok` test, review the plan,
+and run it. The test passes. The overall result is `inconclusive` because
+no real provider was tested. The session also reads that decision as CLI JSON:
 
-![Interactive default-template demo: select the mock model and configured test, review the plan, confirm the local run, and read inconclusive exit 3 through the CLI and JSON](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/default-template-interactive.gif)
+![Interactive default-template demo: select the mock model and configured test, review the plan, confirm the local run, and read inconclusive exit 3 through the CLI and JSON](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/default-template-session.gif)
 
 *The mock test passes; the overall decision stays inconclusive (exit `3`).
-No API keys or provider calls.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/default-template-interactive.mp4)
+No API keys or provider calls.* [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/default-template-session.mp4)
 or follow the [interactive walkthrough and CLI JSON example](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md#default-template-walkthrough).
 
 ## See a contract change fail

@@ -306,9 +306,8 @@ routes by task. Consult [CLI reference](https://github.com/feronovak/llm-preflig
 and [result JSON](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/results.md)
 for exact behavior. Native routes and dated pricing coverage are listed in
 [current snapshots](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/current-snapshots.md).
-The [north star](https://github.com/feronovak/llm-preflight/blob/main/docs/NORTH_STAR.md)
-and [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
-explain the intended workflow and scope.
+The [AI implementation testing guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/agent-validation.md)
+explains the intended workflow and scope.
 
 Release notes for every version are in the [changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md).
 

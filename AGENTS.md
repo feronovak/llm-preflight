@@ -83,7 +83,9 @@ and no commit authored under an assistant identity.
 
 Internal planning stays out of the published repository: the roadmap, the
 release runbook and the PRDs are deliberately gitignored and declared local
-below. Everything else a contributor needs is tracked.
+below. The north star and the product positioning page are gitignored too.
+The technical reference under `docs/reference/` stays public. Everything else
+a contributor needs is tracked.
 
 ## Where things are
 

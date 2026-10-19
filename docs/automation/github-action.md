@@ -52,8 +52,7 @@ The paid path is a one-repetition smoke with no saved result. The action
 temporarily captures its JSON result, appends the privacy-filtered report to
 the GitHub job summary, then removes the temporary file. The summary omits
 prompts, responses, credentials, paths, host details, and custom run labels.
-Read the [North
-star](../NORTH_STAR.md), [agent decision contract](../reference/decision.md),
+Read the [agent decision contract](../reference/decision.md)
 and [pricing and safety guide](../guides/pricing-and-safety.md) before using it
 for a live integration change.
 

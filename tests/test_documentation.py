@@ -586,13 +586,21 @@ def test_change_plans_guide_is_indexed_in_the_generated_document_map():
     assert "docs/guides/reports.md" in docmap
 
 
-def test_positioning_and_decisions_are_public_and_current():
+def test_positioning_stays_local_and_decisions_and_reference_stay_public():
     readme = (ROOT / "README.md").read_text()
+    index = (ROOT / "docs/index.md").read_text()
+    action = (ROOT / "docs/automation/github-action.md").read_text()
+    rubric = (ROOT / "docs/development/build-rating.md").read_text()
     positioning = (ROOT / "docs/product/positioning.md").read_text()
     north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
     when_to_use = (ROOT / "docs/product/when-to-use.md").read_text()
     decisions = (ROOT / "docs/DECISIONS.md").read_text()
+    reference = (ROOT / "docs/reference/decision.md").read_text()
     metadata = (ROOT / "pyproject.toml").read_text()
+    tracked = set(
+        subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
+    )
+    gitignore = (ROOT / ".gitignore").read_text()
 
     assert "## Choose your path" in readme
     assert "docs/guides/model-catalog.md" in readme
@@ -606,6 +614,16 @@ def test_positioning_and_decisions_are_public_and_current():
         "Check LLM responses against the output rules your application depends on"
         in readme
     )
+    for page in (readme, index, action, rubric, when_to_use):
+        assert "NORTH_STAR.md" not in page
+        assert "product/positioning.md" not in page
+    assert "docs/NORTH_STAR.md" in gitignore
+    assert "docs/product/positioning.md" in gitignore
+    assert "docs/NORTH_STAR.md" not in tracked
+    assert "docs/product/positioning.md" not in tracked
+    assert "docs/DECISIONS.md" in tracked
+    assert "docs/reference/decision.md" in tracked
+    assert "docs/product/when-to-use.md" in tracked
     assert "[North star](../NORTH_STAR.md)" in positioning
     assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
     assert "## Mission" in north_star
@@ -615,6 +633,9 @@ def test_positioning_and_decisions_are_public_and_current():
         in north_star
     )
     assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
+    assert "../reference/decision.md" in when_to_use
+    assert "../reference/decision.md" in action
+    assert "schema_version" in reference
     assert "**Last reviewed:** 2026-10-14 · **As of:** v2.21.1" in decisions
     for decision in (
         "Local-first execution",

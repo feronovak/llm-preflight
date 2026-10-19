@@ -5,7 +5,7 @@
 LLM Preflight is for a local integration change: a model ID, provider route,
 prompt, request option, tool definition, schema, parser, or validation rule.
 It answers whether that configured contract works from your environment at an
-understood bounded cost. Read the [North star](../NORTH_STAR.md) and treat the
+understood bounded cost. Treat the
 [decision contract](../reference/decision.md) as the automation boundary.
 
 It is not a universal ranking of models. A passing run is evidence for one

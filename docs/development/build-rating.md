@@ -13,7 +13,7 @@ Current rubric: `build-rating-3` (see [Rubric identifier](#rubric-identifier)).
   work: retain a source archive or content manifest and its SHA-256.
 - Identify the actual wheel and sdist by SHA-256. Do not rate source checks as
   proof that an installed package works.
-- Use [North star](../NORTH_STAR.md) and [Product decisions](../DECISIONS.md)
+- Use the ignored local north star and [Product decisions](../DECISIONS.md)
   as the product contract. The ignored local roadmap supplies current priorities.
   An explicit owner decision can revise scope; record it before scoring.
 - Review the complete current build, then explain changes from the previous

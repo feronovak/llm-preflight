@@ -78,7 +78,7 @@ see [direct GLM, DeepSeek and Qwen checks](guides/native-chinese-models.md).
 - [CLI reference](reference/cli.md)
 - [Configuration](reference/configuration.md) and [configuration reference](reference/configuration-schema.md)
 - [Result JSON](reference/results.md) and [decision contract](reference/decision.md)
-- [When to use this tool](product/when-to-use.md), [north star](NORTH_STAR.md) and [product decisions](DECISIONS.md)
+- [When to use this tool](product/when-to-use.md) and [product decisions](DECISIONS.md)
 - [Product map](FEATURE_MAP.md) and [code map](PROJECT_MAP.md)
 - [Changelog](../CHANGELOG.md), [contributing](../CONTRIBUTING.md) and [documentation writing guide](development/documentation.md)
 - [Security reporting](../SECURITY.md)

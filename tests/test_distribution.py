@@ -68,7 +68,7 @@ def test_issue_forms_and_comparison_page_keep_reporting_safe_and_scoped():
     assert "observability platform" in comparison
     assert "provider CLI" in comparison
     assert "not a universal ranking" in comparison
-    assert "../NORTH_STAR.md" in comparison
+    assert "NORTH_STAR.md" not in comparison
     assert "../reference/decision.md" in comparison
 
 

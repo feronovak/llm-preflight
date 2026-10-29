@@ -50,8 +50,10 @@ All notable changes to this project are documented here.
 - Attribute Qwen 3.7 Plus prices/cache rules to native Alibaba sources. Refresh
   the native Qwen example override and the routed Relace GLM example's separate
   endpoint prices; historical measurements retain their original evidence.
-- Update runtime, package, MCP and plugin metadata to 2.23.0. Published Action
-  defaults and example installation pins remain 2.22.2 until publication.
+- Update runtime, package, MCP and plugin metadata to 2.23.0. After publication,
+  update the main-branch Action default and example installation pins to 2.23.0.
+  The immutable `v2.23.0` Action tag retains its 2.22.2 default; set
+  `package-version: "2.23.0"` explicitly when using that tag.
 
 ## 2.22.2 - 2026-10-19
 

@@ -1,10 +1,10 @@
 # GitHub Marketplace Action
 
-The `v2.22.2` Action defaults to package **2.22.2**. Set the input explicitly
-for reproducible CI. An inconclusive paid decision remains exit 3; null cost
+Use the `v2.23.0` Action with `package-version: "2.23.0"` for reproducible CI.
+The immutable release tag retains its earlier **2.22.2** default. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local
@@ -13,14 +13,14 @@ contract-preflight gate, not an evaluation platform or deployment approval.
 ```yaml
 steps:
   - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-  - uses: feronovak/llm-preflight@v2.22.2
+  - uses: feronovak/llm-preflight@v2.23.0
     with:
       config: benchmark.json
-      package-version: "2.22.2"
+      package-version: "2.23.0"
 ```
 
 The Action installs the exact `package-version` input. The current repository
-source defaults to `2.22.2`. The `v2.22.1` release tag retains the `2.22.0`
+source defaults to `2.23.0`; `v2.23.0` retains its `2.22.2` default. The `v2.22.1` release tag retains the `2.22.0`
 default, so the example sets the input explicitly. The default execution path
 makes no provider generation request and needs no secret. The action writes a
 compact job summary confirming those three no-spend checks completed.
@@ -39,10 +39,10 @@ environment; do not commit an environment file or put a key in action inputs.
 ```yaml
 steps:
   - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-  - uses: feronovak/llm-preflight@v2.22.2
+  - uses: feronovak/llm-preflight@v2.23.0
     with:
       config: benchmark.json
-      package-version: "2.22.2"
+      package-version: "2.23.0"
       run-paid: "true"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -88,7 +88,7 @@ the pull request's head commit as `commit`; it then checks that commit's
 configuration with the workflow and credentials of `main`. The protected
 environment's required reviewers approve each paid run.
 
-The workflow below uses `v2.22.2` with `package-version` `2.22.2`. The older `v2.22.1` release tag retains the `2.22.0` default; explicit package pins also make older tag behavior clear.
+The workflow below uses `v2.23.0` with `package-version` `2.23.0`. The older `v2.22.1` release tag retains the `2.22.0` default; explicit package pins also make older tag behavior clear.
 
 ```yaml
 name: LLM preflight record
@@ -114,10 +114,10 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
-      - uses: feronovak/llm-preflight@v2.22.2
+      - uses: feronovak/llm-preflight@v2.23.0
         with:
           config: benchmark.json
-          package-version: "2.22.2"
+          package-version: "2.23.0"
           run-paid: "true"
           attest: "true"
           sign: "true"

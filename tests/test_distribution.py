@@ -31,14 +31,14 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.22.2"' in workflow
+    assert 'package-version: "2.23.0"' in workflow
     assert "run-paid" not in workflow
 
 
 def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.22.2"' in action
+    assert 'default: "2.23.0"' in action
     assert 'python -m pip install "llm-preflight==${version}"' in action
     assert "sleep 20" in action
 
@@ -579,3 +579,18 @@ def test_documented_gate_decides_on_the_mock_record_the_action_wrote(tmp_path):
     assert gate.returncode == 1, gate.stdout + gate.stderr
     assert "The latest record for this contract (run 4425592351" in gate.stdout
     assert "is WARNED" in gate.stdout
+
+
+def test_current_published_package_pins_are_2_23_0():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    assert 'default: "2.23.0"' in (root / "action.yml").read_text()
+    assert (
+        'package-version: "2.23.0"'
+        in (root / ".github/workflows/action-smoke.yml").read_text()
+    )
+    assert (
+        "llm-preflight==2.23.0"
+        in (root / "examples/github-actions/preflight.yml").read_text()
+    )

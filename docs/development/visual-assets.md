@@ -78,17 +78,21 @@ product card fixtures.
 
 | Asset class | Source size | Layout |
 |---|---|---|
-| Measured-results image | 1280 px wide; current 14-row image is 946 px high | 32 px text margins; 16 px panel margins; 16 px corners; header starts at y=112; data at y=160; 48 px per row; 114 px footer |
+| Measured-results image | 1280 px wide; current 19-row image is 1516 px high | 32 px text margins; 16 px panel margins; 16 px corners; header starts at y=148; data at y=196; 60 px per row; 180 px footer |
 | Terminal GIF and MP4 | 1248 × 996 px | 90 columns × 28 rows; native viewport beneath window chrome; captions outside the viewport; 16 px outer frame margins |
 | Product report card | 600 px wide; content determines height | 20 px margin, 2 px black outline, native wrapping and verdict band |
 | Historical demo GIF | 1100 × 720 px | Frozen legacy assets; new recordings use the current terminal profile |
 | Vision input fixture | 1254 × 1254 px | Input data, not promotional artwork; preserve exact bytes |
 
-Measured-image height is `160 + 48 × row_count + 114`. Keep the complete cohort in one
+Measured-image height is `196 + 60 × row_count + 180`. Keep the complete cohort in one
 image, increasing its height while preserving source order and context.
 Do not shrink text or discard failures to fit.
-The column origins are x=`32, 302, 480, 626, 802, 968`: model, checks passed,
-mean latency, estimated cost, observed date, connection route.
+The column origins are x=`32, 302, 480, 650, 800, 1030`: model, contract passed,
+API errors, mean latency, estimated token cost for this run, connection route.
+Show the observation date once above the table. Contract results use successful
+API responses as their denominator; display API errors separately and explicitly
+mark incomplete evaluations. A partial cost shows its known subtotal and an
+unknown total. Add failure explanations below the affected cells.
 
 SVG is the canonical measured-table image. It stays sharp in Markdown and
 can be opened at full size. Link a text equivalent for narrow screens and
@@ -105,13 +109,13 @@ historical rows.
 
 Each source row supplies `model`, `route`, `observed_on`, `requests`,
 `api_successful`, `valid`, `mean_latency_seconds` and `estimated_cost_usd`.
-Optional `display_name` supplies an upstream-readable label. Optional
-`api_failure_summary` explains an all-API-failure row, such as the retained
-Qwen rejected-request observation; without it the image keeps the numeric
-zero count. Optional top-level `display_title` names the workload.
+Optional `display_name` supplies an upstream-readable label. Optional `contract_failure_summary` explains observed contract failures.
+Optional `failures` categories identify rate limits; other API errors retain
+their count. `known_cost_subtotal_usd` with positive `cost_coverage.known_requests`
+permits a clearly labelled partial cost when the total remains null. Optional top-level `display_title` names the workload.
 
 Use the same positive request count for each row in one figure so its cost
-column has a truthful denominator. Each row keeps its own ISO date and actual
+column has a truthful denominator. The subtitle shows the date or date range; each row keeps its actual
 route. Preserve separate rows when the same model has native and routed
 observations. Keep missing latency/cost null in the JSON and unavailable in
 the image. Never infer a native Z.ai, DeepSeek or Qwen observation from an
@@ -185,7 +189,7 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-10-29.svg` | Current measured results, 1280×1186; 19 rows | `scripts/render_measured_models.py`; October 29 aggregates |
+| `docs/images/measured-models-2026-10-29.svg` | Current measured results, 1280×1516; 19 rows | `scripts/render_measured_models.py`; October 29 aggregates |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |
 | `docs/images/contract-check-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 23 seconds | Actual local contract-check pass/reject/fix session; follow terminal rules above |
 | `docs/images/default-template-evidence-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 30 seconds | Actual init/default interactive mock and CLI JSON session; refreshed for 2.22.2 evidence-aware summary |

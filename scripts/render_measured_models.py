@@ -75,7 +75,7 @@ def render(data_path: Path | None = None) -> str:
     title = (
         data.get("display_title", "Observed model results")
         if data_path
-        else "Observed results on a support-routing contract"
+        else f"Eight application checks across {len(rows)} models"
     )
     request_count = data["rows"][0]["requests"]
     dates = sorted(row[4] for row in rows)
@@ -113,24 +113,59 @@ def render(data_path: Path | None = None) -> str:
         text(
             32,
             86,
-            f"{len(rows)} selected models · {request_count} requests each · observed {date_range}",
+            f"{len(rows)} models · {request_count} requests each · observed {date_range}",
             layout["subtitle_size"],
             "muted",
         ),
-        f'<rect x="16" y="112" width="{width - 32}" height="48" rx="6" fill="{colors["header"]}"/>',
+        text(
+            32,
+            120,
+            "Small synthetic sample; passing does not establish overall model quality.",
+            layout["subtitle_size"],
+            "muted",
+        ),
+        f'<rect x="16" y="148" width="{width - 32}" height="48" rx="6" fill="{colors["header"]}"/>',
     ]
     columns = layout["columns"]
     headers = (
         "Model",
-        "Checks passed",
+        "Contract passed",
+        "API errors",
         "Mean latency",
-        f"Est. cost / {request_count}",
-        "Last tested",
+        "Est. cost · this run",
         "Connection route",
     )
     for x, header in zip(columns, headers):
-        parts.append(text(x, 143, header, layout["header_size"], bold=True))
-    for index, row in enumerate(rows):
+        parts.append(text(x, 179, header, layout["header_size"], bold=True))
+    for index, (observed, evidence) in enumerate(zip(rows, data["rows"])):
+        responses = evidence["api_successful"]
+        errors = evidence["requests"] - responses
+        rate_limits = sum(
+            failure.get("category") == "rate_limit"
+            for failure in evidence.get("failures", [])
+        )
+        error_label = (
+            f"{errors} rate limits" if errors and rate_limits == errors else str(errors)
+        )
+        cost = observed[3]
+        partial = (
+            cost == "—"
+            and evidence.get("cost_coverage", {}).get("known_requests", 0) > 0
+        )
+        if partial:
+            subtotal = evidence["known_cost_subtotal_usd"]
+            if not math.isfinite(subtotal) or subtotal < 0:
+                raise ValueError("Known cost must be finite nonnegative evidence")
+            cost = f"${subtotal:.6f} known"
+        row = (
+            observed[0],
+            f"{evidence['valid']}/{responses} passed" if responses else "Not evaluated",
+            error_label,
+            observed[2],
+            cost,
+            observed[5],
+        )
+
         top = layout["table_top"] + index * layout["row_height"]
         if index % 2 == 0:
             parts.append(
@@ -142,14 +177,48 @@ def render(data_path: Path | None = None) -> str:
             if column == 1:
                 color = (
                     "pass_text"
-                    if value == f"{request_count}/{request_count}"
-                    else "fail_text"
-                    if value in {"Request rejected", f"0/{request_count}"}
+                    if responses and evidence["valid"] == responses
                     else "warning_text"
                 )
+                if errors:
+                    color = "warning_text"
+            elif column == 2 and errors:
+                color = "warning_text"
             size = layout["model_size"] if column == 0 else layout["cell_size"]
-            parts.append(text(x, top + 31, value, size, color))
-        parts.append("</g>")
+            parts.append(text(x, top + 25, value, size, color))
+        parts.append('<g class="annotations">')
+        contract_note = evidence.get("contract_failure_summary")
+        if contract_note:
+            parts.append(
+                text(
+                    columns[1],
+                    top + 47,
+                    contract_note,
+                    layout["footnote_size"],
+                    "warning_text",
+                )
+            )
+        elif errors:
+            parts.append(
+                text(
+                    columns[1],
+                    top + 47,
+                    "incomplete evaluation",
+                    layout["footnote_size"],
+                    "warning_text",
+                )
+            )
+        if partial:
+            parts.append(
+                text(
+                    columns[4],
+                    top + 47,
+                    "total unknown",
+                    layout["footnote_size"],
+                    "warning_text",
+                )
+            )
+        parts.append("</g></g>")
     footer_top = height - layout["footer_height"] + 16
     parts.extend(
         [
@@ -157,14 +226,28 @@ def render(data_path: Path | None = None) -> str:
             text(
                 32,
                 footer_top + 31,
-                "Latency excludes API errors. — means unavailable; missing usage keeps total cost unknown.",
+                "Passed = valid / API responses. API errors are separate; 3/3 with 5 errors is an incomplete evaluation.",
                 layout["footnote_size"],
                 "muted",
             ),
             text(
                 32,
                 footer_top + 62,
-                "One workload; routes and settings differ. See the linked method and failure analysis before comparing.",
+                "Estimated token cost is for this run, including invalid outputs. Missing usage keeps total cost unknown.",
+                layout["footnote_size"],
+                "muted",
+            ),
+            text(
+                32,
+                footer_top + 93,
+                "Latency averages API responses only. One request per case does not establish consistency.",
+                layout["footnote_size"],
+                "muted",
+            ),
+            text(
+                32,
+                footer_top + 124,
+                "Routes and settings differ. Read the linked method before comparing; this is not production approval.",
                 layout["footnote_size"],
                 "muted",
             ),

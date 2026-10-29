@@ -18,10 +18,17 @@
   },
   "measured_models": {
     "width": 1280,
-    "table_top": 160,
-    "row_height": 48,
-    "footer_height": 114,
-    "columns": [32, 302, 480, 626, 802, 968],
+    "table_top": 196,
+    "row_height": 60,
+    "footer_height": 180,
+    "columns": [
+      32,
+      302,
+      480,
+      650,
+      800,
+      1030
+    ],
     "title_size": 31,
     "subtitle_size": 20,
     "header_size": 19,

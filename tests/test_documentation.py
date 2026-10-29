@@ -63,14 +63,12 @@ def test_documented_model_list_matches_comparison_evidence():
     ns = {"svg": "http://www.w3.org/2000/svg"}
     expected = {
         row["display_name"]: (
-            f"{row['valid']}/{row['requests']}",
-            f"{row['mean_latency_seconds']:.3f}s"
-            if row["mean_latency_seconds"] is not None
-            else "—",
+            f"{row['valid']}/{row['api_successful']} passed",
+            f"{row['api_failures']} rate limits" if row["api_failures"] else "0",
+            f"{row['mean_latency_seconds']:.3f}s",
             f"${row['estimated_cost_usd']:.6f}"
             if row["estimated_cost_usd"] is not None
-            else "—",
-            row["observed_on"],
+            else f"${row['known_cost_subtotal_usd']:.6f} known",
             row["route"],
         )
         for row in data["rows"]
@@ -1273,6 +1271,7 @@ def test_measured_image_accepts_new_native_and_routed_evidence(tmp_path):
         api_failures=4,
         contract_failures=2,
         estimated_cost_usd=None,
+        cost_coverage={"known_requests": 0},
     )
     routed = {**row, "route": "OpenRouter / Relace"}
     source.update(display_title="Native & routed <checks>", rows=[row, routed])
@@ -1300,10 +1299,13 @@ def test_measured_image_accepts_new_native_and_routed_evidence(tmp_path):
     cells = [[cell.text for cell in row.findall("svg:text", ns)] for row in rows]
     assert {row[-1] for row in cells} == {"DeepSeek (native)", "OpenRouter / Relace"}
     assert all(
-        row[0] == "DeepSeek Flash" and row[1] == "10/16" and row[3] == "—"
+        row[0] == "DeepSeek Flash"
+        and row[1] == "10/12 passed"
+        and row[2] == "4"
+        and row[4] == "—"
         for row in cells
     )
-    assert all(row[4] == "2026-10-20" for row in cells)
+    assert "observed 2026-10-20" in "".join(image.itertext())
     assert image.find("svg:title", ns).text == "Native & routed <checks>"
 
 
@@ -1433,7 +1435,7 @@ def test_measured_image_keeps_a_full_cohort_in_one_image(
     rows = image.findall("svg:g[@data-model]", ns)
     seen = [row.get("data-model") for row in rows]
     assert "part " not in image.find("svg:title", ns).text
-    assert int(image.get("height")) == 160 + 48 * 19 + 114
+    assert int(image.get("height")) == 196 + 60 * 19 + 180
     assert len(seen) == len(set(seen)) == 19
     assert set(seen) == {f"Fixture model {index}" for index in range(19)}
 
@@ -1504,3 +1506,38 @@ def test_public_documentation_checks_work_without_private_planning_files(monkeyp
     monkeypatch.setattr(Path, "read_text", public_read)
     test_visitor_docs_stamp_json_evidence_and_release_scope_are_current()
     test_positioning_stays_local_and_decisions_and_reference_stay_public()
+
+
+def test_measured_image_explains_contract_failures_api_errors_and_partial_cost():
+    import importlib.util
+    import xml.etree.ElementTree as ET
+
+    spec = importlib.util.spec_from_file_location(
+        "measured_image", ROOT / "scripts/render_measured_models.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    svg = ET.fromstring(module.render())
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    texts = list(svg.itertext())
+    assert "Eight application checks across 19 models" in texts
+    assert (
+        "Small synthetic sample; passing does not establish overall model quality."
+        in texts
+    )
+    assert "Last tested" not in texts
+    rows = {
+        row.get("data-model"): list(row.itertext())
+        for row in svg.findall("svg:g[@data-model]", ns)
+    }
+    assert "3/3 passed" in rows["Kimi K3.1 Pro"]
+    assert "5 rate limits" in rows["Kimi K3.1 Pro"]
+    assert "$0.001668 known" in rows["Kimi K3.1 Pro"]
+    assert "total unknown" in rows["Kimi K3.1 Pro"]
+    assert "7/8 passed" in rows["GLM 5.3"]
+    assert "1 wrong queue" in rows["GLM 5.3"]
+    for model in ("GLM 5.3 Flash", "GLM 5.3 FlashX"):
+        assert "1 fenced JSON" in rows[model]
+        assert "0" in rows[model]
+    assert "8/8 passed" in rows["GPT-6.1 Terra"]
+    assert "$0.001218" in rows["GPT-6.1 Terra"]

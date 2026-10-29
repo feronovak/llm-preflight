@@ -41,14 +41,14 @@ provider fallback, alternative routes or additional paid probes were made.
 | Z.ai | `glm-5.3` | 7/8 | 8/8 | 1.461s | $0.001398 |
 | Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
 | Z.ai | `glm-5.3-flashx` | 7/8 | 8/8 | 1.091s | $0.000391 |
-| Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | — |
+| Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | $0.001668 known; total unknown |
 
 The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,
 case and private-result hashes. The known token-cost subtotal is **$0.06902127**
 across **147** calls with usage. **Total cost remains unknown** because the five
 API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
-its full eight-call cost stays unavailable in the table and image. API errors
+the table and image label that subtotal as partial, while its full eight-call cost remains unknown. API errors
 are not assumed free. The approved maximum token-based estimate was **$1.64**,
 not an invoice guarantee. Earlier smoke checks are separate evidence and are
 not included in these 152 calls or this subtotal.

@@ -1341,7 +1341,8 @@
       "config_sha256": "08335e43c969642f2a218f77fbd2612e6344bcc90d1bae82eee6f0387a715f3e",
       "result_sha256": "aa434a44e35e90ff15863a8a53ed9aa4a7f8a97858d47047c66ceec3906fac92",
       "pricing_fingerprint": "16e4031ae5b44cc3e92fdde977753a16cb6b0d18ef3aca4b468bf06ca0b55621",
-      "validator_version": null
+      "validator_version": null,
+      "contract_failure_summary": "1 wrong queue"
     },
     {
       "provider": "zai",
@@ -1429,7 +1430,8 @@
       "config_sha256": "986b186695747b67678bb95648f18d3e000dbf24520581c83ff56f3e02b7285b",
       "result_sha256": "9e59fef77de3c333dea03d4606ee89f80572d69f5e9cfc9b9db961a61ed18ff5",
       "pricing_fingerprint": "ac1d34d79ffa20f353b0f0b543342d7f93db8fa5235421302f4a2cdd9201739e",
-      "validator_version": null
+      "validator_version": null,
+      "contract_failure_summary": "1 fenced JSON"
     },
     {
       "provider": "zai",
@@ -1517,7 +1519,8 @@
       "config_sha256": "2a96e0cd2de8d59b185ba45a6fd16332b674d682f91d888f05b27ec42d249622",
       "result_sha256": "4e029e8db8d2ce6a3d127ef1981052cbbc3101acbf51f17a6a6ecff4529c1422",
       "pricing_fingerprint": "5b0fbe6cd7d7d92a82b628318d39d668443c36152e422aa6acf07a7c8cd315a7",
-      "validator_version": null
+      "validator_version": null,
+      "contract_failure_summary": "1 fenced JSON"
     },
     {
       "provider": "moonshot",

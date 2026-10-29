@@ -10,7 +10,8 @@ All notable changes to this project are documented here.
   comparison: 19 models, eight cases each, 152 calls. Show all models in one generated
   README image and the full documentation table; retain historical results.
   Report three contract failures and five Kimi rate-limit errors, with unknown
-  total cost rather than treating API failures as free.
+  total cost rather than treating API failures as free. Distinguish contract
+  results from API errors, label partial known costs and explain sample limits.
 
 - Native text routes and metadata discovery for Moonshot/Kimi, MiniMax, Mistral
   and Cohere, with native credentials, setup, JSON presets and literal source

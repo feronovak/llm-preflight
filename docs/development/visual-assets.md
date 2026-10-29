@@ -84,9 +84,9 @@ product card fixtures.
 | Historical demo GIF | 1100 × 720 px | Frozen legacy assets; new recordings use the current terminal profile |
 | Vision input fixture | 1254 × 1254 px | Input data, not promotional artwork; preserve exact bytes |
 
-Measured-image height is `160 + 48 × row_count + 114`. Use at most 16 rows per
-image. Split a larger dataset into clearly labelled groups while preserving
-source order and context; do not shrink text or discard failures to fit.
+Measured-image height is `160 + 48 × row_count + 114`. Keep the complete cohort in one
+image, increasing its height while preserving source order and context.
+Do not shrink text or discard failures to fit.
 The column origins are x=`32, 302, 480, 626, 802, 968`: model, checks passed,
 mean latency, estimated cost, observed date, connection route.
 
@@ -99,9 +99,9 @@ figure at its intended display width before publication.
 ## Measured models and future Chinese model runs
 
 Generate the figure from retained aggregates; never edit its numerical SVG
-labels by hand. The current summary uses only the October 29 JSON. A larger cohort
-is split into balanced panels of at most 16 rows with `--part 1` and `--part 2`. Neither default nor `--data` input
-silently inherits historical rows.
+labels by hand. The current summary uses only the October 29 JSON and keeps
+all 19 models in one image. Neither default nor `--data` input silently inherits
+historical rows.
 
 Each source row supplies `model`, `route`, `observed_on`, `requests`,
 `api_successful`, `valid`, `mean_latency_seconds` and `estimated_cost_usd`.
@@ -127,9 +127,7 @@ From a source checkout, regenerate and check the current figure:
 
 ```bash
 python3 scripts/render_measured_models.py
-python3 scripts/render_measured_models.py --part 2
 python3 scripts/render_measured_models.py --check
-python3 scripts/render_measured_models.py --part 2 --check
 ```
 
 After creating a new reviewed aggregate JSON, supply its actual path and a new
@@ -187,8 +185,7 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-10-29-1.svg` | Current measured results, 1280×754; 10 rows | `scripts/render_measured_models.py`; October 29 aggregates, part 1 |
-| `docs/images/measured-models-2026-10-29-2.svg` | Current measured results, 1280×706; 9 rows | `scripts/render_measured_models.py --part 2`; same aggregates, part 2 |
+| `docs/images/measured-models-2026-10-29.svg` | Current measured results, 1280×1186; 19 rows | `scripts/render_measured_models.py`; October 29 aggregates |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |
 | `docs/images/contract-check-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 23 seconds | Actual local contract-check pass/reject/fix session; follow terminal rules above |
 | `docs/images/default-template-evidence-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 30 seconds | Actual init/default interactive mock and CLI JSON session; refreshed for 2.22.2 evidence-aware summary |

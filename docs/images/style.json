@@ -21,7 +21,6 @@
     "table_top": 160,
     "row_height": 48,
     "footer_height": 114,
-    "max_rows": 16,
     "columns": [32, 302, 480, 626, 802, 968],
     "title_size": 31,
     "subtitle_size": 20,

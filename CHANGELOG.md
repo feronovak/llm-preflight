@@ -7,8 +7,8 @@ All notable changes to this project are documented here.
 ### Added
 
 - Replace the current model measurement with the owner-approved October 29 native
-  comparison: 19 models, eight cases each, 152 calls. Show all models in two generated
-  README panels and the full documentation table; retain historical results.
+  comparison: 19 models, eight cases each, 152 calls. Show all models in one generated
+  README image and the full documentation table; retain historical results.
   Report three contract failures and five Kimi rate-limit errors, with unknown
   total cost rather than treating API failures as free.
 

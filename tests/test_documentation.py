@@ -76,18 +76,17 @@ def test_documented_model_list_matches_comparison_evidence():
         for row in data["rows"]
     }
     seen = []
-    for part, count in ((1, 10), (2, 9)):
-        name = f"measured-models-2026-10-29-{part}.svg"
-        assert name in readme
-        image = ET.parse(ROOT / "docs/images" / name).getroot()
-        rows = image.findall("svg:g[@data-model]", ns)
-        assert len(rows) == count
-        for row in rows:
-            values = ["".join(cell.itertext()) for cell in row.findall("svg:text", ns)]
-            assert tuple(values[1:]) == expected[values[0]]
-            seen.append(values[0])
-        assert "not a ranking" in image.find("svg:desc", ns).text
-        assert not image.findall(".//svg:script", ns)
+    name = "measured-models-2026-10-29.svg"
+    assert name in readme
+    image = ET.parse(ROOT / "docs/images" / name).getroot()
+    rows = image.findall("svg:g[@data-model]", ns)
+    assert len(rows) == 19
+    for row in rows:
+        values = ["".join(cell.itertext()) for cell in row.findall("svg:text", ns)]
+        assert tuple(values[1:]) == expected[values[0]]
+        seen.append(values[0])
+    assert "not a ranking" in image.find("svg:desc", ns).text
+    assert not image.findall(".//svg:script", ns)
     assert len(seen) == len(set(seen)) == len(expected) == 19
     assert set(seen) == set(expected)
     assert {row["provider"] for row in data["rows"]} == {
@@ -1222,7 +1221,7 @@ def test_measured_model_image_is_reproducible(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert (
         output.read_bytes()
-        == (ROOT / "docs/images/measured-models-2026-10-29-1.svg").read_bytes()
+        == (ROOT / "docs/images/measured-models-2026-10-29.svg").read_bytes()
     )
     output.write_text("outdated image")
     result = subprocess.run(
@@ -1393,7 +1392,7 @@ def test_measured_image_rejects_invalid_cost_evidence(tmp_path):
         assert not output.exists()
 
 
-def test_measured_image_splits_a_full_cohort_without_dropping_or_repeating_rows(
+def test_measured_image_keeps_a_full_cohort_in_one_image(
     tmp_path,
 ):
     import xml.etree.ElementTree as ET
@@ -1415,30 +1414,26 @@ def test_measured_image_splits_a_full_cohort_without_dropping_or_repeating_rows(
     data = tmp_path / "cohort.json"
     data.write_text(json.dumps(source))
     ns = {"svg": "http://www.w3.org/2000/svg"}
-    seen = []
-    for part, expected_count in ((1, 10), (2, 9)):
-        output = tmp_path / f"part-{part}.svg"
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts/render_measured_models.py"),
-                "--data",
-                str(data),
-                "--part",
-                str(part),
-                "--output",
-                str(output),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert result.returncode == 0, result.stderr
-        image = ET.parse(output).getroot()
-        rows = image.findall("svg:g[@data-model]", ns)
-        assert len(rows) == expected_count
-        assert f"part {part}/2" in image.find("svg:title", ns).text
-        seen.extend(row.get("data-model") for row in rows)
+    output = tmp_path / "all-models.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--data",
+            str(data),
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    image = ET.parse(output).getroot()
+    rows = image.findall("svg:g[@data-model]", ns)
+    seen = [row.get("data-model") for row in rows]
+    assert "part " not in image.find("svg:title", ns).text
+    assert int(image.get("height")) == 160 + 48 * 19 + 114
     assert len(seen) == len(set(seen)) == 19
     assert set(seen) == {f"Fixture model {index}" for index in range(19)}
 

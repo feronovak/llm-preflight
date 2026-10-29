@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CURRENT_MEASUREMENT = "2026-10-29"
 DEFAULT_DATA = ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json"
-DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}-1.svg"
+DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
     "gpt-6.1-sol": "GPT-6.1 Sol",
@@ -66,25 +66,17 @@ def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
     return rows
 
 
-def render(data_path: Path | None = None, *, part: int = 1) -> str:
+def render(data_path: Path | None = None) -> str:
     style = json.loads((ROOT / "docs/images/style.json").read_text())
     colors = style["colors"]
     layout = style["measured_models"]
     rows = observed_rows(data_path)
-    total_rows = len(rows)
-    part_count = math.ceil(total_rows / layout["max_rows"])
-    if not 1 <= part <= part_count:
-        raise ValueError(f"Part must be between 1 and {part_count}")
-    rows_per_part = math.ceil(total_rows / part_count)
-    rows = rows[(part - 1) * rows_per_part : part * rows_per_part]
     data = json.loads((data_path or DEFAULT_DATA).read_text())
     title = (
         data.get("display_title", "Observed model results")
         if data_path
         else "Observed results on a support-routing contract"
     )
-    if part_count > 1:
-        title += f" · part {part}/{part_count}"
     request_count = data["rows"][0]["requests"]
     dates = sorted(row[4] for row in rows)
     date_range = dates[0] if dates[0] == dates[-1] else f"{dates[0]}–{dates[-1]}"
@@ -191,16 +183,9 @@ def main() -> int:
         help="New aggregate JSON; uses only its rows, without historical additions",
     )
     parser.add_argument("--check", action="store_true")
-    parser.add_argument(
-        "--part", type=int, default=1, help="Panel of a larger cohort (1-based)"
-    )
     args = parser.parse_args()
-    if args.part != 1 and args.output == DEFAULT_OUTPUT:
-        args.output = DEFAULT_OUTPUT.with_name(
-            f"measured-models-{CURRENT_MEASUREMENT}-{args.part}.svg"
-        )
     try:
-        content = render(args.data, part=args.part).encode()
+        content = render(args.data).encode()
     except (ValueError, KeyError, OSError) as error:
         parser.error(str(error))
     if args.check:

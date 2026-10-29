@@ -92,9 +92,7 @@ three outputs failed their contract and five Kimi calls returned HTTP 429.
 **15 models passed all eight checks.** These are workload observations, not a
 ranking of general intelligence or production approval.
 
-[![Latest measured model results, part 1 of 2: GPT, Claude and Gemini; checks passed out of eight, mean latency, estimated token cost, date and native route](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29-1.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
-
-[![Latest measured model results, part 2 of 2: Gemini, Grok, DeepSeek, Qwen, GLM and Kimi; partial failures and unavailable total costs remain visible](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29-2.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+[![All 19 measured models: checks passed out of eight, mean latency, estimated token cost, date and native route; partial failures and unavailable costs remain visible](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 
 Latency includes successful API responses, including contract failures, and
 excludes API errors. The known token-cost subtotal is **$0.06902127**; total cost

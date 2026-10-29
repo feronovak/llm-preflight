@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -30,15 +30,14 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
-## Current source build
+## New in 2.23.0
 
-The unpublished 2.23.0 source build adds GPT-6.1 Terra pricing and native Kimi,
+This release adds GPT-6.1 Terra pricing and native Kimi,
 MiniMax, Mistral and Cohere text checks, plus GLM Flash and restricted Mythos
-coverage. The candidate source checkout includes
-`docs/guides/native-providers.md` with bounded examples and request limits.
+coverage. See [native provider checks](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/native-providers.md) for
+bounded examples and request limits.
 New coverage has deterministic protocol fixtures; live observations below cover
-the listed 19 routes. Other added providers retain fixture-only coverage. The
-installation command below still installs the latest published package, 2.22.2.
+the listed 19 routes. Other added providers retain fixture-only coverage.
 
 ## Try it in 60 seconds
 

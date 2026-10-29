@@ -339,13 +339,13 @@ model, increase a budget, or turn a paid run into an implicit action. See
 [Coding agents](coding-agents.md) for the corresponding CLI workflow and
 [CI and JSON output](ci.md) for baseline gates.
 
-## Current native provider source build
+## Native providers in 2.23.0
 
-The unpublished 2.23.0 build adds native model routes and reviewed prices;
+Release 2.23.0 adds native model routes and reviewed prices;
 [native provider checks](../guides/native-providers.md) lists coverage and
 settings. Contract, pricing and plan tools use the same validation as the CLI.
 Report missing usage/prices, retirement unknowns and every blocking warning.
 Discovery membership and successful fixtures do not establish a live result,
 account access, tool execution or permission to spend. Read-only MCP tools use
-configured models and do not resolve provider discovery. Published package and
-Action pins remain 2.22.2 until the update is released.
+configured models and do not resolve provider discovery. Use package 2.23.0
+or newer for these additions.

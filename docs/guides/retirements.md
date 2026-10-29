@@ -160,7 +160,7 @@ from the ID.
 
 ## Release retirement review
 
-The unpublished 2.23.0 snapshot contains 116 rows: 36 Anthropic, 75 OpenAI and five Gemini,
+The 2.23.0 snapshot contains 116 rows: 36 Anthropic, 75 OpenAI and five Gemini,
 all reviewed on the date stamped above. Non-retired rows become stale on
 2026-11-26; retired rows remain failures. The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published

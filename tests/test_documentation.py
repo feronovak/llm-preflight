@@ -472,7 +472,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2"
+        "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -1541,3 +1541,19 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
         assert "0" in rows[model]
     assert "8/8 passed" in rows["GPT-6.1 Terra"]
     assert "$0.001218" in rows["GPT-6.1 Terra"]
+
+
+def test_release_guides_describe_available_2_23_features():
+    for relative in (
+        "README.md",
+        "docs/README.md",
+        "docs/guides/native-providers.md",
+        "docs/guides/current-snapshots.md",
+        "docs/guides/native-chinese-models.md",
+        "docs/guides/model-catalog.md",
+    ):
+        page = (ROOT / relative).read_text()
+        assert "unpublished 2.23.0" not in page, relative
+        assert "source build is unpublished" not in page, relative
+        assert "candidate wheel" not in page, relative
+    assert "## New in 2.23.0" in (ROOT / "README.md").read_text()

@@ -6,15 +6,14 @@ This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.23.0**. This source build is unpublished; PyPI and the
-published Action examples still use 2.22.2 until release. The table records
-this build's reviewed public-route rates, not account access or model quality.
+Package version: **2.23.0**. The table records this version's reviewed
+public-route rates, not account access or model quality.
 All rows were reviewed on 2026-10-26 UTC and become stale on 2026-11-26.
 Strict pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
-on 2026-10-29, with eight cases each:144 of 152validated outputs, three contract
+on 2026-10-29, with eight cases each: 144 of 152 validated outputs, three contract
 failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.

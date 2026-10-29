@@ -2,10 +2,9 @@
 
 **Last reviewed:** 2026-10-26 · **As of:** v2.23.0
 
-The unpublished 2.23.0 source build adds native Kimi, MiniMax, Mistral and
+Version 2.23.0 adds native Kimi, MiniMax, Mistral and
 Cohere text routes, GPT-6.1 Terra pricing, GLM Flash siblings and restricted
-Mythos pricing. Install the candidate wheel or the source checkout to use
-these additions. The published 2.22.2 package does not contain them.
+Mythos pricing. Install `llm-preflight>=2.23.0` to use these additions.
 
 The [October 29 comparison](observed-model-comparison.md) now supplies live
 observations for 19 native routes, including Terra, Kimi K3.1 Pro and GLM Flash/FlashX.
@@ -117,13 +116,13 @@ Their metadata is a candidate for review, not a successful probe or approval.
 Cohere discovery filters Chat models and follows bounded pagination. Z.ai uses
 configured native models; no metadata discovery endpoint is integrated.
 
-| Surface | Coverage in the source build |
+| Surface | Coverage in 2.23.0 |
 |---|---|
 | CLI checks and plans | Native settings, route-specific pricing and existing three-state decisions. |
 | Source audit and change plans | New literal model families and explicit provider prefixes; an explicit OpenRouter route does not inherit native prices. Literal scanning does not resolve an application's dynamic endpoint or execute its parser. |
 | MCP | Existing contract, pricing and plan tools reuse native validation. Read-only tools accept configured models and refuse provider discovery. Live calls retain explicit confirmation requirements. |
 | Saved results and reports | Existing normalized usage, observed model identity, cost coverage and decision fields; no new live result is implied by fixtures. |
-| GitHub Action | Runs the installed package. Published defaults remain 2.22.2 until release; new providers require the candidate package or the published 2.23.0 after publication. |
+| GitHub Action | Runs the installed package. Set `package-version: "2.23.0"` to use these providers. |
 | Agent plugin | Existing guidance requires reporting the contract, price/plan decision, warnings and unknown evidence before any live work. |
 
 DeepSeek's `deepseek-flash` currently resolves to V4.1-Flash-1017. Its legacy

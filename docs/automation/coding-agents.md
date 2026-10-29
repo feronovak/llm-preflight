@@ -220,13 +220,13 @@ fails the comparison. Keep catalog discovery and new-model approval separate
 from a benchmark gate; discovery is not compatibility evidence, and a passing
 run is not approval unless a user explicitly records it.
 
-## Current native provider source build
+## Native providers in 2.23.0
 
-The unpublished 2.23.0 build adds native model routes and reviewed prices;
+Release 2.23.0 adds native model routes and reviewed prices;
 [native provider checks](../guides/native-providers.md) lists coverage and
 settings. Contract, pricing and plan tools use the same validation as the CLI.
 Report missing usage/prices, retirement unknowns and every blocking warning.
 Discovery membership and successful fixtures do not establish a live result,
 account access, tool execution or permission to spend. Read-only MCP tools use
-configured models and do not resolve provider discovery. Published package and
-Action pins remain 2.22.2 until the update is released.
+configured models and do not resolve provider discovery. Use package 2.23.0
+or newer for these additions.

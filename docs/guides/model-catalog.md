@@ -29,7 +29,7 @@ llm-preflight catalog init
 ```
 
 Press Enter to include all supported providers (`openai`, `anthropic`,
-`gemini`, `xai`, `openrouter`, `deepseek`, `qwen`, `typesafe`). The unpublished 2.23.0 source build also
+`gemini`, `xai`, `openrouter`, `deepseek`, `qwen`, `typesafe`). Version 2.23.0 also
 includes `moonshot`, `minimax`, `mistral`, and `cohere`; see
 [native provider checks](native-providers.md). Z.ai is available through
 configured native models and has no integrated metadata discovery. Official

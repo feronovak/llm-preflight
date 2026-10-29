@@ -32,7 +32,7 @@ with the exact reviewed ID your application uses:
 | `typesafe` | `TYPESAFE_API_KEY` |
 | `openai_compatible` | configured with `api_key_env` |
 
-The unpublished 2.23.0 source build adds the `moonshot`, `minimax`, `mistral`
+Release 2.23.0 adds the `moonshot`, `minimax`, `mistral`
 and `cohere` rows. Their current native adapters support text only. See
 [native provider checks](../guides/native-providers.md) for exact IDs,
 reasoning settings, public endpoint scope and bounded source examples.
@@ -260,7 +260,7 @@ Run an overlay with `llm-preflight benchmark.json --env ci`. See
 data handling. See the [complete configuration reference](configuration-schema.md)
 for every supported key and default.
 
-### Responses request options in the 2.23.0 source build
+### Responses request options in 2.23.0
 
 With `provider: openai` and `adapter: openai_responses`, the supported
 `request.provider_options.openai` fields are `reasoning`, `text`, `service_tier`,

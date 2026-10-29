@@ -34,7 +34,7 @@
       "cached_input_cost_per_million": null,
       "pricing_metadata": {
         "source": "user override",
-        "as_of": "2026-10-15",
+        "as_of": "2026-10-26",
         "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
         "scope": "Singapore / International standard text API; cache-hit rate requires the account console"
       }

@@ -22,7 +22,7 @@ GEMINI_MODEL_REDIRECTS = {
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
-_REVIEWED = "2026-10-19"
+_REVIEWED = "2026-10-26"
 
 
 def _row(
@@ -148,7 +148,9 @@ _OPENAI: dict[str, dict[str, Any]] = {
     # 2026-10-01 announcement
     "gpt-5.3-codex": _openai("deprecated", "2027-04-01", "gpt-6-sol"),
     "gpt-5.4-nano": _openai("deprecated", "2027-04-01", "gpt-6-luna"),
+    "gpt-5.4-nano-2026-03-17": _openai("deprecated", "2027-04-01", "gpt-6-luna"),
     "gpt-5.1": _openai("deprecated", "2027-04-01", "gpt-6-sol"),
+    "gpt-5.1-2025-11-13": _openai("deprecated", "2027-04-01", "gpt-6-sol"),
     # 2026-09-11: no replacement named on the page
     "gpt-5.4-cyber": _openai("deprecated", "2026-10-01"),
     # 2026-06-11 announcement

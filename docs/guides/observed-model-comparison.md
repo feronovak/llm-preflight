@@ -1,20 +1,128 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-10-15 · **As of:** v2.21.2
+**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
 
-**Study dates:** 2026-09-28, 2026-09-30, 2026-10-07 and 2026-10-14.
-The latest run attempted 12 exact IDs; the earlier tables retain **27 measured**
-IDs. Nine candidates passed every selected case in the latest run. API rejection,
-rate limits and contract failures are separate observations.
+**Latest measurement:** 2026-10-29, 19 native model IDs, eight cases each.
+The previous 12-model run and earlier tables retain their original dates and
+routes below. API rejection, rate limits and contract failures are separate
+observations. These repository-owned synthetic cases are not confirmed
+production traffic, a universal ranking or production approval.
 
-This is a dated example of using LLM Preflight to narrow a model shortlist. It
-does not certify these models, rank general intelligence, or approve a route for
-another application. The tested support tickets and JSON rules came from this
-repository's examples and variants; they are not confirmed production traffic.
-The underlying per-request artifacts are retained locally by the maintainer
-and excluded from the public repository because failed responses and run
-metadata can contain sensitive information. This page publishes aggregates
-and the request method, not an independently auditable provider invoice.
+## 2026-10-29 bounded comparison
+
+The owner-approved run used the unpublished **2.23.0 source build**, the same
+eight support-routing and strict JSON cases once per model, no warmups, and
+one attempt per request. All models used a **1,024-token output allowance** and
+low reasoning effort where supported. Requests within each model were sequential;
+up to four provider blocks could overlap on the same host. All routes were native.
+
+All **152** planned calls were attempted: **147** returned API responses,
+**144** passed validation, **three** failed the output contract, and **five**
+returned API errors. **15 of 19 models passed 8/8 checks.** No automatic retries,
+provider fallback, alternative routes or additional paid probes were made.
+
+| Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
+|---|---|---:|---:|---:|---:|
+| OpenAI | `gpt-6-astra` | 8/8 | 8/8 | 2.089s | $0.010580 |
+| OpenAI | `gpt-6.1-sol` | 8/8 | 8/8 | 1.476s | $0.002116 |
+| OpenAI | `gpt-6.1-terra` | 8/8 | 8/8 | 1.192s | $0.001218 |
+| OpenAI | `gpt-6-luna` | 8/8 | 8/8 | 1.205s | $0.000174 |
+| Anthropic | `claude-fable-5-1` | 8/8 | 8/8 | 0.923s | $0.014500 |
+| Anthropic | `claude-opus-5-5` | 8/8 | 8/8 | 1.497s | $0.005740 |
+| Anthropic | `claude-sonnet-5-5` | 8/8 | 8/8 | 1.421s | $0.002870 |
+| Anthropic | `claude-haiku-5-5` | 8/8 | 8/8 | 1.758s | $0.000150 |
+| Gemini | `gemini-4-argon` | 8/8 | 8/8 | 5.186s | $0.002728 |
+| Gemini | `gemini-3.8-flash` | 8/8 | 8/8 | 2.621s | $0.002723 |
+| Gemini | `gemini-3.6-flash` | 8/8 | 8/8 | 1.359s | $0.004005 |
+| xAI | `grok-4.7` | 8/8 | 8/8 | 1.567s | $0.007536 |
+| DeepSeek | `deepseek-flash` | 8/8 | 8/8 | 1.297s | $0.000809 |
+| DeepSeek | `deepseek-v4-pro` | 8/8 | 8/8 | 1.766s | $0.004220 |
+| Alibaba Singapore | `qwen3.8-max` | 8/8 | 8/8 | 3.834s | $0.006034 |
+| Z.ai | `glm-5.3` | 7/8 | 8/8 | 1.461s | $0.001398 |
+| Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
+| Z.ai | `glm-5.3-flashx` | 7/8 | 8/8 | 1.091s | $0.000391 |
+| Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | — |
+
+The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
+retain all 19 rows, request settings, reported identities, token/cost coverage,
+case and private-result hashes. The known token-cost subtotal is **$0.06902127**
+across **147** calls with usage. **Total cost remains unknown** because the five
+API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
+its full eight-call cost stays unavailable in the table and image. API errors
+are not assumed free. The approved maximum token-based estimate was **$1.64**,
+not an invoice guarantee. Earlier smoke checks are separate evidence and are
+not included in these 152 calls or this subtotal.
+
+### Failures and interpretation
+
+- **GLM-5.3:** seven checks passed. The invoice-request response selected
+  `account`; the unchanged case required `billing`. Valid JSON alone did not
+  satisfy the application contract.
+- **GLM-5.3 Flash and FlashX:** each passed seven checks. Their ticket-extraction
+  output included Markdown JSON fences; the unchanged consumer contract required
+  raw JSON. Both were rejected rather than silently stripping the fences.
+- **Kimi K3.1 Pro:** the first three label checks passed. The other five calls
+  returned HTTP 429 (`rate_limit_reached_error`), so those JSON tasks have no
+  model-quality result. No retries were made.
+- **The other 15 models:** all eight API calls and validators passed for this
+  synthetic workload. This is scoped evidence, not production approval.
+
+All three retained invalid outputs were replayed locally against the unchanged
+validators and failed again. Full response fields were retained for failures
+only; bounded previews and per-request flags can remain for passing calls.
+Public aggregates contain no response text, API keys, account identifiers or
+local paths. Private raw evidence is excluded from the public repository and
+package artifacts.
+
+### Request settings and comparability
+
+The eight cases cover billing, technical and account labels; strict ticket
+extraction; duplicate-charge prompt injection; an active technical outage;
+account email changes; and an invoice request. Each case has a positive and
+negative local validator fixture in the
+[reusable comparison configuration](../../examples/current-model-comparison.json).
+The aggregate case fingerprint binds those exact prompts, schemas and fixtures.
+
+OpenAI uses Responses with `store: false` and low reasoning effort. Claude uses
+low output effort and its documented adaptive-thinking behavior. Gemini uses
+`LOW` thinking; Grok, DeepSeek, Qwen, GLM and Kimi use their supported low-effort
+settings. Qwen caps reasoning and answer together with `max_completion_tokens`.
+Temperature is omitted. Reported reasoning tokens remain billable usage even
+when reasoning text is excluded from validation. Cache usage follows each row's
+recorded native-route price evidence; cache-hit rates were not systematically
+tested. Mean latency includes API successes, including contract failures, and
+excludes API errors.
+
+This run replaces the previous measurement in the README and current summaries.
+The October 14 run and earlier measurements remain below as history. They used
+different routes, two repetitions, and different output allowances, so these
+figures do not establish a like-for-like improvement or a general model ranking.
+A 1,024-token cap can limit reasoning; no allowance was raised during this run.
+
+To reconstruct one native row without generation, use the 2.23.0 candidate
+source checkout until that version is published:
+
+```bash
+python3 - <<'PYCODE'
+import json
+from pathlib import Path
+
+data = json.loads(Path("docs/data/model-comparison-2026-10-29.json").read_text())
+row = next(row for row in data["rows"] if row["model"] == "gemini-4-argon")
+config = json.loads(Path(data["method"]["case_source"]).read_text())
+config.update(row["configuration"])
+with Path("comparison.json").open("x") as output:
+    output.write(json.dumps(config, indent=2) + "\n")
+PYCODE
+llm-preflight comparison.json --contract-check
+llm-preflight comparison.json --doctor
+llm-preflight comparison.json --pricing-check
+llm-preflight comparison.json --dry-run
+```
+
+The snippet refuses to overwrite an existing config. Inspect current route,
+price freshness, reasoning/output allowance and request limits before approving
+a paid rerun. Local fixture checks do not execute application parser code.
 
 ## 2026-10-14 bounded comparison
 
@@ -278,7 +386,10 @@ reads, and $4.00 output per million tokens, checked against the
 The example's route prices were re-reviewed on 2026-10-16 at $0.0608 input,
 $0.0565 cache reads and $4.40 output per million tokens, which raises its
 maximum estimate to $0.0361131392; past measurements used the prices of their
-day.
+day. The current example was reviewed again on 2026-10-26: Relace's endpoint
+catalogue lists $0.0703 input, $0.0703 cache reads and $4.3843 output per million
+tokens, giving a maximum estimate of $0.0359952028. This configuration refresh
+does not change the historical observations or their recorded costs.
 
 All requests completed successfully; 14 outputs passed the configured
 contract. Reported usage was 1,148 input tokens (448 cached) and 263 output

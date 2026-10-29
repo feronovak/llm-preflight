@@ -13,6 +13,7 @@ from typing import Any
 from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
 from .images import input_image_parts
 from .pricing import valid_token_count
+from .providers import PROVIDER_DEFAULTS
 from .security import open_public_url, require_http_url
 
 TokenUsage = dict[str, int | None]
@@ -24,50 +25,6 @@ _QWEN_COMBINED_OUTPUT_MODELS = {
     "qwen3.8-max",
     "qwen3.8-max-0902",
     "qwen3.8-flash",
-}
-
-
-PROVIDER_DEFAULTS = {
-    "openai": {
-        "base_url": "https://api.openai.com/v1",
-        "api_key_env": "OPENAI_API_KEY",
-        "max_tokens_parameter": "max_completion_tokens",
-    },
-    "openrouter": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env": "OPENROUTER_API_KEY",
-    },
-    "xai": {
-        "base_url": "https://api.x.ai/v1",
-        "api_key_env": "XAI_API_KEY",
-    },
-    "anthropic": {
-        "base_url": "https://api.anthropic.com/v1",
-        "api_key_env": "ANTHROPIC_API_KEY",
-    },
-    "gemini": {
-        "base_url": "https://generativelanguage.googleapis.com/v1beta",
-        "api_key_env": "GEMINI_API_KEY",
-    },
-    "deepseek": {
-        "base_url": "https://api.deepseek.com/v1",
-        "api_key_env": "DEEPSEEK_API_KEY",
-    },
-    "qwen": {
-        "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-        "api_key_env": "DASHSCOPE_API_KEY",
-    },
-    "zai": {
-        "base_url": "https://api.z.ai/api/paas/v4",
-        "api_key_env": "ZAI_API_KEY",
-    },
-    "typesafe": {
-        "base_url": "https://api.typesafe.ai/v1",
-        "api_key_env": "TYPESAFE_API_KEY",
-    },
-    "mock": {
-        "base_url": "https://mock.local/v1",
-    },
 }
 
 
@@ -85,6 +42,8 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             model_id == "gpt-5.5"
             or model_id.startswith(("gpt-5.5-", "gpt-5.6-", "gpt-6-", "gpt-6.1-"))
         )
+    if provider in {"moonshot", "minimax"}:
+        return False
     if provider == "anthropic":
         return model_id not in {
             "claude-sonnet-5",
@@ -92,6 +51,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             "claude-haiku-5-5",
             "claude-fable-5",
             "claude-fable-5-1",
+            "claude-mythos-5-1",
             "claude-opus-4-8",
             "claude-opus-5",
             "claude-opus-5-5",
@@ -115,8 +75,37 @@ def validate_native_request_options(
     model: dict[str, Any], options: dict[str, Any]
 ) -> None:
     """Keep native request identity and limits aligned with the shared plan."""
-    provider = model.get("provider")
-    if provider not in {"zai", "deepseek", "qwen"}:
+    provider = str(model.get("provider") or "")
+    model_id = model.get("model", "")
+    strict_openai = provider == "openai" and model_id.startswith(("gpt-6-", "gpt-6.1-"))
+    strict_claude = provider == "anthropic" and model_id in {
+        "claude-fable-5-1",
+        "claude-mythos-5-1",
+    }
+    if provider == "openai" and model.get("adapter") == "openai_responses":
+        supported = {
+            "reasoning",
+            "text",
+            "service_tier",
+            "prompt_cache_retention",
+            "prompt_cache_key",
+        }
+        unsupported = _provider_options(options, provider).keys() - supported
+        if unsupported:
+            raise ValueError(
+                "Responses provider_options are unsupported: "
+                + ", ".join(sorted(unsupported))
+                + "; use the configured prompt and request.max_output_tokens"
+            )
+    if provider not in {
+        "zai",
+        "deepseek",
+        "qwen",
+        "moonshot",
+        "minimax",
+        "mistral",
+        "cohere",
+    } and not (strict_openai or strict_claude):
         return
     provider_options = _provider_options(options, provider)
     if {
@@ -132,6 +121,100 @@ def validate_native_request_options(
             "native provider_options cannot override model, messages, streaming or "
             "token limits; use models and request.max_output_tokens"
         )
+    if strict_openai:
+        if provider_options.get("service_tier", "default") not in {
+            "default",
+            "standard",
+            "auto",
+        }:
+            raise ValueError(
+                "GPT-6 preflight supports standard service-tier pricing only"
+            )
+        if provider_options.get("prompt_cache_retention", "30m") != "30m":
+            raise ValueError("GPT-6 preflight supports 30m cache-write pricing only")
+    if strict_claude:
+        thinking = provider_options.get("thinking", {"type": "adaptive"})
+        if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
+            raise ValueError("Fable/Mythos 5.1 require adaptive reasoning")
+        choice = provider_options.get("tool_choice", {"type": "auto"})
+        if not isinstance(choice, dict) or choice.get("type") not in {"auto", "none"}:
+            raise ValueError("Fable/Mythos 5.1 do not support forced tool choice")
+    if provider in {"moonshot", "minimax", "mistral", "cohere"}:
+        expected_adapter = (
+            "cohere_chat" if provider == "cohere" else "openai_compatible_chat"
+        )
+        if model.get("adapter") not in {None, expected_adapter}:
+            raise ValueError(f"native {provider} requires adapter={expected_adapter}")
+        expected_parameter = (
+            "max_completion_tokens" if provider == "minimax" else "max_tokens"
+        )
+        if model.get("max_tokens_parameter", expected_parameter) != expected_parameter:
+            raise ValueError(
+                f"native {provider} requires max_tokens_parameter={expected_parameter}"
+            )
+        if options.get("input_images"):
+            raise ValueError(
+                f"the native {provider} adapter currently supports text only"
+            )
+        if provider_options.get("service_tier", "standard") not in {"standard", "auto"}:
+            raise ValueError("native provider service_tier requires standard pricing")
+        if {"tools", "documents", "connectors", "web_search"} & provider_options.keys():
+            raise ValueError(
+                "native text preflight does not execute tools or hosted retrieval"
+            )
+    if provider == "moonshot":
+        cache_options = provider_options.get("prompt_cache_options", {})
+        if (
+            not isinstance(cache_options, dict)
+            or cache_options.get("mode", "implicit") != "implicit"
+            or cache_options.get("ttl", "5m") != "5m"
+        ):
+            raise ValueError(
+                "Kimi snapshot supports implicit 5m cache-write pricing only"
+            )
+        if "thinking" in provider_options or provider_options.get(
+            "reasoning_effort", "max"
+        ) not in {"low", "high", "max"}:
+            raise ValueError(
+                "Kimi K3.1 requires reasoning_effort low, high, or max; remove thinking"
+            )
+        if {
+            "temperature",
+            "top_p",
+            "n",
+            "presence_penalty",
+            "frequency_penalty",
+        } & provider_options.keys():
+            raise ValueError(
+                "Kimi K3.1 sampling parameters are fixed; omit provider sampling options"
+            )
+    if provider == "minimax":
+        if provider_options.get("reasoning_split", True) is not True:
+            raise ValueError("MiniMax text preflight requires reasoning_split=true")
+        thinking = provider_options.get("thinking", {"type": "adaptive"})
+        allowed = (
+            {"adaptive"}
+            if model["model"] == "MiniMax-M3.1-Flash"
+            else {"adaptive", "disabled"}
+        )
+        if not isinstance(thinking, dict) or thinking.get("type") not in allowed:
+            raise ValueError("MiniMax reasoning requires a supported thinking type")
+        if provider_options.get("reasoning_effort", "max") not in {
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+        }:
+            raise ValueError("MiniMax reasoning effort is unsupported")
+    if provider == "zai" and model.get("model") in {
+        "glm-5.3",
+        "glm-5.3-flash",
+        "glm-5.3-flashx",
+    }:
+        thinking = provider_options.get("thinking", {"type": "enabled"})
+        if not isinstance(thinking, dict) or thinking.get("type") != "enabled":
+            raise ValueError("GLM-5.3 models require enabled reasoning")
     if provider != "qwen" or model.get("model") not in _QWEN_COMBINED_OUTPUT_MODELS:
         return
     parameter = model.get("max_tokens_parameter", "max_completion_tokens")
@@ -266,6 +349,11 @@ class ProviderClient(ABC):
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
         """Return a text delta and any input/output token usage."""
 
+    requires_complete_stream = False
+
+    def terminal_event(self, event: dict[str, Any]) -> bool:
+        return False
+
     def event_model(self, event: dict[str, Any]) -> Any:
         """The model an event says answered; OpenAI-compatible chunks name it."""
         return event.get("model")
@@ -293,6 +381,7 @@ class ProviderClient(ABC):
             content: list[str] = []
             usage: dict[str, int] = {}
             models: list[Any] = []
+            completed = False
             try:
                 endpoint = self.endpoint()
                 require_http_url(endpoint)
@@ -321,7 +410,10 @@ class ProviderClient(ABC):
                         if not payload or payload == "[DONE]":
                             continue
                         event = json.loads(payload)
+                        if not isinstance(event, dict):
+                            raise TypeError("provider stream event must be an object")
                         text, event_usage = self.parse_event(event)
+                        completed = completed or self.terminal_event(event)
                         models.append(self.event_model(event))
                         usage.update(
                             {
@@ -330,15 +422,27 @@ class ProviderClient(ABC):
                                 if value is not None
                             }
                         )
+                        if text is not None and not isinstance(text, str):
+                            raise ValueError("provider text delta must be a string")
                         if text:
                             if first_token_at is None:
                                 first_token_at = time.perf_counter()
                             content.append(text)
+                    if self.requires_complete_stream and not completed:
+                        raise ValueError(
+                            "provider stream ended before a complete response"
+                        )
             except urllib.error.HTTPError as exc:
                 detail = exc.read(2000).decode("utf-8", errors="replace")
                 last_error = f"HTTP {exc.code}: {detail}"
                 last_category = _classify_failure(last_error, exc.code)
-            except (OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+            except (
+                OSError,
+                TimeoutError,
+                json.JSONDecodeError,
+                ValueError,
+                TypeError,
+            ) as exc:
                 last_error = str(exc)
                 last_category = _classify_exception(exc)
             else:
@@ -491,6 +595,11 @@ class OpenAICompatibleClient(ProviderClient):
             ),
             "output_tokens": usage.get("completion_tokens"),
         }
+        if (
+            self.model.get("provider") == "deepseek"
+            and normalized["cached_input_tokens"] is None
+        ):
+            normalized["cached_input_tokens"] = usage.get("prompt_cache_hit_tokens")
         details = usage.get("prompt_tokens_details") or {}
         if "cache_write_tokens" in details:
             normalized["cache_write_input_tokens"] = details["cache_write_tokens"]
@@ -499,8 +608,123 @@ class OpenAICompatibleClient(ProviderClient):
         return text, normalized
 
 
-class ZaiClient(OpenAICompatibleClient):
+def _stream_object(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise TypeError("provider stream contained a malformed object")
+    return value
+
+
+class NativeTextClient(OpenAICompatibleClient):
+    """Reviewed native Chat Completions routes with explicit completion evidence."""
+
+    requires_complete_stream = True
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        body = super().body(prompt, options)
+        if self.model.get("provider") == "minimax":
+            body.setdefault("reasoning_split", True)
+        if self.model.get("provider") == "mistral":
+            body.pop("stream_options", None)
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        if (
+            not isinstance(event, dict)
+            or event.get("error")
+            or event.get("type") == "error"
+        ):
+            raise ValueError("native provider returned an error event")
+        choices = event.get("choices", [])
+        if not isinstance(choices, list) or any(
+            not isinstance(c, dict) for c in choices
+        ):
+            raise ValueError("native provider returned malformed choices")
+        if any(c.get("finish_reason") not in {None, "stop"} for c in choices):
+            raise ValueError("native provider did not finish a complete text response")
+        if any(not isinstance(c.get("delta", {}), dict) for c in choices):
+            raise ValueError("native provider returned a malformed text delta")
+        if event.get("usage") is not None and not isinstance(event["usage"], dict):
+            raise ValueError("native provider returned malformed usage")
+        text, usage = super().parse_event(event)
+        if self.model.get("provider") == "mistral" and isinstance(text, list):
+            final_text = []
+            for chunk in text:
+                if not isinstance(chunk, dict):
+                    raise TypeError("Mistral content chunk must be an object")
+                kind = chunk.get("type", "text")
+                if kind == "thinking":
+                    continue
+                if kind != "text" or not isinstance(chunk.get("text"), str):
+                    raise ValueError(
+                        "Mistral returned an unsupported text content chunk"
+                    )
+                final_text.append(chunk["text"])
+            text = "".join(final_text)
+        if (
+            self.model.get("provider") == "mistral"
+            and usage.get("cached_input_tokens") is None
+        ):
+            raw = event.get("usage") or {}
+            usage["cached_input_tokens"] = (raw.get("prompt_token_details") or {}).get(
+                "cached_tokens", raw.get("num_cached_tokens")
+            )
+        return text, usage
+
+    def terminal_event(self, event: dict[str, Any]) -> bool:
+        return any(c.get("finish_reason") == "stop" for c in event.get("choices", []))
+
+
+class CohereClient(NativeTextClient):
+    """Cohere v2 Chat SSE, normalized using billed rather than injected tokens."""
+
+    def endpoint(self) -> str:
+        return self.model["base_url"].rstrip("/") + "/chat"
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        body = super().body(prompt, options)
+        body.pop("stream_options", None)
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        if (
+            not isinstance(event, dict)
+            or event.get("error")
+            or event.get("type") == "error"
+        ):
+            raise ValueError("Cohere returned an error event")
+        delta = event.get("delta") or {}
+        if not isinstance(delta, dict):
+            raise TypeError("Cohere returned a malformed delta")
+        if event.get("type") == "content-delta":
+            message = _stream_object(delta.get("message"))
+            content = _stream_object(message.get("content"))
+            return content.get("text"), {}
+        if event.get("type") == "message-end":
+            if delta.get("finish_reason") != "COMPLETE":
+                raise ValueError("Cohere did not finish a complete text response")
+            raw = _stream_object(delta.get("usage"))
+            billed = _stream_object(raw.get("billed_units"))
+            return None, {
+                "input_tokens": billed.get("input_tokens"),
+                "output_tokens": billed.get("output_tokens"),
+            }
+        return None, {}
+
+    def terminal_event(self, event: dict[str, Any]) -> bool:
+        return event.get("type") == "message-end"
+
+
+class ZaiClient(NativeTextClient):
     """Z.ai's native Chat Completion protocol, with usage in the final event."""
+
+    def __init__(self, model: dict[str, Any], timeout: float):
+        super().__init__(model, timeout)
+        self.requires_complete_stream = model["model"] in {
+            "glm-5.3-flash",
+            "glm-5.3-flashx",
+        }
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
         if self.model["model"] == "glm-5.3" and options.get("input_images"):
@@ -526,6 +750,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
         return self.model["base_url"].rstrip("/") + "/responses"
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        validate_native_request_options(self.model, options)
         if options.get("input_images"):
             raise ValueError(
                 "the OpenAI Responses adapter does not support input_images"
@@ -541,6 +766,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
             "max_output_tokens", options.get("max_tokens", DEFAULT_MAX_OUTPUT_TOKENS)
         )
         body["max_output_tokens"] = limit
+        body.update(_provider_options(options, "openai"))
         return body
 
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
@@ -576,23 +802,55 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                     raise ValueError(
                         "provider response exceeded the 8 MiB safety limit"
                     )
-                payload = json.loads(body)
+                payload = _stream_object(json.loads(body))
+                status = payload.get("status")
+                requires_status = self.model.get("provider") == "openai" and self.model[
+                    "model"
+                ].startswith(("gpt-6-", "gpt-6.1-"))
+                if payload.get("error") or (
+                    status != "completed" and (status is not None or requires_status)
+                ):
+                    raise ValueError(
+                        "Responses API did not finish a complete text response"
+                    )
+                usage = _stream_object(payload.get("usage"))
+                input_details = _stream_object(usage.get("input_tokens_details"))
+                text = payload.get("output_text")
+                if text is not None and not isinstance(text, str):
+                    raise TypeError("Responses API returned malformed output text")
+                text = text or ""
+                if not text:
+                    output_items = payload.get("output", [])
+                    if not isinstance(output_items, list):
+                        raise TypeError("Responses API returned malformed output items")
+                    for output in output_items:
+                        output = _stream_object(output)
+                        content_items = output.get("content", [])
+                        if not isinstance(content_items, list):
+                            raise TypeError("Responses API returned malformed content")
+                        for content in content_items:
+                            content = _stream_object(content)
+                            if content.get("type") in {"output_text", "text"}:
+                                chunk = content.get("text")
+                                if not isinstance(chunk, str):
+                                    raise TypeError(
+                                        "Responses API returned malformed text"
+                                    )
+                                text += chunk
             except urllib.error.HTTPError as exc:
                 detail = exc.read(2000).decode("utf-8", errors="replace")
                 last_error = f"HTTP {exc.code}: {detail}"
                 last_category = _classify_failure(last_error, exc.code)
-            except (OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+            except (
+                OSError,
+                TimeoutError,
+                json.JSONDecodeError,
+                ValueError,
+                TypeError,
+            ) as exc:
                 last_error = str(exc)
                 last_category = _classify_exception(exc)
             else:
-                usage = payload.get("usage") or {}
-                input_details = usage.get("input_tokens_details") or {}
-                text = str(payload.get("output_text") or "")
-                if not text:
-                    for output in payload.get("output") or []:
-                        for content in output.get("content") or []:
-                            if content.get("type") in {"output_text", "text"}:
-                                text += str(content.get("text") or "")
                 finished = time.perf_counter()
                 return {
                     "ok": bool(text),
@@ -637,6 +895,16 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
 
 
 class AnthropicClient(ProviderClient):
+    def __init__(self, model: dict[str, Any], timeout: float):
+        super().__init__(model, timeout)
+        self.requires_complete_stream = model["model"] in {
+            "claude-fable-5-1",
+            "claude-mythos-5-1",
+        }
+
+    def terminal_event(self, event: dict[str, Any]) -> bool:
+        return event.get("type") == "message_stop"
+
     def endpoint(self) -> str:
         return self.model["base_url"].rstrip("/") + "/messages"
 
@@ -647,6 +915,7 @@ class AnthropicClient(ProviderClient):
         }
 
     def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        validate_native_request_options(self.model, options)
         if options.get("input_images"):
             raise ValueError("the Anthropic adapter does not support input_images")
         body: dict[str, Any] = {
@@ -665,6 +934,12 @@ class AnthropicClient(ProviderClient):
         return body
 
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        if event.get("type") == "error":
+            raise ValueError("Anthropic returned a provider error event")
+        if self.requires_complete_stream and event.get("type") == "message_delta":
+            reason = (event.get("delta") or {}).get("stop_reason")
+            if reason not in {None, "end_turn", "stop_sequence"}:
+                raise ValueError("Anthropic did not finish a complete text response")
         usage = event.get("usage") or (event.get("message") or {}).get("usage") or {}
         # Anthropic's input count excludes both cache reads and writes; our
         # normalized count includes them for partition costing and price bands.
@@ -840,6 +1115,8 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
             f"for provider {provider!r}"
         )
     require_http_url(resolved["base_url"], resolve_host=False)
+    if provider in {"moonshot", "minimax", "mistral", "cohere"}:
+        validate_native_request_options(resolved, {})
     adapters: dict[str, Any] = {
         "openai": OpenAICompatibleClient,
         "openrouter": OpenAICompatibleClient,
@@ -848,6 +1125,10 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "deepseek": OpenAICompatibleClient,
         "qwen": OpenAICompatibleClient,
         "zai": ZaiClient,
+        "moonshot": NativeTextClient,
+        "minimax": NativeTextClient,
+        "mistral": NativeTextClient,
+        "cohere": CohereClient,
         "anthropic": AnthropicClient,
         "gemini": GeminiClient,
         "mock": MockClient,

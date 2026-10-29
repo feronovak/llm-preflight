@@ -119,6 +119,7 @@ def test_runtime_url_validation_failure_becomes_a_normal_api_failure(monkeypatch
         "gpt-5.6-sol",
         "gpt-6-astra",
         "gpt-6.1-sol",
+        "gpt-6.1-terra",
         "gpt-6-sol",
         "gpt-6-luna",
     ],
@@ -132,8 +133,13 @@ def test_current_gpt_models_omit_unsupported_temperature(model):
     assert older.body("hello", {"temperature": 0})["temperature"] == 0
 
 
+@pytest.mark.parametrize(
+    "model_id,expected_cost", [("gpt-6.1-sol", 0.00073), ("gpt-6.1-terra", 0.000365)]
+)
 @pytest.mark.parametrize("adapter", ["openai_compatible_chat", "openai_responses"])
-def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter):
+def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(
+    monkeypatch, adapter, model_id, expected_cost
+):
     captured = []
 
     class Response:
@@ -160,6 +166,7 @@ def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter)
         def read(self, *args):
             return json.dumps(
                 {
+                    "status": "completed",
                     "output": [
                         {"content": [{"type": "output_text", "text": "billing"}]}
                     ],
@@ -181,7 +188,7 @@ def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter)
     monkeypatch.setenv("OPENAI_API_KEY", "test")
     monkeypatch.setattr("urllib.request.urlopen", transport)
     client = create_client(
-        {"provider": "openai", "model": "gpt-6.1-sol", "adapter": adapter}, 10
+        {"provider": "openai", "model": model_id, "adapter": adapter}, 10
     )
 
     sample = client.run(
@@ -200,7 +207,7 @@ def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter)
     assert sample["cached_input_tokens"] == 800
     assert sample["cache_write_input_tokens"] == 100
     assert sample["output_tokens"] == 20
-    assert captured[0]["model"] == "gpt-6.1-sol"
+    assert captured[0]["model"] == model_id
     assert "temperature" not in captured[0]
 
     from llm_preflight.metrics import summarize
@@ -208,7 +215,7 @@ def test_gpt_6_1_protocol_preserves_cache_reads_and_writes(monkeypatch, adapter)
 
     summary = summarize([sample], apply_public_pricing(client.model))
     assert summary["cache_write_input_tokens"] == 100
-    assert summary["estimated_cost_usd"] == pytest.approx(0.00073)
+    assert summary["estimated_cost_usd"] == pytest.approx(expected_cost)
 
 
 def test_glm_5_3_native_stream_preserves_usage_and_ignores_reasoning_text(monkeypatch):
@@ -2134,6 +2141,7 @@ def test_responses_api_records_the_model_the_provider_reported(monkeypatch):
                 {
                     "id": "resp_fixture",
                     "object": "response",
+                    "status": "completed",
                     "model": "gpt-6.1-sol-2026-09-30",
                     "output_text": "billing",
                     "usage": {"input_tokens": 9, "output_tokens": 2},

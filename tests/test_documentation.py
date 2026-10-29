@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2" in page
+    assert "**Last reviewed:** 2026-10-26 · **As of:** v2.23.0" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -27,7 +27,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
     ):
-        assert f"| `qwen` | `{model}` | {rates} | 2026-10-16 |" in page
+        assert f"| `qwen` | `{model}` | {rates} | 2026-10-26 |" in page
     assert "Model Studio" in page and "account console" in page
     for (provider, model_id), (_, _, as_of) in PUBLIC_PRICING.items():
         rows = [
@@ -56,39 +56,14 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
 
 
 def test_documented_model_list_matches_comparison_evidence():
+    import xml.etree.ElementTree as ET
+
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
     readme = (ROOT / "README.md").read_text()
-    docs_index = (ROOT / "docs/index.md").read_text()
-    study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
-    fresh = json.loads(
-        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
-    )
-    historical = study.split("## Comparison results", 1)[1].split("\n## ", 1)[0]
-    historical_rows = re.findall(
-        r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
-        historical,
-        re.MULTILINE,
-    )
-    assert len(historical_rows) == 27
-    names = {
-        "gpt-6-astra": "GPT-6 Astra",
-        "gpt-6.1-sol": "GPT-6.1 Sol",
-        "gpt-6-luna": "GPT-6 Luna",
-        "claude-opus-5-5": "Claude Opus 5.5",
-        "claude-sonnet-5-5": "Claude Sonnet 5.5",
-        "claude-haiku-5-5": "Claude Haiku 5.5",
-        "gemini-4-argon": "Gemini 4 Argon",
-        "gemini-3.8-flash": "Gemini 3.8 Flash",
-        "gemini-3.1-flash-lite": "Gemini 3.1 Flash-Lite",
-        "z-ai/glm-5.3": "GLM 5.3",
-        "z-ai/glm-5.3-flash": "GLM 5.3 Flash",
-        "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
-        "qwen/qwen3.8-max-0902": "Qwen 3.8 Max 0902",
-        "qwen/qwen3.8-flash": "Qwen 3.8 Flash",
-    }
-    expected = {}
-    for row in fresh["rows"]:
-        expected[names[row["model"]]] = (
-            f"{row['valid']}/16" if row["api_successful"] else "Request rejected",
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    expected = {
+        row["display_name"]: (
+            f"{row['valid']}/{row['requests']}",
             f"{row['mean_latency_seconds']:.3f}s"
             if row["mean_latency_seconds"] is not None
             else "—",
@@ -98,57 +73,37 @@ def test_documented_model_list_matches_comparison_evidence():
             row["observed_on"],
             row["route"],
         )
-    for historical_model in ("gpt-6-astra", "gemini-3.1-flash-lite"):
-        provider, model, date, valid, latency, cost = next(
-            row for row in historical_rows if row[1] == historical_model
-        )
-        expected[names[model]] = (f"{valid}/16", latency, cost, date, provider)
-    import xml.etree.ElementTree as ET
-
-    assert "docs/images/measured-models.svg" in readme
-    assert "docs/guides/observed-model-comparison.md" in readme
-    assert "| Model | Checks passed |" not in readme
-    assert "| Model | Checks passed |" not in docs_index
-    assert "observed-model-comparison.md" in docs_index
-    svg = ET.fromstring((ROOT / "docs/images/measured-models.svg").read_bytes())
-    ns = {"svg": "http://www.w3.org/2000/svg"}
-    rows = [
-        tuple("".join(cell.itertext()) for cell in row.findall("svg:text", ns))
-        for row in svg.findall("svg:g[@data-model]", ns)
-    ]
-    assert len(rows) == len(expected) == 14
-    assert {row[0] for row in rows} == set(expected)
-    for name, *values in rows:
-        assert tuple(values) == expected[name], name
-    assert svg.find("svg:title", ns) is not None
-    description = svg.find("svg:desc", ns).text
-    assert "API errors" in description
-    assert "unknown" in description
-    assert "not a ranking" in description
-    assert not svg.findall(".//svg:script", ns)
-    for provider in ("OpenAI", "Anthropic", "Gemini"):
-        assert sum(row[-1] == provider for row in rows) >= 3, provider
-    for row in rows:
-        if row[0].startswith(("GLM", "DeepSeek", "Qwen")):
-            assert row[-1].startswith("OpenRouter /"), row[0]
-    qwen_max = next(row for row in rows if row[0] == "Qwen 3.8 Max 0902")
-    assert qwen_max[1:4] == ("Request rejected", "—", "—")
-    for detail in (
-        "password-reset",
-        "5/6",
-        "14/16",
-        "cache-write",
-        "32,768",
-        "512",
-        "reasoning.enabled: false",
-        "passing response text was discarded",
-    ):
-        assert detail in study
-    assert "| `claude-haiku-5-5` | 16/16 | 53/53 | 5/6 | $0.0014602 |" in study
-    assert "| `claude-sonnet-5-5` | 16/16 | 53/53 | 6/6 | $0.0221540 |" in study
+        for row in data["rows"]
+    }
+    seen = []
+    for part, count in ((1, 10), (2, 9)):
+        name = f"measured-models-2026-10-29-{part}.svg"
+        assert name in readme
+        image = ET.parse(ROOT / "docs/images" / name).getroot()
+        rows = image.findall("svg:g[@data-model]", ns)
+        assert len(rows) == count
+        for row in rows:
+            values = ["".join(cell.itertext()) for cell in row.findall("svg:text", ns)]
+            assert tuple(values[1:]) == expected[values[0]]
+            seen.append(values[0])
+        assert "not a ranking" in image.find("svg:desc", ns).text
+        assert not image.findall(".//svg:script", ns)
+    assert len(seen) == len(set(seen)) == len(expected) == 19
+    assert set(seen) == set(expected)
+    assert {row["provider"] for row in data["rows"]} == {
+        "openai",
+        "anthropic",
+        "gemini",
+        "xai",
+        "deepseek",
+        "qwen",
+        "zai",
+        "moonshot",
+    }
+    assert all("OpenRouter" not in row["route"] for row in data["rows"])
 
 
-def test_current_comparison_aggregates_keep_the_approved_case_contract():
+def test_historical_comparison_aggregates_keep_the_original_case_contract():
     data = json.loads((ROOT / "docs/data/model-comparison-2026-10-14.json").read_text())
     study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
     current_method = study.split("## 2026-10-14 bounded comparison", 1)[1].split(
@@ -232,8 +187,8 @@ def test_comparison_reconstruction_preserves_an_existing_config(tmp_path):
     snippet = re.search(r"python3 - <<'PYCODE'\n(.*?)\nPYCODE", guide, re.DOTALL)
     assert snippet is not None
     for relative in (
-        "docs/data/model-comparison-2026-10-14.json",
-        "examples/anthropic-5.5-comparison.json",
+        "docs/data/model-comparison-2026-10-29.json",
+        "examples/current-model-comparison.json",
     ):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -533,14 +488,12 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     assert "llm-preflight init live.json --template provider --interactive" in safe_demo
     assert safe_demo.count("**Last reviewed:**") == 1
     ci = (ROOT / "docs/automation/ci.md").read_text()
-    north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
 
     assert '"state": "inconclusive"' in safe_demo
     assert "saved JSON artifact" in " ".join(safe_demo.split())
     assert "## Release documentation checklist" in ci
     assert "examples/github-actions/preflight.yml" in ci
     assert "tests/test_package.py" in ci
-    assert "statically validates a deliberately portable" in north_star
 
 
 def test_marketplace_action_docs_describe_the_current_published_release():
@@ -591,8 +544,6 @@ def test_positioning_stays_local_and_decisions_and_reference_stay_public():
     index = (ROOT / "docs/index.md").read_text()
     action = (ROOT / "docs/automation/github-action.md").read_text()
     rubric = (ROOT / "docs/development/build-rating.md").read_text()
-    positioning = (ROOT / "docs/product/positioning.md").read_text()
-    north_star = (ROOT / "docs/NORTH_STAR.md").read_text()
     when_to_use = (ROOT / "docs/product/when-to-use.md").read_text()
     decisions = (ROOT / "docs/DECISIONS.md").read_text()
     reference = (ROOT / "docs/reference/decision.md").read_text()
@@ -624,15 +575,7 @@ def test_positioning_stays_local_and_decisions_and_reference_stay_public():
     assert "docs/DECISIONS.md" in tracked
     assert "docs/reference/decision.md" in tracked
     assert "docs/product/when-to-use.md" in tracked
-    assert "[North star](../NORTH_STAR.md)" in positioning
-    assert "**Last reviewed:** 2026-09-08 · **As of:** v2.12.0" in north_star
-    assert "## Mission" in north_star
-    assert "## Niche" in north_star
-    assert (
-        "Help engineers catch LLM integration regressions before shipping a change."
-        in north_star
-    )
-    assert "**Last reviewed:** 2026-08-31 · **As of:** v2.10.0" in when_to_use
+    assert "**Last reviewed:** 2026-10-27 · **As of:** v2.23.0" in when_to_use
     assert "../reference/decision.md" in when_to_use
     assert "../reference/decision.md" in action
     assert "schema_version" in reference
@@ -738,7 +681,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2" in guide
+    assert "**Last reviewed:** 2026-10-26 · **As of:** v2.23.0" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
@@ -1278,7 +1221,8 @@ def test_measured_model_image_is_reproducible(tmp_path):
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert (
-        output.read_bytes() == (ROOT / "docs/images/measured-models.svg").read_bytes()
+        output.read_bytes()
+        == (ROOT / "docs/images/measured-models-2026-10-29-1.svg").read_bytes()
     )
     output.write_text("outdated image")
     result = subprocess.run(
@@ -1447,3 +1391,121 @@ def test_measured_image_rejects_invalid_cost_evidence(tmp_path):
         assert result.returncode == 2
         assert "finite nonnegative" in result.stderr
         assert not output.exists()
+
+
+def test_measured_image_splits_a_full_cohort_without_dropping_or_repeating_rows(
+    tmp_path,
+):
+    import xml.etree.ElementTree as ET
+
+    source = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
+    )
+    source["rows"] = [
+        {
+            **source["rows"][0],
+            "model": f"fixture-model-{index}",
+            "display_name": f"Fixture model {index}",
+            "requests": 8,
+            "api_successful": 8,
+            "valid": 8,
+        }
+        for index in range(19)
+    ]
+    data = tmp_path / "cohort.json"
+    data.write_text(json.dumps(source))
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    seen = []
+    for part, expected_count in ((1, 10), (2, 9)):
+        output = tmp_path / f"part-{part}.svg"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/render_measured_models.py"),
+                "--data",
+                str(data),
+                "--part",
+                str(part),
+                "--output",
+                str(output),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        image = ET.parse(output).getroot()
+        rows = image.findall("svg:g[@data-model]", ns)
+        assert len(rows) == expected_count
+        assert f"part {part}/2" in image.find("svg:title", ns).text
+        seen.extend(row.get("data-model") for row in rows)
+    assert len(seen) == len(set(seen)) == 19
+    assert set(seen) == {f"Fixture model {index}" for index in range(19)}
+
+
+def test_latest_comparison_keeps_the_approved_low_cost_contract_and_private_raw_evidence():
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    source = json.loads((ROOT / data["method"]["case_source"]).read_text())
+    case_hash = hashlib.sha256(
+        json.dumps(source["prompts"], sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert data["method"]["case_set_sha256"] == case_hash
+    assert len(data["rows"]) == 19
+    assert data["approved_maximum_requests"] == 152
+    assert data["approved_maximum_token_estimate_usd"] <= 1.64
+    assert data["method"]["suite_repetitions"] == 1 and data["method"]["warmups"] == 0
+    assert data["method"]["attempts"] == 1
+    for row in data["rows"]:
+        assert row["requests"] == 8 and row["retry_count"] == 0
+        assert row["api_successful"] + row["api_failures"] == 8
+        assert row["valid"] + row["contract_failures"] == row["api_successful"]
+        assert row["request"]["max_output_tokens"] == 1024
+        assert row["request"]["retry"]["max_attempts"] == 1
+        assert row["observed_on"] == "2026-10-29"
+        assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+        if row["decision"] == "pass":
+            assert row["valid"] == row["cost_coverage"]["known_requests"] == 8
+    for field in (
+        "requests",
+        "api_successful",
+        "api_failures",
+        "valid",
+        "contract_failures",
+        "retry_count",
+    ):
+        assert data["totals"][field] == sum(row[field] for row in data["rows"])
+    if any(row["estimated_cost_usd"] is None for row in data["rows"]):
+        assert data["totals"]["estimated_cost_usd"] is None
+    assert math.isclose(
+        data["totals"]["known_cost_subtotal_usd"],
+        sum(row["known_cost_subtotal_usd"] or 0 for row in data["rows"]),
+    )
+    for marker in ("/home/", "scratchpad/", '"response":', '"api_key":', '"user_id":'):
+        assert marker not in json.dumps(data)
+
+
+def test_default_measured_image_uses_only_the_latest_run():
+    from scripts.render_measured_models import observed_rows
+
+    current = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-10-29.json").read_text()
+    )
+    rows = observed_rows()
+    assert len(rows) == 19
+    assert {row[0] for row in rows} == {row["display_name"] for row in current["rows"]}
+    assert {row[4] for row in rows} == {"2026-10-29"}
+
+
+def test_public_documentation_checks_work_without_private_planning_files(monkeypatch):
+    read_text = Path.read_text
+
+    def public_read(path, *args, **kwargs):
+        if path in {ROOT / "docs/NORTH_STAR.md", ROOT / "docs/product/positioning.md"}:
+            raise FileNotFoundError(
+                "Private planning is absent in a contributor checkout"
+            )
+        return read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", public_read)
+    test_visitor_docs_stamp_json_evidence_and_release_scope_are_current()
+    test_positioning_stays_local_and_decisions_and_reference_stay_public()

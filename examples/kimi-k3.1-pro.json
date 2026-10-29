@@ -1,0 +1,45 @@
+{
+  "name": "kimi-k3.1-pro-support-routing",
+  "prompt": "I was charged twice for the same subscription. Which support queue should handle this?",
+  "validation": {
+    "exact": "billing"
+  },
+  "validation_fixtures": [
+    {
+      "name": "billing accepted",
+      "response": "billing",
+      "expect": "pass"
+    },
+    {
+      "name": "sales rejected",
+      "response": "sales",
+      "expect": "fail"
+    }
+  ],
+  "models": [
+    {
+      "provider": "moonshot",
+      "model": "kimi-k3.1-pro"
+    }
+  ],
+  "repetitions": 1,
+  "warmups": 0,
+  "concurrency": 1,
+  "timeout_seconds": 120,
+  "max_requests": 1,
+  "max_estimated_cost_usd": 0.5,
+  "require_current_pricing": true,
+  "save_responses": "failures",
+  "request": {
+    "system_prompt": "Return only one lowercase support queue label: billing, technical, or account.",
+    "max_output_tokens": 4096,
+    "retry": {
+      "max_attempts": 1
+    },
+    "provider_options": {
+      "moonshot": {
+        "reasoning_effort": "low"
+      }
+    }
+  }
+}

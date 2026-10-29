@@ -25,15 +25,26 @@ with the exact reviewed ID your application uses:
 | `deepseek` | `DEEPSEEK_API_KEY` |
 | `qwen` | `DASHSCOPE_API_KEY` |
 | `zai` | `ZAI_API_KEY` |
+| `moonshot` | `MOONSHOT_API_KEY` |
+| `minimax` | `MINIMAX_API_KEY` |
+| `mistral` | `MISTRAL_API_KEY` |
+| `cohere` | `COHERE_API_KEY` |
 | `typesafe` | `TYPESAFE_API_KEY` |
 | `openai_compatible` | configured with `api_key_env` |
+
+The unpublished 2.23.0 source build adds the `moonshot`, `minimax`, `mistral`
+and `cohere` rows. Their current native adapters support text only. See
+[native provider checks](../guides/native-providers.md) for exact IDs,
+reasoning settings, public endpoint scope and bounded source examples.
 
 `typesafe` discovers Jev for catalogue review. Jev returns typed decisions
 rather than generated text, so it is not eligible for a generic text smoke.
 Use `qwen` for Alibaba Model Studio's OpenAI-compatible chat route. The
 default endpoint is the international compatible-mode URL, which matches the
 bundled USD snapshots. A China Beijing endpoint remains valid by setting
-`base_url`; the checked-in Qwen-VL example does that. The existing
+`base_url`; the checked-in Qwen-VL example does that. Bundled public-route
+prices do not apply to a different endpoint; supply reviewed deployment prices
+when a cost gate requires them. The existing
 `openai_compatible` plus `DASHSCOPE_API_KEY` form also remains valid.
 For account-specific Qwen endpoints, reasoning limits and a bounded native
 smoke, see [direct GLM, DeepSeek and Qwen checks](../guides/native-chinese-models.md).
@@ -248,3 +259,14 @@ Run an overlay with `llm-preflight benchmark.json --env ci`. See
 [tests, pricing, and safety](../guides/pricing-and-safety.md) for validation choices and
 data handling. See the [complete configuration reference](configuration-schema.md)
 for every supported key and default.
+
+### Responses request options in the 2.23.0 source build
+
+With `provider: openai` and `adapter: openai_responses`, the supported
+`request.provider_options.openai` fields are `reasoning`, `text`, `service_tier`,
+`prompt_cache_retention` and `prompt_cache_key`. The adapter forwards these
+fields to Responses. Other fields are refused before planning; set the prompt,
+system prompt and output allowance through the normal configuration fields.
+The adapter uses `store: false`. GPT-6 pricing still requires standard service
+and30-minute cache retention. GPT-6 Responses require completed response status;
+partial text from an incomplete or failed response cannot count as a success.

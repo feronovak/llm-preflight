@@ -27,6 +27,18 @@ from llm_preflight.runner import load_config, validate_config_validations
 from llm_preflight.source_audit import audit_source
 
 EXAMPLES = (
+    "current-model-comparison",
+    "gpt-6.1-terra",
+    "glm-5.3-flash",
+    "glm-5.3-flashx",
+    "kimi-k3.1-pro",
+    "kimi-k3.1-pro-highspeed",
+    "minimax-m3.1-flash",
+    "minimax-m3",
+    "mistral-large-4",
+    "cohere-command-a-plus",
+    "mythos-5.1-restricted",
+    "native-chinese-smoke",
     "approved-smoke",
     "gemini-4-argon",
     "cross-provider-run",

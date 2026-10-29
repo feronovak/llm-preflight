@@ -36,11 +36,11 @@ Choose a task below; each path explains the inputs, expected result and next ste
 ## Observed provider results
 
 Read the [support-routing comparison](guides/observed-model-comparison.md) for
-**27 measured API model IDs** across retained study dates, including a later
-12-model run with API errors and contract failures. The
-[README results image](../README.md#observed-results-on-a-support-routing-contract)
-summarizes 14 selected models. The comparison guide retains the accessible text
-results, request settings, dates, route pins, missing-cost evidence and limits.
+the **2026-10-29 measurement of 19 native models**: 152 requests, 144 validated
+outputs, three contract failures and five rate-limit errors. The two
+[README result panels](../README.md#observed-results-on-a-support-routing-contract)
+show all 19 models. The guide includes the full table, settings, unknown-cost
+evidence and earlier measurements as history.
 
 These observations do not establish how a model performs on your application.
 For supported routes and dated price coverage, use

@@ -6,6 +6,7 @@ import math
 from datetime import date, datetime, timezone
 from typing import Any, TypeGuard, cast
 
+from .providers import PROVIDER_DEFAULTS
 from .retirements import GEMINI_MODEL_REDIRECTS
 
 # Standard synchronous API rates in USD per million tokens. Provider catalogs
@@ -23,48 +24,66 @@ from .retirements import GEMINI_MODEL_REDIRECTS
 # their recorded dates. Qwen rows retain USD list rates, excluding temporary
 # discounts.
 PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
-    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-16"),
-    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-16"),
-    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-16"),
-    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-10-16"),
-    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-10-16"),
-    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-10-16"),
-    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-10-16"),
-    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-10-16"),
-    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-10-16"),
-    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-16"),
-    ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-10-16"),
-    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-16"),
-    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-16"),
-    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-10-16"),
-    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-10-16"),
-    ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-16"),
-    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-16"),
-    ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-16"),
-    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-10-16"),
-    ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-16"),
-    ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-16"),
-    ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-10-16"),
-    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-10-16"),
-    ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-10-16"),
-    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-10-16"),
-    ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-10-16"),
-    ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-10-16"),
-    ("xai", "grok-4.3"): (1.25, 2.5, "2026-10-16"),
-    ("xai", "grok-4.5"): (2.0, 6.0, "2026-10-16"),
-    ("xai", "grok-4.6"): (2.0, 6.0, "2026-10-16"),
-    ("xai", "grok-4.7"): (2.0, 6.0, "2026-10-16"),
-    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-10-16"),
-    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-10-16"),
-    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-16"),
-    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-16"),
-    ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-10-16"),
-    ("zai", "glm-5.3"): (1.4, 4.4, "2026-10-16"),
-    ("typesafe", "jev-latest"): (0.042, 0.0, "2026-10-16"),
-    ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-10-16"),
+    ("openai", "gpt-5.6-luna"): (0.2, 1.2, "2026-10-26"),
+    ("openai", "gpt-5.6-terra"): (2.0, 12.0, "2026-10-26"),
+    ("openai", "gpt-5.6-sol"): (4.0, 20.0, "2026-10-26"),
+    ("openai", "gpt-5.5"): (5.0, 30.0, "2026-10-26"),
+    ("openai", "gpt-5.4-mini"): (0.75, 4.5, "2026-10-26"),
+    ("openai", "gpt-5.4-nano"): (0.2, 1.25, "2026-10-26"),
+    ("openai", "gpt-4.1"): (2.0, 8.0, "2026-10-26"),
+    ("openai", "gpt-4.1-mini"): (0.4, 1.6, "2026-10-26"),
+    ("openai", "gpt-4.1-nano"): (0.1, 0.4, "2026-10-26"),
+    ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-10-26"),
+    ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-10-26"),
+    ("openai", "gpt-6.1-terra"): (1.0, 5.0, "2026-10-26"),
+    ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-10-26"),
+    ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-10-26"),
+    ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-10-26"),
+    ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-10-26"),
+    ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-10-26"),
+    ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-10-26"),
+    ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-10-26"),
+    ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-10-26"),
+    ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-10-26"),
+    ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-10-26"),
+    ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-10-26"),
+    ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-10-26"),
+    ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-10-26"),
+    ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-10-26"),
+    ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-10-26"),
+    ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-10-26"),
+    ("xai", "grok-4.3"): (1.25, 2.5, "2026-10-26"),
+    ("xai", "grok-4.5"): (2.0, 6.0, "2026-10-26"),
+    ("xai", "grok-4.6"): (2.0, 6.0, "2026-10-26"),
+    ("xai", "grok-4.7"): (2.0, 6.0, "2026-10-26"),
+    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-10-26"),
+    ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-10-26"),
+    ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-10-26"),
+    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-10-26"),
+    ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-10-26"),
+    ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-10-26"),
+    ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-10-26"),
+    ("zai", "glm-5.3"): (1.4, 4.4, "2026-10-26"),
+    ("typesafe", "jev-latest"): (0.042, 0.0, "2026-10-26"),
+    ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-10-26"),
+    ("typesafe", "jev-1.14.0"): (0.042, 0.0, "2026-10-26"),
+    ("zai", "glm-5.3-flash"): (0.15, 0.5, "2026-10-26"),
+    ("zai", "glm-5.3-flashx"): (0.37, 1.25, "2026-10-26"),
+    ("anthropic", "claude-mythos-5-1"): (10, 50, "2026-10-26"),
+    ("moonshot", "kimi-k3.1-pro"): (2, 10, "2026-10-26"),
+    ("moonshot", "kimi-k3.1-pro-highspeed"): (4, 20, "2026-10-26"),
+    ("minimax", "MiniMax-M3.1-Flash"): (0.15, 0.6, "2026-10-26"),
+    ("minimax", "MiniMax-M3"): (0.3, 1.2, "2026-10-26"),
+    ("mistral", "mistral-large-4"): (1.36, 4.18, "2026-10-26"),
+    ("mistral", "mistral-large-4-0"): (1.36, 4.18, "2026-10-26"),
+    ("cohere", "command-a-plus-05-2026"): (0, 0, "2026-10-26"),
 }
 
 _PROVIDER_PRICING_PAGES = {
+    "moonshot": "https://platform.kimi.ai/",
+    "minimax": "https://platform.minimax.io/docs/pricing/overview",
+    "mistral": "https://docs.mistral.ai/models/mistral-large-4-0",
+    "cohere": "https://docs.cohere.com/docs/command-a-plus",
     "openai": "https://developers.openai.com/api/docs/pricing",
     "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
     "gemini": "https://ai.google.dev/gemini-api/docs/pricing",
@@ -75,6 +94,10 @@ _PROVIDER_PRICING_PAGES = {
     "typesafe": "https://docs.typesafe.ai/models",
 }
 _MODEL_PRICING_PAGES = {
+    (
+        "anthropic",
+        "claude-mythos-5-1",
+    ): "https://platform.claude.com/docs/en/models/fable-5-1/overview",
     ("anthropic", "claude-haiku-4-5-20251001"): (
         "https://platform.claude.com/docs/en/models/haiku-4-5/overview"
     ),
@@ -96,6 +119,7 @@ _MODEL_PRICING_PAGES = {
             "gpt-4.1-nano",
             "gpt-6-astra",
             "gpt-6.1-sol",
+            "gpt-6.1-terra",
             "gpt-6-sol",
             "gpt-6-luna",
         )
@@ -108,7 +132,10 @@ _MODEL_PRICING_PAGES = {
         "qwen",
         "qwen3.8-flash",
     ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
-    ("qwen", "qwen3.7-plus"): "https://www.qwencloud.com/models/qwen3.7-plus",
+    (
+        "qwen",
+        "qwen3.7-plus",
+    ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
 }
 PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
     key: _MODEL_PRICING_PAGES.get(key, _PROVIDER_PRICING_PAGES[key[0]])
@@ -123,6 +150,43 @@ PUBLIC_PRICING_CHANGES = {
 }
 
 PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
+    ("deepseek", "deepseek-v4-flash"): {"cached_input_cost_per_million": 0.006},
+    ("deepseek", "deepseek-v4-flash-vision-exp"): {
+        "cached_input_cost_per_million": 0.006
+    },
+    ("zai", "glm-5.3-flash"): {"cached_input_cost_per_million": 0.03},
+    ("zai", "glm-5.3-flashx"): {"cached_input_cost_per_million": 0.075},
+    ("anthropic", "claude-mythos-5-1"): {
+        "cached_input_cost_per_million": 0.25,
+        "cache_write_input_cost_per_million": 12.5,
+    },
+    ("moonshot", "kimi-k3.1-pro"): {
+        "cached_input_cost_per_million": 0.2,
+        "cache_write_input_cost_per_million": 2,
+    },
+    ("moonshot", "kimi-k3.1-pro-highspeed"): {
+        "cached_input_cost_per_million": 0.2,
+        "cache_write_input_cost_per_million": 4,
+    },
+    ("minimax", "MiniMax-M3.1-Flash"): {"cached_input_cost_per_million": 0.015},
+    ("minimax", "MiniMax-M3"): {
+        "cached_input_cost_per_million": 0.06,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 512000,
+                "input_cost_per_million": 0.3,
+                "cached_input_cost_per_million": 0.06,
+                "output_cost_per_million": 1.2,
+            },
+            {
+                "input_cost_per_million": 0.6,
+                "cached_input_cost_per_million": 0.12,
+                "output_cost_per_million": 2.4,
+            },
+        ],
+    },
+    ("mistral", "mistral-large-4"): {"cached_input_cost_per_million": 0.14},
+    ("mistral", "mistral-large-4-0"): {"cached_input_cost_per_million": 0.14},
     ("zai", "glm-5.3"): {"cached_input_cost_per_million": 0.26},
     ("openai", "gpt-5.5"): {
         "cached_input_cost_per_million": 0.5,
@@ -232,6 +296,25 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
                 "output_cost_per_million": 15.0,
                 "cached_input_cost_per_million": 0.2,
                 "cache_write_input_cost_per_million": 5.0,
+            },
+        ],
+    },
+    ("openai", "gpt-6.1-terra"): {
+        "cached_input_cost_per_million": 0.05,
+        "cache_write_input_cost_per_million": 1.25,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 5.0,
+                "cached_input_cost_per_million": 0.05,
+                "cache_write_input_cost_per_million": 1.25,
+            },
+            {
+                "input_cost_per_million": 2.0,
+                "output_cost_per_million": 7.5,
+                "cached_input_cost_per_million": 0.1,
+                "cache_write_input_cost_per_million": 2.5,
             },
         ],
     },
@@ -522,6 +605,25 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
         if metadata.get("source") != "official snapshot":
             return {**model, "pricing_metadata": {"source": "user override"}}
     key = (model.get("provider", "openai_compatible"), model["model"])
+    if key in PUBLIC_PRICING and key[0] in PROVIDER_DEFAULTS:
+        public_url = PROVIDER_DEFAULTS[key[0]]["base_url"]
+        if str(model.get("base_url", public_url)).rstrip("/") != public_url:
+            return {
+                **{
+                    k: v
+                    for k, v in model.items()
+                    if k
+                    not in {
+                        "input_cost_per_million",
+                        "output_cost_per_million",
+                        "cached_input_cost_per_million",
+                        "cache_write_input_cost_per_million",
+                        "pricing_tiers",
+                        "pricing_metadata",
+                    }
+                },
+                "pricing_metadata": {"source": "unknown"},
+            }
     pricing = PUBLIC_PRICING.get(key)
     if pricing is None:
         if key[0] == "gemini" and key[1] in GEMINI_MODEL_REDIRECTS:

@@ -3,8 +3,11 @@
 **Last reviewed:** 2026-10-15 · **As of:** v2.21.2
 
 These direct routes bypass OpenRouter. Their deterministic protocol fixtures
-pass; the published comparison contains OpenRouter observations, not live
-measurements of these native routes.
+pass. The [dated comparison](observed-model-comparison.md) distinguishes native
+and routed observations; those observations apply to their recorded date and
+route. DeepSeek's current Flash alias changed after the October 14 observation.
+The unpublished 2.23.0 build adds GLM Flash/FlashX and further native providers;
+see [current native checks](native-providers.md) for their fixture-only status.
 
 | Model | Provider | Native API model ID | Credential |
 |---|---|---|---|

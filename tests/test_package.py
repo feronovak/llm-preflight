@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.22.2"
-    assert 'version = "2.22.2"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.23.0"
+    assert 'version = "2.23.0"' in Path("pyproject.toml").read_text()
     server = json.loads(Path("server.json").read_text())
     assert server["version"] == __version__
     assert {package["version"] for package in server["packages"]} == {__version__}
@@ -303,17 +303,17 @@ def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests(
     assert options["reasoning"] == {"effort": "low"}
     budget = check_budget(config)
     assert budget["requests"] == budget["possible_requests"] == 16
-    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.0361131392)
+    assert budget["maximum_estimated_cost_usd"] == pytest.approx(0.0359952028)
     assert config["max_estimated_cost_usd"] == 0.1
     assert model["pricing_metadata"]["source_url"] == (
         "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints"
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
     assert (
         model["input_cost_per_million"],
         model["cached_input_cost_per_million"],
         model["output_cost_per_million"],
-    ) == (0.0608, 0.0565, 4.4)
+    ) == (0.0703, 0.0703, 4.3843)
 
 
 def test_custom_contract_examples_are_parseable_and_documented():

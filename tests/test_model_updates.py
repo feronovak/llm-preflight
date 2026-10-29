@@ -162,7 +162,7 @@ def test_gemini_4_pricing_switches_on_the_published_date(monkeypatch, day, rates
         )
         == rates
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
     assert (
         model["pricing_metadata"]["source_url"]
         == "https://ai.google.dev/gemini-api/docs/pricing"
@@ -259,7 +259,7 @@ def test_gemini_4_example_is_a_bounded_fixture_verified_plan(snapshot_review_day
     assert check_contract(config)["ok"] is True
     assert (
         pricing_coverage_report(
-            models, today=date(2026, 10, 16), require_current_pricing=True
+            models, today=date(2026, 10, 26), require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
@@ -311,7 +311,7 @@ def test_published_openai_cache_writes_use_the_full_request_context_boundary(
         + 1000 * output_rate
     ) / 1_000_000
     assert estimate_sample_cost(sample, model) == pytest.approx(expected)
-    assert model["pricing_metadata"]["as_of"] == "2026-10-16"
+    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
 
 
 @pytest.mark.parametrize(
@@ -344,3 +344,41 @@ def test_published_openai_cache_write_budget_includes_premium_and_long_context(
     assert budget["maximum_estimated_cost_usd"] == pytest.approx(
         (272001 * input_rate * 2 * 1.25 + 1000 * output_rate * 1.5) / 1_000_000
     )
+
+
+@pytest.mark.parametrize(
+    "model,replacement",
+    [("gpt-5.4-nano-2026-03-17", "gpt-6-luna"), ("gpt-5.1-2025-11-13", "gpt-6-sol")],
+)
+def test_october_dated_openai_ids_reach_their_announced_retirement_boundary(
+    model, replacement
+):
+    before = retirement_verdict("openai", model, date(2027, 3, 31))
+    # Expired review evidence still carries the published retirement date.
+    assert before["status"] == "stale"
+    assert before["retirement_date"] == "2027-04-01"
+    assert before["replacement"] == replacement
+    after = retirement_verdict("openai", model, date(2027, 4, 1))
+    assert after["status"] == "retired"
+    assert after["decision"] == "fail"
+
+
+def test_current_release_refreshes_every_reviewed_snapshot_row():
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    assert {rates[2] for rates in PUBLIC_PRICING.values()} == {"2026-10-26"}
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-10-26"}
+
+
+def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():
+    from llm_preflight.catalog import classify_catalog_model
+    from llm_preflight.client import create_client
+
+    model = classify_catalog_model(
+        apply_public_pricing({"provider": "typesafe", "model": "jev-1.14.0"})
+    )
+    assert model["input_cost_per_million"] == 0.042
+    assert model["output_cost_per_million"] == 0
+    assert model["catalog_type"] == "decision"
+    with pytest.raises(ValueError, match="incompatible"):
+        create_client(model, 10)

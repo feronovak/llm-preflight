@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-10-26 · **As of:** v2.23.0
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -160,8 +160,11 @@ from the ID.
 
 ## Release retirement review
 
-The current snapshot contains 114 rows: 36 Anthropic, 73 OpenAI and five Gemini,
-all reviewed on the date stamped above. The GPT-4o, GPT-4o mini, GPT-4.1 and
+The unpublished 2.23.0 snapshot contains 116 rows: 36 Anthropic, 75 OpenAI and five Gemini,
+all reviewed on the date stamped above. Non-retired rows become stale on
+2026-11-26; retired rows remain failures. The added dated OpenAI IDs
+`gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
+2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and
 GPT-4.1 mini aliases follow the schedule of the dated snapshots their official
 model pages name, and name `gpt-6-luna` as the page does. No row names the
 retiring `gpt-4.1` or `gpt-4o` as a successor.

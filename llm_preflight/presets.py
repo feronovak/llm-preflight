@@ -62,6 +62,10 @@ def expand_presets(request: dict[str, Any], presets: list[str]) -> dict[str, Any
             "deepseek",
             "qwen",
             "zai",
+            "moonshot",
+            "minimax",
+            "mistral",
+            "cohere",
         ):
             _setdefault_nested(
                 provider_options,

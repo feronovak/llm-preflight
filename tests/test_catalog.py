@@ -127,22 +127,25 @@ def test_openai_text_family_is_visible_as_a_probe_candidate(monkeypatch):
     assert model["capabilities"]["adapter"] == "openai_responses"
 
 
-def test_auto_example_discovers_gpt_6_1_sol_with_current_pricing(monkeypatch):
+@pytest.mark.parametrize(
+    "model_id,cache_rate", [("gpt-6.1-sol", 0.1), ("gpt-6.1-terra", 0.05)]
+)
+def test_auto_example_discovers_gpt_6_1_with_current_pricing(
+    monkeypatch, model_id, cache_rate
+):
     config = json.loads(Path("benchmark.auto.example.json").read_text())
     source = next(s for s in config["discovery"] if s["provider"] == "openai")
     monkeypatch.setattr(
         "llm_preflight.catalog._get_json",
-        lambda *args, **kwargs: {
-            "data": [{"id": "gpt-6.1-sol"}, {"id": "gpt-6.1-image"}]
-        },
+        lambda *args, **kwargs: {"data": [{"id": model_id}, {"id": "gpt-6.1-image"}]},
     )
 
     models = discover_models(source)
 
-    assert [m["model"] for m in models] == ["gpt-6.1-sol"]
+    assert [m["model"] for m in models] == [model_id]
     assert models[0]["catalog_type"] == "text-candidate"
     assert models[0]["capabilities"]["adapter"] == "openai_responses"
-    assert models[0]["cached_input_cost_per_million"] == 0.1
+    assert models[0]["cached_input_cost_per_million"] == cache_rate
 
 
 def test_gemini_tts_is_not_a_generic_text_probe(monkeypatch):
@@ -649,3 +652,17 @@ def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
     assert model["capabilities"]["text_generation"] == "candidate"
     assert model["capabilities"]["adapter"] == "gemini_generate_content"
     assert model["pricing_metadata"]["source"] == "official snapshot"
+
+
+@pytest.mark.parametrize(
+    "provider,model_id",
+    [("xai", "grok-4.7"), ("gemini", "gemini-4-argon"), ("gemini", "gemini-3.8-flash")],
+)
+def test_auto_watch_includes_current_direct_flagships(provider, model_id):
+    import re
+
+    config = json.loads(Path("benchmark.auto.example.json").read_text())
+    source = next(s for s in config["discovery"] if s["provider"] == provider)
+    assert re.search(source["include"], model_id)
+    if provider == "gemini":
+        assert not re.search(source["include"], "gemini-3.5-flash")

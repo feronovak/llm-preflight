@@ -2,6 +2,56 @@
 
 All notable changes to this project are documented here.
 
+## 2.23.0 - 2026-10-29
+
+### Added
+
+- Replace the current model measurement with the owner-approved October 29 native
+  comparison: 19 models, eight cases each, 152 calls. Show all models in two generated
+  README panels and the full documentation table; retain historical results.
+  Report three contract failures and five Kimi rate-limit errors, with unknown
+  total cost rather than treating API failures as free.
+
+- Native text routes and metadata discovery for Moonshot/Kimi, MiniMax, Mistral
+  and Cohere, with native credentials, setup, JSON presets and literal source
+  recognition. Cohere uses v2 Chat billed usage and bounded model pagination.
+- Reviewed prices for GPT-6.1 Terra, GLM-5.3 Flash/FlashX, restricted Mythos 5.1,
+  Kimi K3.1 Pro/Highspeed, MiniMax M3.1 Flash/M3, Mistral Large 4 and public
+  Cohere Command A+. Model Vault and other deployments require their own prices.
+  Include current TypeSafe Jev 1.14 catalog-only pricing.
+- Ten bounded native examples with positive/negative fixtures and deterministic
+  protocol coverage, including Mistral typed reasoning/text blocks. Fixtures
+  do not establish live quality or latency.
+
+### Fixed
+
+- Preserve reviewed Responses reasoning/cache/text settings instead of silently
+  dropping them. Refuse unsupported overrides before planning; require complete
+  GPT-6 response status and reject malformed response content.
+- Refuse incomplete, malformed, truncated and output-limited new native streams;
+  keep unavailable usage unknown. Protect planned model/output limits and reject
+  unsupported reasoning, billing modes, cache retention and adapter settings.
+- Bind bundled pricing to reviewed public deployments, including persisted
+  official rows. Preserve explicit owner overrides and routed host prices.
+- Preserve explicit provider prefixes in source audit; explicit OpenRouter IDs
+  do not borrow native prices. Include current Terra, Grok and Gemini IDs in
+  the automatic watch example.
+- Normalize DeepSeek's top-level cache-hit usage. Verify Flash image input and
+  observed identity; price the two documented legacy Flash aliases at the
+  current redirected Flash route without relabelling historical observations.
+- Add the dated GPT-5.4 Nano and GPT-5.1 retirement IDs announced for 2027-04-01.
+
+### Changed
+
+- Recheck all bundled pricing and 116 retirement rows on 2026-10-26. Non-retired
+  snapshots become stale on 2026-11-26; strict pricing blocks execution and
+  stale retirement evidence makes CI inconclusive. Retired models still fail.
+- Attribute Qwen 3.7 Plus prices/cache rules to native Alibaba sources. Refresh
+  the native Qwen example override and the routed Relace GLM example's separate
+  endpoint prices; historical measurements retain their original evidence.
+- Update runtime, package, MCP and plugin metadata to 2.23.0. Published Action
+  defaults and example installation pins remain 2.22.2 until publication.
+
 ## 2.22.2 - 2026-10-19
 
 ### Fixed

@@ -1,6 +1,6 @@
 # When to use LLM Preflight
 
-**Last reviewed:** 2026-08-31 · **As of:** v2.10.0
+**Last reviewed:** 2026-10-27 · **As of:** v2.23.0
 
 LLM Preflight is for a local integration change: a model ID, provider route,
 prompt, request option, tool definition, schema, parser, or validation rule.
@@ -30,3 +30,32 @@ Start with the no-key mock demo, then use the smallest test that represents
 your application contract. For a new model, follow the local lifecycle:
 discover, inspect pricing and adapter evidence, probe deliberately, preview a
 bounded smoke, and retain human approval separately.
+
+## Compare the job before choosing a tool
+
+For a support-routing change, use LLM Preflight to check the accepted `billing`
+and rejected `sales` fixtures, inspect the route and price evidence, and plan a
+bounded model request. A local fixture or mock verifies the configured validator;
+it does not establish provider quality or production approval.
+
+For a reusable dataset of outputs, prompts and scoring rules, an evaluation
+framework can be a better fit. [Promptfoo assertions](https://www.promptfoo.dev/docs/configuration/expected-outputs/)
+cover equality, JSON shape and other metrics. Its [Echo provider](https://www.promptfoo.dev/docs/providers/echo/)
+can apply assertions to existing outputs without generating new ones. Both tools
+can check a label fixture; choose the workflow that fits the review you need.
+This overlap does not establish superiority or statistical model quality.
+
+For production request traces, prefer instrumentation and an observability
+system. [Langfuse tracing](https://langfuse.com/docs/observability/get-started)
+records application spans and generations in a cloud or self-hosted deployment.
+LLM Preflight's saved preflight results do not replace production traces.
+
+For provider resource administration or direct API exploration, prefer the
+provider's own tools. The [OpenAI CLI](https://developers.openai.com/api/docs/libraries/openai-cli)
+exposes API and administrative operations; its [model commands](https://developers.openai.com/api/reference/cli/resources/models)
+list, retrieve and delete provider model resources. Those are different jobs
+from checking a cross-provider application contract before a change.
+
+These are workflow comparisons based on documented capabilities and local
+fixture checks. They are not adoption evidence, performance rankings or claims
+that any tool is exclusive to one job.

@@ -1,0 +1,1631 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-29",
+  "reviewed_on": "2026-10-29",
+  "tool_version": "2.23.0",
+  "source_commit": "a28c9ac16c4dfa9222d33f1feb48f524de02805e",
+  "source_dirty": true,
+  "execution_manifest_sha256": "3d42cdc6c70ffa0005684501a964a2349e8f6f866d0454c1ab94439a608330d0",
+  "approved_maximum_requests": 152,
+  "approved_maximum_token_estimate_usd": 1.64,
+  "planned_maximum_token_estimate_usd": 1.6378469500000001,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "maximum_concurrent_provider_blocks": 4,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "All 19 rows use native provider routes. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model, provider blocks may overlap; not a model ranking or production approval",
+    "comparison_limit": "The previous study used two repetitions and different output caps and routes; no like-for-like improvement claim."
+  },
+  "totals": {
+    "requests": 152,
+    "api_successful": 147,
+    "api_failures": 5,
+    "valid": 144,
+    "contract_failures": 3,
+    "retry_count": 0,
+    "estimated_cost_usd": null,
+    "known_cost_subtotal_usd": 0.06902127,
+    "known_cost_requests": 147,
+    "missing_usage_requests": 5
+  },
+  "rows": [
+    {
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "display_name": "GPT-6 Astra",
+      "route": "OpenAI",
+      "observed_on": "2026-10-29",
+      "observed_model": "gpt-6-astra",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.0893141121196095,
+      "latency_p50_seconds": 1.999359647044912,
+      "latency_p95_seconds": 2.6053736543573907,
+      "mean_ttft_seconds": null,
+      "input_tokens": 548,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 102,
+      "estimated_cost_usd": 0.010579999999999999,
+      "known_cost_subtotal_usd": 0.010579999999999999,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.416625,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openai": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-openai-gpt-6-astra",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6-astra",
+            "adapter": "openai_responses"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openai": {
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.416625,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "29bd3360590755989375d2408c79700e4d252a308dbac9fe31c7e864d83f4dc8",
+      "result_sha256": "75d3ebff87c77342ad03cde9e9aae03877e58ea800634cf1bc736744b7ec6ca5",
+      "pricing_fingerprint": "0e23a548b5dbf1ddc3acc974a60f275eaff36683682eab4e99ae6cd1f80697ba",
+      "validator_version": null
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "display_name": "GPT-6.1 Sol",
+      "route": "OpenAI",
+      "observed_on": "2026-10-29",
+      "observed_model": "gpt-6.1-sol",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.4758817133697448,
+      "latency_p50_seconds": 1.4489644864806905,
+      "latency_p95_seconds": 1.9144042349187655,
+      "mean_ttft_seconds": null,
+      "input_tokens": 548,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 102,
+      "estimated_cost_usd": 0.002116,
+      "known_cost_subtotal_usd": 0.002116,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083325,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openai": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-openai-gpt-6.1-sol",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6.1-sol",
+            "adapter": "openai_responses"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openai": {
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083325,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "1e73a47965ba72d254671b4e295c3f91a27c6ca1b2db528ad3038e66fc425502",
+      "result_sha256": "965bbe0966562afb717599704aa14bb3a0150555ba7025a591168f9d68e025bd",
+      "pricing_fingerprint": "de83de36c8422d359e2a5e087fcb3f6c828f70ce9a32c2d370c85caa276400b7",
+      "validator_version": null
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-terra",
+      "display_name": "GPT-6.1 Terra",
+      "route": "OpenAI",
+      "observed_on": "2026-10-29",
+      "observed_model": "gpt-6.1-terra",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.191699449234875,
+      "latency_p50_seconds": 1.2289620424853638,
+      "latency_p95_seconds": 1.4770508666872046,
+      "mean_ttft_seconds": null,
+      "input_tokens": 548,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 134,
+      "estimated_cost_usd": 0.001218,
+      "known_cost_subtotal_usd": 0.001218,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.041663,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openai": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-openai-gpt-6.1-terra",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6.1-terra",
+            "adapter": "openai_responses"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openai": {
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.041663,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "d4c8db8e421654c78c11014188a7cdcc19fa5b9e5f41e6b3c73eaf0640ff6b5a",
+      "result_sha256": "16de40261fc37f45016e499cb33c47587f898c656110d86dc526f7cc5eaf2cc1",
+      "pricing_fingerprint": "d9674f7be46096519e86eb998e203671fc9a95e880b11ac3399beee31c370d96",
+      "validator_version": null
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "display_name": "GPT-6 Luna",
+      "route": "OpenAI",
+      "observed_on": "2026-10-29",
+      "observed_model": "gpt-6-luna",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.204773506251513,
+      "latency_p50_seconds": 1.1635216900031082,
+      "latency_p95_seconds": 1.5020687165961133,
+      "mean_ttft_seconds": null,
+      "input_tokens": 548,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 238,
+      "estimated_cost_usd": 0.0001738,
+      "known_cost_subtotal_usd": 0.0001738,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004167,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openai": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-openai-gpt-6-luna",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6-luna",
+            "adapter": "openai_responses"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openai": {
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.004167,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "8e40d7f3387c450cb78c1623829cf3b6b38e58524fef02a871b53a0a322e865d",
+      "result_sha256": "12da76adbb00d5a64726bbc8676e71af736e472f71ee1cbbf9b2cd4989c3052a",
+      "pricing_fingerprint": "894c815014fcc266ac48fdb63232f7ed68dab4f6b069beebeaf0fd223daaddd2",
+      "validator_version": null
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "display_name": "Claude Fable 5.1",
+      "route": "Anthropic",
+      "observed_on": "2026-10-29",
+      "observed_model": "claude-fable-5-1",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 0.9231210996222217,
+      "latency_p50_seconds": 0.8993634469807148,
+      "latency_p95_seconds": 1.0482513176859356,
+      "mean_ttft_seconds": 0.6232738531980431,
+      "input_tokens": 780,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 134,
+      "estimated_cost_usd": 0.0145,
+      "known_cost_subtotal_usd": 0.0145,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.41522,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-fable-5-1",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-fable-5-1"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.41522,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "239f718246b465b2c8d7368fc909a156d9c0785e3a7d28188c4bdb8f36bb16e1",
+      "result_sha256": "a98412f583b0adc001801a2368a95aa8bb5e0a8d40b78e8934372a97ce7876c1",
+      "pricing_fingerprint": "c2f3751ce17387e1fcb03d1114b4ea694b08e0872131a14fe29258c693b3b4d3",
+      "validator_version": null
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "display_name": "Claude Opus 5.5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-29",
+      "observed_model": "claude-opus-5-5",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.4973222504922887,
+      "latency_p50_seconds": 1.3934410994988866,
+      "latency_p95_seconds": 1.977448413305683,
+      "mean_ttft_seconds": 1.1337658983829897,
+      "input_tokens": 780,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 131,
+      "estimated_cost_usd": 0.00574,
+      "known_cost_subtotal_usd": 0.00574,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.166088,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-opus-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.166088,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "01dcd7c46196f4e1f5361667f8dca1c9b094ea226ce30448baae8725f4cc10ad",
+      "result_sha256": "e12fb24828a6d82de411ef0e3d72d19607c90320f12da0eba72308a6a49c199f",
+      "pricing_fingerprint": "f084c1759e4438fff6cc0c3a0e8ffeb68880c9f8806674992f29ecfa81b2f7e7",
+      "validator_version": null
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "display_name": "Claude Sonnet 5.5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-29",
+      "observed_model": "claude-sonnet-5-5",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.421268018995761,
+      "latency_p50_seconds": 1.2487400264944881,
+      "latency_p95_seconds": 2.308058564038947,
+      "mean_ttft_seconds": 1.0402935790189076,
+      "input_tokens": 780,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 131,
+      "estimated_cost_usd": 0.00287,
+      "known_cost_subtotal_usd": 0.00287,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083044,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-sonnet-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083044,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "32e89958003f0521d850529c9e6f296b8043fe631aa9269c751c28cafa091024",
+      "result_sha256": "45a70e084fad77287d70dc26a25c50ae5aafc794780f5616a751e2d535beca3e",
+      "pricing_fingerprint": "30c151936e27b52e88df032a7ccd795f32a02a63f2364523c120ea11dd60f5d9",
+      "validator_version": null
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "display_name": "Claude Haiku 5.5",
+      "route": "Anthropic",
+      "observed_on": "2026-10-29",
+      "observed_model": "claude-haiku-5-5",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.7583701950352406,
+      "latency_p50_seconds": 1.6745265735080466,
+      "latency_p95_seconds": 3.012055392563343,
+      "mean_ttft_seconds": 1.6500015038909623,
+      "input_tokens": 780,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 144,
+      "estimated_cost_usd": 0.00015000000000000001,
+      "known_cost_subtotal_usd": 0.00015000000000000001,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004153,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-haiku-5-5",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-haiku-5-5"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.004153,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "9dc5c1e38e67cd14b3e7e9222b60d7f64e9d4ec91cad4856d93d9c8a3463c21d",
+      "result_sha256": "132c6d8758578847f1e9d081dc85000f3192346d7146ae6ddf7e4f44a509e6a4",
+      "pricing_fingerprint": "e9a0e97b07f1e584d11e8b54997de7e53402af00d39a9c647f71100d10257d19",
+      "validator_version": null
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-4-argon",
+      "display_name": "Gemini 4 Argon",
+      "route": "Gemini",
+      "observed_on": "2026-10-29",
+      "observed_model": "gemini-4-argon",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 5.186247084624483,
+      "latency_p50_seconds": 3.5218983729719184,
+      "latency_p95_seconds": 13.133609950303791,
+      "mean_ttft_seconds": 5.0602826043905225,
+      "input_tokens": 759,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 121,
+      "estimated_cost_usd": 0.002728,
+      "known_cost_subtotal_usd": 0.002728,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083044,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-4-argon",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-4-argon"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083044,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "07a22fa31202f461c9a886464e4c8bc74274f25e9c723f8344ed4bf42786650c",
+      "result_sha256": "c7683a7b50353455117cc48ced7e647ce93a7112e2ccb62d797fbe263618ab8d",
+      "pricing_fingerprint": "152347a26206e4ab3dae36e52019e9710335393ec7490f81ac927d24116d9dfc",
+      "validator_version": null
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.8-flash",
+      "display_name": "Gemini 3.8 Flash",
+      "route": "Gemini",
+      "observed_on": "2026-10-29",
+      "observed_model": "gemini-3.8-flash",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.6207624941453105,
+      "latency_p50_seconds": 2.4142271980526857,
+      "latency_p95_seconds": 4.416786760441027,
+      "mean_ttft_seconds": 2.5965599492628826,
+      "input_tokens": 480,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 630,
+      "estimated_cost_usd": 0.0027225,
+      "known_cost_subtotal_usd": 0.0027225,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.031142,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-3.8-flash",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-3.8-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.031142,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "112cb21ecffaad1a0a6ab0db8cbbe4edf2eeefdd2531ca7db1d2ab6d06121e2d",
+      "result_sha256": "29b33f5aa564ec0e779b1b38f911637fd29a074b552c371c0c92dd69c18bc912",
+      "pricing_fingerprint": "4503a88d477c5ca3a1f698148840643b0353d08e19cab8fc2841da042cd968a8",
+      "validator_version": null
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.6-flash",
+      "display_name": "Gemini 3.6 Flash",
+      "route": "Gemini",
+      "observed_on": "2026-10-29",
+      "observed_model": "gemini-3.6-flash",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.3594264578714501,
+      "latency_p50_seconds": 1.3454974524793215,
+      "latency_p95_seconds": 1.855302132066572,
+      "mean_ttft_seconds": 1.3150461220211582,
+      "input_tokens": 480,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 972,
+      "estimated_cost_usd": 0.004005,
+      "known_cost_subtotal_usd": 0.004005,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.031142,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-3.6-flash",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-3.6-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.031142,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "1f01e3b3c60c9196104012d1c86ede7b5f4adb04b402b061c526cf820abc7d74",
+      "result_sha256": "eb4fc3e40f0b6a38076734d1f8286a0af147d282d2cb9decfd759599806cb18e",
+      "pricing_fingerprint": "4ae02c4cbaf86b8e07e47683cf3e65c40806d848ccbaac431cbea5d6fd5dc195",
+      "validator_version": null
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.7",
+      "display_name": "Grok 4.7",
+      "route": "xAI",
+      "observed_on": "2026-10-29",
+      "observed_model": "grok-4.7",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.5669744732585968,
+      "latency_p50_seconds": 1.5996827600174583,
+      "latency_p95_seconds": 2.1347352498734837,
+      "mean_ttft_seconds": 1.5649940316216089,
+      "input_tokens": 10434,
+      "cached_input_tokens": 9216,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 82,
+      "estimated_cost_usd": 0.007536,
+      "known_cost_subtotal_usd": 0.007536,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.050276,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "xai": {
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-xai-grok-4.7",
+        "models": [
+          {
+            "provider": "xai",
+            "model": "grok-4.7"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "xai": {
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.050276,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "e6cc953557ffb38b992c20e3931bdee16ee7950db8bd73e8d8312230fc6ab2b2",
+      "result_sha256": "261ed53cd2fdcf96866654a120e68cb1ff6f204c2e25239669d8f367003d042d",
+      "pricing_fingerprint": "682eca6e5360a003c573a0eee2c450e19a57c9e032b46f7df862e99b490cc39b",
+      "validator_version": null
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "display_name": "DeepSeek Flash",
+      "route": "DeepSeek",
+      "observed_on": "2026-10-29",
+      "observed_model": "deepseek-flash",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.297242379267118,
+      "latency_p50_seconds": 1.250890146533493,
+      "latency_p95_seconds": 1.5842889459920115,
+      "mean_ttft_seconds": 1.2721631109016016,
+      "input_tokens": 717,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 495,
+      "estimated_cost_usd": 0.0008091,
+      "known_cost_subtotal_usd": 0.0008091,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.01,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "deepseek": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-deepseek-deepseek-flash",
+        "models": [
+          {
+            "provider": "deepseek",
+            "model": "deepseek-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "deepseek": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.01,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "188a6e59020f5c88e63230b2f42cbc1b0724c18e430b81d815da5b12fc226be3",
+      "result_sha256": "5fc45e1420befcd2dc21ead5698b33504f276ac75aa17490f0986ac94d34eabc",
+      "pricing_fingerprint": "3afcc6bd26b4d334b0237b962e4f003e5566fc5b039baffc5e32af1d3c4a9e99",
+      "validator_version": null
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-pro",
+      "display_name": "DeepSeek V4 Pro",
+      "route": "DeepSeek",
+      "observed_on": "2026-10-29",
+      "observed_model": "deepseek-v4-pro",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.7656254794710549,
+      "latency_p50_seconds": 1.5490567089873366,
+      "latency_p95_seconds": 2.919251289969542,
+      "mean_ttft_seconds": 1.7106209649937227,
+      "input_tokens": 509,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 896,
+      "estimated_cost_usd": 0.00422004,
+      "known_cost_subtotal_usd": 0.00422004,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.033183,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "deepseek": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-deepseek-deepseek-v4-pro",
+        "models": [
+          {
+            "provider": "deepseek",
+            "model": "deepseek-v4-pro"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "deepseek": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.033183,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "663e94d4706b1df05e2b549444c0cc29c338a2f38fad8ae19016a8b5ae909194",
+      "result_sha256": "359ee97845b9cef18b13c714ef92f28adbf3eab61f528c57dac9da16cc881372",
+      "pricing_fingerprint": "bcd857386cb07ed4c22e8c2361c44166944ee1fbbc6915c012a561fd3794f938",
+      "validator_version": null
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-max",
+      "display_name": "Qwen 3.8 Max",
+      "route": "Alibaba Singapore",
+      "observed_on": "2026-10-29",
+      "observed_model": "qwen3.8-max",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 3.8336621776252287,
+      "latency_p50_seconds": 3.6780899729928933,
+      "latency_p95_seconds": 5.082435211824485,
+      "mean_ttft_seconds": 3.6715041328716325,
+      "input_tokens": 800,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 739,
+      "estimated_cost_usd": 0.006034,
+      "known_cost_subtotal_usd": 0.006034,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.050276,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "qwen": {
+            "enable_thinking": true,
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-qwen-qwen3.8-max",
+        "models": [
+          {
+            "provider": "qwen",
+            "model": "qwen3.8-max"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "qwen": {
+              "enable_thinking": true,
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.050276,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "ae52ba748d47634e1d49c259621b97c99fc823379f90b090f5b9b9453960a09c",
+      "result_sha256": "5171d24258ae679f7964cb6c4b07a2f7d6563de364ddbb6f4d6e0a443c174e53",
+      "pricing_fingerprint": "63d1edcf1bb85e44e1189a74ee46177a54092337d351fa3fd5b5d6402b090cb6",
+      "validator_version": null
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3",
+      "display_name": "GLM 5.3",
+      "route": "Z.ai",
+      "observed_on": "2026-10-29",
+      "observed_model": "glm-5.3",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 7,
+      "contract_failures": 1,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.4613491708732909,
+      "latency_p50_seconds": 1.3712146035395563,
+      "latency_p95_seconds": 1.9974305796960832,
+      "mean_ttft_seconds": 1.3327853403898189,
+      "input_tokens": 574,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 135,
+      "estimated_cost_usd": 0.0013976000000000001,
+      "known_cost_subtotal_usd": 0.0013976000000000001,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.036832,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "invoice-request",
+          "kind": "contract_failure",
+          "validation_rule": "json_schema"
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "zai": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-zai-glm-5.3",
+        "models": [
+          {
+            "provider": "zai",
+            "model": "glm-5.3"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "zai": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.036832,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "08335e43c969642f2a218f77fbd2612e6344bcc90d1bae82eee6f0387a715f3e",
+      "result_sha256": "aa434a44e35e90ff15863a8a53ed9aa4a7f8a97858d47047c66ceec3906fac92",
+      "pricing_fingerprint": "16e4031ae5b44cc3e92fdde977753a16cb6b0d18ef3aca4b468bf06ca0b55621",
+      "validator_version": null
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3-flash",
+      "display_name": "GLM 5.3 Flash",
+      "route": "Z.ai",
+      "observed_on": "2026-10-29",
+      "observed_model": "glm-5.3-flash",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 7,
+      "contract_failures": 1,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.8323747580725467,
+      "latency_p50_seconds": 1.0723660259391181,
+      "latency_p95_seconds": 4.067325541505125,
+      "mean_ttft_seconds": 1.5892475113505498,
+      "input_tokens": 574,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 152,
+      "estimated_cost_usd": 0.00016209999999999998,
+      "known_cost_subtotal_usd": 0.00016209999999999998,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.004181,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "ticket-extraction",
+          "kind": "contract_failure",
+          "validation_rule": "json_schema"
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "zai": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-zai-glm-5.3-flash",
+        "models": [
+          {
+            "provider": "zai",
+            "model": "glm-5.3-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "zai": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.004181,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "986b186695747b67678bb95648f18d3e000dbf24520581c83ff56f3e02b7285b",
+      "result_sha256": "9e59fef77de3c333dea03d4606ee89f80572d69f5e9cfc9b9db961a61ed18ff5",
+      "pricing_fingerprint": "ac1d34d79ffa20f353b0f0b543342d7f93db8fa5235421302f4a2cdd9201739e",
+      "validator_version": null
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3-flashx",
+      "display_name": "GLM 5.3 FlashX",
+      "route": "Z.ai",
+      "observed_on": "2026-10-29",
+      "observed_model": "glm-5.3-flashx",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 7,
+      "contract_failures": 1,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.0907713511114707,
+      "latency_p50_seconds": 1.011849667003844,
+      "latency_p95_seconds": 1.32737272195518,
+      "mean_ttft_seconds": 1.0065634341153782,
+      "input_tokens": 574,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 143,
+      "estimated_cost_usd": 0.00039113,
+      "known_cost_subtotal_usd": 0.00039113,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.010448,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "ticket-extraction",
+          "kind": "contract_failure",
+          "validation_rule": "json_schema"
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "zai": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-zai-glm-5.3-flashx",
+        "models": [
+          {
+            "provider": "zai",
+            "model": "glm-5.3-flashx"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "zai": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.010448,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "2a96e0cd2de8d59b185ba45a6fd16332b674d682f91d888f05b27ec42d249622",
+      "result_sha256": "4e029e8db8d2ce6a3d127ef1981052cbbc3101acbf51f17a6a6ecff4529c1422",
+      "pricing_fingerprint": "5b0fbe6cd7d7d92a82b628318d39d668443c36152e422aa6acf07a7c8cd315a7",
+      "validator_version": null
+    },
+    {
+      "provider": "moonshot",
+      "model": "kimi-k3.1-pro",
+      "display_name": "Kimi K3.1 Pro",
+      "route": "Moonshot/Kimi",
+      "observed_on": "2026-10-29",
+      "observed_model": "kimi-k3.1-pro",
+      "requests": 8,
+      "api_successful": 3,
+      "api_failures": 5,
+      "valid": 3,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.216928079724312,
+      "latency_p50_seconds": 2.4475154890678823,
+      "latency_p95_seconds": 2.4553493824671024,
+      "mean_ttft_seconds": 2.207669698012372,
+      "input_tokens": 394,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 88,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": 0.001668,
+      "cost_coverage": {
+        "known_requests": 3,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 5,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083044,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "ticket-extraction",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "duplicate-charge-injection",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "active-technical-outage",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "account-email-change",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "invoice-request",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "moonshot": {
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-moonshot-kimi-k3.1-pro",
+        "models": [
+          {
+            "provider": "moonshot",
+            "model": "kimi-k3.1-pro"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "moonshot": {
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083044,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "d017e63a25266b4aed0a07a4b7f1d3c89da3944d5a239e6f4cbf70cbd3abfc16",
+      "result_sha256": "2302d9545632f9bd7694afbcfebef8c62d6db8b1da123d6e4ef7666bc22e51bb",
+      "pricing_fingerprint": "9738a9829ed26dcaf8d7f4c5d510fe7cca5a4e1c88a450abb4d4ab51c0720c9c",
+      "validator_version": null
+    }
+  ],
+  "runtime_source_manifest_sha256": "aeb01292e8c080e8846c24cf70f0ad106488b343c56912eea06fa47a7d4b2733"
+}

@@ -30,6 +30,16 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
+## Current source build
+
+The unpublished 2.23.0 source build adds GPT-6.1 Terra pricing and native Kimi,
+MiniMax, Mistral and Cohere text checks, plus GLM Flash and restricted Mythos
+coverage. The candidate source checkout includes
+`docs/guides/native-providers.md` with bounded examples and request limits.
+New coverage has deterministic protocol fixtures; live observations below cover
+the listed 19 routes. Other added providers retain fixture-only coverage. The
+installation command below still installs the latest published package, 2.22.2.
+
 ## Try it in 60 seconds
 
 In a new directory, install the tool and run the local mock—no API key or
@@ -76,16 +86,22 @@ A passing run is evidence for the configured workload, not production approval.
 
 ## Observed results on a support-routing contract
 
-These are selected real provider observations, including failed checks and
-rejected requests. Each model received 16 requests. Dates, routes and request
-settings differ; the results describe one workload and are not a general ranking.
+The latest measurement, **2026-10-29**, tested **19 native model routes** on eight
+synthetic support-routing and strict JSON cases each. **144 of 152 checks passed**:
+three outputs failed their contract and five Kimi calls returned HTTP 429.
+**15 models passed all eight checks.** These are workload observations, not a
+ranking of general intelligence or production approval.
 
-[![Measured results for 14 models, including GPT, Claude, Gemini, GLM, DeepSeek and Qwen: checks passed, mean latency, estimated cost, date and actual route; partial failures, rejected requests and unknown costs remain visible](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/images/measured-models.svg)
+[![Latest measured model results, part 1 of 2: GPT, Claude and Gemini; checks passed out of eight, mean latency, estimated token cost, date and native route](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29-1.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 
-Latency covers successful API responses, including contract failures, and
-excludes API errors. `—` means unavailable; missing usage keeps total cost
-unknown. OpenRouter observations do not establish native-provider behavior.
-[Read the results as text, request settings, and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
+[![Latest measured model results, part 2 of 2: Gemini, Grok, DeepSeek, Qwen, GLM and Kimi; partial failures and unavailable total costs remain visible](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29-2.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+
+Latency includes successful API responses, including contract failures, and
+excludes API errors. The known token-cost subtotal is **$0.06902127**; total cost
+is unknown because five error responses supplied no usage. Each request used a
+1,024-token output allowance and one attempt. No retries were made.
+[Read all 19 rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
+Previous dated measurements remain available as history.
 
 <a id="purpose"></a>
 

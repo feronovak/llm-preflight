@@ -89,16 +89,54 @@ from .runner import (
 from .source_audit import audit_source
 
 _ENV_TEMPLATE = """# Copy this file to .env.production beside your benchmark configuration.
-# Fill only the providers you use. Never commit .env.production.
+# For an existing .env.production, add only missing lines; preserve populated keys.
+# Fill only the providers you use. Never commit .env.production or share API keys.
+# Key-management pages may require sign-in and API billing activation.
 
+# OpenAI / GPT: https://platform.openai.com/api-keys
 OPENAI_API_KEY=""
+
+# Anthropic / Claude: https://platform.claude.com/settings/keys
 ANTHROPIC_API_KEY=""
+
+# Google Gemini via AI Studio: https://aistudio.google.com/api-keys
 GEMINI_API_KEY=""
-OPENROUTER_API_KEY=""
+
+# xAI / Grok: sign in and open API keys at https://console.x.ai/
 XAI_API_KEY=""
+
+# DeepSeek: https://platform.deepseek.com/api_keys
 DEEPSEEK_API_KEY=""
+
+# Alibaba Model Studio / Qwen: use a Singapore key for the default international route.
+# https://modelstudio.console.alibabacloud.com/ap-southeast-1/settings/api-key
 DASHSCOPE_API_KEY=""
+
+# Z.ai / GLM: use a key with standard API access, not only Coding Plan access.
+# https://z.ai/manage-apikey/apikey-list
 ZAI_API_KEY=""
+
+# Moonshot / Kimi international API key, separate from Kimi Code subscription keys.
+# https://platform.kimi.ai/console/api-keys
+MOONSHOT_API_KEY=""
+
+# MiniMax: create a pay-as-you-go API key for the standard native API route.
+# https://platform.minimax.io/console/access
+MINIMAX_API_KEY=""
+
+# Mistral: create a Studio API key, not a Vibe key.
+# https://console.mistral.ai/api-keys
+MISTRAL_API_KEY=""
+
+# Cohere / Command: https://dashboard.cohere.com/api-keys
+COHERE_API_KEY=""
+
+# OpenRouter: routed models use this key, separately from native provider keys.
+# https://openrouter.ai/settings/keys
+OPENROUTER_API_KEY=""
+
+# TypeSafe / Jev: optional catalog access; excluded from the text live run.
+# Sign in and open API keys at https://console.typesafe.ai/
 TYPESAFE_API_KEY=""
 """
 
@@ -1838,6 +1876,18 @@ def _catalog_main(argv: list[str]) -> None:
             "deepseek": {"provider": "deepseek", "include": "^deepseek-", "limit": 30},
             "qwen": {"provider": "qwen", "include": "qwen", "limit": 30},
             "typesafe": {"provider": "typesafe", "include": "^jev-", "limit": 10},
+            "moonshot": {"provider": "moonshot", "include": "^kimi-k3", "limit": 20},
+            "minimax": {"provider": "minimax", "include": "^MiniMax-M3", "limit": 20},
+            "mistral": {
+                "provider": "mistral",
+                "include": "^mistral-large-4",
+                "limit": 20,
+            },
+            "cohere": {
+                "provider": "cohere",
+                "include": "^command-a-plus-",
+                "limit": 20,
+            },
         }
         watch_path = args.directory / "watch.json"
         approved_path = args.directory / "approved.json"
@@ -1865,7 +1915,7 @@ def _catalog_main(argv: list[str]) -> None:
             print("=== Catalog setup ===")
             print("Choose provider catalogues now; this does not make paid requests.")
             provider_answer = input(
-                "Providers to include (openai, anthropic, gemini, xai, openrouter, deepseek, qwen, typesafe, or all) [all]: "
+                f"Providers to include ({', '.join(sources)}, or all) [all]: "
             ).strip()
         if not provider_answer or provider_answer.casefold() == "all":
             names = list(sources)

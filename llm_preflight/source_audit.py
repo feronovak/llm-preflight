@@ -46,7 +46,7 @@ _QUOTED = re.compile(
     r"(?P<quote>['\"])(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)(?P=quote)"
 )
 _MODEL_PREFIX = re.compile(
-    r"^(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe|z-ai|zai)/)?(?:gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|glm-[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
+    r"^(?:openrouter/(?:[A-Za-z0-9_-]+/)?)?(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe|z-ai|zai|moonshot|minimax|mistral|cohere)/)?(?:kimi-[A-Za-z0-9]|minimax-m[0-9]|mistral-large-[0-9]|command-a-plus-[0-9]|gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|glm-[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
     re.IGNORECASE,
 )
 _YAML_MODEL = re.compile(
@@ -55,7 +55,37 @@ _YAML_MODEL = re.compile(
 
 
 def _provider_for(model: str) -> str | None:
+    if model.casefold().startswith("openrouter/"):
+        return "openrouter"
+    prefix, separator, _ = model.partition("/")
+    explicit = {
+        "openai": "openai",
+        "anthropic": "anthropic",
+        "google": "gemini",
+        "xai": "xai",
+        "x-ai": "xai",
+        "deepseek": "deepseek",
+        "qwen": "qwen",
+        "alibaba": "qwen",
+        "typesafe": "typesafe",
+        "z-ai": "zai",
+        "zai": "zai",
+        "moonshot": "moonshot",
+        "minimax": "minimax",
+        "mistral": "mistral",
+        "cohere": "cohere",
+    }
+    if separator and prefix.casefold() in explicit:
+        return explicit[prefix.casefold()]
     lowered = model.rsplit("/", 1)[-1].casefold()
+    if lowered.startswith("kimi-"):
+        return "moonshot"
+    if lowered.startswith("minimax-m"):
+        return "minimax"
+    if lowered.startswith("mistral-large-"):
+        return "mistral"
+    if lowered.startswith("command-a-plus-"):
+        return "cohere"
     if lowered.startswith("gpt-") or re.match(r"^o[1-9](?:-|$)", lowered):
         return "openai"
     if lowered.startswith("claude-"):

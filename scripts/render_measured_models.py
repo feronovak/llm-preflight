@@ -9,12 +9,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 from html import escape
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_OUTPUT = ROOT / "docs/images/measured-models.svg"
+CURRENT_MEASUREMENT = "2026-10-29"
+DEFAULT_DATA = ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json"
+DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}-1.svg"
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
     "gpt-6.1-sol": "GPT-6.1 Sol",
@@ -34,9 +35,7 @@ MODEL_NAMES = {
 
 
 def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
-    data = json.loads(
-        (data_path or ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
-    )
+    data = json.loads((data_path or DEFAULT_DATA).read_text())
     current = data["rows"]
     request_counts = {row["requests"] for row in current}
     if len(request_counts) != 1 or next(iter(request_counts)) <= 0:
@@ -64,41 +63,28 @@ def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
                 row["route"],
             )
         )
-    if data_path is None:
-        # Only the existing summary combines the later study with these two
-        # historical observations. A new dataset never silently inherits them.
-        study = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
-        historical = study.split("## Comparison results", 1)[1].split("\n## ", 1)[0]
-        older = re.findall(
-            r"^\| ([^|]+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|$",
-            historical,
-            re.MULTILINE,
-        )
-        for provider, model, date, valid, latency, cost in older:
-            if model in {"gpt-6-astra", "gemini-3.1-flash-lite"}:
-                rows.append(
-                    (MODEL_NAMES[model], f"{valid}/16", latency, cost, date, provider)
-                )
-        order = {name: index for index, name in enumerate(MODEL_NAMES.values())}
-        rows.sort(key=lambda row: order[row[0]])
     return rows
 
 
-def render(data_path: Path | None = None) -> str:
+def render(data_path: Path | None = None, *, part: int = 1) -> str:
     style = json.loads((ROOT / "docs/images/style.json").read_text())
     colors = style["colors"]
     layout = style["measured_models"]
     rows = observed_rows(data_path)
-    if len(rows) > layout["max_rows"]:
-        raise ValueError("Split more than 16 rows into separate evidence files/images")
-    data = json.loads(
-        (data_path or ROOT / "docs/data/model-comparison-2026-10-14.json").read_text()
-    )
+    total_rows = len(rows)
+    part_count = math.ceil(total_rows / layout["max_rows"])
+    if not 1 <= part <= part_count:
+        raise ValueError(f"Part must be between 1 and {part_count}")
+    rows_per_part = math.ceil(total_rows / part_count)
+    rows = rows[(part - 1) * rows_per_part : part * rows_per_part]
+    data = json.loads((data_path or DEFAULT_DATA).read_text())
     title = (
         data.get("display_title", "Observed model results")
         if data_path
         else "Observed results on a support-routing contract"
     )
+    if part_count > 1:
+        title += f" · part {part}/{part_count}"
     request_count = data["rows"][0]["requests"]
     dates = sorted(row[4] for row in rows)
     date_range = dates[0] if dates[0] == dates[-1] else f"{dates[0]}–{dates[-1]}"
@@ -205,9 +191,16 @@ def main() -> int:
         help="New aggregate JSON; uses only its rows, without historical additions",
     )
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--part", type=int, default=1, help="Panel of a larger cohort (1-based)"
+    )
     args = parser.parse_args()
+    if args.part != 1 and args.output == DEFAULT_OUTPUT:
+        args.output = DEFAULT_OUTPUT.with_name(
+            f"measured-models-{CURRENT_MEASUREMENT}-{args.part}.svg"
+        )
     try:
-        content = render(args.data).encode()
+        content = render(args.data, part=args.part).encode()
     except (ValueError, KeyError, OSError) as error:
         parser.error(str(error))
     if args.check:

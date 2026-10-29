@@ -1,23 +1,23 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-10-26 · **As of:** v2.23.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
-discover any ID a supported provider lists. The table below records the
-direct-provider pricing snapshots included in **2.22.2**, unchanged since **2.22.0**.
-The native Qwen 3.8 price-source/cache corrections below ship in 2.22.0; an
-installed 2.21.2 still has the earlier QwenCloud-derived cache rates. The
-`gpt-6.1-sol` and `glm-5.3` rows were added in 2.19.0; each row records its own
-official-source review date. Discover and probe the IDs you actually run.
+discover IDs returned by supported metadata endpoints; configured native routes
+are described in [native provider checks](native-providers.md).
 
-Package version: **2.22.2**. Each pricing row retains its recorded UTC review
-date. Version 2.21.0 adds Gemini 4 Argon and Gemini 3.6 Flash, refreshes 3.8
-Flash, and removes prices for redirected 3.5/3.7 aliases. Gemini 4 has
-deterministic protocol coverage and a native **16/16** observation on October
-14; see the [dated comparison](observed-model-comparison.md) for its scope.
+Package version: **2.23.0**. This source build is unpublished; PyPI and the
+published Action examples still use 2.22.2 until release. The table records
+this build's reviewed public-route rates, not account access or model quality.
+All rows were reviewed on 2026-10-26 UTC and become stale on 2026-11-26.
+Strict pricing then blocks execution. Explicit owner overrides retain their
+own evidence and review dates.
 
-Version 2.19.1 adds Haiku 5.5 and updates Sonnet 5.5 cache pricing; the
-Anthropic section below records the rates, request behavior and limits.
+The [latest comparison](observed-model-comparison.md) measured 19 native routes
+on 2026-10-29, with eight cases each:144 of 152validated outputs, three contract
+failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
+from October 14 is retained separately. Unmeasured added providers keep fixture-only
+coverage; this pricing table does not establish access or model quality.
 
 ## Native routes
 
@@ -30,62 +30,88 @@ Anthropic section below records the rates, request behavior and limits.
 | `deepseek` | `DEEPSEEK_API_KEY` | Text chat (OpenAI-compatible) |
 | `qwen` | `DASHSCOPE_API_KEY` | Text chat (international DashScope) |
 | `zai` | `ZAI_API_KEY` | Text chat (standard Z.ai API) |
+| `moonshot` | `MOONSHOT_API_KEY` | Kimi native text chat |
+| `minimax` | `MINIMAX_API_KEY` | MiniMax native text chat |
+| `mistral` | `MISTRAL_API_KEY` | Mistral native text chat |
+| `cohere` | `COHERE_API_KEY` | Cohere native v2 text Chat |
 | `openrouter` | `OPENROUTER_API_KEY` | Routed catalog; live prices when present |
 | `openai_compatible` | `api_key_env` | Caller-supplied OpenAI-compatible base URL |
 | `typesafe` | `TYPESAFE_API_KEY` | Catalogue-only typed-decision (Jev); not text smoke |
 | `mock` | — | Local fixtures; no provider call |
 
 `catalog init` can include `openai`, `anthropic`, `gemini`, `xai`, `openrouter`,
-`deepseek`, `qwen`, and `typesafe`.
+`deepseek`, `qwen`, `typesafe`, `moonshot`, `minimax`, `mistral`, and `cohere`.
+Z.ai supports configured native models; no documented metadata discovery
+endpoint is integrated.
+
+Bundled native prices apply to the reviewed default base URL. A different
+endpoint leaves the price unknown, including persisted official snapshots;
+supply an explicitly reviewed override for that deployment. OpenRouter keeps
+its own route prices. Kimi Highspeed is priced separately from standard Kimi.
 
 ## Bundled official snapshots
 
-Rates are USD per million tokens. `as_of` is the date this package last
-checked the official page. Every row was rechecked on 2026-10-16 UTC; no
-rate changed. Long-context bands, cache rates, and DeepSeek peak hours live
-in code; this table is the headline input/output pair.
+Rates are USD per million tokens. `as_of` is the actual review date. Long-context
+bands and cache rates are recorded in the bundled ledger. The DeepSeek rows
+use peak rates; Qwen uses Singapore/International list rates. Cohere's zero
+row applies to its public Command A+ API under its documented rate limits;
+it does not price Model Vault or another deployment.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
-| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-16 |
-| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-10-16 |
-| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-16 |
-| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-16 |
-| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-16 |
-| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-16 |
-| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-16 |
-| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-10-16 |
-| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-10-16 |
-| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-10-16 |
-| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-10-16 |
-| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-10-16 |
-| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-10-16 |
-| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-10-16 |
-| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-10-16 |
-| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-10-16 |
-| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-10-16 |
-| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-10-16 |
-| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-10-16 |
-| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-16 |
-| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-16 |
-| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-10-16 |
-| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-16 |
-| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-16 |
-| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-16 |
-| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-10-16 |
-| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-10-16 |
-| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-10-16 |
-| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-10-16 |
-| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-10-16 |
-| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-10-16 |
-| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-10-16 |
-| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-10-16 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-16 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-16 |
-| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-10-16 |
-| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-10-16 |
-| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-10-16 |
-| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-10-16 |
+| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-26 |
+| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-10-26 |
+| `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-10-26 |
+| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-26 |
+| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-26 |
+| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-26 |
+| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-26 |
+| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-26 |
+| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-10-26 |
+| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-10-26 |
+| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-10-26 |
+| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-10-26 |
+| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-10-26 |
+| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-10-26 |
+| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-10-26 |
+| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-10-26 |
+| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-10-26 |
+| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-10-26 |
+| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-10-26 |
+| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-10-26 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-26 |
+| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-26 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-10-26 |
+| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-26 |
+| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-26 |
+| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-26 |
+| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-10-26 |
+| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-10-26 |
+| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-10-26 |
+| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-10-26 |
+| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-10-26 |
+| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-10-26 |
+| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-10-26 |
+| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-10-26 |
+| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-10-26 |
+| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-10-26 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-26 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-26 |
+| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-10-26 |
+| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-10-26 |
+| `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-10-26 |
+| `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-10-26 |
+| `anthropic` | `claude-mythos-5-1` | 10.00 | 50.00 | 2026-10-26 |
+| `moonshot` | `kimi-k3.1-pro` | 2.00 | 10.00 | 2026-10-26 |
+| `moonshot` | `kimi-k3.1-pro-highspeed` | 4.00 | 20.00 | 2026-10-26 |
+| `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-10-26 |
+| `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-10-26 |
+| `mistral` | `mistral-large-4` | 1.36 | 4.18 | 2026-10-26 |
+| `mistral` | `mistral-large-4-0` | 1.36 | 4.18 | 2026-10-26 |
+| `cohere` | `command-a-plus-05-2026` | 0.00 | 0.00 | 2026-10-26 |
+| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-10-26 |
+| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-10-26 |
+| `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-10-26 |
 
 DeepSeek rows use peak cache-miss rates. Qwen rows use USD list rates; the
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
@@ -97,11 +123,36 @@ that threshold. See
 [`pricing.py`](../../llm_preflight/pricing.py) and
 [pricing and safety](pricing-and-safety.md).
 
+### GPT-6.1 Terra
+
+The [official model page](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
+lists `gpt-6.1-terra` with a 1,050,000-token context window, up to 128,000
+output tokens, text/image input and text output. Reasoning efforts are `none`,
+`low`, `medium` (default), `high`, `xhigh` and `max`. Tool calling requires
+Responses. This tool checks canonical tool definitions locally; it does not
+execute tool calls or computer-use workflows.
+
+The pricing row uses standard synchronous USD rates per million
+tokens: $1 input, $0.05 cache reads, $1.25 cache writes (30-minute retention),
+and $5 output. Above 272,000 total input tokens, input and cache rates double
+and output costs $7.50 for the whole request. Twelve-hour cache writes, Fast,
+Batch/Flex and regional processing require their own reviewed overrides.
+The row becomes stale on 2026-11-26; strict pricing then blocks execution.
+OpenAI retirement status remains unknown when its deprecations page does not
+list an ID. Pricing coverage does not establish account access or approval.
+
+The automatic discovery example includes Terra and recommends the Responses
+adapter. Deterministic Chat Completions and Responses fixtures verify text
+transport, configured Responses reasoning effort, complete response status,
+cache usage and cost estimates. Terra and Sol each passed 8/8 cases in the
+October 29 native comparison. Earlier Sol observations retain their original
+route, settings and date.
+
 ### Native Qwen 3.8 corrections in source
 
 The Max and Flash rows use Model Studio Singapore/International standard
 input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
-on October 16. Other regions and deployment scopes require their own reviewed
+on October 26. Other regions and deployment scopes require their own reviewed
 overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
 must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed
@@ -168,7 +219,7 @@ are applied only when usage reports a cache hit.
 
 ### Anthropic pricing and request updates in 2.19.1
 
-Reviewed on **2026-10-07** and rechecked unchanged on 2026-10-16. The
+Reviewed on **2026-10-07** and rechecked unchanged on 2026-10-26. The
 [Haiku 5.5 model page](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
 documents `claude-haiku-5-5` with these standard synchronous USD rates per
 million tokens:
@@ -223,7 +274,7 @@ rate is published, so no later transition is invented.
 ### GPT-6.1 Sol pricing and request limits
 
 The [official model page](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
-was rechecked on 2026-10-16. Standard synchronous USD rates per million tokens:
+was rechecked on 2026-10-26. Standard synchronous USD rates per million tokens:
 
 | Input length | Input | Cached input | Cache writes | Output |
 |---|---:|---:|---:|---:|
@@ -244,7 +295,7 @@ The project's minimal Responses adapter currently accepts text requests.
 ### GLM-5.3 pricing and request limits
 
 The [official Z.ai pricing page](https://docs.z.ai/guides/overview/pricing)
-was rechecked on 2026-10-16: $1.40 input, $0.26 cached input and $4.40 output
+was rechecked on 2026-10-26: $1.40 input, $0.26 cached input and $4.40 output
 per million tokens for the standard native API. Cache storage is temporarily
 free; estimates exclude storage charges if that offer changes.
 The route is `https://api.z.ai/api/paas/v4/chat/completions`, with
@@ -260,10 +311,10 @@ to select `low` for the bounded comparison. Reported completion usage is
 priced in full, including reasoning; internal reasoning text is excluded from
 response validation.
 
-The [dated comparison](observed-model-comparison.md) includes a measured
-GLM-5.3 run through OpenRouter / Relace, with that host's separate prices.
-The native Z.ai integration has deterministic fixture coverage; it has not
-had a live run with native credentials.
+The [dated comparison](observed-model-comparison.md) now includes native Z.ai
+GLM-5.3, Flash and FlashX observations from October 29: each passed 7/8 cases.
+The invoice-label or raw-JSON contract failures remain visible. Historical
+OpenRouter/Relace measurements retain that host's separate route and prices.
 
 Native Z.ai catalogue discovery is not implemented. Enter `glm-5.3` explicitly
 for native runs, or discover `z-ai/glm-5.3` through OpenRouter using its live

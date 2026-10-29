@@ -180,6 +180,70 @@ def _qwen(source: dict[str, Any]) -> list[dict[str, Any]]:
     return _openai_compatible_catalog(source, capabilities=_qwen_capabilities)
 
 
+_REVIEWED_NATIVE_TEXT_IDS = {
+    "kimi-k3.1-pro",
+    "kimi-k3.1-pro-highspeed",
+    "MiniMax-M3",
+    "MiniMax-M3.1-Flash",
+    "mistral-large-4",
+    "mistral-large-4-0",
+}
+
+
+def _native_text_capabilities(model_id: str) -> dict[str, Any]:
+    if model_id in _REVIEWED_NATIVE_TEXT_IDS:
+        return {"text_generation": "candidate", "adapter": "openai_compatible_chat"}
+    return {}
+
+
+def _native_text(source: dict[str, Any]) -> list[dict[str, Any]]:
+    return _openai_compatible_catalog(source, capabilities=_native_text_capabilities)
+
+
+def _cohere(source: dict[str, Any]) -> list[dict[str, Any]]:
+    config = _base(source)
+    base_url = config["base_url"].rstrip("/").removesuffix("/v2") + "/v1/models"
+    rows: list[dict[str, Any]] = []
+    token = None
+    seen: set[str] = set()
+    for _ in range(20):
+        params = {"page_size": "1000", "endpoint": "chat"}
+        if token:
+            params["page_token"] = token
+        payload = _get_json(
+            base_url + "?" + urllib.parse.urlencode(params),
+            config.get("api_key_env"),
+            config.get("headers"),
+        )
+        for item in payload.get("models", []):
+            if "chat" not in item.get("endpoints", []):
+                continue
+            rows.append(
+                {
+                    "provider": "cohere",
+                    "model": item["name"],
+                    "name": item["name"],
+                    "capabilities": {
+                        "text_generation": "candidate",
+                        "adapter": "cohere_chat",
+                    },
+                    "capability_evidence": [
+                        {"source": "official-metadata", "confidence": "low"}
+                    ],
+                    "catalog_metadata": item,
+                }
+            )
+        token = payload.get("next_page_token")
+        if not token or len(rows) >= int(source["limit"]):
+            return rows
+        if not isinstance(token, str) or token in seen:
+            raise ValueError(
+                "Cohere catalog pagination repeated or malformed its page token"
+            )
+        seen.add(token)
+    raise ValueError("Cohere catalog pagination exceeded the 20-page safety limit")
+
+
 def _typesafe(source: dict[str, Any]) -> list[dict[str, Any]]:
     config = _base(source)
     payload = _get_json(
@@ -395,6 +459,10 @@ DISCOVERERS = {
     "deepseek": _deepseek,
     "qwen": _qwen,
     "typesafe": _typesafe,
+    "moonshot": _native_text,
+    "minimax": _native_text,
+    "mistral": _native_text,
+    "cohere": _cohere,
 }
 
 

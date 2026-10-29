@@ -28,6 +28,7 @@ module names.
 | Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
 | Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
+| Native Kimi, MiniMax, Mistral and Cohere text routes, metadata discovery, reviewed price/setting guards and bounded fixture examples | source 2.23.0, unpublished | `providers.py`, `client.py`, `catalog.py`, `docs/guides/native-providers.md` |
 | Official pricing snapshots for named public model IDs, listed for the current package version | live | `pricing.py`, `docs/guides/current-snapshots.md` |
 | Gemini 4 Argon synchronous GenerateContent requests, thinking/cache accounting, explicit output bounds and scheduled official price changes; deterministic protocol evidence | live | `client.py`, `pricing.py`, `tests/test_clients.py`, `examples/gemini-4-argon.json` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |

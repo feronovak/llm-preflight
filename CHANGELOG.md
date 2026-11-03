@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Declare the MCP registry workspace argument as a required user-supplied
+  value, and link discovery to the manual setup guide. Document the explicit
+  uv package/executable selection for clients that would otherwise start the
+  benchmark CLI. Registry publication remains separate from these source changes.
+- Align the application-integration CI example with published 2.23.0.
+
 ## 2.23.0 - 2026-10-29
 
 ### Added

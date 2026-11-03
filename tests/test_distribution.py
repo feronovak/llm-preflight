@@ -92,9 +92,18 @@ def test_mcp_registry_manifest_and_plugin_keep_discovery_local_and_safe():
                 {
                     "type": "named",
                     "name": "--workspace",
+                    "value": "{workspace_path}",
                     "description": "Absolute path to the repository that the server may read.",
                     "isRequired": True,
                     "format": "filepath",
+                    "variables": {
+                        "workspace_path": {
+                            "description": "Absolute path to the repository that the server may read.",
+                            "isRequired": True,
+                            "format": "filepath",
+                            "placeholder": "/absolute/path/to/repository",
+                        }
+                    },
                 }
             ],
         }
@@ -106,6 +115,69 @@ def test_mcp_registry_manifest_and_plugin_keep_discovery_local_and_safe():
     assert "dry_run_plan" in skill
     assert "confirm_paid_run: true" in skill
     assert "must not infer approval" in skill
+
+
+def test_registry_workspace_argument_starts_the_server_with_the_selected_workspace(
+    tmp_path,
+):
+    manifest = json.loads((ROOT / "server.json").read_text())
+    package = manifest["packages"][0]
+    arguments = []
+    inputs = {"workspace_path": str(tmp_path)}
+    for argument in package["packageArguments"]:
+        if argument["type"] == "named":
+            arguments.append(argument["name"])
+        if "value" in argument:
+            arguments.append(argument["value"].format_map(inputs))
+
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "Reply with ok.",
+                "validation": {"exact": "ok"},
+                "models": [
+                    {
+                        "name": "local",
+                        "provider": "mock",
+                        "model": "local",
+                        "response": "ok",
+                    }
+                ],
+                "repetitions": 1,
+                "warmups": 0,
+            }
+        )
+    )
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+    ]
+    result = subprocess.run(
+        [sys.executable, "-m", "llm_preflight.mcp", *arguments],
+        input="".join(json.dumps(request) + "\n" for request in requests),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, result.stderr
+    responses = [json.loads(line) for line in result.stdout.splitlines()]
+    plan = responses[1]["result"]["structuredContent"]
+    assert plan["ok"] is True
+    assert plan["requests"] == 1
+    workspace = package["packageArguments"][0]["variables"]["workspace_path"]
+    assert workspace["isRequired"] is True
+    assert workspace["format"] == "filepath"
+    assert "default" not in workspace
 
 
 def test_testpypi_clean_install_exercises_the_mcp_no_spend_handshake():

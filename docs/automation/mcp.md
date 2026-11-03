@@ -33,6 +33,32 @@ The server accepts only workspace-relative paths. It supports the standard MCP
 initialization flow used by current coding agents (protocol version
 `2025-06-18`) as well as its existing `2026-07-28` discovery flow.
 
+### Run with uv without a separate installation
+
+If your client can run [uv](https://docs.astral.sh/uv/guides/tools/#commands-with-different-package-names),
+select the MCP executable explicitly from the published package:
+
+```json
+{
+  "mcpServers": {
+    "llm-preflight": {
+      "command": "uvx",
+      "args": [
+        "--from", "llm-preflight==2.23.0",
+        "llm-preflight-mcp",
+        "--workspace", "/absolute/path/to/repository"
+      ]
+    }
+  }
+}
+```
+
+Replace the workspace path with the repository the server may read. The PyPI
+package and MCP executable have different names: `uvx llm-preflight` starts the
+benchmark CLI. A directory or registry installer that infers the executable
+from the package name may therefore need this manual configuration. Keep the
+workspace argument and client-side tool approval enabled.
+
 `validate_config` advertises every JSON type accepted for the optional
 configuration `name`, including numbers, booleans, objects and arrays. It
 preserves the configured label and applies the existing secret redaction; the
@@ -181,6 +207,12 @@ MCP Registry. It identifies the public PyPI package and its local stdio
 transport, including a required `--workspace` filepath argument; the registry
 stores metadata, not the server artifact. The manifest is published only after
 the matching package version is available on PyPI.
+
+The source manifest declares the workspace as a required user-supplied value
+and links to the manual setup above. Registry metadata alone does not establish
+that a directory selects the correct executable. Verify its generated command
+before using it; the installed MCP command and explicit uv configuration above
+work with the published package.
 
 The repository also includes a small Codex plugin at
 `plugins/llm-preflight/`. Its skill teaches the no-spend workflow but

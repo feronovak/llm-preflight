@@ -3,6 +3,7 @@
   "name": "io.github.feronovak/llm-preflight",
   "title": "LLM Preflight",
   "description": "Local, cross-provider preflight checks for LLM integration changes.",
+  "websiteUrl": "https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md#configure-a-workspace",
   "repository": {
     "url": "https://github.com/feronovak/llm-preflight",
     "source": "github"
@@ -20,9 +21,18 @@
         {
           "type": "named",
           "name": "--workspace",
+          "value": "{workspace_path}",
           "description": "Absolute path to the repository that the server may read.",
           "isRequired": true,
-          "format": "filepath"
+          "format": "filepath",
+          "variables": {
+            "workspace_path": {
+              "description": "Absolute path to the repository that the server may read.",
+              "isRequired": true,
+              "format": "filepath",
+              "placeholder": "/absolute/path/to/repository"
+            }
+          }
         }
       ]
     }

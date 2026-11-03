@@ -9,8 +9,10 @@ For every behavior change:
    expected reason.
 2. Green: implement the smallest production change that makes the focused test
    pass. Do not weaken assertions to obtain a passing result.
-3. Verify: run the complete test suite and confirm all tests pass.
-4. Refactor: improve structure only while the full suite stays green.
+3. Verify: run the affected tests locally; CI runs the full suite and must be
+   green before merge.
+4. Refactor: improve structure only while the affected tests stay green and CI
+   stays green.
 
 Bug fixes must begin with a regression test that reproduces the bug. Provider
 integrations must use deterministic mocked protocol fixtures; live API calls are

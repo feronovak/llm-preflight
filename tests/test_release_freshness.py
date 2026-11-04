@@ -30,7 +30,8 @@ def test_release_freshness_passes_on_the_snapshot_review_day(capsys):
 
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
-    assert _script().main(["--today", "2026-12-05"]) == 1
+    script = _script()
+    assert script.main(["--today", "2026-12-05"]) == 1
 
     output = capsys.readouterr().out
     failed = [
@@ -38,7 +39,11 @@ def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
         for line in output.splitlines()
         if line.startswith("FAIL pricing-check")
     ]
-    assert "examples/mistral-large-4.json" in failed
+    assert failed == [
+        f"examples/{example}.json"
+        for example in script.EXAMPLES
+        if example not in script.EXPECTED_UNPRICED
+    ]
     assert "mistral/mistral-large-4: official pricing snapshot is stale by 31 days" in (
         output
     )
@@ -165,7 +170,6 @@ def _pin_cli_day(monkeypatch, today):
             "2026-11-13",
             "2026-11-14",
             "2026-11-04",
-            "2026-12-04",
             "2026-11-26",
             "2026-12-01",
             "2026-12-04",

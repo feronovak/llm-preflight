@@ -8,9 +8,8 @@ are described in [native provider checks](native-providers.md).
 
 Package version: **2.23.0**. The table records this version's reviewed
 public-route rates, not account access or model quality.
-Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05, except
-the two Mistral rows, last reviewed on 2026-10-26, which become stale on
-2026-11-26. Strict pricing then blocks execution. Explicit owner overrides retain their
+Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
+pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes

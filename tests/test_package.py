@@ -308,7 +308,7 @@ def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests(
     assert model["pricing_metadata"]["source_url"] == (
         "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints"
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
     assert (
         model["input_cost_per_million"],
         model["cached_input_cost_per_million"],

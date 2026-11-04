@@ -1,6 +1,6 @@
 # Check current native models
 
-**Last reviewed:** 2026-10-26 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
 
 Version 2.23.0 adds native Kimi, MiniMax, Mistral and
 Cohere text routes, GPT-6.1 Terra pricing, GLM Flash siblings and restricted
@@ -85,10 +85,12 @@ the three commands above do not need a key or contact the provider.
   streams, extracts final text from typed reasoning/text blocks, and accepts
   documented cached-usage field variants. Reasoning remains in billable usage.
 - Cohere's adapter uses v2 Chat and bills from `usage.billed_units`, not the
-  larger count that can include provider-injected tokens. Its public Command A+
-  API is documented as free within rate limits. Model Vault, private deployments
-  and commercial agreements require their own reviewed configuration and prices.
-  A free price does not establish access, and absent usage remains unknown cost.
+  larger count that can include provider-injected tokens. Cohere publishes no
+  per-token price for Command A+, so the snapshot has no bundled price: cost is
+  unknown, and `--pricing-check` and `require_current_pricing` refuse the model
+  until you supply your own rates. Model Vault, private deployments and
+  commercial agreements likewise require their own reviewed configuration and
+  prices. Absent usage remains unknown cost.
 - GLM Flash/FlashX thinking cannot be disabled. GLM-5.3 remains text-only in its
   existing route. The newly added Kimi, MiniMax, Mistral and Cohere adapters
   currently accept text inputs only; model vision capabilities do not imply

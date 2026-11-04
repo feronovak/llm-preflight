@@ -386,7 +386,7 @@ reads, and $4.00 output per million tokens, checked against the
 The example's route prices were re-reviewed on 2026-10-16 at $0.0608 input,
 $0.0565 cache reads and $4.40 output per million tokens, which raises its
 maximum estimate to $0.0361131392; past measurements used the prices of their
-day. The current example was reviewed again on 2026-10-26: Relace's endpoint
+day. The current example was reviewed again on 2026-11-04: Relace's endpoint
 catalogue lists $0.0703 input, $0.0703 cache reads and $4.3843 output per million
 tokens, giving a maximum estimate of $0.0359952028. This configuration refresh
 does not change the historical observations or their recorded costs.

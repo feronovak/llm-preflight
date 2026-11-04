@@ -83,18 +83,17 @@ def test_openai_retirement_reaches_source_audit_ci(monkeypatch, tmp_path, capsys
         ("gemini-3.7-flash", "gemini-3.8-flash"),
     ],
 )
-def test_deprecated_gemini_aliases_report_redirects_without_inventing_shutdown(
-    model, replacement
-):
-    verdict = retirement_verdict("gemini", model, date(2026, 10, 14))
-    assert verdict["status"] == "retiring"
-    assert verdict["decision"] == "inconclusive"
-    assert verdict["replacement"] == replacement
-    assert verdict["replacement_status"] == "active"
+def test_gemini_stable_alias_is_active_and_reports_its_route(model, replacement):
+    verdict = retirement_verdict("gemini", model, date(2026, 11, 4))
+    assert verdict["status"] == "active"
+    assert verdict["decision"] == "pass"
+    assert verdict["as_of"] == "2026-11-04"
     assert "retirement_date" not in verdict
+    assert "replacement" not in verdict
+    assert "next_command" not in verdict
     assert "automatically route" in verdict["reason"]
+    assert replacement in verdict["reason"]
     assert "not shutting down" in verdict["reason"]
-    assert "to be announced" not in verdict["reason"]
 
 
 @pytest.mark.parametrize(
@@ -109,17 +108,15 @@ def test_current_gemini_models_have_reviewed_active_rows(model):
 
 def test_gemini_redirect_reaches_source_audit_ci(monkeypatch, tmp_path, capsys):
     (tmp_path / "app.py").write_text('MODEL = "gemini-3.5-flash"\n')
-    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 10, 14))
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 4))
     monkeypatch.setattr(
         sys,
         "argv",
         ["llm-preflight", "--audit-source", str(tmp_path), "--ci", "--json"],
     )
-    with pytest.raises(SystemExit) as exc:
-        cli.main()
-    assert exc.value.code == 3
+    cli.main()
     report = json.loads(capsys.readouterr().out)
-    assert report["decision"] == "inconclusive"
+    assert report["decision"] == "pass"
     assert "automatically route" in report["references"][0]["retirement"]["reason"]
 
 
@@ -162,10 +159,10 @@ def test_gemini_4_pricing_switches_on_the_published_date(monkeypatch, day, rates
         )
         == rates
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
     assert (
         model["pricing_metadata"]["source_url"]
-        == "https://ai.google.dev/gemini-api/docs/pricing"
+        == "https://aistudio.google.com/docs/pricing"
     )
     assert estimate_sample_cost(
         {"input_tokens": 1000, "cached_input_tokens": 800, "output_tokens": 100}, model
@@ -259,7 +256,7 @@ def test_gemini_4_example_is_a_bounded_fixture_verified_plan(snapshot_review_day
     assert check_contract(config)["ok"] is True
     assert (
         pricing_coverage_report(
-            models, today=date(2026, 10, 26), require_current_pricing=True
+            models, today=date(2026, 11, 4), require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
@@ -311,7 +308,7 @@ def test_published_openai_cache_writes_use_the_full_request_context_boundary(
         + 1000 * output_rate
     ) / 1_000_000
     assert estimate_sample_cost(sample, model) == pytest.approx(expected)
-    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
 
 
 @pytest.mark.parametrize(
@@ -366,8 +363,14 @@ def test_october_dated_openai_ids_reach_their_announced_retirement_boundary(
 def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
-    assert {rates[2] for rates in PUBLIC_PRICING.values()} == {"2026-10-26"}
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-10-26"}
+    held = {("mistral", "mistral-large-4"), ("mistral", "mistral-large-4-0")}
+    assert {
+        key for key, rates in PUBLIC_PRICING.items() if rates[2] == "2026-10-26"
+    } == held
+    assert {rates[2] for key, rates in PUBLIC_PRICING.items() if key not in held} == {
+        "2026-11-04"
+    }
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-04"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

@@ -95,12 +95,13 @@ def test_cohere_discovery_refuses_repeating_pagination(monkeypatch):
 )
 def test_source_audit_recognizes_new_native_cohort(model, provider):
     report = audit_source_text(
-        Path("app.py"), f'MODEL = "{model}"', today=date(2026, 10, 26)
+        Path("app.py"), f'MODEL = "{model}"', today=date(2026, 11, 4)
     )
     assert len(report["references"]) == 1
     reference = report["references"][0]
     assert reference["provider"] == provider
-    assert reference["status"] == "pricing_known"
+    expected = "pricing_unknown" if provider == "cohere" else "pricing_known"
+    assert reference["status"] == expected
     assert reference["retirement"]["status"] == "unknown"
 
 

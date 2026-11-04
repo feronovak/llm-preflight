@@ -11,6 +11,26 @@ All notable changes to this project are documented here.
   uv package/executable selection for clients that would otherwise start the
   benchmark CLI. Registry publication remains separate from these source changes.
 - Align the application-integration CI example with published 2.23.0.
+- Cohere Command A+ (`command-a-plus-05-2026`) no longer reports a bundled $0
+  price; Cohere publishes no rate. Its cost is now unknown, so `--pricing-check`
+  and `require_current_pricing` refuse it until you supply your own rates. The
+  release freshness gate accepts that example only while it stays unpriced.
+
+### Added
+
+- Retirement row for `gemini-3.1-flash-lite`: deprecated, retires 2027-05-07,
+  replacement `gemini-3.5-flash-lite`. `--ci` now exits 3 for it instead of
+  reporting unknown.
+
+### Changed
+
+- `gemini-3.5-flash` and `gemini-3.7-flash` are reported active, matching
+  Google's stable label. Requests still route to Gemini 3.6 Flash and 3.8 Flash.
+  `--audit-source --ci` and `--dry-run --ci` now exit 0 instead of 3 for them,
+  with no replacement command.
+- Re-reviewed the bundled pricing and retirement rows on 2026-11-04, except the
+  Mistral rows. Corrected source links for Claude Sonnet 5.5, Claude Mythos 5.1,
+  Gemini and Kimi.
 
 ## 2.23.0 - 2026-10-29
 

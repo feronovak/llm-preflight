@@ -51,6 +51,10 @@ EXAMPLES = (
     "glm-5.3-openrouter-comparison",
 )
 _FLAGGED = {"retired", "retiring", "stale"}
+# Examples whose model has no bundled price on purpose: they pass only while
+# the sole pricing reason is that the price is unknown.
+EXPECTED_UNPRICED = {"cohere-command-a-plus"}
+_UNKNOWN_PRICE = ": pricing is unknown"
 
 
 def pricing_reasons(path: Path, today: date) -> list[str]:
@@ -68,6 +72,17 @@ def pricing_reasons(path: Path, today: date) -> list[str]:
         f"{warning['provider']}/{warning['model']}: {warning['message']}"
         for warning in report["warnings"]
     ] or ["pricing coverage is incomplete"]
+
+
+def release_blockers(example: str, reasons: list[str]) -> list[str]:
+    """The reasons that fail the gate; an expected-unpriced example may only be unpriced."""
+    if example not in EXPECTED_UNPRICED:
+        return reasons
+    if not reasons:
+        return [f"{example} is expected to be unpriced but has a bundled price"]
+    if all(reason.endswith(_UNKNOWN_PRICE) for reason in reasons):
+        return []
+    return reasons
 
 
 def retirement_reasons(path: Path, today: date) -> tuple[str, list[str]]:
@@ -93,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     for example in EXAMPLES:
         label = f"examples/{example}.json"
-        reasons = pricing_reasons(ROOT / label, today)
+        reasons = release_blockers(example, pricing_reasons(ROOT / label, today))
         print(f"{'FAIL' if reasons else 'ok'} pricing-check {label}")
         print("".join(f"  {reason}\n" for reason in reasons), end="")
         failed = failed or bool(reasons)

@@ -15,14 +15,14 @@ ANTHROPIC_DEPRECATIONS_URL = (
     "https://platform.claude.com/docs/en/about-claude/model-deprecations"
 )
 OPENAI_DEPRECATIONS_URL = "https://developers.openai.com/api/docs/deprecations"
-GEMINI_DEPRECATIONS_URL = "https://ai.google.dev/gemini-api/docs/deprecations"
+GEMINI_DEPRECATIONS_URL = "https://aistudio.google.com/docs/deprecations"
 RETIREMENT_PROVIDERS: tuple[str, ...] = ("anthropic", "gemini", "openai")
 GEMINI_MODEL_REDIRECTS = {
     "gemini-3.5-flash": "gemini-3.6-flash",
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
-_REVIEWED = "2026-10-26"
+_REVIEWED = "2026-11-04"
 
 
 def _row(
@@ -246,19 +246,22 @@ _GEMINI = {
     },
     "gemini-4-argon": _row(
         "active",
-        source_url="https://ai.google.dev/gemini-api/docs/models/gemini-4-argon",
+        source_url="https://aistudio.google.com/docs/models/gemini-4-argon",
     ),
     **{
         model: {
-            **_row(
-                "deprecated",
-                source_url=GEMINI_DEPRECATIONS_URL,
-                replacement=replacement,
-            ),
+            **_row("active", source_url=GEMINI_DEPRECATIONS_URL),
             "redirected": True,
+            "routes_to": route,
         }
-        for model, replacement in GEMINI_MODEL_REDIRECTS.items()
+        for model, route in GEMINI_MODEL_REDIRECTS.items()
     },
+    "gemini-3.1-flash-lite": _row(
+        "deprecated",
+        source_url=GEMINI_DEPRECATIONS_URL,
+        retirement_date="2027-05-07",
+        replacement="gemini-3.5-flash-lite",
+    ),
 }
 
 PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {
@@ -370,16 +373,18 @@ def retirement_verdict(
     elif base_status == "retiring":
         status, decision = "retiring", "inconclusive"
         reason = (
-            f"deprecated alias; requests automatically route to {replacement}; "
-            "the endpoint is not shutting down"
-            if row.get("redirected")
-            else f"retirement announced for {retirement_date}"
+            f"retirement announced for {retirement_date}"
             if retirement_date
             else "deprecated; retirement date to be announced"
         )
     else:
         status, decision = "active", "pass"
-        reason = f"listed active as of {as_of}"
+        reason = (
+            f"stable alias; requests automatically route to {row['routes_to']}; "
+            "the endpoint is not shutting down"
+            if row.get("redirected")
+            else f"listed active as of {as_of}"
+        )
     if status == "stale":
         next_step = f"update llm-preflight or review {source_url}"
     elif status in {"retired", "retiring"} and replacement:

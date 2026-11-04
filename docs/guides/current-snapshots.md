@@ -8,9 +8,8 @@ are described in [native provider checks](native-providers.md).
 
 Package version: **2.23.0**. The table records this version's reviewed
 public-route rates, not account access or model quality.
-Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05, except
-the two Mistral rows, last reviewed on 2026-10-26, which become stale on
-2026-11-26. Strict pricing then blocks execution. Explicit owner overrides retain their
+Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
+pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
@@ -106,8 +105,8 @@ unknown until you supply your own rates.
 | `moonshot` | `kimi-k3.1-pro-highspeed` | 4.00 | 20.00 | 2026-11-04 |
 | `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-11-04 |
 | `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-11-04 |
-| `mistral` | `mistral-large-4` | 1.36 | 4.18 | 2026-10-26 |
-| `mistral` | `mistral-large-4-0` | 1.36 | 4.18 | 2026-10-26 |
+| `mistral` | `mistral-large-4` | 0.70 | 2.10 | 2026-11-04 |
+| `mistral` | `mistral-large-4-0` | 0.70 | 2.10 | 2026-11-04 |
 | `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-11-04 |
 | `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-11-04 |
 | `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-11-04 |

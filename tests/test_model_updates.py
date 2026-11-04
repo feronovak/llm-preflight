@@ -378,13 +378,7 @@ def test_october_dated_openai_ids_reach_their_announced_retirement_boundary(
 def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
-    held = {("mistral", "mistral-large-4"), ("mistral", "mistral-large-4-0")}
-    assert {
-        key for key, rates in PUBLIC_PRICING.items() if rates[2] == "2026-10-26"
-    } == held
-    assert {rates[2] for key, rates in PUBLIC_PRICING.items() if key not in held} == {
-        "2026-11-04"
-    }
+    assert {rates[2] for rates in PUBLIC_PRICING.values()} == {"2026-11-04"}
     assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-04"}
 
 

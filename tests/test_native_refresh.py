@@ -255,8 +255,8 @@ PRICES = [
     ("moonshot", "kimi-k3.1-pro-highspeed", 4, 20, 0.20, 4),
     ("minimax", "MiniMax-M3.1-Flash", 0.15, 0.60, 0.015, None),
     ("minimax", "MiniMax-M3", 0.30, 1.20, 0.06, None),
-    ("mistral", "mistral-large-4", 1.36, 4.18, 0.14, None),
-    ("mistral", "mistral-large-4-0", 1.36, 4.18, 0.14, None),
+    ("mistral", "mistral-large-4", 0.70, 2.10, 0.07, None),
+    ("mistral", "mistral-large-4-0", 0.70, 2.10, 0.07, None),
 ]
 
 
@@ -276,7 +276,7 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     assert priced.get("cached_input_cost_per_million") == cache_rate
     assert priced.get("cache_write_input_cost_per_million") == write_rate
     as_of = priced["pricing_metadata"]["as_of"]
-    assert as_of == ("2026-10-26" if provider == "mistral" else "2026-11-04")
+    assert as_of == "2026-11-04"
     assert priced["pricing_metadata"]["source_url"].startswith("https://")
     sample = {
         "input_tokens": 1000,

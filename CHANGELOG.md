@@ -29,9 +29,12 @@ All notable changes to this project are documented here.
   shutdown date for them and routes requests to Gemini 3.6 Flash and 3.8 Flash.
   `--audit-source --ci` and `--dry-run --ci` now exit 0 instead of 3 for them,
   with no replacement command.
-- Re-reviewed the bundled pricing and retirement rows on 2026-11-04, except the
-  Mistral rows. Corrected source links for Claude Sonnet 5.5, Claude Mythos 5.1,
+- Re-reviewed the bundled pricing and retirement rows on 2026-11-04.
+  Corrected source links for Claude Sonnet 5.5, Claude Mythos 5.1,
   Gemini and Kimi.
+- Lower the bundled Mistral Large 4 price (`mistral-large-4` and
+  `mistral-large-4-0`) to $0.70 input, $2.10 output and $0.07 cached input per
+  million tokens, as listed on the Mistral model page on 2026-11-04.
 
 ## 2.23.0 - 2026-10-29
 

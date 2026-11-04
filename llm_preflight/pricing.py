@@ -74,8 +74,8 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("moonshot", "kimi-k3.1-pro-highspeed"): (4, 20, "2026-11-04"),
     ("minimax", "MiniMax-M3.1-Flash"): (0.15, 0.6, "2026-11-04"),
     ("minimax", "MiniMax-M3"): (0.3, 1.2, "2026-11-04"),
-    ("mistral", "mistral-large-4"): (1.36, 4.18, "2026-10-26"),
-    ("mistral", "mistral-large-4-0"): (1.36, 4.18, "2026-10-26"),
+    ("mistral", "mistral-large-4"): (0.7, 2.1, "2026-11-04"),
+    ("mistral", "mistral-large-4-0"): (0.7, 2.1, "2026-11-04"),
 }
 
 _PROVIDER_PRICING_PAGES = {
@@ -185,8 +185,8 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
             },
         ],
     },
-    ("mistral", "mistral-large-4"): {"cached_input_cost_per_million": 0.14},
-    ("mistral", "mistral-large-4-0"): {"cached_input_cost_per_million": 0.14},
+    ("mistral", "mistral-large-4"): {"cached_input_cost_per_million": 0.07},
+    ("mistral", "mistral-large-4-0"): {"cached_input_cost_per_million": 0.07},
     ("zai", "glm-5.3"): {"cached_input_cost_per_million": 0.26},
     ("openai", "gpt-5.5"): {
         "cached_input_cost_per_million": 0.5,

@@ -106,18 +106,33 @@ def test_current_gemini_models_have_reviewed_active_rows(model):
     assert "retirement_date" not in verdict
 
 
-def test_gemini_redirect_reaches_source_audit_ci(monkeypatch, tmp_path, capsys):
-    (tmp_path / "app.py").write_text('MODEL = "gemini-3.5-flash"\n')
+@pytest.mark.parametrize(
+    ("model", "decision", "exit_code"),
+    [
+        ("gemini-3.5-flash", "pass", 0),
+        ("gemini-3.7-flash", "pass", 0),
+        ("gemini-3.1-flash-lite", "inconclusive", 3),
+    ],
+)
+def test_gemini_rows_reach_source_audit_ci(
+    monkeypatch, tmp_path, capsys, model, decision, exit_code
+):
+    (tmp_path / "app.py").write_text(f'MODEL = "{model}"\n')
     monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 4))
     monkeypatch.setattr(
         sys,
         "argv",
         ["llm-preflight", "--audit-source", str(tmp_path), "--ci", "--json"],
     )
-    cli.main()
+    try:
+        cli.main()
+        status = 0
+    except SystemExit as exc:
+        status = exc.code
     report = json.loads(capsys.readouterr().out)
-    assert report["decision"] == "pass"
-    assert "automatically route" in report["references"][0]["retirement"]["reason"]
+    assert (report["decision"], status) == (decision, exit_code)
+    reason = report["references"][0]["retirement"]["reason"]
+    assert ("automatically route" in reason) == (exit_code == 0)
 
 
 def test_current_smoke_examples_choose_direct_gemini_routes():

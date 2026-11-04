@@ -380,7 +380,7 @@ def retirement_verdict(
     else:
         status, decision = "active", "pass"
         reason = (
-            f"stable alias; requests automatically route to {row['routes_to']}; "
+            f"no shutdown date listed; requests automatically route to {row['routes_to']}; "
             "the endpoint is not shutting down"
             if row.get("redirected")
             else f"listed active as of {as_of}"

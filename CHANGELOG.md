@@ -25,8 +25,8 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- `gemini-3.5-flash` and `gemini-3.7-flash` are reported active, matching
-  Google's stable label. Requests still route to Gemini 3.6 Flash and 3.8 Flash.
+- `gemini-3.5-flash` and `gemini-3.7-flash` are reported active: Google lists no
+  shutdown date for them and routes requests to Gemini 3.6 Flash and 3.8 Flash.
   `--audit-source --ci` and `--dry-run --ci` now exit 0 instead of 3 for them,
   with no replacement command.
 - Re-reviewed the bundled pricing and retirement rows on 2026-11-04, except the

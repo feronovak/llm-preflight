@@ -170,7 +170,7 @@ explicitly. These fixes do not change OpenRouter requests or prior results.
 Google's [October changelog](https://ai.google.dev/gemini-api/docs/changelog)
 announces GA of `gemini-4-argon` on October 13. The
 [migration guide](https://ai.google.dev/gemini-api/docs/latest-model) and
-[pricing page](https://ai.google.dev/gemini-api/docs/pricing) document these
+[pricing page](https://aistudio.google.com/docs/pricing) document these
 standard synchronous USD rates per million tokens, rechecked October 16 UTC:
 
 | Model | Period | Input | Cached input | Output, including thinking |

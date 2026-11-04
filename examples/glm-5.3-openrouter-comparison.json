@@ -37,7 +37,7 @@
       "pricing_metadata": {
         "source": "OpenRouter Relace endpoint pricing",
         "source_url": "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints",
-        "as_of": "2026-10-26"
+        "as_of": "2026-11-04"
       }
     }
   ],

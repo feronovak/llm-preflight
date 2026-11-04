@@ -246,7 +246,7 @@ def test_frontier_candidates_include_current_flagships_and_are_priced(
         "claude-sonnet-5-5",
         "gemini-3.8-flash",
         "gemini-3.1-pro-preview",
-        "gemini-3.1-flash-lite",
+        "gemini-3.6-flash",
         "grok-4.7",
         "grok-4.6",
         "grok-4.3",
@@ -308,7 +308,7 @@ def test_glm_routed_comparison_pins_the_observed_host_and_bounds_requests(
     assert model["pricing_metadata"]["source_url"] == (
         "https://openrouter.ai/api/v1/models/z-ai/glm-5.3/endpoints"
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-10-26"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
     assert (
         model["input_cost_per_million"],
         model["cached_input_cost_per_million"],

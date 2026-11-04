@@ -257,7 +257,6 @@ PRICES = [
     ("minimax", "MiniMax-M3", 0.30, 1.20, 0.06, None),
     ("mistral", "mistral-large-4", 1.36, 4.18, 0.14, None),
     ("mistral", "mistral-large-4-0", 1.36, 4.18, 0.14, None),
-    ("cohere", "command-a-plus-05-2026", 0, 0, None, None),
 ]
 
 
@@ -267,7 +266,7 @@ PRICES = [
 def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     provider, model, input_rate, output_rate, cache_rate, write_rate
 ):
-    from datetime import date
+    from datetime import date, timedelta
 
     from llm_preflight.pricing import apply_public_pricing, pricing_coverage_report
 
@@ -276,7 +275,8 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     assert priced["output_cost_per_million"] == output_rate
     assert priced.get("cached_input_cost_per_million") == cache_rate
     assert priced.get("cache_write_input_cost_per_million") == write_rate
-    assert priced["pricing_metadata"]["as_of"] == "2026-10-26"
+    as_of = priced["pricing_metadata"]["as_of"]
+    assert as_of == ("2026-10-26" if provider == "mistral" else "2026-11-04")
     assert priced["pricing_metadata"]["source_url"].startswith("https://")
     sample = {
         "input_tokens": 1000,
@@ -294,15 +294,18 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
         assert estimate_sample_cost(sample, priced) == pytest.approx(
             expected + 100 * (write_rate - input_rate) / 1e6
         )
+    last_fresh_day = date.fromisoformat(as_of) + timedelta(days=30)
     assert (
         pricing_coverage_report(
-            [priced], today=date(2026, 11, 25), require_current_pricing=True
+            [priced], today=last_fresh_day, require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
     assert (
         pricing_coverage_report(
-            [priced], today=date(2026, 11, 26), require_current_pricing=True
+            [priced],
+            today=last_fresh_day + timedelta(days=1),
+            require_current_pricing=True,
         )["enforcement_ok"]
         is False
     )
@@ -344,7 +347,10 @@ def test_minimax_m3_full_request_context_tier(
     )
 
 
-@pytest.mark.parametrize("provider,model,endpoint,key_env,limit_key", NATIVE_CASES)
+@pytest.mark.parametrize(
+    "provider,model,endpoint,key_env,limit_key",
+    [case for case in NATIVE_CASES if case[0] != "cohere"],
+)
 @pytest.mark.parametrize("persisted", [False, True])
 def test_native_public_prices_never_apply_to_another_deployment(
     provider, model, endpoint, key_env, limit_key, persisted
@@ -360,7 +366,7 @@ def test_native_public_prices_never_apply_to_another_deployment(
         config.update(
             input_cost_per_million=1,
             output_cost_per_million=1,
-            pricing_metadata={"source": "official snapshot", "as_of": "2026-10-26"},
+            pricing_metadata={"source": "official snapshot", "as_of": "2026-11-04"},
         )
     resolved = apply_public_pricing(config)
     assert resolved.get("input_cost_per_million") is None
@@ -372,7 +378,7 @@ def test_native_public_prices_never_apply_to_another_deployment(
         **config,
         "input_cost_per_million": 3,
         "output_cost_per_million": 5,
-        "pricing_metadata": {"source": "user override", "as_of": "2026-10-26"},
+        "pricing_metadata": {"source": "user override", "as_of": "2026-11-04"},
     }
     assert apply_public_pricing(explicit) == explicit
 
@@ -536,7 +542,7 @@ def test_retained_native_snapshots_require_their_reviewed_public_deployment(
         **config,
         "input_cost_per_million": 1,
         "output_cost_per_million": 2,
-        "pricing_metadata": {"source": "user override", "as_of": "2026-10-26"},
+        "pricing_metadata": {"source": "user override", "as_of": "2026-11-04"},
     }
     assert apply_public_pricing(explicit) == explicit
 

@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-10-26 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -144,14 +144,18 @@ from the ID.
   [deprecations page](https://developers.openai.com/api/docs/deprecations).
   OpenAI publishes no active list, so an OpenAI ID absent from that page is
   `unknown`, not `active`.
-- Gemini: five targeted rows from Google's
-  [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations) and
-  [Gemini 4 Argon model page](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
-  Gemini 4 Argon, 3.6 Flash and 3.8 Flash are active. The October 8
-  [changelog](https://ai.google.dev/gemini-api/docs/changelog) confirms that
-  3.5 Flash redirects to 3.6 and 3.7 to 3.8; these endpoints are not shutting
-  down. The alias verdict explains the redirect and has no retirement date.
-  Other Gemini IDs remain unknown; this is partial coverage.
+- Gemini: six targeted rows from Google's
+  [deprecations page](https://aistudio.google.com/docs/deprecations) and
+  [Gemini 4 Argon model page](https://aistudio.google.com/docs/models/gemini-4-argon).
+  Gemini 4 Argon, 3.6 Flash and 3.8 Flash are active. `gemini-3.5-flash` and
+  `gemini-3.7-flash` are no longer available in Google AI Studio, but their
+  endpoints are not shutting down: requests route to 3.6 Flash and 3.8 Flash.
+  They are recorded active, and the verdict names the route; it has no
+  retirement date and no replacement command. `gemini-3.1-flash-lite` is
+  deprecated and retires on 2027-05-07; Google names `gemini-3.5-flash-lite`
+  as its replacement. `gemini-3.1-pro-preview` has no row because the page
+  states no shutdown date or replacement. Other Gemini IDs remain unknown;
+  this is partial coverage.
 - Text-generation models only. Audio, realtime, image, transcription,
   embedding and fine-tuning retirements are not in the snapshot.
 - A page entry that names more than one replacement, a replacement that
@@ -160,9 +164,9 @@ from the ID.
 
 ## Release retirement review
 
-The 2.23.0 snapshot contains 116 rows: 36 Anthropic, 75 OpenAI and five Gemini,
+The 2.23.0 snapshot contains 117 rows: 36 Anthropic, 75 OpenAI and six Gemini,
 all reviewed on the date stamped above. Non-retired rows become stale on
-2026-11-26; retired rows remain failures. The added dated OpenAI IDs
+2026-12-05; retired rows remain failures. The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
 2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and
 GPT-4.1 mini aliases follow the schedule of the dated snapshots their official

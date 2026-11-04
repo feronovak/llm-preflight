@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-26 · **As of:** v2.23.0" in page
+    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.0" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -27,7 +27,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
     ):
-        assert f"| `qwen` | `{model}` | {rates} | 2026-10-26 |" in page
+        assert f"| `qwen` | `{model}` | {rates} | 2026-11-04 |" in page
     assert "Model Studio" in page and "account console" in page
     for (provider, model_id), (_, _, as_of) in PUBLIC_PRICING.items():
         rows = [
@@ -678,7 +678,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-26 · **As of:** v2.23.0" in guide
+    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.0" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()

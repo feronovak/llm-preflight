@@ -8,6 +8,7 @@ from llm_preflight.catalog import resolve_models
 from llm_preflight.client import create_client
 from llm_preflight.contracts import check_contract
 from llm_preflight.features import estimate_budget
+from llm_preflight.pricing import PUBLIC_PRICING
 from llm_preflight.runner import load_config, validate_config_validations
 
 EXAMPLES = [
@@ -48,7 +49,11 @@ def test_new_native_example_has_fixtures_and_a_single_bounded_request(
     assert body["model"] == model
     budget = estimate_budget(config, models)
     assert budget["possible_requests"] == 1
-    assert budget["maximum_estimated_cost_usd"] <= config["max_estimated_cost_usd"]
+    cost = budget["maximum_estimated_cost_usd"]
+    if (provider, model) in PUBLIC_PRICING:
+        assert cost <= config["max_estimated_cost_usd"]
+    else:
+        assert cost is None
 
 
 def test_release_freshness_checks_every_new_native_example():
@@ -68,4 +73,4 @@ def test_price_sensitive_example_overrides_have_been_re_reviewed(name):
         for model in config["models"]
         if "pricing_metadata" in model
     ]
-    assert dated == ["2026-10-26"]
+    assert dated == ["2026-11-04"]

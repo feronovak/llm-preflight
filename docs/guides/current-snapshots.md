@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-10-26 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
@@ -8,8 +8,9 @@ are described in [native provider checks](native-providers.md).
 
 Package version: **2.23.0**. The table records this version's reviewed
 public-route rates, not account access or model quality.
-All rows were reviewed on 2026-10-26 UTC and become stale on 2026-11-26.
-Strict pricing then blocks execution. Explicit owner overrides retain their
+Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05, except
+the two Mistral rows, last reviewed on 2026-10-26, which become stale on
+2026-11-26. Strict pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
@@ -52,65 +53,64 @@ its own route prices. Kimi Highspeed is priced separately from standard Kimi.
 
 Rates are USD per million tokens. `as_of` is the actual review date. Long-context
 bands and cache rates are recorded in the bundled ledger. The DeepSeek rows
-use peak rates; Qwen uses Singapore/International list rates. Cohere's zero
-row applies to its public Command A+ API under its documented rate limits;
-it does not price Model Vault or another deployment.
+use peak rates; Qwen uses Singapore/International list rates. Cohere
+publishes no per-token price for Command A+, so it has no row: its cost is
+unknown until you supply your own rates.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
-| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-10-26 |
-| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-10-26 |
-| `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-10-26 |
-| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-10-26 |
-| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-10-26 |
-| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-10-26 |
-| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-10-26 |
-| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-10-26 |
-| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-10-26 |
-| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-10-26 |
-| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-10-26 |
-| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-10-26 |
-| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-10-26 |
-| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-10-26 |
-| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-10-26 |
-| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-10-26 |
-| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-10-26 |
-| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-10-26 |
-| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-10-26 |
-| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-10-26 |
-| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-10-26 |
-| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-10-26 |
-| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-10-26 |
-| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-10-26 |
-| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-10-26 |
-| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-10-26 |
-| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-10-26 |
-| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-10-26 |
-| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-10-26 |
-| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-10-26 |
-| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-10-26 |
-| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-10-26 |
-| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-10-26 |
-| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-10-26 |
-| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-10-26 |
-| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-10-26 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-10-26 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-10-26 |
-| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-10-26 |
-| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-10-26 |
-| `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-10-26 |
-| `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-10-26 |
-| `anthropic` | `claude-mythos-5-1` | 10.00 | 50.00 | 2026-10-26 |
-| `moonshot` | `kimi-k3.1-pro` | 2.00 | 10.00 | 2026-10-26 |
-| `moonshot` | `kimi-k3.1-pro-highspeed` | 4.00 | 20.00 | 2026-10-26 |
-| `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-10-26 |
-| `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-10-26 |
+| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-11-04 |
+| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-11-04 |
+| `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-11-04 |
+| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-11-04 |
+| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-11-04 |
+| `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-11-04 |
+| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-11-04 |
+| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-11-04 |
+| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-11-04 |
+| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-11-04 |
+| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-11-04 |
+| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-11-04 |
+| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-04 |
+| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-04 |
+| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-04 |
+| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-04 |
+| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-04 |
+| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-11-04 |
+| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-04 |
+| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-11-04 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-11-04 |
+| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-04 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-04 |
+| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-04 |
+| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-04 |
+| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-04 |
+| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-04 |
+| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-11-04 |
+| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-11-04 |
+| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-04 |
+| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-04 |
+| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-04 |
+| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-04 |
+| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-04 |
+| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-04 |
+| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-04 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-04 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-04 |
+| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-04 |
+| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-11-04 |
+| `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-11-04 |
+| `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-11-04 |
+| `anthropic` | `claude-mythos-5-1` | 10.00 | 50.00 | 2026-11-04 |
+| `moonshot` | `kimi-k3.1-pro` | 2.00 | 10.00 | 2026-11-04 |
+| `moonshot` | `kimi-k3.1-pro-highspeed` | 4.00 | 20.00 | 2026-11-04 |
+| `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-11-04 |
+| `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-11-04 |
 | `mistral` | `mistral-large-4` | 1.36 | 4.18 | 2026-10-26 |
 | `mistral` | `mistral-large-4-0` | 1.36 | 4.18 | 2026-10-26 |
-| `cohere` | `command-a-plus-05-2026` | 0.00 | 0.00 | 2026-10-26 |
-| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-10-26 |
-| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-10-26 |
-| `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-10-26 |
+| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-11-04 |
+| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-11-04 |
+| `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-11-04 |
 
 DeepSeek rows use peak cache-miss rates. Qwen rows use USD list rates; the
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
@@ -136,7 +136,7 @@ tokens: $1 input, $0.05 cache reads, $1.25 cache writes (30-minute retention),
 and $5 output. Above 272,000 total input tokens, input and cache rates double
 and output costs $7.50 for the whole request. Twelve-hour cache writes, Fast,
 Batch/Flex and regional processing require their own reviewed overrides.
-The row becomes stale on 2026-11-26; strict pricing then blocks execution.
+The row becomes stale on 2026-12-05; strict pricing then blocks execution.
 OpenAI retirement status remains unknown when its deprecations page does not
 list an ID. Pricing coverage does not establish account access or approval.
 
@@ -151,7 +151,7 @@ route, settings and date.
 
 The Max and Flash rows use Model Studio Singapore/International standard
 input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
-on October 26. Other regions and deployment scopes require their own reviewed
+on November 4. Other regions and deployment scopes require their own reviewed
 overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
 must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed
@@ -170,7 +170,7 @@ explicitly. These fixes do not change OpenRouter requests or prior results.
 Google's [October changelog](https://ai.google.dev/gemini-api/docs/changelog)
 announces GA of `gemini-4-argon` on October 13. The
 [migration guide](https://ai.google.dev/gemini-api/docs/latest-model) and
-[pricing page](https://ai.google.dev/gemini-api/docs/pricing) document these
+[pricing page](https://aistudio.google.com/docs/pricing) document these
 standard synchronous USD rates per million tokens, rechecked October 16 UTC:
 
 | Model | Period | Input | Cached input | Output, including thinking |
@@ -184,12 +184,12 @@ The tool selects these published rates using the current UTC date. A scheduled
 price change does not renew snapshot freshness: strict pricing checks still
 require a recent review. Explicit owner prices retain precedence.
 
-Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8;
-requests redirect to 3.6 and 3.8 respectively. Their endpoints are not shutting
-down. The tool reports these aliases as retiring/inconclusive without a
-shutdown date and leaves their effective price unknown, including saved
-official prices. Use the direct replacement or supply an explicitly reviewed
-owner rate. The September comparison remains historical evidence.
+`gemini-3.5-flash` and `gemini-3.7-flash` are no longer available in Google AI
+Studio; their endpoints are not shutting down and requests route to 3.6 and 3.8
+respectively. The tool reports these aliases as active and names the route in
+the verdict. It still leaves their effective price unknown, including saved
+official prices. Use the direct model or supply an explicitly reviewed owner
+rate. The September comparison remains historical evidence.
 
 Argon shares a 1,048,576-token window across input, thinking and output.
 The native GenerateContent adapter supports synchronous requests capped at

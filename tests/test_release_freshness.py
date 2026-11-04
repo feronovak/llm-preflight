@@ -22,11 +22,11 @@ def _script():
 
 
 def test_release_freshness_passes_on_the_snapshot_review_day(capsys):
-    assert _script().main(["--today", "2026-10-26"]) == 0
+    assert _script().main(["--today", "2026-11-04"]) == 0
 
     output = capsys.readouterr().out
     assert "FAIL" not in output
-    assert "Release freshness on 2026-10-26: pass" in output
+    assert "Release freshness on 2026-11-04: pass" in output
 
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
@@ -38,10 +38,35 @@ def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
         for line in output.splitlines()
         if line.startswith("FAIL pricing-check")
     ]
-    assert "examples/glm-5.3-openrouter-comparison.json" in failed
+    assert failed == ["examples/mistral-large-4.json"]
+    assert "official pricing snapshot is stale by 31 days" in output
+    assert "Release freshness on 2026-11-26: fail" in output
+
+
+def test_release_freshness_names_the_stale_override_example(capsys):
+    assert _script().main(["--today", "2026-12-05"]) == 1
+
+    output = capsys.readouterr().out
+    assert "FAIL pricing-check examples/glm-5.3-openrouter-comparison.json" in output
     assert "OpenRouter Relace endpoint pricing pricing is stale by 31 days" in output
     assert "FAIL pricing-check examples/approved-smoke.json" in output
-    assert "Release freshness on 2026-11-26: fail" in output
+
+
+def test_release_freshness_accepts_only_expected_unpriced_examples(capsys, monkeypatch):
+    script = _script()
+    script.EXAMPLES = ("cohere-command-a-plus",)
+    assert script.main(["--today", "2026-11-04"]) == 0
+    assert "ok pricing-check examples/cohere-command-a-plus.json" in (
+        capsys.readouterr().out
+    )
+
+    key = ("cohere", "command-a-plus-05-2026")
+    monkeypatch.setitem(pricing.PUBLIC_PRICING, key, (1.0, 2.0, "2026-11-04"))
+    monkeypatch.setitem(pricing.PUBLIC_PRICING_SOURCES, key, "https://example.test/")
+    assert script.main(["--today", "2026-11-04"]) == 1
+    output = capsys.readouterr().out
+    assert "FAIL pricing-check examples/cohere-command-a-plus.json" in output
+    assert "expected to be unpriced but has a bundled price" in output
 
 
 def test_official_snapshots_stay_fresh_through_november_25(capsys):
@@ -53,15 +78,16 @@ def test_official_snapshots_stay_fresh_through_november_25(capsys):
     output = capsys.readouterr().out
     assert "official pricing snapshot is stale by 31 days" in output
     assert "official pricing snapshot is stale by 32 days" not in output
+    assert "examples/mistral-large-4.json" in output
 
 
 def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys):
     script = _script()
     script.EXAMPLES = ()
 
-    assert script.main(["--today", "2026-11-25"]) == 0
+    assert script.main(["--today", "2026-12-04"]) == 0
     capsys.readouterr()
-    assert script.main(["--today", "2026-11-26"]) == 1
+    assert script.main(["--today", "2026-12-05"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL audit-source examples: inconclusive" in output
@@ -78,7 +104,7 @@ def test_release_freshness_script_exits_non_zero_on_a_stale_day():
     )
 
     assert result.returncode == 1, result.stderr
-    assert "FAIL pricing-check examples/approved-smoke.json" in result.stdout
+    assert "FAIL pricing-check examples/mistral-large-4.json" in result.stdout
 
 
 def test_make_release_freshness_and_the_release_workflow_run_the_script():
@@ -136,9 +162,12 @@ def _pin_cli_day(monkeypatch, today):
             "2026-11-12",
             "2026-11-13",
             "2026-11-14",
+            "2026-11-04",
             "2026-11-25",
             "2026-11-26",
             "2026-12-01",
+            "2026-12-04",
+            "2026-12-05",
             "2027-01-01",
         )
     ],
@@ -239,7 +268,7 @@ def test_release_retirement_gate_matches_cli_for_each_decision(
 
 
 def test_latest_comparison_is_checked_for_release_price_freshness(capsys):
-    assert _script().main(["--today", "2026-11-26"]) == 1
+    assert _script().main(["--today", "2026-12-05"]) == 1
     assert (
         "FAIL pricing-check examples/current-model-comparison.json"
         in capsys.readouterr().out

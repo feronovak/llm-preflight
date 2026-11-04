@@ -22,7 +22,7 @@
     {"provider": "anthropic", "model": "claude-sonnet-5-5"},
     {"provider": "gemini", "model": "gemini-3.1-pro-preview"},
     {"provider": "gemini", "model": "gemini-3.8-flash"},
-    {"provider": "gemini", "model": "gemini-3.1-flash-lite"},
+    {"provider": "gemini", "model": "gemini-3.6-flash"},
     {"provider": "xai", "model": "grok-4.7"},
     {"provider": "xai", "model": "grok-4.6"},
     {"provider": "xai", "model": "grok-4.3"},

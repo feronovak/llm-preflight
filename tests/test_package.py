@@ -246,7 +246,7 @@ def test_frontier_candidates_include_current_flagships_and_are_priced(
         "claude-sonnet-5-5",
         "gemini-3.8-flash",
         "gemini-3.1-pro-preview",
-        "gemini-3.1-flash-lite",
+        "gemini-3.6-flash",
         "grok-4.7",
         "grok-4.6",
         "grok-4.3",

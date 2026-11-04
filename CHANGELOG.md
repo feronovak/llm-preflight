@@ -20,7 +20,8 @@ All notable changes to this project are documented here.
 
 - Retirement row for `gemini-3.1-flash-lite`: deprecated, retires 2027-05-07,
   replacement `gemini-3.5-flash-lite`. `--ci` now exits 3 for it instead of
-  reporting unknown.
+  reporting unknown. The frontier candidates example now uses the active
+  `gemini-3.6-flash` in place of the deprecated model.
 
 ### Changed
 

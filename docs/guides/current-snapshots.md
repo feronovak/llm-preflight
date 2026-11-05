@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes

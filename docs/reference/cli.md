@@ -10,7 +10,7 @@ Machine decision schemas and benchmark exit codes are unchanged.
 
 Run `llm-preflight --help` for the installed version. The options below match this
 version. A normal benchmark takes `config`, a benchmark JSON path. Standalone
-commands such as `init`, `catalog`, `models`, `report`, `attest`, `verify` and
+commands such as `init`, `catalog`, `models`, `migrate`, `report`, `attest`, `verify` and
 `gate`, plus `--audit-source`, `--quick`, `--diff` and `--replay`, have their own
 inputs; see their `--help`.
 
@@ -208,6 +208,7 @@ temporary candidate plan, benchmark execution, and permanent approval separate.
 | `catalog test WATCH_CONFIG --approved APPROVED --output CONFIG` | Write a runnable benchmark plan for permanent approved models, using the test settings in the watch config. |
 | `CANDIDATES --interactive --approve-to APPROVED` | Run the single interactive benchmark flow, then offer passing models for approval. |
 | `models approve PROVIDER:MODEL --from RESULT --approved APPROVED` | Explicitly approve one passing model from a saved result, optionally with `--note TEXT`. |
+| `migrate CONFIG [--ci] [--json]` | Report, for each explicit `models` entry, whether the bundled retirement row names a provider replacement. It reads the config only: no file is written, no provider is called and `discovery` is ignored with a warning. Per model the `outcome` is `candidate`, `replacement_in_config`, `no_named_replacement`, `replacement_unusable` (the replacement is itself retired or retiring; the chain is not followed), `snapshot_stale`, `route_headers` (the row sets `headers`, so add the replacement by hand) or `not_affected`. A replacement with status `unknown` is reported as `unknown`, never active. The decision is the worst row decision. Exit 0 unless `--ci`: then 1 for `fail`, 3 for `inconclusive`; 2 for a usage or config error. `--json` keys: `schema_version`, `kind`, `decision`, `models`, `candidate_config`, `plan`, `approval`, `smoke`, `paid_requests_made`, `warnings`, `next_steps`. |
 | `models remove PROVIDER:MODEL --approved APPROVED` | Confirm and remove a permanent model while recording a removal timestamp and optional `--note TEXT`. |
 
 Example:

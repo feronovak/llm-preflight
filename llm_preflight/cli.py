@@ -64,6 +64,9 @@ from .features import (
     replay_config,
 )
 from .interactive import InteractiveServices, select_interactively
+from .migrate import build_report as build_migrate_report
+from .migrate import exit_code as migrate_exit_code
+from .migrate import format_report as format_migrate_report
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
@@ -2221,6 +2224,32 @@ def interactive_selection(
     )
 
 
+def _migrate_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog="llm-preflight migrate",
+        description=(
+            "Report which provider-named replacement applies to each retired "
+            "model in a config; writes nothing and calls no provider"
+        ),
+    )
+    parser.add_argument("config", type=Path, help="benchmark config JSON to inspect")
+    parser.add_argument(
+        "--ci", action="store_true", help="exit 1 on fail and 3 on inconclusive"
+    )
+    parser.add_argument("--json", action="store_true", help="print the report as JSON")
+    args = parser.parse_args(argv)
+    report = build_migrate_report(args.config, today_utc())
+    print(
+        json.dumps(report, indent=2, ensure_ascii=False)
+        if args.json
+        else format_migrate_report(report, ci=args.ci),
+        end="\n" if args.json else "",
+    )
+    code = migrate_exit_code(report["decision"], args.ci)
+    if code:
+        raise SystemExit(code)
+
+
 def _report_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         description="Render a safe offline report from saved result JSON"
@@ -2639,6 +2668,16 @@ def main() -> None:
             print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
             raise SystemExit(130) from None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "migrate":
+        try:
+            _migrate_main(sys.argv[2:])
+        except (OSError, ValueError) as exc:
             print(
                 f"{_display_command()}: error: {redact_secrets(str(exc))}",
                 file=sys.stderr,

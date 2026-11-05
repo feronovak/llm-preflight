@@ -500,16 +500,58 @@ def test_git_change_plan_reports_a_file_it_may_not_read(tmp_path, monkeypatch):
     ]
 
 
+def _locked_directory_repository(workspace):
+    _git(workspace, "init")
+    _git(workspace, "config", "user.email", "test@example.invalid")
+    _git(workspace, "config", "user.name", "Test User")
+    (workspace / "sub").mkdir()
+    (workspace / "sub" / "p.py").write_text("x = 1\n")
+    _git(workspace, "add", ".")
+    _git(workspace, "commit", "-m", "initial")
+
+
+def _lock_directory(monkeypatch, directory):
+    directory.chmod(0)
+    if os.geteuid() == 0:  # root ignores the mode: simulate the denial
+        for method in ("lstat", "stat", "read_text"):
+            _deny_reading(monkeypatch, "p.py", method)
+        _deny_reading(monkeypatch, "new.py", "stat")
+
+
 def test_git_change_plan_reports_a_file_in_a_directory_it_may_not_enter(
     tmp_path, monkeypatch
 ):
-    _repository_with_signal(tmp_path)
-    _deny_reading(monkeypatch, "locked.py", "stat")
+    _locked_directory_repository(tmp_path)
+    sub = tmp_path / "sub"
+    (sub / "p.py").write_text('model = "gpt-5.5"\nprompt = "changed"\n')
+    _lock_directory(monkeypatch, sub)
+    try:
+        plan = git_change_plan(tmp_path, "HEAD")
+    finally:
+        sub.chmod(0o755)
 
-    plan = git_change_plan(tmp_path, "HEAD")
-
+    assert plan["unreadable_files"] == ["sub/p.py"]
     assert plan["files_unreadable"] == 1
-    assert plan["unreadable_files"] == ["locked.py"]
+    assert "sub/p.py" not in plan["deleted_files"]
+    assert plan["plan_incomplete"] is True
+    assert plan["requires_preflight_review"] is True
+
+
+def test_git_change_plan_lists_a_staged_new_file_in_a_directory_it_may_not_enter(
+    tmp_path, monkeypatch
+):
+    _locked_directory_repository(tmp_path)
+    sub = tmp_path / "sub"
+    (sub / "new.py").write_text('prompt = "new"\n')
+    _git(tmp_path, "add", "sub/new.py")
+    _lock_directory(monkeypatch, sub)
+    try:
+        plan = git_change_plan(tmp_path, "HEAD")
+    finally:
+        sub.chmod(0o755)
+
+    assert "sub/new.py" in plan["changed_files"]
+    assert "sub/new.py" in plan["unreadable_files"]
     assert plan["plan_incomplete"] is True
 
 

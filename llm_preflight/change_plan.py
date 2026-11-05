@@ -28,12 +28,17 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
     changed_files, deleted_files = _changed_files(root, reference)
     triggers: list[dict[str, Any]] = []
     unreadable: list[str] = []
+    # Git reports a path it cannot lstat as deleted; only a missing path is.
+    gone = {item for item in deleted_files if _may_be_deleted(root / item)}
     # Paths stay as Git listed them for file and Git access, and are displayed
     # as UTF-8 text.
     for relative_path in changed_files:
         shown = display_path(relative_path)
         path = (root / relative_path).resolve()
-        deleted = relative_path in deleted_files
+        if relative_path in deleted_files and relative_path not in gone:
+            unreadable.append(shown)
+            continue
+        deleted = relative_path in gone
         if not deleted and root != path and root not in path.parents:
             continue
         if deleted:
@@ -77,7 +82,7 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
         "network_accessed": False,
         "paid_work_authorized": False,
         "changed_files": [display_path(item) for item in changed_files],
-        "deleted_files": [display_path(item) for item in deleted_files],
+        "deleted_files": [display_path(item) for item in deleted_files if item in gone],
         "files_unreadable": len(unreadable),
         "unreadable_files": unreadable,
         "plan_incomplete": bool(unreadable),
@@ -89,6 +94,17 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
             "This change plan is no-spend evidence and never authorizes paid work.",
         ],
     }
+
+
+def _may_be_deleted(path: Path) -> bool:
+    """False only when Git listed path as deleted because it may not be seen."""
+    try:
+        path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return True
+    except OSError:
+        return False
+    return True
 
 
 def unreadable_note(count: int) -> str:
@@ -138,10 +154,25 @@ def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
         reference,
         "--",
     )
+    staged = _git(
+        root,
+        "diff",
+        "--cached",
+        "--name-only",
+        "--diff-filter=ACMRD",
+        "--ignore-submodules=dirty",
+        "-z",
+        reference,
+        "--",
+    )
     untracked = _git(root, "ls-files", "--others", "--exclude-standard", "-z")
     paths = [
         Path(item)
-        for item in [*changed.stdout.split("\0"), *untracked.stdout.split("\0")]
+        for item in [
+            *changed.stdout.split("\0"),
+            *staged.stdout.split("\0"),
+            *untracked.stdout.split("\0"),
+        ]
         if item
     ]
     safe = []

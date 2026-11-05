@@ -27,6 +27,7 @@ def rows(monkeypatch):
         ("openai", "new"): _row("active"),
         ("openai", "cand"): _row("retired", replacement="fresh", date_="2026-10-01"),
         ("openai", "hdr"): _row("retired", replacement="fresh", date_="2026-10-01"),
+        ("openai", "norepl"): _row("retired", date_="2026-10-01"),
         ("openai", "modeonly"): _row("retired", date_="2026-10-01"),
         ("openai", "stale-old"): _row(
             "retired", replacement="new", as_of="2026-01-01", date_="2026-02-01"
@@ -58,16 +59,35 @@ def _entry(report, model):
 
 
 def test_retired_id_without_replacement_stops_and_writes_nothing(rows, tmp_path):
-    path = _write(tmp_path, [_m("cand")])
+    path = _write(tmp_path, [_m("norepl")])
     before = sorted(p.name for p in tmp_path.iterdir())
     report = migrate.build_report(path, TODAY)
+    entry = _entry(report, "norepl")
+    assert entry["outcome"] == "no_named_replacement"
+    assert entry["replacement"] is None
+    assert report["decision"] == "fail"
+    assert report["candidate_config"] is None
+    assert report["paid_requests_made"] == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == before
+
+
+def test_retired_id_with_named_replacement_is_candidate(rows, tmp_path):
+    report = migrate.build_report(_write(tmp_path, [_m("cand")]), TODAY)
     entry = _entry(report, "cand")
     assert entry["outcome"] == "candidate"
     assert entry["replacement"] == "fresh"
-    assert report["paid_requests_made"] == 0
     assert report["decision"] == "fail"
-    assert report["candidate_config"] is None
-    assert sorted(p.name for p in tmp_path.iterdir()) == before
+
+
+def test_retired_model_reached_through_alias_is_classified(rows, tmp_path):
+    path = _write(
+        tmp_path, ["main"], aliases={"main": {"provider": "openai", "model": "cand"}}
+    )
+    entry = _entry(migrate.build_report(path, TODAY), "cand")
+    assert entry["outcome"] == "candidate"
+    path = _write(tmp_path, ["ghost"], aliases={"main": _m("cand")})
+    with pytest.raises(ValueError, match="alias"):
+        migrate.build_report(path, TODAY)
 
 
 def test_mode_setting_row_reports_no_named_replacement(rows, tmp_path):
@@ -89,7 +109,9 @@ def test_replacement_already_in_config_reuses_user_row(rows, tmp_path):
 
 def test_stale_row_stops_even_when_retired(rows, tmp_path):
     report = migrate.build_report(_write(tmp_path, [_m("stale-old")]), TODAY)
-    assert _entry(report, "stale-old")["outcome"] == "snapshot_stale"
+    entry = _entry(report, "stale-old")
+    assert entry["outcome"] == "snapshot_stale"
+    assert entry["next_step"] == f"update llm-preflight or review {URL}"
     assert report["decision"] == "fail"
 
 
@@ -211,3 +233,14 @@ def test_exit_codes_table(rows, tmp_path, monkeypatch, capsys, model, plain, ci)
     missing = tmp_path / "nope.json"
     assert _run(monkeypatch, capsys, [str(missing)])[0] == 2
     assert _run(monkeypatch, capsys, [str(missing), "--ci"])[0] == 2
+
+
+@pytest.mark.parametrize(
+    "bad", [{"provider": ["x"], "model": "m"}, {"provider": None, "model": "m"}]
+)
+def test_non_string_provider_is_a_config_error(
+    rows, tmp_path, monkeypatch, capsys, bad
+):
+    path = _write(tmp_path, [bad])
+    assert _run(monkeypatch, capsys, [str(path), "--ci"])[0] == 2
+    assert _run(monkeypatch, capsys, [str(path)])[0] == 2

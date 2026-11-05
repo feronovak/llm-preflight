@@ -203,5 +203,5 @@ replacement stays your step.
 | `not_affected` | Active or unknown. |
 
 A replacement the snapshot has no row for is reported as `unknown`, never as
-active. Exit codes follow the table above: with `--ci`, 1 for a retired model
-and 3 for retiring or stale; without it, 0. A bad config exits 2.
+active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or
+stale; without it, 0. A bad config exits 2.

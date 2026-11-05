@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from . import retirements
+from .features import apply_model_aliases
 from .retirements import DEFAULT_MAX_AGE_DAYS, retirement_verdict, worst_decision
 
 SCHEMA_VERSION = 1
@@ -28,6 +29,7 @@ def _load(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path} is not valid JSON: {exc}") from None
     if not isinstance(config, dict):
         raise ValueError(f"{path} must hold a JSON object")  # noqa: TRY004
+    config = apply_model_aliases(config)
     models = config.get("models")
     if not isinstance(models, list) or not models:
         raise ValueError("config must list at least one entry under 'models'")
@@ -36,6 +38,8 @@ def _load(path: Path) -> dict[str, Any]:
             raise ValueError(  # noqa: TRY004
                 "every 'models' entry must be an object with a 'model'"
             )
+        if not isinstance(model.get("provider", ""), str):
+            raise ValueError("'provider' must be a string")  # noqa: TRY004
     return config
 
 
@@ -83,6 +87,8 @@ _NEXT = {
 
 
 def _next_step(outcome: str, verdict: dict[str, Any]) -> str:
+    if outcome == "snapshot_stale":
+        return f"update llm-preflight or review {verdict['source_url']}"
     template = _NEXT.get(outcome)
     if template is None:
         return verdict["next_step"]

@@ -28,12 +28,12 @@ make test
 Never leave intentionally failing tests in the completed work. Record the red
 test result during development, not as committed broken code.
 
-## Local Planning Memory
+## Planning
 
-`ROADMAP.md` is the local, ignored source of truth for product direction and
-next steps. When asked about the roadmap, planned work, or what to do next,
-read it before answering. Keep it current whenever a planned slice, its scope,
-or its target version changes; do not add it to Git or package artifacts.
+Product planning and the version plan live in the maintainer's private tracker
+and are not part of this repository. Contributors do not need them; the
+tracked docs, `CHANGELOG.md` and open issues are enough to work from. Do not
+add planning files to Git or package artifacts.
 
 Use semantic versioning: `major.minor.bugfix`. Increase `major` for breaking
 changes, `minor` for backward-compatible product features, and `bugfix` for

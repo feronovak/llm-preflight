@@ -13,6 +13,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -25,9 +26,19 @@ sys.path.insert(0, str(ROOT))
 
 from llm_preflight.catalog import _normalized_model_id
 from llm_preflight.pricing import PUBLIC_PRICING, PUBLIC_PRICING_SOURCES
-from llm_preflight.retirements import PUBLIC_RETIREMENTS
+from llm_preflight.retirements import (
+    ANTHROPIC_DEPRECATIONS_URL,
+    GEMINI_DEPRECATIONS_URL,
+    OPENAI_DEPRECATIONS_URL,
+    PUBLIC_RETIREMENTS,
+)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
+DEPRECATION_URLS = {
+    "ANTHROPIC_DEPRECATIONS_URL": ANTHROPIC_DEPRECATIONS_URL,
+    "OPENAI_DEPRECATIONS_URL": OPENAI_DEPRECATIONS_URL,
+    "GEMINI_DEPRECATIONS_URL": GEMINI_DEPRECATIONS_URL,
+}
 SNAPSHOT_VERSION = 1
 TIMEOUT_SECONDS = 20
 MAX_BYTES = 5_000_000
@@ -35,7 +46,7 @@ MIN_TEXT_CHARS = 200
 BOT_WALL_MAX_CHARS = 3000
 EXCERPT_LINES = 20
 EXCERPT_CHARS = 200
-MAX_STORED_LINES = 5000
+COLLAPSE_RATIO = 5
 # OpenRouter author prefix per bundle provider (catalog.py knows xai and gemini).
 OPENROUTER_AUTHORS = {
     "xai": "x-ai",
@@ -110,17 +121,28 @@ class _TextExtractor(HTMLParser):
 def normalise_html(html: str) -> list[str]:
     """Reduce a page to its non-empty, whitespace-collapsed text lines."""
     extractor = _TextExtractor()
-    extractor.feed(html)
-    extractor.close()
+    try:
+        extractor.feed(html)
+        extractor.close()
+    except (AssertionError, ValueError) as error:  # older html.parser versions
+        raise FetchError("unparseable HTML") from error
     lines = (" ".join(line.split()) for line in "".join(extractor.parts).splitlines())
     return [line for line in lines if line]
 
 
-def unreadable_reason(lines: list[str]) -> str | None:
-    """Why normalised text is clearly not the content, or None."""
+def unreadable_reason(
+    lines: list[str], before: dict[str, Any] | None = None
+) -> str | None:
+    """Why normalised text is clearly not the content, or None.
+
+    A page that shrank to a fifth of its previous line count is a JS shell or
+    a stripped page, not an edit.
+    """
     text = "\n".join(lines)
     if len(text) < MIN_TEXT_CHARS:
         return "near-empty text"
+    if before and len(lines) * COLLAPSE_RATIO < len(before["lines"]):
+        return "content collapsed against previous snapshot"
     if len(text) < BOT_WALL_MAX_CHARS and any(
         m in text.casefold() for m in BOT_WALL_MARKERS
     ):
@@ -139,11 +161,13 @@ def cited_urls() -> dict[str, list[str]]:
         cites.setdefault(url, []).append(f"pricing {provider}/{model}")
     for (provider, model), row in PUBLIC_RETIREMENTS.items():
         cites.setdefault(row["source_url"], []).append(f"retirement {provider}/{model}")
+    for name, url in DEPRECATION_URLS.items():
+        cites.setdefault(url, []).append(f"retirements constant {name}")
     return {url: sorted(rows) for url, rows in sorted(cites.items())}
 
 
 def _comparable_id(model_id: str) -> str:
-    return _DATED_SUFFIX.sub("", _normalized_model_id(model_id))
+    return _normalized_model_id(_DATED_SUFFIX.sub("", model_id))
 
 
 def _per_million(value: Any) -> float | None:
@@ -199,10 +223,9 @@ def openrouter_findings(payload: Any) -> list[dict[str, Any]]:
 
 def changed_excerpt(old: list[str], new: list[str]) -> list[str]:
     """Bounded `-`/`+` lines between two page versions."""
+    body = list(difflib.unified_diff(old, new, lineterm="", n=0))[2:]
     diff = [
-        f"{line[0]} {line[1 : EXCERPT_CHARS + 1]}"
-        for line in difflib.unified_diff(old, new, lineterm="", n=0)
-        if line[0] in "+-" and not line.startswith(("+++", "---"))
+        f"{line[0]} {line[1 : EXCERPT_CHARS + 1]}" for line in body if line[0] in "+-"
     ]
     return diff[:EXCERPT_LINES]
 
@@ -217,7 +240,7 @@ def watch_pages(
     for url, rows in cited_urls().items():
         try:
             lines = normalise_html(read(url).decode("utf-8", errors="replace"))
-            reason = unreadable_reason(lines)
+            reason = unreadable_reason(lines, old_pages.get(url))
             if reason:
                 raise FetchError(reason)
         except FetchError as error:
@@ -228,7 +251,7 @@ def watch_pages(
                 pages[url] = old_pages[url]
             continue
         digest = text_hash(lines)
-        pages[url] = {"hash": digest, "lines": lines[:MAX_STORED_LINES]}
+        pages[url] = {"hash": digest, "lines": lines}
         before = old_pages.get(url)
         if previous is not None and before and before["hash"] != digest:
             findings.append(
@@ -259,13 +282,38 @@ def load_snapshot(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("version") != SNAPSHOT_VERSION or not isinstance(
-        data.get("pages"), dict
+    pages = data.get("pages") if isinstance(data, dict) else None
+    if (
+        not isinstance(data, dict)
+        or data.get("version") != SNAPSHOT_VERSION
+        or not isinstance(pages, dict)
+        or not all(_valid_page(entry) for entry in pages.values())
     ):
         raise ValueError(
             f"{path}: not a version {SNAPSHOT_VERSION} source-watch snapshot"
         )
     return data
+
+
+def _valid_page(entry: Any) -> bool:
+    return (
+        isinstance(entry, dict)
+        and isinstance(entry.get("hash"), str)
+        and isinstance(entry.get("lines"), list)
+        and all(isinstance(line, str) for line in entry["lines"])
+    )
+
+
+def write_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
+    """Write through a temp file so a killed run never leaves a torn snapshot."""
+    temp = path.with_name(path.name + ".tmp")
+    try:
+        temp.write_text(
+            json.dumps(snapshot, indent=1, sort_keys=True), encoding="utf-8"
+        )
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def render_text(findings: list[dict[str, Any]]) -> str:
@@ -286,15 +334,17 @@ def main(argv: list[str] | None = None, read: Any = fetch) -> int:
         print(f"source watch: cannot read previous snapshot: {error}", file=sys.stderr)
         return 2
     findings, snapshot = run(previous, read)
-    if args.write:
-        args.write.write_text(
-            json.dumps(snapshot, indent=1, sort_keys=True), encoding="utf-8"
-        )
     print(
         json.dumps({"findings": findings}, indent=2)
         if args.json
         else render_text(findings)
     )
+    if args.write:
+        try:
+            write_snapshot(args.write, snapshot)
+        except OSError as error:
+            print(f"source watch: cannot write snapshot: {error}", file=sys.stderr)
+            return 2
     return 0
 
 

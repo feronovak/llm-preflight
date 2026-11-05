@@ -44,6 +44,7 @@ def sw(monkeypatch):
             ("anthropic", "claude-sonnet-5-5"): LIMIT,
         },
     )
+    monkeypatch.setattr(module, "DEPRECATION_URLS", {})
     monkeypatch.setattr(
         module,
         "PUBLIC_RETIREMENTS",
@@ -181,3 +182,141 @@ def test_cited_urls_cover_the_real_bundle():
     urls = _load().cited_urls()
     assert all(url.startswith("https://") for url in urls)
     assert len(urls) >= 10
+
+
+def _haiku_findings(sw, monkeypatch, prompt, completion):
+    monkeypatch.setattr(
+        sw,
+        "PUBLIC_PRICING",
+        {("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-04")},
+    )
+    item = {
+        "id": "anthropic/claude-haiku-4.5",
+        "pricing": {"prompt": prompt, "completion": completion},
+    }
+    return sw.openrouter_findings({"data": [item]})
+
+
+def test_dated_bundle_id_matches_the_undated_openrouter_id(sw, monkeypatch):
+    assert _haiku_findings(sw, monkeypatch, "0.000001", "0.000005") == []
+
+
+def test_dated_bundle_id_still_raises_price_signal(sw, monkeypatch):
+    [finding] = _haiku_findings(sw, monkeypatch, "0.000002", "0.00001")
+    assert finding["key"] == "price-signal:anthropic:claude-haiku-4-5-20251001"
+
+
+def test_change_past_the_old_storage_cap_still_shows(sw):
+    def page(tail):
+        rows = "".join(f"<p>row {i} price</p>" for i in range(6000))
+        return f"<html><body>{rows}<p>{tail}</p></body></html>".encode()
+
+    def read(tail):
+        return lambda url: page(tail) if url == PAGE else _reader()(url)
+
+    _, snapshot = sw.run(None, read("tail old value"))
+    findings, _ = sw.run(snapshot, read("tail new value"))
+    [change] = _by_type(findings, "page-changed")
+    assert change["changed_lines"] == ["- tail old value", "+ tail new value"]
+
+
+def test_diff_lines_that_look_like_file_headers_are_kept(sw):
+    assert sw.changed_excerpt(["-- old value"], ["-- new value"]) == [
+        "- -- old value",
+        "+ -- new value",
+    ]
+    assert sw.changed_excerpt([], ["++ added"]) == ["+ ++ added"]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "[]",
+        '{"version": 1, "pages": []}',
+        '{"version": 1, "pages": {"u": "x"}}',
+        '{"version": 1, "pages": {"u": {"hash": "a"}}}',
+    ],
+)
+def test_malformed_previous_snapshot_exits_2(sw, tmp_path, capsys, content):
+    snap = tmp_path / "snap.json"
+    snap.write_text(content)
+    assert sw.main(["--previous", str(snap)], _reader()) == 2
+    assert "cannot read previous snapshot" in capsys.readouterr().err
+
+
+def test_unwritable_snapshot_prints_findings_then_exits_2(sw, tmp_path, capsys):
+    target = tmp_path / "missing-dir" / "snap.json"
+    assert sw.main(["--write", str(target), "--json"], _reader()) == 2
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["findings"]
+    assert "cannot write snapshot" in captured.err
+
+
+def test_snapshot_write_leaves_no_temp_file(sw, tmp_path):
+    snap = tmp_path / "snap.json"
+    assert sw.main(["--write", str(snap)], _reader()) == 0
+    assert [p.name for p in tmp_path.iterdir()] == ["snap.json"]
+
+
+def test_content_collapse_against_previous_snapshot_is_fetch_failed(sw):
+    _, snapshot = sw.run(None, _reader())
+    findings, next_snapshot = sw.run(snapshot, _reader({PAGE: "shell.html"}))
+    assert _by_type(findings, "page-changed") == []
+    assert f"fetch-failed:{PAGE}" in {f["key"] for f in findings}
+    assert next_snapshot["pages"][PAGE] == snapshot["pages"][PAGE]
+
+
+def test_deprecation_constants_are_watched_even_without_rows(sw, monkeypatch):
+    url = "https://example.test/deprecations"
+    monkeypatch.setattr(sw, "DEPRECATION_URLS", {"X_DEPRECATIONS_URL": url})
+    assert sw.cited_urls()[url] == ["retirements constant X_DEPRECATIONS_URL"]
+
+
+class _Response:
+    def __init__(self, body):
+        self._body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self, limit):
+        return self._body[:limit]
+
+
+def _urlopen(sw, monkeypatch, action):
+    monkeypatch.setattr(sw.urllib.request, "urlopen", action)
+
+
+def test_fetch_returns_the_body(sw, monkeypatch):
+    _urlopen(sw, monkeypatch, lambda request, timeout: _Response(b"ok"))
+    assert sw.fetch("https://example.test/x") == b"ok"
+
+
+def test_fetch_rejects_non_https(sw):
+    with pytest.raises(sw.FetchError, match="not an https URL"):
+        sw.fetch("http://example.test/x")
+
+
+def test_fetch_reports_http_status_and_timeouts(sw, monkeypatch):
+    def http_error(request, timeout):
+        raise sw.urllib.error.HTTPError(request.full_url, 503, "busy", {}, None)
+
+    def timed_out(request, timeout):
+        raise TimeoutError
+
+    _urlopen(sw, monkeypatch, http_error)
+    with pytest.raises(sw.FetchError, match="HTTP 503"):
+        sw.fetch("https://example.test/x")
+    _urlopen(sw, monkeypatch, timed_out)
+    with pytest.raises(sw.FetchError, match="TimeoutError"):
+        sw.fetch("https://example.test/x")
+
+
+def test_fetch_rejects_an_oversize_body(sw, monkeypatch):
+    big = b"x" * (sw.MAX_BYTES + 1)
+    _urlopen(sw, monkeypatch, lambda request, timeout: _Response(big))
+    with pytest.raises(sw.FetchError, match="too large"):
+        sw.fetch("https://example.test/x")

@@ -83,9 +83,9 @@ No AI assistant is recorded as a contributor: no `Co-Authored-By` trailer
 naming one, no session reference, no generation notice in a pull request body,
 and no commit authored under an assistant identity.
 
-Internal planning stays out of the published repository: the roadmap, the
-release runbook and the PRDs are deliberately gitignored and declared local
-below. The north star and the product positioning page are gitignored too.
+Internal planning stays out of the published repository: planning lives in
+the maintainer's private tracker, and the local roadmap file stays gitignored
+and declared local below, as do the release runbook and the PRDs. The north star and the product positioning page are gitignored too.
 The technical reference under `docs/reference/` stays public. Everything else
 a contributor needs is tracked.
 

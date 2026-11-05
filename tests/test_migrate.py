@@ -244,3 +244,21 @@ def test_non_string_provider_is_a_config_error(
     path = _write(tmp_path, [bad])
     assert _run(monkeypatch, capsys, [str(path), "--ci"])[0] == 2
     assert _run(monkeypatch, capsys, [str(path)])[0] == 2
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"models": 5, "aliases": {"main": {"provider": "openai", "model": "x"}}},
+        {"models": None, "aliases": {"main": {"provider": "openai", "model": "x"}}},
+        {"models": ["main"], "aliases": ["main"]},
+        {"models": ["m"], "aliases": "main"},
+    ],
+)
+def test_malformed_models_or_aliases_is_a_config_error(
+    rows, tmp_path, monkeypatch, capsys, extra
+):
+    path = tmp_path / "bench.json"
+    path.write_text(json.dumps({"prompt": "p", **extra}), encoding="utf-8")
+    assert _run(monkeypatch, capsys, [str(path), "--ci"])[0] == 2
+    assert _run(monkeypatch, capsys, [str(path)])[0] == 2

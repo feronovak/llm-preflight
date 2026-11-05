@@ -29,10 +29,13 @@ def _load(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path} is not valid JSON: {exc}") from None
     if not isinstance(config, dict):
         raise ValueError(f"{path} must hold a JSON object")  # noqa: TRY004
-    config = apply_model_aliases(config)
     models = config.get("models")
     if not isinstance(models, list) or not models:
         raise ValueError("config must list at least one entry under 'models'")
+    if not isinstance(config.get("aliases", {}), dict):
+        raise ValueError("'aliases' must be an object")  # noqa: TRY004
+    config = apply_model_aliases(config)
+    models = config["models"]
     for model in models:
         if not isinstance(model, dict) or not isinstance(model.get("model"), str):
             raise ValueError(  # noqa: TRY004

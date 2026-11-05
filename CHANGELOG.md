@@ -11,7 +11,11 @@ All notable changes to this project are documented here.
   `files_unreadable`, and sets `plan_incomplete`. Meaning change: a file that is
   not UTF-8 text (a binary file, a UTF-16 prompt) now counts as unreadable too,
   so `plan_incomplete` and `requires_preflight_review` are true for it, where
-  `requires_preflight_review` was false before.
+  `requires_preflight_review` was false before. An unreadable file now exits 0
+  instead of 2, so CI users who relied on that failure must check
+  `plan_incomplete`. Staged-only paths now appear in `changed_files`, and a path
+  in a directory the command may not open moves from `deleted_files` to
+  `unreadable_files`.
 - Declare the MCP registry workspace argument as a required user-supplied
   value, and link discovery to the manual setup guide. Document the explicit
   uv package/executable selection for clients that would otherwise start the

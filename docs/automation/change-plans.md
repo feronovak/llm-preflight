@@ -31,7 +31,9 @@ no model ID, prompt, schema or tool definition, so
 `requires_preflight_review` is also `true`, and the first note says the plan is
 incomplete. The text output prints the same sentence and the paths. A deleted file
 is read from the Git reference, so one that is not UTF-8 text there is not
-reported. Git does not list untracked files inside a directory it may not open,
+reported. The staged listing
+names the path but reads the work tree, not the staged content. Git does not
+list untracked files inside a directory it may not open,
 so the plan cannot report them.
 
 Its findings are deliberately incomplete: dynamic model selection and generated

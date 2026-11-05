@@ -43,7 +43,7 @@ from .catalog_watch import (
     save_snapshot,
     snapshot_catalog,
 )
-from .change_plan import git_change_plan
+from .change_plan import git_change_plan, unreadable_note
 from .client import PROVIDER_DEFAULTS
 from .contracts import check_contract, contract_fixtures_declared
 from .eligibility import eligibility_next_step, smoke_eligibility_report
@@ -2973,6 +2973,10 @@ def main() -> None:
                     f"Changed files: {len(change_plan['changed_files'])}; "
                     f"preflight signals: {len(change_plan['triggers'])}."
                 )
+                if change_plan["plan_incomplete"]:
+                    print(unreadable_note(change_plan["files_unreadable"]))
+                    for unreadable_path in change_plan["unreadable_files"]:
+                        print(f"    {printable(unreadable_path)}")
                 for command in change_payload["recommended_commands"]:
                     print(command)
             return

@@ -454,3 +454,116 @@ def test_write_approval_receipt_keeps_an_existing_parent_directory_accessible(
 
     assert stat.S_IMODE(shared.stat().st_mode) == 0o755
     assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+
+
+def _repository_with_signal(workspace):
+    _git(workspace, "init")
+    _git(workspace, "config", "user.email", "test@example.invalid")
+    _git(workspace, "config", "user.name", "Test User")
+    (workspace / "app.py").write_text('model = "gpt-5.4-mini"\n')
+    (workspace / "locked.py").write_text("x = 1\n")
+    _git(workspace, "add", ".")
+    _git(workspace, "commit", "-m", "initial")
+    (workspace / "app.py").write_text('model = "gpt-5.5"\n')
+    (workspace / "locked.py").write_text('prompt = "changed"\n')
+
+
+def _deny_reading(monkeypatch, name, method):
+    """Make one path unreadable even when the tests run as root."""
+    original = getattr(Path, method)
+
+    def guarded(self, *args, **kwargs):
+        if self.name == name:
+            raise PermissionError(13, "Permission denied", str(self))
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, method, guarded)
+
+
+def test_git_change_plan_reports_a_file_it_may_not_read(tmp_path, monkeypatch):
+    _repository_with_signal(tmp_path)
+    locked = tmp_path / "locked.py"
+    locked.chmod(0)
+    _deny_reading(monkeypatch, "locked.py", "read_text")
+    try:
+        plan = git_change_plan(tmp_path, "HEAD")
+    finally:
+        locked.chmod(0o644)
+
+    assert plan["files_unreadable"] == 1
+    assert plan["unreadable_files"] == ["locked.py"]
+    assert plan["plan_incomplete"] is True
+    assert plan["requires_preflight_review"] is True
+    assert plan["notes"][0].startswith("Plan incomplete: 1 file could not be read")
+    assert [(item["path"], item["kind"]) for item in plan["triggers"]] == [
+        ("app.py", "model_id")
+    ]
+
+
+def test_git_change_plan_reports_a_file_in_a_directory_it_may_not_enter(
+    tmp_path, monkeypatch
+):
+    _repository_with_signal(tmp_path)
+    _deny_reading(monkeypatch, "locked.py", "stat")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["files_unreadable"] == 1
+    assert plan["unreadable_files"] == ["locked.py"]
+    assert plan["plan_incomplete"] is True
+
+
+def test_git_change_plan_counts_a_file_that_is_not_utf8_as_unreadable(tmp_path):
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    _git(tmp_path, "config", "user.name", "Test User")
+    (tmp_path / "keep.txt").write_text("x\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "initial")
+    (tmp_path / "prompt.txt").write_bytes('prompt = "hi"\n'.encode("utf-16"))
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["files_unreadable"] == 1
+    assert plan["unreadable_files"] == ["prompt.txt"]
+    assert plan["plan_incomplete"] is True
+    assert plan["requires_preflight_review"] is True
+    assert plan["triggers"] == []
+
+
+def test_git_change_plan_without_unreadable_files_is_not_marked_incomplete(tmp_path):
+    _repository_with_signal(tmp_path)
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["files_unreadable"] == 0
+    assert plan["unreadable_files"] == []
+    assert plan["plan_incomplete"] is False
+    assert len(plan["notes"]) == 2
+    assert not plan["notes"][0].startswith("Plan incomplete")
+
+
+def test_git_change_plan_does_not_count_a_dangling_symlink_as_unreadable(tmp_path):
+    _repository_with_signal(tmp_path)
+    (tmp_path / "dangling.py").symlink_to(tmp_path / "missing.py")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["files_unreadable"] == 0
+    assert plan["plan_incomplete"] is False
+
+
+def test_git_change_plan_lists_an_unreadable_name_that_is_not_utf8(tmp_path):
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    _git(tmp_path, "config", "user.name", "Test User")
+    (tmp_path / "keep.txt").write_text("x\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "initial")
+    odd = os.fsdecode(b"bad-\xff.bin")
+    (tmp_path / odd).write_bytes(b"\xff\xfe\x00")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["unreadable_files"] == ["bad-\\xff.bin"]
+    json.dumps(plan).encode("utf-8")

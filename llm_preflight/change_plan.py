@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import stat
 
 # Only CalledProcessError is used; run_git starts Git.
 import subprocess  # nosec B404
@@ -10,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .git import run_git
-from .source_audit import audit_source, audit_source_text, display_path
+from .source_audit import audit_source_text, display_path
 
 _REFERENCE = re.compile(r"[A-Za-z0-9._/@^~-]+\Z")
 _CONTRACT_SURFACE = re.compile(
@@ -26,6 +27,7 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
     _validate_reference(reference)
     changed_files, deleted_files = _changed_files(root, reference)
     triggers: list[dict[str, Any]] = []
+    unreadable: list[str] = []
     # Paths stay as Git listed them for file and Git access, and are displayed
     # as UTF-8 text.
     for relative_path in changed_files:
@@ -34,13 +36,22 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
         deleted = relative_path in deleted_files
         if not deleted and root != path and root not in path.parents:
             continue
-        if not deleted and not path.is_file():
-            continue
         if deleted:
-            previous = _git(root, "show", f"{reference}:{relative_path}").stdout
-            findings = audit_source_text(Path(relative_path), previous)["references"]
+            text = _git(root, "show", f"{reference}:{relative_path}").stdout
+            source = Path(relative_path)
         else:
-            findings = audit_source(path)["references"]
+            try:
+                if not stat.S_ISREG(path.stat().st_mode):
+                    continue
+                text = path.read_text(encoding="utf-8")
+            except (FileNotFoundError, NotADirectoryError):
+                continue  # nothing here to read, as is_file() decided
+            except (OSError, UnicodeDecodeError):
+                # Unknown is never "no contract surface": report it.
+                unreadable.append(shown)
+                continue
+            source = path
+        findings = audit_source_text(source, text)["references"]
         if findings:
             triggers.extend(
                 {
@@ -55,11 +66,7 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
                 for finding in findings
             )
             continue
-        trigger = (
-            _contract_surface_trigger_text(previous, shown)
-            if deleted
-            else _contract_surface_trigger(path, shown)
-        )
+        trigger = _contract_surface_trigger_text(text, shown)
         if trigger:
             if deleted:
                 trigger["change"] = "deleted"
@@ -71,13 +78,26 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
         "paid_work_authorized": False,
         "changed_files": [display_path(item) for item in changed_files],
         "deleted_files": [display_path(item) for item in deleted_files],
+        "files_unreadable": len(unreadable),
+        "unreadable_files": unreadable,
+        "plan_incomplete": bool(unreadable),
         "triggers": triggers,
-        "requires_preflight_review": bool(triggers),
+        "requires_preflight_review": bool(triggers or unreadable),
         "notes": [
+            *([unreadable_note(len(unreadable))] if unreadable else []),
             "Static findings cannot identify dynamic model selection; review application changes.",
             "This change plan is no-spend evidence and never authorizes paid work.",
         ],
     }
+
+
+def unreadable_note(count: int) -> str:
+    """The incomplete-plan statement shared by JSON notes and CLI text."""
+    subject, pronoun = ("1 file", "it") if count == 1 else (f"{count} files", "they")
+    return (
+        f"Plan incomplete: {subject} could not be read as UTF-8 text; "
+        f"{pronoun} may still change a model ID, prompt, schema or tool definition."
+    )
 
 
 def _repository_root(repository: Path) -> Path:
@@ -136,14 +156,6 @@ def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
         if not path.is_absolute() and ".." not in path.parts
     )
     return sorted(set(safe)), safe_deleted
-
-
-def _contract_surface_trigger(path: Path, relative_path: str) -> dict[str, Any] | None:
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except UnicodeDecodeError:
-        return None
-    return _contract_surface_trigger_text("\n".join(lines), relative_path)
 
 
 def _contract_surface_trigger_text(

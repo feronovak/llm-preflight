@@ -20,6 +20,17 @@ when its recorded commit changes. Files inside an untracked nested
 repository are not inspected. A repository whose filter driver name
 contains `=` cannot have that driver disabled, so the change plan refuses it.
 
+A changed file the command cannot read as UTF-8 text (no read permission, a
+directory it may not enter, or binary or UTF-16 content) does not stop the plan.
+The JSON `change_plan` object reports `files_unreadable` (a count, named as in
+`--audit-source`), `unreadable_files` (the paths), and `plan_incomplete`
+(`true` when any file was unreadable). The plan never treats such a file as
+touching no model ID, prompt, schema or tool definition, so
+`requires_preflight_review` is also `true`, and the first note says the plan is
+incomplete. The text output prints the same sentence and the paths. Git does
+not list untracked files inside a directory it may not open, so the plan cannot
+report them.
+
 Its findings are deliberately incomplete: dynamic model selection and generated
 prompts require human review. Treat the recommended `--doctor`, optional
 `--contract-check`, and `--dry-run` commands as the next no-spend steps, not as

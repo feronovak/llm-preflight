@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- `--change-plan` no longer stops with a permission error on a changed file it
+  cannot read. It lists the file under `unreadable_files`, counts it in
+  `files_unreadable`, and sets `plan_incomplete`. Meaning change: a file that is
+  not UTF-8 text (a binary file, a UTF-16 prompt) now counts as unreadable too,
+  so `plan_incomplete` and `requires_preflight_review` are true for it, where
+  `requires_preflight_review` was false before.
 - Declare the MCP registry workspace argument as a required user-supplied
   value, and link discovery to the manual setup guide. Document the explicit
   uv package/executable selection for clients that would otherwise start the

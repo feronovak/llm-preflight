@@ -3,7 +3,7 @@
 **Last reviewed:** 2026-10-13 · **As of:** v2.21.0
 
 What this tool does today. Present tense only — what is open belongs in the
-roadmap, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
+maintainer's private planning, what shipped belongs in [`CHANGELOG.md`](../CHANGELOG.md).
 
 Every row was read against the source at the version above, not inferred from
 module names.
@@ -46,5 +46,5 @@ module names.
 | Opt-in, versioned agent-instruction block with drift detection | live | `cli.py`, `docs/automation/coding-agents.md` |
 
 Nothing listed here is gated, partial or deprecated. Work proposed but not
-built lives in the roadmap, which is deliberately not published — see the
-contract in [`AGENTS.md`](../AGENTS.md).
+built lives in the maintainer's private planning, which is not published — see
+[`AGENTS.md`](../AGENTS.md).

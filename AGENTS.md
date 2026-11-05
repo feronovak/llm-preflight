@@ -28,12 +28,12 @@ make test
 Never leave intentionally failing tests in the completed work. Record the red
 test result during development, not as committed broken code.
 
-## Local Planning Memory
+## Planning
 
-`ROADMAP.md` is the local, ignored source of truth for product direction and
-next steps. When asked about the roadmap, planned work, or what to do next,
-read it before answering. Keep it current whenever a planned slice, its scope,
-or its target version changes; do not add it to Git or package artifacts.
+Product planning and the version plan live in the maintainer's private tracker
+and are not part of this repository. Contributors do not need them; the
+tracked docs, `CHANGELOG.md` and open issues are enough to work from. Do not
+add planning files to Git or package artifacts.
 
 Use semantic versioning: `major.minor.bugfix`. Increase `major` for breaking
 changes, `minor` for backward-compatible product features, and `bugfix` for
@@ -83,9 +83,9 @@ No AI assistant is recorded as a contributor: no `Co-Authored-By` trailer
 naming one, no session reference, no generation notice in a pull request body,
 and no commit authored under an assistant identity.
 
-Internal planning stays out of the published repository: the roadmap, the
-release runbook and the PRDs are deliberately gitignored and declared local
-below. The north star and the product positioning page are gitignored too.
+Internal planning stays out of the published repository: planning lives in
+the maintainer's private tracker, and the local roadmap file stays gitignored
+and declared local below, as do the release runbook and the PRDs. The north star and the product positioning page are gitignored too.
 The technical reference under `docs/reference/` stays public. Everything else
 a contributor needs is tracked.
 

@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- `--dry-run --json` and the MCP `dry_run_plan` tool now print each model's
+  `base_url` as scheme and host[:port], with any path, query, userinfo or `;`
+  parameter shown as `/[REDACTED]`; an exact public provider route is kept. The
+  JSON value changed: read the route from your config. A token in a host name
+  stays visible. Existing approval receipts keep verifying, because the receipt
+  still hashes the unmasked plan.
+
 ### Fixed
 
 - `--change-plan` no longer stops with a permission error on a changed file it

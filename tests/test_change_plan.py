@@ -1,8 +1,9 @@
+import copy
 import json
 import os
 import stat
 import subprocess
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,7 @@ from llm_preflight.approval import (
     write_approval_receipt,
 )
 from llm_preflight.change_plan import git_change_plan
-from llm_preflight.cli import dry_run_plan
+from llm_preflight.cli import dry_run_output, dry_run_plan
 from llm_preflight.redaction import redact_secrets
 
 
@@ -736,3 +737,72 @@ def test_git_change_plan_scans_a_deleted_non_utf8_file_the_audit_skips(tmp_path)
     ]
     assert plan["files_unreadable"] == 0
     assert plan["requires_preflight_review"] is True
+
+
+_TOKEN_URL = "https://proxy.example:8443/tok-PIN123/v1"
+_TOKEN_CONFIG = {
+    "prompt": "ok",
+    "models": [
+        {"provider": "openai_compatible", "model": "router", "base_url": _TOKEN_URL}
+    ],
+}
+# Computed on unmodified origin/main (a3110a8) for _TOKEN_CONFIG, today 2026-11-06.
+_RECORDED_PLAN_SHA256 = (
+    "e075bc057fdd0e4944608985f15a8f11e78e898fd6c7088fcd70e4cbad615b04"
+)
+_NOW = datetime(2026, 11, 6, tzinfo=timezone.utc)
+
+
+def _recorded_receipt():
+    return {
+        "schema_version": 1,
+        "kind": "llm-preflight-approval-receipt",
+        "created_at": _NOW.isoformat(),
+        "expires_at": "2099-01-01T00:00:00+00:00",
+        "note": "n",
+        "plan_sha256": _RECORDED_PLAN_SHA256,
+        "bounds": {},
+        "recorded_human_approval": True,
+        "authorizes_paid_run": False,
+    }
+
+
+def test_recorded_receipt_still_verifies_with_a_token_in_base_url():
+    plan = dry_run_plan(_TOKEN_CONFIG, None, today=date(2026, 11, 6))
+
+    assert (
+        verify_approval_receipt(_recorded_receipt(), plan, now=_NOW)["state"]
+        == "recorded"
+    )
+    assert (
+        verify_approval_receipt(_recorded_receipt(), dry_run_output(plan), now=_NOW)[
+            "state"
+        ]
+        == "mismatch"
+    )
+
+
+def test_dry_run_plan_keeps_the_written_base_url():
+    plan = dry_run_plan(_TOKEN_CONFIG, None, today=date(2026, 11, 6))
+
+    assert plan["models"][0]["base_url"] == _TOKEN_URL
+
+
+def test_dry_run_output_masks_without_changing_the_plan():
+    plan = dry_run_plan(_TOKEN_CONFIG, None, today=date(2026, 11, 6))
+    before = copy.deepcopy(plan)
+    plan["catalog_candidates"] = [
+        {"model": "m", "base_url": _TOKEN_URL},
+        {"model": "n"},
+    ]
+    before["catalog_candidates"] = copy.deepcopy(plan["catalog_candidates"])
+
+    output = dry_run_output(plan)
+
+    assert plan == before
+    assert output["models"][0]["base_url"] == "https://proxy.example:8443/[REDACTED]"
+    assert output["catalog_candidates"][0]["base_url"] == (
+        "https://proxy.example:8443/[REDACTED]"
+    )
+    assert "base_url" not in output["catalog_candidates"][1]
+    assert set(output) == set(plan)

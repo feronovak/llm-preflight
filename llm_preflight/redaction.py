@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import urlsplit
+
+from .providers import PROVIDER_DEFAULTS
 
 REDACTED = "[REDACTED]"
 
@@ -22,6 +25,43 @@ _SECRET_TEXT_PATTERNS: list[tuple[re.Pattern[str], int | None]] = [
     (re.compile(r"\bAIza[A-Za-z0-9_-]{20,}\b"), None),
     (re.compile(r"\bxai-[A-Za-z0-9_-]{16,}\b"), None),
 ]
+
+
+_PUBLIC_BASE_URLS = {
+    defaults["base_url"].rstrip("/")
+    for defaults in PROVIDER_DEFAULTS.values()
+    if "base_url" in defaults
+}
+_AUTHORITY = re.compile(
+    r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?", re.ASCII
+)
+
+
+def mask_base_url(value: Any) -> Any:
+    """Keep only scheme and host[:port] of a base URL meant for output.
+
+    A path, query, userinfo or parameter can carry a token and cannot be told
+    apart from a harmless path, so each is masked whole. An exact public
+    provider route is kept. Anything that does not parse as an http(s) URL
+    with a plain authority is masked entirely. Never use this on a value that
+    is hashed or written back to a config.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return REDACTED
+    if value.rstrip("/") in _PUBLIC_BASE_URLS:
+        return value
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return REDACTED
+    scheme = parts.scheme.lower()
+    authority = parts.netloc.rpartition("@")[2]
+    if scheme not in {"http", "https"} or not _AUTHORITY.fullmatch(authority):
+        return REDACTED
+    hidden = "@" in parts.netloc or parts.query or parts.path.strip("/")
+    return f"{scheme}://{authority}" + (f"/{REDACTED}" if hidden else "")
 
 
 def _is_sensitive_key(key: str) -> bool:

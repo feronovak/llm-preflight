@@ -70,7 +70,7 @@ from .migrate import format_report as format_migrate_report
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
-from .redaction import redact_secrets, without_credentials
+from .redaction import mask_base_url, redact_secrets, without_credentials
 from .reporting import render_card_svg, render_job_summary, render_report_html
 from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
@@ -659,7 +659,8 @@ def dry_run_plan(
     `pricing_evidence` adds the resolved pricing ledger and its fingerprint.
     The CLI leaves them out of the plan an approval receipt hashes. A receipt
     hashes the whole plan, so a change to the plan's shape makes receipts
-    written for the old shape verify as `mismatch`.
+    written for the old shape verify as `mismatch`. Never mask a value here;
+    printed plans go through `dry_run_output`.
     """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
@@ -720,6 +721,20 @@ def dry_run_plan(
         plan["pricing_ledger"] = budget["pricing_ledger"]
         plan["pricing_fingerprint"] = budget["pricing_fingerprint"]
     return plan
+
+
+def dry_run_output(plan: dict[str, Any]) -> dict[str, Any]:
+    """Copy of a plan for stdout, with each row's `base_url` masked."""
+    output = dict(plan)
+    for key in ("models", "catalog_candidates"):
+        if key in output:
+            output[key] = [
+                {**row, "base_url": mask_base_url(row["base_url"])}
+                if "base_url" in row
+                else row
+                for row in output[key]
+            ]
+    return output
 
 
 def _format_dry_run_plan(plan: dict[str, Any]) -> str:
@@ -1710,7 +1725,7 @@ def _watch_new_main(argv: list[str]) -> None:
         plan = dry_run_plan(config, args.tests)
         plan["catalog_candidates"] = catalog_output(candidates)
         print(
-            json.dumps(redact_secrets(plan), indent=2)
+            json.dumps(redact_secrets(dry_run_output(plan)), indent=2)
             if args.json
             else redact_secrets(_format_dry_run_plan(plan))
         )
@@ -3143,7 +3158,7 @@ def main() -> None:
                     _load_quick_env_file(args)
         if args.dry_run:
             plan = dry_run_plan(config, profile_selector, today=today_utc())
-            payload: dict[str, Any] = plan
+            payload: dict[str, Any] = dry_run_output(plan)
             verification = None
             if args.approval_receipt:
                 receipt = create_approval_receipt(
@@ -3157,7 +3172,7 @@ def main() -> None:
                     replace=args.replace_approval_receipt,
                 )
                 payload = {
-                    "plan": plan,
+                    "plan": dry_run_output(plan),
                     "approval_receipt": {
                         "path": str(args.approval_receipt),
                         "receipt": receipt,
@@ -3167,7 +3182,10 @@ def main() -> None:
                 verification = verify_approval_receipt(
                     load_approval_receipt(args.verify_approval_receipt), plan
                 )
-                payload = {"plan": plan, "approval_verification": verification}
+                payload = {
+                    "plan": dry_run_output(plan),
+                    "approval_verification": verification,
+                }
             print(
                 json.dumps(redact_secrets(payload), indent=2)
                 if args.json

@@ -4416,3 +4416,163 @@ def test_change_plan_text_escapes_an_unreadable_name(monkeypatch, tmp_path, caps
     lines = capsys.readouterr().out.splitlines()
     assert "    bad\\nname.py" in lines
     assert "name.bin" not in lines
+
+
+_URL_PARTS = (
+    "https://user:SENTINELUSER@proxy.example:8443/SENTINELPATH/v1;SENTINELPARAM=1"
+    "?key=SENTINELQUERY#SENTINELFRAG"
+)
+_SENTINELS = ("SENTINELUSER", "SENTINELPATH", "SENTINELPARAM", "SENTINELQUERY")
+_MASKED_URL = "https://proxy.example:8443/[REDACTED]"
+
+
+def _token_url_config(tmp_path):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "ok",
+                "models": [
+                    {
+                        "provider": "openai_compatible",
+                        "model": "router",
+                        "base_url": _URL_PARTS,
+                    }
+                ],
+            }
+        )
+    )
+    return config
+
+
+def _run_cli(monkeypatch, capsys, *argv):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+    cli.main()
+    return capsys.readouterr().out
+
+
+def test_dry_run_json_never_prints_a_url_token(monkeypatch, tmp_path, capsys):
+    config = _token_url_config(tmp_path)
+
+    out = _run_cli(
+        monkeypatch, capsys, str(config), "--dry-run", "--json", "--no-env-file"
+    )
+
+    assert not [word for word in _SENTINELS if word in out]
+    assert json.loads(out)["models"][0]["base_url"] == _MASKED_URL
+
+
+def test_dry_run_receipt_and_verify_output_mask_base_url(monkeypatch, tmp_path, capsys):
+    config = _token_url_config(tmp_path)
+    receipt = tmp_path / "approval.json"
+
+    written = _run_cli(
+        monkeypatch,
+        capsys,
+        str(config),
+        "--dry-run",
+        "--no-env-file",
+        "--approval-receipt",
+        str(receipt),
+        "--approval-note",
+        "Reviewed.",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+        "--json",
+    )
+    verified = _run_cli(
+        monkeypatch,
+        capsys,
+        str(config),
+        "--dry-run",
+        "--no-env-file",
+        "--verify-approval-receipt",
+        str(receipt),
+        "--json",
+    )
+
+    for out in (written, verified):
+        assert not [word for word in _SENTINELS if word in out]
+        assert json.loads(out)["plan"]["models"][0]["base_url"] == _MASKED_URL
+    assert json.loads(verified)["approval_verification"]["state"] == "recorded"
+
+
+def test_catalog_dry_run_json_masks_candidate_base_url(monkeypatch, tmp_path, capsys):
+    watch = tmp_path / "watch.json"
+    watch.write_text('{"prompt":"hello","models":[{"model":"old"}]}')
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models": []}')
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [
+            {"provider": "openai_compatible", "model": "new", "base_url": _URL_PARTS}
+        ],
+    )
+
+    out = _run_cli(
+        monkeypatch,
+        capsys,
+        "watch-new",
+        str(watch),
+        "--against",
+        str(approved),
+        "--snapshot",
+        str(tmp_path / "snapshot.json"),
+        "--test",
+        "--dry-run",
+        "--json",
+    )
+
+    assert not [word for word in _SENTINELS if word in out]
+    payload = json.loads(out)
+    assert payload["models"][0]["base_url"] == _MASKED_URL
+    assert payload["catalog_candidates"][0]["base_url"] == _MASKED_URL
+
+
+def test_catalog_write_config_keeps_its_base_url(
+    monkeypatch, tmp_path, capsys, august_catalog_review
+):
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        '{"prompt":"hello","max_requests":2,"max_estimated_cost_usd":0.01,'
+        '"models":[{"model":"old"}]}'
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models":[{"provider":"openai","model":"old"}]}')
+    output = tmp_path / "candidates.json"
+    snapshot = tmp_path / "snapshot.json"
+    snapshot.write_text(
+        json.dumps({"models": [{"provider": "openai", "model": "old"}]})
+    )
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [
+            {
+                "provider": "openai",
+                "model": "new",
+                "base_url": _URL_PARTS,
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+                "pricing_metadata": {"as_of": "2026-08-31"},
+            }
+        ],
+    )
+
+    _run_cli(
+        monkeypatch,
+        capsys,
+        "watch-new",
+        str(watch),
+        "--against",
+        str(approved),
+        "--snapshot",
+        str(snapshot),
+        "--write-config",
+        str(output),
+    )
+
+    assert json.loads(output.read_text())["models"][0]["base_url"] == _URL_PARTS

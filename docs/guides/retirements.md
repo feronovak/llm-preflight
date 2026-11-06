@@ -2,6 +2,9 @@
 
 **Last reviewed:** 2026-11-04 · **As of:** v2.23.1
 
+> The [Migrate report](#migrate-report) section describes the `migrate` command,
+> which is not in 2.23.1 and is on the main branch only.
+
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
 deprecation/model pages
@@ -186,6 +189,8 @@ page names on its own.
 
 ## Migrate report
 
+Not in 2.23.1; on the main branch only.
+
 `llm-preflight migrate CONFIG [--ci] [--json]` reads the explicit `models` of a
 benchmark config and reports which provider-named replacement applies to each
 retired or retiring model. It writes nothing, never edits your config and makes
@@ -206,3 +211,7 @@ replacement stays your step.
 A replacement the snapshot has no row for is reported as `unknown`, never as
 active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or
 stale; without it, 0. A bad config exits 2.
+
+`migrate` is a command-line tool only for now. It has no MCP tool, plugin entry
+or GitHub Action input yet, so an agent that works through those surfaces cannot
+run it.

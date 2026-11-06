@@ -2207,3 +2207,206 @@ def test_a_failed_request_reports_no_observed_model(monkeypatch):
 
     assert sample["ok"] is False
     assert sample["observed_model"] is None
+
+
+TOOL_CALL_ERROR = (
+    "provider returned a tool call; preflight checks text responses "
+    "and does not execute tools"
+)
+_TOOL_DELTA = {
+    "tool_calls": [
+        {
+            "index": 0,
+            "id": "call_secret_id",
+            "function": {"name": "lookup_secret_tool", "arguments": '{"q":"s3cret"}'},
+        }
+    ]
+}
+_GENERIC = {
+    "provider": "openai_compatible",
+    "model": "m",
+    "base_url": "https://example.com/v1",
+    "api_key_env": "CUSTOM_KEY",
+}
+_ANTHROPIC = {"provider": "anthropic", "model": "claude-sonnet-4-5"}
+_GEMINI = {"provider": "gemini", "model": "gemini-2.5-flash"}
+
+
+def _chat_delta(delta, finish=None):
+    return {"choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
+
+
+def _anthropic_events(*blocks, stop="end_turn"):
+    events = [{"type": "message_start", "message": {"model": "m", "usage": {}}}]
+    for block in blocks:
+        events.append(
+            {"type": "content_block_start", "index": 0, "content_block": block}
+        )
+        if block["type"] == "text":
+            events.append(
+                {
+                    "type": "content_block_delta",
+                    "delta": {"type": "text_delta", "text": block["text"]},
+                }
+            )
+    events.append({"type": "message_delta", "delta": {"stop_reason": stop}})
+    return events
+
+
+def _gemini_event(parts=(), finish=None):
+    candidate = {"content": {"parts": list(parts)}}
+    if finish:
+        candidate["finishReason"] = finish
+    return {"candidates": [candidate]}
+
+
+_CALL_PART = {"functionCall": {"name": "lookup_secret_tool", "args": {"q": "s3cret"}}}
+_TOOL_USE = {"type": "tool_use", "id": "t", "name": "lookup_secret_tool"}
+_TOOL_CASES = {
+    "generic-only": (_GENERIC, [_chat_delta(_TOOL_DELTA, "tool_calls")]),
+    "generic-text-then-call": (
+        _GENERIC,
+        [_chat_delta({"content": "Looking"}), _chat_delta(_TOOL_DELTA)],
+    ),
+    "generic-legacy-function-call": (
+        _GENERIC,
+        [_chat_delta({"function_call": {"name": "lookup_secret_tool"}})],
+    ),
+    "generic-finish-reason": (
+        _GENERIC,
+        [_chat_delta({"content": "x"}, "function_call")],
+    ),
+    "anthropic-only": (_ANTHROPIC, _anthropic_events(_TOOL_USE, stop="tool_use")),
+    "anthropic-text-then-call": (
+        _ANTHROPIC,
+        _anthropic_events(
+            {"type": "text", "text": "Looking"}, _TOOL_USE, stop="tool_use"
+        ),
+    ),
+    "gemini-only": (_GEMINI, [_gemini_event([_CALL_PART])]),
+    "gemini-text-and-call": (
+        _GEMINI,
+        [_gemini_event([{"text": "Looking"}, _CALL_PART])],
+    ),
+}
+
+
+def _run_stream(monkeypatch, model, events, options=None, calls=None):
+    for name in (
+        "CUSTOM_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "MISTRAL_API_KEY",
+    ):
+        monkeypatch.setenv(name, "test")
+
+    def fake(request, timeout):
+        if calls is not None:
+            calls.append(request)
+        return _StreamResponse(events)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    return create_client(model, 10).run(
+        "hello", {"max_output_tokens": 8, **(options or {})}
+    )
+
+
+@pytest.mark.parametrize("case", sorted(_TOOL_CASES))
+def test_tool_call_response_is_a_failed_request(monkeypatch, case):
+    model, events = _TOOL_CASES[case]
+    sample = _run_stream(monkeypatch, model, events)
+    assert sample["ok"] is False
+    assert sample["response"] == ""
+    assert sample["failure_category"] == "provider_error"
+    assert sample["error"] == TOOL_CALL_ERROR
+    assert "lookup_secret_tool" not in sample["error"]
+    assert "s3cret" not in sample["error"]
+
+
+@pytest.mark.parametrize(
+    "reason", ["MALFORMED_FUNCTION_CALL", "UNEXPECTED_TOOL_CALL", "TOO_MANY_TOOL_CALLS"]
+)
+def test_gemini_tool_finish_reason_is_a_failed_request(monkeypatch, reason):
+    sample = _run_stream(monkeypatch, _GEMINI, [_gemini_event([], reason)])
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR
+
+
+def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch):
+    model = {"provider": "anthropic", "model": "claude-fable-5-1"}
+    events = _anthropic_events(_TOOL_USE, stop="tool_use")
+    assert _run_stream(monkeypatch, model, events)["error"] == TOOL_CALL_ERROR
+
+
+def test_native_chat_tool_call_delta_is_a_failed_request(monkeypatch):
+    model = {"provider": "mistral", "model": "m"}
+    events = [_chat_delta(_TOOL_DELTA), _chat_delta({}, "stop")]
+    sample = _run_stream(monkeypatch, model, events)
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR
+
+
+def test_tool_call_response_is_not_retried_by_default(monkeypatch):
+    model, events = _TOOL_CASES["generic-only"]
+    calls = []
+    sample = _run_stream(monkeypatch, model, events, calls=calls)
+    assert len(calls) == 1
+    assert sample["attempts"] == 1
+
+
+def test_tool_call_failure_leaves_cost_unknown(monkeypatch):
+    model, events = _TOOL_CASES["generic-text-then-call"]
+    sample = _run_stream(monkeypatch, model, events)
+    assert sample["input_tokens"] is None
+    assert sample["output_tokens"] is None
+
+
+@pytest.mark.parametrize(
+    ("model", "events"),
+    [
+        (_GENERIC, [_chat_delta({"content": "ok"}, "stop")]),
+        (_ANTHROPIC, _anthropic_events({"type": "text", "text": "ok"})),
+        (_GEMINI, [_gemini_event([{"text": "ok"}], "STOP")]),
+    ],
+    ids=["generic", "anthropic", "gemini"],
+)
+def test_declared_tools_are_forwarded_and_a_text_answer_passes(
+    monkeypatch, model, events
+):
+    calls = []
+    tools = [{"type": "function", "function": {"name": "lookup"}}]
+    sample = _run_stream(
+        monkeypatch,
+        model,
+        events,
+        options={"provider_options": {"tools": tools}},
+        calls=calls,
+    )
+    assert sample["ok"] is True
+    assert sample["response"] == "ok"
+    assert b"lookup" in calls[0].data
+
+
+@pytest.mark.parametrize(
+    "delta",
+    [
+        {"content": "ok", "tool_calls": []},
+        {"content": "ok", "tool_calls": None},
+        {"content": "ok", "function_call": None},
+    ],
+    ids=["empty-list", "null", "function-call-null"],
+)
+def test_empty_tool_call_fields_are_not_a_tool_call(monkeypatch, delta):
+    sample = _run_stream(monkeypatch, _GENERIC, [_chat_delta(delta, "stop")])
+    assert sample["ok"] is True
+    assert sample["response"] == "ok"
+
+
+def test_anthropic_server_tool_use_with_text_still_passes(monkeypatch):
+    events = _anthropic_events(
+        {"type": "server_tool_use", "id": "s", "name": "web_search"},
+        {"type": "text", "text": "answer"},
+    )
+    sample = _run_stream(monkeypatch, _ANTHROPIC, events)
+    assert sample["ok"] is True
+    assert sample["response"] == "answer"

@@ -150,6 +150,12 @@ the run has no golden cases. A consumer rejection fails the benchmark even when
 the configured validator otherwise passes; a contract-only failure is rejected
 by the configured contract but accepted by the declared consumer parser.
 
+A response that contains a tool call is a failed request, not a text answer:
+the sample has `ok` false, `failure_category` `provider_error` and unknown
+token counts, and the decision is `fail` with `api_failure`. This applies to
+the Chat Completions, Anthropic and Gemini routes, including a tool call that
+follows text. The error text never names the tool or its arguments.
+
 Golden samples include normalized `golden_expected`, `golden_observed`, and
 `golden_valid`. Consumer-profile samples include `consumer_valid_output`,
 `contract_only_failure`, and `consumer_rejection`.

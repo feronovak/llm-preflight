@@ -55,7 +55,8 @@ llm-preflight native-smoke.json --dry-run --json
 ```
 
 These commands do not generate model responses. Missing keys fail doctor;
-expired review dates fail strict price checks. Confirm the selected endpoint,
+expired review dates fail strict price checks. Confirm the selected endpoint (a custom `base_url` shows only its host after
+`--dry-run --json`; read the full route in the config),
 prices and three-request plan before approving live execution.
 
 The example uses one request per model, no retries or warmups, low reasoning,

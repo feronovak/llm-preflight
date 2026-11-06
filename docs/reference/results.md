@@ -40,6 +40,14 @@ Eligibility confirms that request and cost caps exist. The paid-run budget gate
 then enforces those caps against the dry-run's retry-expanded requests and
 maximum estimated cost; eligibility itself is not a cost estimate.
 
+Not in 2.23.1; main branch only: each `models[].base_url` in this JSON prints
+only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as
+`/[REDACTED]`, because a token cannot be told apart from a path; an exact public
+provider route stays. A token in a host name stays visible. A base URL that is not http(s) with a plain host (for example `https://host;tok=1`) prints as `[REDACTED]`. Read the route from
+the config. Masking does not change the approval receipt hash, which still
+covers the unmasked plan; a receipt still reports `mismatch` when the plan
+changes.
+
 ## Top-level fields
 
 | Field | Meaning |
@@ -149,6 +157,12 @@ Every summary includes `contract_only_failures`, `consumer_rejections`,
 the run has no golden cases. A consumer rejection fails the benchmark even when
 the configured validator otherwise passes; a contract-only failure is rejected
 by the configured contract but accepted by the declared consumer parser.
+
+A response that contains a tool call is a failed request, not a text answer:
+the sample has `ok` false, `failure_category` `provider_error` and unknown
+token counts, and the decision is `fail` with `api_failure`. This applies to
+the Chat Completions, Anthropic and Gemini routes, including a tool call that
+follows text. The error text never names the tool or its arguments.
 
 Golden samples include normalized `golden_expected`, `golden_observed`, and
 `golden_valid`. Consumer-profile samples include `consumer_valid_output`,

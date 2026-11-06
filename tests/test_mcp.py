@@ -866,7 +866,7 @@ def test_dry_run_plan_returns_the_cli_dry_run_plan_for_the_same_config(
                     {
                         "provider": "openai_compatible",
                         "model": "router",
-                        "base_url": "https://router.example.test/v1",
+                        "base_url": "https://router.example.test/SENTINELPATH/v1",
                         "headers": {"X-Title": "parity"},
                     },
                 ],
@@ -1656,6 +1656,41 @@ def test_gate_tool_refuses_a_repository_that_contradicts_github_repository(
     assert result["isError"] is False
     assert result["structuredContent"]["reason_code"] == "repository_unknown"
     assert "GITHUB_REPOSITORY is fork/app" in result["structuredContent"]["why"]
+
+
+def test_dry_run_plan_tool_never_returns_a_url_token(tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [
+                    {
+                        "provider": "openai_compatible",
+                        "model": "router",
+                        "base_url": "https://u:SENTINELUSER@proxy.example/SENTINELPATH"
+                        "?key=SENTINELQUERY",
+                    }
+                ],
+            }
+        )
+    )
+
+    result = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )["result"]
+
+    assert "SENTINEL" not in json.dumps(result)
+    model = result["structuredContent"]["models"][0]
+    assert model["base_url"] == "https://proxy.example/[REDACTED]"
 
 
 def _migrate_rows(monkeypatch):

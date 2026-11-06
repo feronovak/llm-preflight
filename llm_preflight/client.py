@@ -604,8 +604,36 @@ class OpenAICompatibleClient(ProviderClient):
         if "cache_write_tokens" in details:
             normalized["cache_write_input_tokens"] = details["cache_write_tokens"]
         choices = event.get("choices") or []
+        if _chat_has_tool_call(choices):
+            raise ValueError(TOOL_CALL_ERROR)
         text = (choices[0].get("delta") or {}).get("content") if choices else None
         return text, normalized
+
+
+TOOL_CALL_ERROR = (
+    "provider returned a tool call; preflight checks text responses "
+    "and does not execute tools"
+)
+_CHAT_TOOL_FINISH = {"tool_calls", "function_call"}
+_GEMINI_TOOL_FINISH = {
+    "MALFORMED_FUNCTION_CALL",
+    "UNEXPECTED_TOOL_CALL",
+    "TOO_MANY_TOOL_CALLS",
+}
+
+
+def _chat_has_tool_call(choices: Any) -> bool:
+    for choice in choices if isinstance(choices, list) else []:
+        if not isinstance(choice, dict):
+            continue
+        delta = choice.get("delta")
+        if isinstance(delta, dict) and (
+            delta.get("tool_calls") or delta.get("function_call")
+        ):
+            return True
+        if choice.get("finish_reason") in _CHAT_TOOL_FINISH:
+            return True
+    return False
 
 
 def _stream_object(value: Any) -> dict[str, Any]:
@@ -936,6 +964,16 @@ class AnthropicClient(ProviderClient):
     def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
         if event.get("type") == "error":
             raise ValueError("Anthropic returned a provider error event")
+        block = event.get("content_block")
+        if (
+            event.get("type") == "content_block_start"
+            and isinstance(block, dict)
+            and block.get("type") == "tool_use"
+        ) or (
+            event.get("type") == "message_delta"
+            and (event.get("delta") or {}).get("stop_reason") == "tool_use"
+        ):
+            raise ValueError(TOOL_CALL_ERROR)
         if self.requires_complete_stream and event.get("type") == "message_delta":
             reason = (event.get("delta") or {}).get("stop_reason")
             if reason not in {None, "end_turn", "stop_sequence"}:
@@ -969,6 +1007,19 @@ class AnthropicClient(ProviderClient):
         """Only `message_start` names the model, inside its message."""
         message = event.get("message")
         return message.get("model") if isinstance(message, dict) else None
+
+
+def _gemini_has_tool_call(candidates: Any) -> bool:
+    for candidate in candidates if isinstance(candidates, list) else []:
+        if not isinstance(candidate, dict):
+            continue
+        if candidate.get("finishReason") in _GEMINI_TOOL_FINISH:
+            return True
+        content = candidate.get("content")
+        parts = content.get("parts") if isinstance(content, dict) else None
+        if any(isinstance(p, dict) and p.get("functionCall") for p in parts or []):
+            return True
+    return False
 
 
 class GeminiClient(ProviderClient):
@@ -1050,6 +1101,8 @@ class GeminiClient(ProviderClient):
         if usage.get("cachedContentTokenCount") is not None:
             normalized["cached_input_tokens"] = usage["cachedContentTokenCount"]
         candidates = event.get("candidates") or []
+        if _gemini_has_tool_call(candidates):
+            raise ValueError(TOOL_CALL_ERROR)
         parts = (
             ((candidates[0].get("content") or {}).get("parts") or [])
             if candidates

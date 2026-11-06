@@ -29,6 +29,9 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- `llm-preflight migrate CONFIG [--ci] [--json]` reports which provider-named
+  replacement applies to each retired or retiring model in a config, with the
+  same outcome in text and JSON. It writes nothing and makes no provider call.
 - Retirement row for `gemini-3.1-flash-lite`: deprecated, retires 2027-05-07,
   replacement `gemini-3.5-flash-lite`. `--ci` now exits 3 for it instead of
   reporting unknown. The frontier candidates example now uses the active

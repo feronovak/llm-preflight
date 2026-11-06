@@ -106,6 +106,7 @@ critical-paths:       # a wrong verdict here ships a cost or trust figure users 
   - llm_preflight/decision.py # a wrong pass/inconclusive verdict ships a trust or cost decision users act on
   - llm_preflight/retirements.py # a wrong retirement verdict fails or passes a user's CI gate
   - llm_preflight/source_audit.py # its decision drives the --audit-source --ci exit code
+  - llm_preflight/migrate.py # its report names the replacement a user adopts for a retired model
   - llm_preflight/mcp.py # agents act on its verdicts and schemas without a human reading them
   - llm_preflight/attestation.py # a wrong gate verdict lets a stale, borrowed or forged pass reach main
   - llm_preflight/github_actions.py # the CI identity it records decides whether the gate accepts a record

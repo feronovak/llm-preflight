@@ -183,3 +183,26 @@ retirement was announced before its review date.
 To add a row, copy an existing `_anthropic(...)` or `_openai(...)` entry,
 use the ID exactly as the page prints it, and record only a replacement the
 page names on its own.
+
+## Migrate report
+
+`llm-preflight migrate CONFIG [--ci] [--json]` reads the explicit `models` of a
+benchmark config and reports which provider-named replacement applies to each
+retired or retiring model. It writes nothing, never edits your config and makes
+no provider request; `discovery` is ignored with a warning. Adopting a
+replacement stays your step.
+
+| Outcome | Meaning |
+|---|---|
+| `candidate` | One named replacement applies; use the printed `--quick --dry-run` command. A custom `api_key_env` is named, not copied: keep it when you add the model. |
+| `replacement_in_config` | The replacement is already listed in your config on the same route (`base_url`). Run `--dry-run` on that config. |
+| `no_named_replacement` | The row names none, or only one that needs a mode setting. Read the page. |
+| `replacement_unusable` | The replacement is itself retired or retiring; the chain is not followed. |
+| `snapshot_stale` | The row is older than 30 days, even when retired; update llm-preflight. The replacement's status is not reported. |
+| `route_base_url` | The row sets a custom `base_url`. The provider names the replacement for its public route only, so add it by hand with your own prices and run `--dry-run` on that config. |
+| `route_headers` | The row sets `headers`; add the replacement by hand. |
+| `not_affected` | Active or unknown. |
+
+A replacement the snapshot has no row for is reported as `unknown`, never as
+active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or
+stale; without it, 0. A bad config exits 2.

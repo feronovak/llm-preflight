@@ -2,6 +2,8 @@
 
 **Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
+The `migrate` command has no MCP tool yet, so an agent connected here cannot run it.
+
 Connect a coding agent to an existing project contract, validate it without
 provider access, then review a bounded plan. The local stdio server exposes
 structured results without granting arbitrary shell execution. A live run
@@ -44,7 +46,7 @@ select the MCP executable explicitly from the published package:
     "llm-preflight": {
       "command": "uvx",
       "args": [
-        "--from", "llm-preflight==2.23.0",
+        "--from", "llm-preflight==2.23.1",
         "llm-preflight-mcp",
         "--workspace", "/absolute/path/to/repository"
       ]

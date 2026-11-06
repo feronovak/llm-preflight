@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.23.0"
-    assert 'version = "2.23.0"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.23.1"
+    assert 'version = "2.23.1"' in Path("pyproject.toml").read_text()
     server = json.loads(Path("server.json").read_text())
     assert server["version"] == __version__
     assert {package["version"] for package in server["packages"]} == {__version__}
@@ -460,7 +460,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.23.0",
+        "llm-preflight==2.23.1",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",

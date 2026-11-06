@@ -16,7 +16,7 @@ module names.
 | `--doctor` — validate config, keys, model resolution, redacted credential provenance, and pricing coverage without a run | live | `cli.py`, `features.py` |
 | Project configuration reuse — a config-relative env-file reference or explicit override loads existing credentials without copying values; MCP keeps the same workspace boundary | live | `env.py`, `cli.py`, `mcp.py` |
 | `--audit-source` — audit literal model IDs in a repository with pricing and retirement snapshot verdicts, no provider requests | live | `source_audit.py`, `git.py`, `retirements.py`, `cli.py` |
-| Bundled model retirement snapshot of official Anthropic, OpenAI and selected Gemini sources, including deprecated alias redirects, with a three-state verdict in the scan, doctor and dry-run | live | `retirements.py`, `features.py`, `cli.py`, `docs/guides/retirements.md` |
+| Bundled model retirement snapshot of official Anthropic, OpenAI and selected Gemini sources, including Gemini aliases with no shutdown date that route to a newer model (recorded active), with a three-state verdict in the scan, doctor and dry-run | live | `retirements.py`, `features.py`, `cli.py`, `docs/guides/retirements.md` |
 | `--change-plan [REF]` — inspect tracked, staged, and untracked Git changes for static LLM contract signals and recommend no-spend checks | live | `change_plan.py`, `git.py`, `source_audit.py`, `cli.py` |
 | `--contract-check` — local accepted/rejected validator fixtures, local image-fixture safety checks, and canonical tool-definition linting, without provider requests | live | `contracts.py`, `images.py`, `runner.py`, `cli.py` |
 | `--baseline` / `--ci` — compare against a previous result, fail when thresholds regress | live | `cli.py` |
@@ -28,7 +28,7 @@ module names.
 | Safe provider-breakage and pricing-drift issue intake | live | `.github/ISSUE_TEMPLATE/` |
 | Product comparison guide — local contract preflight versus evaluation, observability, and provider administration | live | `docs/product/when-to-use.md` |
 | Pricing and cost reporting plus reviewed-snapshot and current-price coverage gates | live | `pricing.py`, `features.py`, `runner.py`, `cli.py` |
-| Native Kimi, MiniMax, Mistral and Cohere text routes, metadata discovery, reviewed price/setting guards and bounded fixture examples | source 2.23.0, unpublished | `providers.py`, `client.py`, `catalog.py`, `docs/guides/native-providers.md` |
+| Native Kimi, MiniMax, Mistral and Cohere text routes, metadata discovery, reviewed price/setting guards and bounded fixture examples | live | `providers.py`, `client.py`, `catalog.py`, `docs/guides/native-providers.md` |
 | Official pricing snapshots for named public model IDs, listed for the current package version | live | `pricing.py`, `docs/guides/current-snapshots.md` |
 | Gemini 4 Argon synchronous GenerateContent requests, thinking/cache accounting, explicit output bounds and scheduled official price changes; deterministic protocol evidence | live | `client.py`, `pricing.py`, `tests/test_clients.py`, `examples/gemini-4-argon.json` |
 | Named profiles, presets, and strict JSON/consumer contracts for repeatable runs | live | `profiles.py`, `presets.py`, `runner.py` |

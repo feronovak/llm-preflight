@@ -1,6 +1,6 @@
 # Check current native models
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
 
 Version 2.23.0 adds native Kimi, MiniMax, Mistral and
 Cohere text routes, GPT-6.1 Terra pricing, GLM Flash siblings and restricted
@@ -124,7 +124,7 @@ configured native models; no metadata discovery endpoint is integrated.
 | Source audit and change plans | New literal model families and explicit provider prefixes; an explicit OpenRouter route does not inherit native prices. Literal scanning does not resolve an application's dynamic endpoint or execute its parser. |
 | MCP | Existing contract, pricing and plan tools reuse native validation. Read-only tools accept configured models and refuse provider discovery. Live calls retain explicit confirmation requirements. |
 | Saved results and reports | Existing normalized usage, observed model identity, cost coverage and decision fields; no new live result is implied by fixtures. |
-| GitHub Action | Runs the installed package. Set `package-version: "2.23.0"` to use these providers. |
+| GitHub Action | Runs the installed package. Set `package-version: "2.23.1"` to use these providers. |
 | Agent plugin | Existing guidance requires reporting the contract, price/plan decision, warnings and unknown evidence before any live work. |
 
 DeepSeek's `deepseek-flash` currently resolves to V4.1-Flash-1017. Its legacy

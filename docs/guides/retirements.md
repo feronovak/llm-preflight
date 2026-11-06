@@ -194,11 +194,12 @@ replacement stays your step.
 
 | Outcome | Meaning |
 |---|---|
-| `candidate` | One named replacement applies; use the printed `--quick --dry-run` command. |
-| `replacement_in_config` | The replacement is already listed in your config. |
+| `candidate` | One named replacement applies; use the printed `--quick --dry-run` command. A custom `api_key_env` is named, not copied: keep it when you add the model. |
+| `replacement_in_config` | The replacement is already listed in your config on the same route (`base_url`). Run `--dry-run` on that config. |
 | `no_named_replacement` | The row names none, or only one that needs a mode setting. Read the page. |
 | `replacement_unusable` | The replacement is itself retired or retiring; the chain is not followed. |
-| `snapshot_stale` | The row is older than 30 days, even when retired; update llm-preflight. |
+| `snapshot_stale` | The row is older than 30 days, even when retired; update llm-preflight. The replacement's status is not reported. |
+| `route_base_url` | The row sets a custom `base_url`. The provider names the replacement for its public route only, so add it by hand with your own prices and run `--dry-run` on that config. |
 | `route_headers` | The row sets `headers`; add the replacement by hand. |
 | `not_affected` | Active or unknown. |
 

@@ -2240,7 +2240,7 @@ def _migrate_main(argv: list[str]) -> None:
     args = parser.parse_args(argv)
     report = build_migrate_report(args.config, today_utc())
     print(
-        json.dumps(report, indent=2, ensure_ascii=False)
+        json.dumps(report, indent=2)
         if args.json
         else format_migrate_report(report, ci=args.ci),
         end="\n" if args.json else "",

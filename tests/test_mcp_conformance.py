@@ -309,6 +309,12 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
             ({"record": "unreadable/bad.preflight.json"}, True),
             ({"record": "../run.preflight.json"}, True),
         ],
+        "migrate_plan": [
+            ({"config": "mock.json"}, False),
+            ({"config": "retired.json"}, False),
+            ({"config": "missing.json"}, True),
+            ({"config": "discovery.json"}, True),
+        ],
         "gate": [
             ({"config": "mock.json", "records": ["records"]}, False),
             (

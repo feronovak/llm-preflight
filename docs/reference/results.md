@@ -36,16 +36,17 @@ and a stable `reason`: `eligible`, `catalog_evidence_required`,
 `unknown_pricing`, `undated_pricing`, `stale_pricing`, or
 `bounded_limits_required`. Agents must use this evidence rather than infer
 whether a newly discovered ID is safe to include in a paid smoke.
+Eligibility confirms that request and cost caps exist. The paid-run budget gate
+then enforces those caps against the dry-run's retry-expanded requests and
+maximum estimated cost; eligibility itself is not a cost estimate.
 
 Not in 2.23.1; main branch only: each `models[].base_url` in this JSON prints
 only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as
 `/[REDACTED]`, because a token cannot be told apart from a path; an exact public
 provider route stays. A token in a host name stays visible. Read the route from
-the config. The approval receipt hashes the unmasked plan, so recorded receipts
-still verify.
-Eligibility confirms that request and cost caps exist. The paid-run budget gate
-then enforces those caps against the dry-run's retry-expanded requests and
-maximum estimated cost; eligibility itself is not a cost estimate.
+the config. Masking does not change the approval receipt hash, which still
+covers the unmasked plan; a receipt still reports `mismatch` when the plan
+changes.
 
 ## Top-level fields
 

@@ -10,8 +10,10 @@ All notable changes to this project are documented here.
   `base_url` as scheme and host[:port], with any path, query, userinfo or `;`
   parameter shown as `/[REDACTED]`; an exact public provider route is kept. The
   JSON value changed: read the route from your config. A token in a host name
-  stays visible. Existing approval receipts keep verifying, because the receipt
-  still hashes the unmasked plan.
+  stays visible. Masking does not change the approval receipt hash, which still
+  covers the unmasked plan, so a receipt recorded before this change verifies
+  against an unchanged plan; a receipt still reports `mismatch` when the plan
+  changes.
 
 ### Fixed
 

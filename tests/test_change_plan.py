@@ -746,10 +746,19 @@ _TOKEN_CONFIG = {
         {"provider": "openai_compatible", "model": "router", "base_url": _TOKEN_URL}
     ],
 }
-# Computed on unmodified origin/main (a3110a8) for _TOKEN_CONFIG, today 2026-11-06.
+# Computed with the unmodified approval code (a3110a8) for _RECORDED_PLAN.
 _RECORDED_PLAN_SHA256 = (
-    "e075bc057fdd0e4944608985f15a8f11e78e898fd6c7088fcd70e4cbad615b04"
+    "f9c48f811e69067a92c4f108cb5b49d57457eb1617bf10a3865f31de7ff69418"
 )
+_RECORDED_PLAN = {
+    "benchmark": "b",
+    "models": [
+        {"provider": "openai_compatible", "model": "router", "base_url": _TOKEN_URL}
+    ],
+    "tests": ["t"],
+    "possible_requests": 5,
+    "maximum_estimated_cost_usd": 0.01,
+}
 _NOW = datetime(2026, 11, 6, tzinfo=timezone.utc)
 
 
@@ -768,14 +777,13 @@ def _recorded_receipt():
 
 
 def test_recorded_receipt_still_verifies_with_a_token_in_base_url():
-    plan = dry_run_plan(_TOKEN_CONFIG, None, today=date(2026, 11, 6))
+    receipt = _recorded_receipt()
 
-    assert (
-        verify_approval_receipt(_recorded_receipt(), plan, now=_NOW)["state"]
-        == "recorded"
+    assert verify_approval_receipt(receipt, _RECORDED_PLAN, now=_NOW)["state"] == (
+        "recorded"
     )
     assert (
-        verify_approval_receipt(_recorded_receipt(), dry_run_output(plan), now=_NOW)[
+        verify_approval_receipt(receipt, dry_run_output(_RECORDED_PLAN), now=_NOW)[
             "state"
         ]
         == "mismatch"

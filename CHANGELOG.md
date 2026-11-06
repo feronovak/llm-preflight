@@ -11,7 +11,8 @@ All notable changes to this project are documented here.
   the call was discarded and a response with text followed by a tool call, or a
   tool call with a permissive validator, could pass. It now fails as a request
   error (`provider_error`, decision `api_failure`) with unknown token counts.
-  Declared `tools` are still forwarded.
+  `request.provider_options.tools` is still forwarded on those routes;
+  top-level `tools` entries stay local.
 - `--change-plan` no longer stops with a permission error on a changed file it
   may not read. It lists the file under `unreadable_files`, counts it in
   `files_unreadable`, and sets `plan_incomplete`; `requires_preflight_review`

@@ -2410,3 +2410,70 @@ def test_anthropic_server_tool_use_with_text_still_passes(monkeypatch):
     sample = _run_stream(monkeypatch, _ANTHROPIC, events)
     assert sample["ok"] is True
     assert sample["response"] == "answer"
+
+
+@pytest.mark.parametrize(
+    "validation",
+    [
+        {"no_markdown": True},
+        {"regex": "^.*$"},
+        {"max_chars": 500},
+        None,
+    ],
+    ids=["no_markdown", "regex", "max_chars", "no-validation"],
+)
+@pytest.mark.parametrize("case", ["generic-text-then-call", "generic-only"])
+def test_tool_call_response_cannot_pass_a_permissive_validator(
+    monkeypatch, case, validation
+):
+    from llm_preflight.runner import run_benchmark
+
+    model, events = _TOOL_CASES[case]
+    for name in ("CUSTOM_KEY",):
+        monkeypatch.setenv(name, "test")
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: _StreamResponse(events)
+    )
+    result = run_benchmark(
+        {
+            "prompt": "hello",
+            **({"validation": validation} if validation else {}),
+            "models": [model],
+            "repetitions": 1,
+            "warmups": 0,
+        }
+    )
+    assert result["decision"]["state"] == "fail"
+    assert "api_failure" in json.dumps(result["decision"])
+    assert result["models"][0]["summary"]["estimated_cost_usd"] is None
+
+
+def test_anthropic_tool_use_stop_reason_alone_is_a_failed_request(monkeypatch):
+    events = _anthropic_events({"type": "text", "text": "Looking"}, stop="tool_use")
+    sample = _run_stream(monkeypatch, _ANTHROPIC, events)
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR
+
+
+def test_tool_call_on_a_second_choice_is_a_failed_request(monkeypatch):
+    event = {
+        "choices": [
+            {"index": 0, "delta": {"content": "ok"}},
+            {"index": 1, "delta": _TOOL_DELTA},
+        ]
+    }
+    sample = _run_stream(monkeypatch, _GENERIC, [event])
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR
+
+
+def test_tool_call_on_a_second_gemini_candidate_is_a_failed_request(monkeypatch):
+    event = {
+        "candidates": [
+            {"content": {"parts": [{"text": "ok"}]}},
+            {"content": {"parts": [_CALL_PART]}},
+        ]
+    }
+    sample = _run_stream(monkeypatch, _GEMINI, [event])
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR

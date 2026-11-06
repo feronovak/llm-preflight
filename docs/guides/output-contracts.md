@@ -298,10 +298,11 @@ If the integration declares callable tools, add canonical `tools` entries with
 rejects names and JSON Schema features that are not portable in this local
 subset. It validates declarations only; it does not exercise a tool call.
 
-Declared `tools` are forwarded to the provider, so a model that answers in text
-is still checked. Preflight reads text only and never runs tools: a response
-that returns a tool call fails as a request error, even when it also carries
-text.
+Top-level `tools` entries stay local and are never sent to a provider. Only
+`request.provider_options.tools` is forwarded, on the generic, Anthropic and
+Gemini routes (native routes refuse it), so a model that answers in text is
+still checked. Preflight reads text only and never runs tools: a response that
+returns a tool call fails as a request error, even when it also carries text.
 
 For a configuration with a `prompts` list, put the fixtures inside the prompt
 they test, beside that prompt's `validation`. Fixtures at the top level test

@@ -31,7 +31,7 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.23.1"' in workflow
+    assert 'package-version: "2.23.0"' in workflow
     assert "run-paid" not in workflow
 
 
@@ -659,7 +659,7 @@ def test_current_published_package_pins_are_2_23_1():
     root = Path(__file__).resolve().parent.parent
     assert 'default: "2.23.1"' in (root / "action.yml").read_text()
     assert (
-        'package-version: "2.23.1"'
+        'package-version: "2.23.0"'
         in (root / ".github/workflows/action-smoke.yml").read_text()
     )
     assert (

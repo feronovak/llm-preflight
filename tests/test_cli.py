@@ -4361,6 +4361,19 @@ def test_dry_run_keeps_direct_replacement_command_for_providerless_proxy(
     assert command in cli._format_dry_run_plan(plan)
 
 
+def test_dry_run_plan_keys_unchanged():
+    plan = cli.dry_run_plan(
+        {"prompt": "hi", "models": [{"provider": "mock", "model": "local"}]}
+    )
+    assert set(plan) == {
+        "benchmark", "models", "tests", "test_breakdown", "requests",
+        "possible_requests", "retry_max_attempts", "estimated_cost_usd",
+        "maximum_estimated_cost_usd", "pricing_warnings", "pricing_coverage",
+        "smoke_eligibility", "retirements", "configuration_warnings", "presets",
+        "request", "save_responses", "stop_on",
+    }  # fmt: skip
+
+
 def _unreadable_change_plan_repository(tmp_path, name):
     def git(*args):
         subprocess.run(

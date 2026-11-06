@@ -33,7 +33,16 @@ All notable changes to this project are documented here.
 
 - `llm-preflight migrate CONFIG [--ci] [--json]` reports which provider-named
   replacement applies to each retired or retiring model in a config, with the
-  same outcome in text and JSON. It writes nothing and makes no provider call.
+  same outcome in text and JSON. It makes no provider call.
+- `llm-preflight migrate CONFIG --output PATH [--replace]` also writes a
+  candidate config holding only the named replacement rows, with smoke
+  settings, and prints the dry-run plan plus the commands that record an
+  approval receipt and run the smoke. The candidate is written beside the
+  source config, which is never changed; an existing file needs `--replace`.
+  Old-model prices and settings are not copied, and a replacement with no
+  bundled price is reported as an unbounded plan.
+  Only a public `base_url` is ever written or printed; a row with a custom
+  `base_url` or `headers` is left for you to add by hand.
 
 ## 2.23.1 - 2026-11-06
 

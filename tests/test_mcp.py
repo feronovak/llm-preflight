@@ -1854,3 +1854,40 @@ def test_migrate_docs_describe_the_read_only_mcp_tool():
     assert "do not expose it as an MCP tool" not in decisions
     assert "`migrate_plan`" in decisions
     assert "save `candidate_config.config`" in mcp_doc
+
+
+def test_migrate_plan_follow_up_is_stated_in_band(tmp_path):
+    initialized = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )
+    listed = mcp._response(
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}, tmp_path
+    )
+    description = {t["name"]: t for t in listed["result"]["tools"]}["migrate_plan"][
+        "description"
+    ]
+    texts = (
+        description,
+        mcp.SAFE_WORKFLOW,
+        initialized["result"]["instructions"],
+    )
+
+    for text in texts:
+        flat = " ".join(text.split())
+        assert "save `candidate_config.config` beside the source config" in flat
+        assert "`output` is not an accepted argument" in flat
+        assert "`next_steps` uses CLI wording" in flat
+        assert "`confirm_paid_run`" in flat
+
+
+def test_decision_and_docs_label_migrate_as_main_branch_only():
+    root = Path(__file__).parent.parent
+    flat = {
+        name: " ".join((root / name).read_text().split())
+        for name in ("docs/automation/mcp.md", "README.md", "docs/DECISIONS.md")
+    }
+
+    assert "main branch only, not in 2.23.1" in flat["docs/automation/mcp.md"]
+    assert "main branch only, not in 2.23.1" in flat["README.md"]
+    assert "`migrate --run` is not available yet" in flat["docs/DECISIONS.md"]
+    assert "behind an approval receipt" not in flat["docs/DECISIONS.md"]

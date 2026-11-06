@@ -111,4 +111,4 @@ authorization remains separate from a numeric rating.
 
 **Why:** It reports which provider-named replacement applies to a retired or retiring model. `migrate_plan` writes no file, runs no smoke and makes no provider request, and it always reports approval as missing. Widening the plugin and CI surfaces needs its own review of what those callers may act on.
 
-**Consequence:** An agent connected over MCP can read the same report and save the candidate itself; the smoke stays a command-line step behind an approval receipt. The plugin and the Action cannot run `migrate`, and the report format is not promised to them.
+**Consequence:** An agent connected over MCP can read the same report and save the candidate itself. `migrate --run` is not available yet, so over MCP a paid run is `run_preflight` with `confirm_paid_run` after explicit user approval. The plugin and the Action cannot run `migrate`, and the report format is not promised to them.

@@ -229,7 +229,7 @@ Configure the installed stdio command in your MCP client:
 }
 ```
 
-The eight tools audit literal model IDs, validate a config, preview a plan, run
+The eight tools (`migrate_plan` is main branch only, not in 2.23.1) audit literal model IDs, validate a config, preview a plan, run
 a preflight, compare saved baselines, verify a record, gate CI evidence and plan
 a retired-model migration.
 For an existing contract, begin with `validate_config` and `dry_run_plan`.

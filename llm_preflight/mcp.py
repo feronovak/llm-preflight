@@ -46,6 +46,12 @@ PROTOCOL_VERSION = "2026-07-28"
 STANDARD_PROTOCOL_VERSION = "2025-06-18"
 SAFE_WORKFLOW_URI = "llm-preflight://guides/safe-workflow"
 _MAX_AGE_DAYS = 3650
+_MIGRATE_FOLLOW_UP = (
+    "To check the candidate, save `candidate_config.config` beside the source "
+    "config, then call `validate_config` and `dry_run_plan` on it, get explicit "
+    "user approval, and only then call `run_preflight` with `confirm_paid_run`. "
+    "`next_steps` uses CLI wording and `output` is not an accepted argument."
+)
 SAFE_WORKFLOW = """# Safe LLM Preflight workflow
 
 In a repository with no benchmark config, call `audit_source` first. It
@@ -75,6 +81,13 @@ before a live run.
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
    returned decision evidence or compare it with `diff_baseline`.
+
+For a retired or retiring model, `migrate_plan` returns the provider-named
+replacement as an inline candidate and writes nothing. To check the candidate,
+save `candidate_config.config` beside the source config, then run
+`validate_config`, `dry_run_plan`, explicit approval and `run_preflight` with
+`confirm_paid_run`. `next_steps` uses CLI wording and `output` is not an
+accepted argument.
 
 Source audit, mock and dry-run tools never load credentials or contact
 providers. A live run does not approve a model, increase a budget, or replace
@@ -887,7 +900,7 @@ def _tools() -> list[dict[str, Any]]:
                 "Report which provider-named replacement applies to each retired "
                 "or retiring model in a config, with the candidate config inline "
                 "and redacted. Writes no file, runs no smoke and makes no "
-                "provider request; approval is always missing."
+                "provider request; approval is always missing. " + _MIGRATE_FOLLOW_UP
             ),
             "inputSchema": {
                 "type": "object",
@@ -1071,6 +1084,8 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                     "report the dry_run_plan `retirements` decision: `fail` for a "
                     "retired model, `inconclusive` for a retiring model or a "
                     "stale snapshot row. "
+                    "For a retired model, migrate_plan reads the named "
+                    "replacement without writing a file: " + _MIGRATE_FOLLOW_UP + " "
                     "Only call run_preflight for a paid config when the user "
                     "explicitly authorizes it and confirm_paid_run is true. "
                     "verify and gate check proof-of-preflight records offline; "

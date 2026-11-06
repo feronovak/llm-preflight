@@ -2224,21 +2224,51 @@ def interactive_selection(
     )
 
 
+def _migrate_plan(path: Path) -> dict[str, Any]:
+    """The plan `--dry-run` would print for the candidate file at `path`."""
+    try:
+        config = load_config(path)
+        config = apply_provider_presets(
+            apply_model_aliases(apply_environment(config, None))
+        )
+        validate_config_validations(config)
+        return dry_run_plan(config, None, today=today_utc())
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
+
+
 def _migrate_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog="llm-preflight migrate",
         description=(
             "Report which provider-named replacement applies to each retired "
-            "model in a config; writes nothing and calls no provider"
+            "model in a config; with --output, write a candidate config of the "
+            "replacements. Calls no provider"
         ),
     )
     parser.add_argument("config", type=Path, help="benchmark config JSON to inspect")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="write the candidate config here, in the config's directory",
+    )
+    parser.add_argument(
+        "--replace", action="store_true", help="overwrite an existing --output file"
+    )
     parser.add_argument(
         "--ci", action="store_true", help="exit 1 on fail and 3 on inconclusive"
     )
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     args = parser.parse_args(argv)
-    report = build_migrate_report(args.config, today_utc())
+    if args.replace and not args.output:
+        parser.error("--replace requires --output")
+    report = build_migrate_report(
+        args.config,
+        today_utc(),
+        output=args.output,
+        replace=args.replace,
+        plan_for=_migrate_plan,
+    )
     print(
         json.dumps(report, indent=2)
         if args.json

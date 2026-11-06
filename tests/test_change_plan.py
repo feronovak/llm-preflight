@@ -3,12 +3,14 @@ import json
 import os
 import stat
 import subprocess
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from llm_preflight import change_plan as change_plan_module
+from llm_preflight import cli
 from llm_preflight.approval import (
     create_approval_receipt,
     verify_approval_receipt,
@@ -814,3 +816,58 @@ def test_dry_run_output_masks_without_changing_the_plan():
     )
     assert "base_url" not in output["catalog_candidates"][1]
     assert set(output) == set(plan)
+
+
+def test_cli_receipt_mismatches_when_only_the_url_path_token_changes(
+    monkeypatch, tmp_path, capsys
+):
+    def write_config(token):
+        config = tmp_path / "benchmark.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "prompt": "ok",
+                    "models": [
+                        {
+                            "provider": "openai_compatible",
+                            "model": "router",
+                            "base_url": f"https://proxy.example/{token}/v1",
+                        }
+                    ],
+                }
+            )
+        )
+        return str(config)
+
+    def run(*args):
+        monkeypatch.setattr(
+            sys, "argv", ["llm-preflight", *args, "--dry-run", "--json"]
+        )
+        monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 6))
+        try:
+            cli.main()
+            code = 0
+        except SystemExit as exit_info:
+            code = exit_info.code
+        return code, json.loads(capsys.readouterr().out)
+
+    receipt = str(tmp_path / "approval.json")
+    run(
+        write_config("tok-one"),
+        "--no-env-file",
+        "--approval-receipt",
+        receipt,
+        "--approval-note",
+        "Reviewed.",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+    )
+    same_code, same = run(
+        write_config("tok-one"), "--no-env-file", "--verify-approval-receipt", receipt
+    )
+    code, changed = run(
+        write_config("tok-two"), "--no-env-file", "--verify-approval-receipt", receipt
+    )
+
+    assert (same_code, same["approval_verification"]["state"]) == (0, "recorded")
+    assert (code, changed["approval_verification"]["state"]) == (1, "mismatch")

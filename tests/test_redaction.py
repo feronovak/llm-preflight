@@ -94,6 +94,7 @@ def test_redact_secrets_replaces_gemini_and_xai_style_keys():
         ("https://host/", "https://host"),
         ("HTTPS://Host.Example/tok", "https://Host.Example/[REDACTED]"),
         ("http://[::1]:8080/tok", "http://[::1]:8080/[REDACTED]"),
+        ("http://my_service:8080/v1", "http://my_service:8080/[REDACTED]"),
     ],
 )
 def test_mask_base_url_hides_everything_but_scheme_and_authority(value, masked):

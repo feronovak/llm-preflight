@@ -43,7 +43,7 @@ maximum estimated cost; eligibility itself is not a cost estimate.
 Not in 2.23.1; main branch only: each `models[].base_url` in this JSON prints
 only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as
 `/[REDACTED]`, because a token cannot be told apart from a path; an exact public
-provider route stays. A token in a host name stays visible. Read the route from
+provider route stays. A token in a host name stays visible. A base URL that is not http(s) with a plain host (for example `https://host;tok=1`) prints as `[REDACTED]`. Read the route from
 the config. Masking does not change the approval receipt hash, which still
 covers the unmasked plan; a receipt still reports `mismatch` when the plan
 changes.

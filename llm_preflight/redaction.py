@@ -33,7 +33,7 @@ _PUBLIC_BASE_URLS = {
     if "base_url" in defaults
 }
 _AUTHORITY = re.compile(
-    r"(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?", re.ASCII
+    r"(?:[A-Za-z0-9._-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?", re.ASCII
 )
 
 

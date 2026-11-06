@@ -74,8 +74,8 @@ llm-preflight benchmark.json --dry-run --json
 
 `--contract-check` tests the accepted and rejected fixtures without loading
 credentials. Doctor identifies the key source or a missing key without showing
-the value. Pricing check flags unknown or stale rates. Dry run shows the route,
-request bound, estimated cost, and retention plan without generation. Resolve
+the value. Pricing check flags unknown or stale rates. Dry run shows the route (a custom `base_url` shows only its host after
+`--dry-run --json`; read the full route in the config), request bound, estimated cost, and retention plan without generation. Resolve
 its warnings before considering a live request. The example caps the run at
 one request; add a reviewed `max_estimated_cost_usd` to the config after price
 coverage is known and before a paid run.

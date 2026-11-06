@@ -105,10 +105,10 @@ to describe the PyPI UI yank procedure.
 used for that build. Earlier reports and scores are not rewritten, and release
 authorization remains separate from a numeric rating.
 
-## Migrate is command-line only
+## Migrate is command-line, plus one read-only MCP tool
 
-**Decision:** Offer `migrate` through the command line only; do not expose it as an MCP tool, plugin entry or GitHub Action input yet.
+**Decision:** Offer `migrate` through the command line and, over MCP, only the read-only `migrate_plan` tool; do not expose it as a plugin entry or GitHub Action input yet.
 
-**Why:** It reports which provider-named replacement applies to a retired or retiring model and writes nothing. The command-line report is the reviewed contract; widening it to agent and CI surfaces needs its own review of what those callers may act on.
+**Why:** It reports which provider-named replacement applies to a retired or retiring model. `migrate_plan` writes no file, runs no smoke and makes no provider request, and it always reports approval as missing. Widening the plugin and CI surfaces needs its own review of what those callers may act on.
 
-**Consequence:** An agent that works only through MCP, the plugin or the Action cannot run `migrate` and has to ask the user to run it. The report format is not promised to those surfaces.
+**Consequence:** An agent connected over MCP can read the same report and save the candidate itself; the smoke stays a command-line step behind an approval receipt. The plugin and the Action cannot run `migrate`, and the report format is not promised to them.

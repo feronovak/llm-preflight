@@ -414,11 +414,15 @@ def _tools() -> list[dict[str, Any]]:
         {
             "schema_version": {"type": "integer", "minimum": 1},
             "kind": {"const": "migrate"},
-            "decision": {"type": "string"},
+            "decision": {"enum": ["fail", "inconclusive", "pass", "none"]},
             "models": {"type": "array", "items": {"type": "object"}},
             "candidate_config": {"type": ["object", "null"]},
             "plan": {"type": "null"},
-            "approval": {"type": "object"},
+            "approval": {
+                "type": "object",
+                "properties": {"state": {"const": "missing"}},
+                "required": ["state"],
+            },
             "smoke": {"type": "null"},
             "paid_requests_made": {"const": 0},
             "warnings": {"type": "array", "items": {"type": "string"}},

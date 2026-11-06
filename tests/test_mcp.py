@@ -1721,6 +1721,7 @@ def test_migrate_plan_tool_is_read_only_and_matches_cli(tmp_path, monkeypatch, c
     assert result["isError"] is False
     assert result["structuredContent"] == cli_report
     report = result["structuredContent"]
+    assert result["content"][0]["text"] == "Decision: fail"
     assert report["smoke"] is None
     assert report["approval"] == {"state": "missing"}
     assert report["paid_requests_made"] == 0
@@ -1745,7 +1746,10 @@ def test_migrate_plan_redacts_secret_like_values_in_the_candidate(
     )
     result = _migrate_call(tmp_path, {"config": "benchmark.json"})
 
+    assert result["isError"] is False
     assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in json.dumps(result)
+    candidate = result["structuredContent"]["candidate_config"]["config"]
+    assert candidate["api_key"] == "[REDACTED]"
 
 
 def test_migrate_plan_rejects_discovery_and_bad_arguments(tmp_path, monkeypatch):
@@ -1793,3 +1797,25 @@ def test_migrate_plan_declares_a_read_only_closed_world_schema(tmp_path):
         "required": ["config"],
         "additionalProperties": False,
     }
+
+
+def test_migrate_plan_output_schema_pins_decision_and_missing_approval(tmp_path):
+    schema = {t["name"]: t for t in mcp._tools()}["migrate_plan"]["outputSchema"]
+    properties = schema["oneOf"][1]["properties"]
+
+    assert properties["decision"] == {"enum": ["fail", "inconclusive", "pass", "none"]}
+    assert properties["approval"]["properties"]["state"] == {"const": "missing"}
+    assert properties["approval"]["required"] == ["state"]
+
+
+def test_migrate_docs_describe_the_read_only_mcp_tool():
+    root = Path(__file__).parent.parent
+    guide = " ".join((root / "docs/guides/retirements.md").read_text().split())
+    decisions = " ".join((root / "docs/DECISIONS.md").read_text().split())
+    mcp_doc = " ".join((root / "docs/automation/mcp.md").read_text().split())
+
+    assert "It has no MCP tool" not in guide
+    assert "`migrate_plan`" in guide
+    assert "do not expose it as an MCP tool" not in decisions
+    assert "`migrate_plan`" in decisions
+    assert "save `candidate_config.config`" in mcp_doc

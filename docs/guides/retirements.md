@@ -241,6 +241,8 @@ A replacement the snapshot has no row for is reported as `unknown`, never as
 active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or
 stale; without it, 0. A bad config exits 2.
 
-`migrate` is a command-line tool only for now. It has no MCP tool, plugin entry
-or GitHub Action input yet, so an agent that works through those surfaces cannot
-run it.
+Over MCP, the read-only `migrate_plan` tool returns the same report with the
+candidate config inline and redacted. It writes no file and runs no smoke, so an
+agent saves `candidate_config.config` beside the source config before it uses
+`validate_config`, `dry_run_plan` and, after approval, `run_preflight`. The
+plugin entry and GitHub Action input do not offer `migrate`.

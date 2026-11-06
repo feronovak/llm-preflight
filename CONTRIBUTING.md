@@ -68,6 +68,13 @@ make check-dist
 - Before a release, run `make release-freshness`. The unit suite pins its clock
   to the snapshot review day, so only this target checks on the real date that
   the bundled examples are still priced and free of retired models.
+- `python3 scripts/source_watch.py --previous snap.json --write snap.json --json`
+  is the maintainer's nightly source watch. It fetches the public OpenRouter
+  model list and every official pricing and retirement page the bundle cites,
+  then reports new models, OpenRouter price signals, changed pages and pages
+  it could not read, each with a stable `key`. It needs no API keys and never
+  edits bundled data: a bundle change still comes from the official page
+  through a normal pull request.
 
 ## Documentation and visual changes
 

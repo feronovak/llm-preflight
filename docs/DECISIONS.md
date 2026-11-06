@@ -104,3 +104,11 @@ to describe the PyPI UI yank procedure.
 **Consequence:** Reviewers compare checkpoint evidence against the rubric text
 used for that build. Earlier reports and scores are not rewritten, and release
 authorization remains separate from a numeric rating.
+
+## Migrate is command-line only
+
+**Decision:** Offer `migrate` through the command line only; do not expose it as an MCP tool, plugin entry or GitHub Action input yet.
+
+**Why:** It reports which provider-named replacement applies to a retired or retiring model and writes nothing. The command-line report is the reviewed contract; widening it to agent and CI surfaces needs its own review of what those callers may act on.
+
+**Consequence:** An agent that works only through MCP, the plugin or the Action cannot run `migrate` and has to ask the user to run it. The report format is not promised to those surfaces.

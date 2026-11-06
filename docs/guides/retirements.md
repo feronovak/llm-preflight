@@ -1,6 +1,9 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
+
+> The [Migrate report](#migrate-report) section describes the `migrate` command,
+> which is not in 2.23.1 and is on the main branch only.
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -75,7 +78,7 @@ return `1`. Pricing snapshots have their own review dates and expiry.
 | Status | Meaning | Decision |
 |---|---|---|
 | `retired` | The retirement date is today (UTC) or earlier, or the page lists the model as retired. | fail |
-| `retiring` | A future retirement or deprecation is announced, including an alias redirected to another model without a shutdown date. | inconclusive |
+| `retiring` | A future retirement or deprecation is announced. An alias redirected to another model with no shutdown date is `active`, not `retiring`. | inconclusive |
 | `stale` | The snapshot row was reviewed more than 30 days ago, counted in UTC days like the pricing snapshot. Update llm-preflight or read the official page. | inconclusive |
 | `active` | The official page lists the model as active and the row is fresh. | pass |
 | `unknown` | No snapshot row. Absence is not evidence. | none |
@@ -164,7 +167,7 @@ from the ID.
 
 ## Release retirement review
 
-The 2.23.0 snapshot contains 117 rows: 36 Anthropic, 75 OpenAI and six Gemini,
+The 2.23.1 snapshot contains 117 rows: 36 Anthropic, 75 OpenAI and six Gemini,
 all reviewed on the date stamped above. Non-retired rows become stale on
 2026-12-05; retired rows remain failures. The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
@@ -186,6 +189,8 @@ page names on its own.
 
 ## Migrate report
 
+Not in 2.23.1; on the main branch only.
+
 `llm-preflight migrate CONFIG [--ci] [--json]` reads the explicit `models` of a
 benchmark config and reports which provider-named replacement applies to each
 retired or retiring model. It writes nothing, never edits your config and makes
@@ -206,3 +211,7 @@ replacement stays your step.
 A replacement the snapshot has no row for is reported as `unknown`, never as
 active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or
 stale; without it, 0. A bad config exits 2.
+
+`migrate` is a command-line tool only for now. It has no MCP tool, plugin entry
+or GitHub Action input yet, so an agent that works through those surfaces cannot
+run it.

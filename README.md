@@ -254,6 +254,10 @@ permission for paid work from a gate result.
   needed. Add `--ci` to make the retirement decision affect the exit code;
   without it, findings normally exit `0`. In Git, the scan reads tracked,
   unignored files. See [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
+- **Replace a retired model:** `llm-preflight migrate benchmark.json --output migrate.json` writes a candidate of
+  the provider-named replacements and prints its plan. After you record an approval receipt,
+  `migrate ... --run --verify-approval-receipt R` runs one bounded smoke. See
+  [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md#migrate-report).
 - **Inspect pricing:** `--doctor` provides pricing advisory;
   `--pricing-check` is the fail-closed coverage gate. Preview the run with
   `llm-preflight benchmark.json --dry-run`.

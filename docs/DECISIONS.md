@@ -111,4 +111,12 @@ authorization remains separate from a numeric rating.
 
 **Why:** It reports which provider-named replacement applies to a retired or retiring model. `migrate_plan` writes no file, runs no smoke and makes no provider request, and it always reports approval as missing. Widening the plugin and CI surfaces needs its own review of what those callers may act on.
 
-**Consequence:** An agent connected over MCP can read the same report and save the candidate itself. `migrate --run` is not available yet, so over MCP a paid run is `run_preflight` with `confirm_paid_run` after explicit user approval. The plugin and the Action cannot run `migrate`, and the report format is not promised to them.
+**Consequence:** An agent connected over MCP can read the same report and save the candidate itself. `migrate --run` is command-line only and has no MCP tool, so over MCP a paid run is `run_preflight` with `confirm_paid_run` after explicit user approval. The plugin and the Action cannot run `migrate`, and the report format is not promised to them.
+
+## Migrate runs on an approval receipt
+
+**Decision:** `migrate --run` requires a recorded approval receipt that matches the plan rebuilt from the candidate file; `--run` is the authorizing act, and the receipt alone starts nothing.
+
+**Why:** The receipt is the only existing artifact that binds a human review to a plan and its cost bounds. Requiring it keeps the smoke inside what was reviewed, while the explicit flag keeps authorization with the user.
+
+**Consequence:** A receipt still has `authorizes_paid_run: false`. A missing, expired, mismatched or unbounded receipt, or a changed candidate, ends the run before any env file is loaded or provider is called.

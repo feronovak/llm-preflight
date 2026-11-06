@@ -71,5 +71,5 @@ llm-preflight benchmark.json --dry-run --no-env-file \
 ```
 
 A receipt is audit evidence only. It never raises a cap, promotes a model, or
-authorizes a provider call. A direct CLI run does not check a receipt or ask
+authorizes a provider call. It is a required precondition of `migrate --run`, which is itself the authorizing act; the receipt alone starts nothing. A direct CLI run does not check a receipt or ask
 for separate approval; authorize the reviewed plan before invoking it.

@@ -87,6 +87,7 @@ from .runner import (
     save_result,
     select_custom_prompt,
     select_test_profiles,
+    selected_profiles,
     validate_config_validations,
 )
 from .source_audit import audit_source
@@ -853,6 +854,23 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             )
         )
     return "\n".join(lines) + "\n"
+
+
+def _migrate_pointer(retirements: dict[str, Any], config_path: Path | None) -> str:
+    """A text-only pointer to `migrate` where the report names a replacement to preview."""
+    if config_path is None or not retirements.get("next_commands"):
+        return ""
+    name = (
+        "migrate.json"
+        if config_path.name != "migrate.json"
+        else "migrate-candidate.json"
+    )
+    target = shlex.quote(str(config_path.with_name(name)))
+    return (
+        "Next: preview the provider-named replacements without a provider call: "
+        f"{_display_command()} migrate {shlex.quote(str(config_path))} "
+        f"--output {target}\n"
+    )
 
 
 def _budget_config(
@@ -2239,17 +2257,70 @@ def interactive_selection(
     )
 
 
-def _migrate_plan(path: Path) -> dict[str, Any]:
-    """The plan `--dry-run` would print for the candidate file at `path`."""
+def _migrate_config(path: Path) -> dict[str, Any]:
+    """The candidate file loaded the way `--dry-run` loads it."""
     try:
         config = load_config(path)
         config = apply_provider_presets(
             apply_model_aliases(apply_environment(config, None))
         )
         validate_config_validations(config)
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
+    return config
+
+
+def _migrate_plan(path: Path) -> dict[str, Any]:
+    """The plan `--dry-run` would print for the candidate file at `path`."""
+    config = _migrate_config(path)
+    try:
         return dry_run_plan(config, None, today=today_utc())
     except (TypeError, AttributeError):
         raise ValueError("candidate config has a value of the wrong type") from None
+
+
+def _migrate_smoke(path: Path, args: argparse.Namespace) -> dict[str, Any]:
+    """The one paid run: budget, then env file, then the benchmark."""
+    config = _migrate_config(path)
+    if "prompt" not in config and not selected_profiles(config, None):
+        raise ValueError("select a custom prompt before running the benchmark")
+    try:
+        check_budget(config)
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
+    if any(model.get("provider") != "mock" for model in config["models"]):
+        _load_config_env_file(path, args, config)
+    config["_source_config_path"] = str(path.resolve())
+    selection = {
+        "prompt": None,
+        "tests": None,
+        "environment": None,
+        "migration_check": False,
+        "smoke": False,
+    }
+    try:
+        with benchmark_run_lock(args.output_dir):
+            result = redact_result(run_benchmark(config, selection=selection))
+    except (TypeError, AttributeError):
+        raise ValueError(
+            "candidate config has a value of the wrong type; a provider request "
+            "may already have been sent"
+        ) from None
+    return {"result": result, "path": str(save_result(result, args.output_dir))}
+
+
+def _migrate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.replace and not args.output:
+        parser.error("--replace requires --output")
+    reading = args.run or args.verify_approval_receipt
+    if reading and not args.output:
+        parser.error("--run and --verify-approval-receipt require --output")
+    if reading and args.replace:
+        parser.error("--replace cannot be combined with --run or the receipt check")
+    if args.no_env_file and args.env_file:
+        parser.error("--no-env-file cannot be combined with --env-file")
+    if (args.env_file or args.no_env_file or args.output_dir) and not args.run:
+        parser.error("--env-file, --no-env-file and --output-dir require --run")
 
 
 def _migrate_main(argv: list[str]) -> None:
@@ -2258,7 +2329,8 @@ def _migrate_main(argv: list[str]) -> None:
         description=(
             "Report which provider-named replacement applies to each retired "
             "model in a config; with --output, write a candidate config of the "
-            "replacements. Calls no provider"
+            "replacements; with --run and a recorded approval receipt, run the "
+            "bounded smoke on it. Calls no provider without --run"
         ),
     )
     parser.add_argument("config", type=Path, help="benchmark config JSON to inspect")
@@ -2271,26 +2343,49 @@ def _migrate_main(argv: list[str]) -> None:
         "--replace", action="store_true", help="overwrite an existing --output file"
     )
     parser.add_argument(
+        "--run",
+        action="store_true",
+        help="run the smoke on the existing --output once a receipt verifies",
+    )
+    parser.add_argument(
+        "--verify-approval-receipt",
+        type=Path,
+        help="check this receipt against the existing --output plan",
+    )
+    parser.add_argument("--output-dir", type=Path, help="result directory for --run")
+    parser.add_argument("--env-file", type=Path, help="env file for --run")
+    parser.add_argument(
+        "--no-env-file", action="store_true", help="load no env file for --run"
+    )
+    parser.add_argument(
         "--ci", action="store_true", help="exit 1 on fail and 3 on inconclusive"
     )
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     args = parser.parse_args(argv)
-    if args.replace and not args.output:
-        parser.error("--replace requires --output")
+    _migrate_args(parser, args)
+    args.output_dir = args.output_dir or Path("results")
     report = build_migrate_report(
         args.config,
         today_utc(),
         output=args.output,
         replace=args.replace,
         plan_for=_migrate_plan,
+        run=args.run,
+        receipt=args.verify_approval_receipt,
+        smoke_for=lambda path: _migrate_smoke(path, args),
     )
     print(
         json.dumps(report, indent=2)
         if args.json
-        else format_migrate_report(report, ci=args.ci),
+        else format_migrate_report(
+            report,
+            ci=args.ci,
+            run=args.run,
+            reading=bool(args.verify_approval_receipt),
+        ),
         end="\n" if args.json else "",
     )
-    code = migrate_exit_code(report["decision"], args.ci)
+    code = migrate_exit_code(report["decision"], args.ci, args.run)
     if code:
         raise SystemExit(code)
 
@@ -2722,6 +2817,9 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "migrate":
         try:
             _migrate_main(sys.argv[2:])
+        except (KeyboardInterrupt, EOFError):
+            print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
+            raise SystemExit(130) from None
         except (OSError, ValueError, RecursionError) as exc:
             print(
                 f"{_display_command()}: error: {redact_secrets(str(exc))}",
@@ -3127,6 +3225,9 @@ def main() -> None:
                 json.dumps(report_data, indent=2)
                 if args.json
                 else _format_doctor(report_data)
+                + redact_secrets(
+                    _migrate_pointer(report_data.get("retirement", {}), args.config)
+                ),
             )
             if not report_data["ok"]:
                 raise SystemExit(1)
@@ -3219,7 +3320,10 @@ def main() -> None:
             print(
                 json.dumps(redact_secrets(payload), indent=2)
                 if args.json
-                else redact_secrets(_format_dry_run_plan(plan)),
+                else redact_secrets(
+                    _format_dry_run_plan(plan)
+                    + _migrate_pointer(plan["retirements"], args.config)
+                ),
                 end="" if not args.json else "\n",
             )
             if verification is not None and not verification["ok"]:

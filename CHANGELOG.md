@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 2.23.1 - 2026-11-06
+## Unreleased
 
 ### Fixed
 
@@ -17,6 +17,17 @@ All notable changes to this project are documented here.
   paths now appear in `changed_files` and the staged content is read, and a
   path in a directory the command may not open moves from `deleted_files` to
   `unreadable_files`.
+
+### Added
+
+- `llm-preflight migrate CONFIG [--ci] [--json]` reports which provider-named
+  replacement applies to each retired or retiring model in a config, with the
+  same outcome in text and JSON. It writes nothing and makes no provider call.
+
+## 2.23.1 - 2026-11-06
+
+### Fixed
+
 - Declare the MCP registry workspace argument as a required user-supplied
   value, and link discovery to the manual setup guide. Document the explicit
   uv package/executable selection for clients that would otherwise start the
@@ -29,9 +40,6 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- `llm-preflight migrate CONFIG [--ci] [--json]` reports which provider-named
-  replacement applies to each retired or retiring model in a config, with the
-  same outcome in text and JSON. It writes nothing and makes no provider call.
 - Retirement row for `gemini-3.1-flash-lite`: deprecated, retires 2027-05-07,
   replacement `gemini-3.5-flash-lite`. `--ci` now exits 3 for it instead of
   reporting unknown. The frontier candidates example now uses the active

@@ -186,10 +186,11 @@ page names on its own.
 
 ## Migrate report
 
-`llm-preflight migrate CONFIG [--ci] [--json]` reads the explicit `models` of a
+`llm-preflight migrate CONFIG [--output PATH [--replace]] [--ci] [--json]` reads the explicit `models` of a
 benchmark config and reports which provider-named replacement applies to each
-retired or retiring model. It writes nothing, never edits your config and makes
-no provider request; `discovery` is ignored with a warning. Adopting a
+retired or retiring model. It never edits your config and makes no provider
+request; without `--output` it writes nothing. `discovery` is ignored with a
+warning. Adopting a
 replacement stays your step.
 
 | Outcome | Meaning |
@@ -202,6 +203,27 @@ replacement stays your step.
 | `route_base_url` | The row sets a custom `base_url`. The provider names the replacement for its public route only, so add it by hand with your own prices and run `--dry-run` on that config. |
 | `route_headers` | The row sets `headers`; add the replacement by hand. |
 | `not_affected` | Active or unknown. |
+
+### Candidate config
+
+With `--output PATH`, `migrate` writes a candidate config next to the source
+config (`PATH` must be in the same directory, so `prompt_file` and image paths
+still resolve). It holds one row per replacement, deduplicated, and copies only
+`provider`, `base_url`, `api_key_env` and `api_version` from the old row. Only a
+public `base_url` can reach it; a custom one stops as `route_base_url`. Prices,
+capabilities and token settings of the old model are dropped, `aliases`,
+`environments` and `discovery` are left out, and the smoke settings, including
+`save_responses`, are written into the file. Secret-shaped values are redacted
+and reported as a warning. If two old rows share a replacement but name
+different `api_key_env` values, the first row's key is used and a warning says
+so. An existing `PATH` needs `--replace`, and `PATH` cannot be the source
+config.
+
+The report then adds the dry-run plan for the candidate (an `unbounded` plan
+means a replacement has no bundled price: add it to your config with your own
+rates and run `migrate` again), `approval` with state `missing`, and the
+commands to record an approval receipt and to run the smoke. Nothing is run and
+no provider is called.
 
 A replacement the snapshot has no row for is reported as `unknown`, never as
 active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or

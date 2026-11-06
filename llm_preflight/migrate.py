@@ -1,19 +1,23 @@
 """Report which provider-named replacement applies to each retired config model.
 
-Read-only: the source config is never written, no provider is called and no
-replacement is inferred. The replacement is the bundled retirement row's
-`replacement` field and nothing else.
+The source config is never written, no provider is called and no replacement is
+inferred. The replacement is the bundled retirement row's `replacement` field
+and nothing else. With an output path the replacement rows are also written to
+a separate candidate config, which a human then previews and approves.
 """
 
 from __future__ import annotations
 
+import copy
 import json
+import shlex
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 from . import retirements
-from .features import apply_model_aliases
+from .features import apply_model_aliases, apply_smoke_mode
 from .providers import PROVIDER_DEFAULTS
 from .redaction import redact_secrets
 from .retirements import DEFAULT_MAX_AGE_DAYS, retirement_verdict, worst_decision
@@ -22,6 +26,8 @@ SCHEMA_VERSION = 1
 EXIT_CODES = {"fail": 1, "inconclusive": 3}
 _AFFECTED = {"retired", "retiring", "stale"}
 _UNUSABLE = {"retired", "retiring"}
+_COPIED = ("provider", "base_url", "api_key_env", "api_version")
+_DROPPED = ("aliases", "environments", "discovery")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -171,9 +177,95 @@ def _entry(
     }
 
 
-def build_report(path: Path, today: date) -> dict[str, Any]:
-    """The outcome table for one config; raises ValueError on a bad config."""
+def _unique_rows(
+    models: list[dict[str, Any]], entries: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """One replacement row per provider and model; the first row's key wins."""
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    warnings: list[str] = []
+    for model, entry in zip(models, entries):
+        if entry["outcome"] != "candidate":
+            continue
+        replacement = entry["replacement"]
+        key = (_provider(model), replacement)
+        row = {"model": replacement} | {k: model[k] for k in _COPIED if k in model}
+        kept = rows.setdefault(key, row)
+        if kept.get("api_key_env") != row.get("api_key_env"):
+            warnings.append(
+                f"{replacement} is named for several rows with different "
+                f"api_key_env; kept {_printable(str(kept.get('api_key_env')))}, "
+                f"dropped {_printable(str(row.get('api_key_env')))}"
+            )
+    return list(rows.values()), warnings
+
+
+def _candidate_config(
+    config: dict[str, Any], rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    candidate = {k: copy.deepcopy(v) for k, v in config.items() if k not in _DROPPED}
+    candidate["models"] = rows
+    candidate = apply_smoke_mode(candidate)
+    candidate.setdefault("save_responses", "failures")
+    return candidate
+
+
+def check_output(config_path: Path, output: Path, replace: bool) -> None:
+    """Refuse an output path that could clobber or escape the config directory."""
+    if output.parent.resolve() != config_path.parent.resolve():
+        raise ValueError("--output must be in the config's directory")
+    if output.resolve() == config_path.resolve():
+        raise ValueError("--output cannot be the source config")
+    if output.is_symlink():
+        raise ValueError("--output cannot be a symbolic link")
+    if output.exists() and not replace:
+        raise ValueError(f"{output} exists; add --replace to overwrite it")
+
+
+def _write_candidate(output: Path, candidate: dict[str, Any], replace: bool) -> None:
+    with output.open("w" if replace else "x", encoding="utf-8") as handle:
+        handle.write(json.dumps(candidate, indent=2) + "\n")
+
+
+def _quoted(path: Path) -> str:
+    return shlex.quote(_printable(str(path)))
+
+
+def _commands(config_path: Path, output: Path) -> tuple[str, str]:
+    receipt = _quoted(output.parent / f"{output.stem}.approval.json")
+    record = (
+        f"llm-preflight {_quoted(output)} --dry-run --approval-receipt {receipt} "
+        '--approval-note "<why you approve this spend>" '
+        "--approval-expires-at <ISO-8601 time with timezone>"
+    )
+    run = (
+        f"llm-preflight migrate {_quoted(config_path)} --output {_quoted(output)} "
+        f"--run --verify-approval-receipt {receipt}"
+    )
+    return record, run
+
+
+_UNBOUNDED_STEP = (
+    "the plan is unbounded: a replacement has no bundled price; add that model to "
+    "the source config with your own input_cost_per_million and "
+    "output_cost_per_million, then run migrate again"
+)
+
+
+def build_report(
+    path: Path,
+    today: date,
+    output: Path | None = None,
+    replace: bool = False,
+    plan_for: Callable[[Path], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """The outcome table for one config; raises ValueError on a bad config.
+
+    With `output`, the replacement rows are written there and `plan_for` builds
+    the dry-run plan from that file, the way `--dry-run` would load it.
+    """
     config = _load(path)
+    if output is not None:
+        check_output(path, output, replace)
     models = config["models"]
     listed = {_listed_key(m) for m in models}
     verdicts = [retirement_verdict(_provider(m), m["model"], today) for m in models]
@@ -181,18 +273,44 @@ def build_report(path: Path, today: date) -> dict[str, Any]:
     warnings = []
     if "discovery" in config:
         warnings.append("discovery is ignored; only explicit models are read")
+    rows, row_warnings = _unique_rows(models, entries)
+    warnings.extend(row_warnings)
+    next_steps = list(dict.fromkeys(entry["next_step"] for entry in entries))
+    candidate_config = plan = None
+    approval: dict[str, Any] = {"state": "missing"}
+    if rows:
+        candidate = _candidate_config(config, rows)
+        safe = redact_secrets(candidate)
+        if safe != candidate:
+            warnings.append(
+                "secret-shaped values were redacted in the candidate config"
+            )
+        candidate_config = {"path": None, "config": safe}
+        if output is None:
+            next_steps.append(
+                "add --output PATH to write the candidate config and see its plan"
+            )
+        else:
+            _write_candidate(output, safe, replace)
+            candidate_config["path"] = str(output)
+            plan = plan_for(output) if plan_for else None
+            record, run = _commands(path, output)
+            approval |= {"record_command": record, "run_command": run}
+            next_steps += [f"record approval: {record}", f"then run the smoke: {run}"]
+            if plan and plan["maximum_estimated_cost_usd"] is None:
+                next_steps.append(_UNBOUNDED_STEP)
     report = {
         "schema_version": SCHEMA_VERSION,
         "kind": "migrate",
         "decision": worst_decision(v["decision"] for v in verdicts),
         "models": entries,
-        "candidate_config": None,
-        "plan": None,
-        "approval": {"state": "missing"},
+        "candidate_config": candidate_config,
+        "plan": plan,
+        "approval": approval,
         "smoke": None,
         "paid_requests_made": 0,
         "warnings": warnings,
-        "next_steps": list(dict.fromkeys(entry["next_step"] for entry in entries)),
+        "next_steps": next_steps,
     }
     redacted: dict[str, Any] = redact_secrets(report)
     return redacted
@@ -211,12 +329,49 @@ def _exit_line(decision: str, ci: bool) -> str:
     return "Exit 0 — --ci also exits 0 on this decision."
 
 
+def _written_line(report: dict[str, Any]) -> str:
+    candidate = report["candidate_config"]
+    if candidate and candidate["path"]:
+        return (
+            "Source config unchanged; only the candidate config was written "
+            "and no provider was called."
+        )
+    return "Source config unchanged; nothing was written and no provider was called."
+
+
+def _plan_line(plan: dict[str, Any]) -> str:
+    maximum = plan["maximum_estimated_cost_usd"]
+    bound = "unbounded (a model has no price)" if maximum is None else f"${maximum}"
+    return (
+        f"Plan: {plan['requests']} requests, estimated ${plan['estimated_cost_usd']}, "
+        f"maximum {bound}"
+    )
+
+
+def _candidate_lines(report: dict[str, Any]) -> list[str]:
+    candidate = report["candidate_config"]
+    if not candidate:
+        return []
+    if not candidate["path"]:
+        return ["Candidate config: not written (add --output PATH)"]
+    approval = report["approval"]
+    lines = [f"Candidate config: {_printable(candidate['path'])}"]
+    if report["plan"]:
+        lines.append(_plan_line(report["plan"]))
+    lines += [
+        f"Approval: {approval['state']} — no receipt is recorded for this plan",
+        f"  Record approval: {approval['record_command']}",
+        f"  Then run the smoke: {approval['run_command']}",
+    ]
+    return lines
+
+
 def format_report(report: dict[str, Any], ci: bool = False) -> str:
     """Text rendered from the report dict only."""
     lines = [
         f"Decision: {report['decision']}",
         _exit_line(report["decision"], ci),
-        "Source config unchanged; nothing was written and no provider was called.",
+        _written_line(report),
     ]
     lines.extend(f"Warning: {warning}" for warning in report["warnings"])
     for entry in report["models"]:
@@ -233,4 +388,5 @@ def format_report(report: dict[str, Any], ci: bool = False) -> str:
         if entry["source_url"]:
             lines.append(f"    Source: {entry['source_url']}")
         lines.append(f"    Next: {entry['next_step']}")
+    lines.extend(_candidate_lines(report))
     return "\n".join(lines) + "\n"

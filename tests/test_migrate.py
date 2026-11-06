@@ -210,6 +210,14 @@ def test_source_config_is_byte_identical_after_every_path(
         _run(monkeypatch, capsys, [str(path), *flags])
         assert path.read_bytes() == before
     assert sorted(p.name for p in tmp_path.iterdir()) == listing
+    target = tmp_path / "out.json"
+    for flags in (["--output", str(target)], ["--output", str(target), "--replace"]):
+        _run(monkeypatch, capsys, [str(path), *flags])
+        assert path.read_bytes() == before
+    for flags in (["--output", str(path)], ["--output", str(path), "--replace"]):
+        _run(monkeypatch, capsys, [str(path), *flags])
+        assert path.read_bytes() == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted([*listing, "out.json"])
 
 
 def _expected_block(entry):
@@ -246,8 +254,12 @@ def test_text_and_json_agree_on_every_outcome(rows, tmp_path, monkeypatch, capsy
     }  # fmt: skip
     _, text = _run(monkeypatch, capsys, [str(path)])
     assert text.out.startswith(f"Decision: {report['decision']}\n")
+    blocks = "".join(_expected_block(e) for e in report["models"])
     body = text.out.split("\n  ", 1)[1]
-    assert "  " + body == "".join(_expected_block(e) for e in report["models"])
+    assert ("  " + body).startswith(blocks)
+    assert ("  " + body).removeprefix(blocks) == (
+        "Candidate config: not written (add --output PATH)\n"
+    )
 
 
 @pytest.mark.parametrize(
@@ -436,7 +448,8 @@ def test_custom_api_key_env_only_stays_candidate(rows, tmp_path):
     assert entry["outcome"] == "candidate"
     assert "--quick" in entry["next_step"]
     assert "keep this row's api_key_env" in entry["next_step"]
-    assert "TEAM_SECRET_NAME" not in json.dumps(report)
+    assert "TEAM_SECRET_NAME" not in json.dumps(report["models"])
+    assert "TEAM_SECRET_NAME" not in json.dumps(report["next_steps"])
 
 
 def test_default_api_key_env_is_not_custom(rows, tmp_path):
@@ -540,3 +553,233 @@ def test_deep_nesting_beyond_aliases_is_a_config_error(
     )
     for flags in ([], ["--ci"], ["--json"]):
         assert _run(monkeypatch, capsys, [str(path), *flags])[0] == 2
+
+
+# --- candidate config, plan and approval (slice B) ---------------------------
+
+
+@pytest.fixture
+def priced(rows):
+    rows[("openai", "oldp")] = _row(
+        "retired", replacement="gpt-5.6-luna", date_="2026-10-01"
+    )
+    rows[("openai", "oldp2")] = _row(
+        "retired", replacement="gpt-5.6-luna", date_="2026-10-01"
+    )
+    rows[("openai", "gpt-5.6-luna")] = _row("active")
+    return rows
+
+
+def _migrate(monkeypatch, capsys, path, *flags):
+    return _run(monkeypatch, capsys, [str(path), *flags])
+
+
+def test_retired_id_with_named_replacement_reaches_plan(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "migrate.json"
+    code, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    assert code == 0
+    report = json.loads(out.out)
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert [m["model"] for m in written["models"]] == ["gpt-5.6-luna"]
+    assert report["candidate_config"]["path"] == str(target)
+    assert report["candidate_config"]["config"] == written
+    assert report["plan"]["maximum_estimated_cost_usd"] is not None
+    assert [m["model"] for m in report["plan"]["models"]] == ["gpt-5.6-luna"]
+    assert report["approval"]["state"] == "missing"
+    assert report["paid_requests_made"] == 0
+    assert any("--approval-receipt" in step for step in report["next_steps"])
+    assert any("--run" in step for step in report["next_steps"])
+    assert written["repetitions"] == 1
+    assert written["save_responses"] == "failures"
+
+
+def test_candidate_reloads_with_prompt_file_and_alias(
+    priced, tmp_path, monkeypatch, capsys
+):
+    (tmp_path / "p.txt").write_text("hello", encoding="utf-8")
+    path = tmp_path / "bench.json"
+    path.write_text(
+        json.dumps(
+            {
+                "name": "bench",
+                "prompts": [{"name": "one", "prompt_file": "p.txt"}],
+                "aliases": {"legacy": {"provider": "openai", "model": "oldp"}},
+                "environments": {"x": {"repetitions": 9}},
+                "discovery": [{"provider": "openai"}],
+                "models": ["legacy"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    target = tmp_path / "migrate.json"
+    code, _ = _migrate(monkeypatch, capsys, path, "--output", str(target))
+    assert code == 0
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert not {"aliases", "environments", "discovery"} & set(written)
+    assert written["prompts"] == [{"name": "one", "prompt_file": "p.txt"}]
+    from llm_preflight.runner import load_config
+
+    assert load_config(target)["models"][0]["model"] == "gpt-5.6-luna"
+
+
+def test_old_model_price_not_carried_to_replacement(
+    priced, tmp_path, monkeypatch, capsys
+):
+    row = _m(
+        "oldp",
+        base_url="https://api.openai.com/v1/",
+        api_key_env="MY_KEY",
+        api_version="v9",
+        input_cost_per_million=99,
+        output_cost_per_million=99,
+        max_output_tokens=7,
+        capabilities={"x": 1},
+    )
+    path = _write(tmp_path, [row])
+    target = tmp_path / "migrate.json"
+    _migrate(monkeypatch, capsys, path, "--output", str(target))
+    new = json.loads(target.read_text(encoding="utf-8"))["models"][0]
+    assert new == {
+        "provider": "openai",
+        "model": "gpt-5.6-luna",
+        "base_url": "https://api.openai.com/v1/",
+        "api_key_env": "MY_KEY",
+        "api_version": "v9",
+    }
+
+
+def test_headers_row_stops_and_no_secret_written(rows, tmp_path, monkeypatch, capsys):
+    secret = "sk-SECRETVALUE123"
+    path = _write(
+        tmp_path,
+        [_m("hdr", headers={"Authorization": f"Bearer {secret}"}), _m("cand")],
+        note=f"key {secret}",
+    )
+    target = tmp_path / "migrate.json"
+    code, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    assert code == 0
+    assert secret not in out.out
+    written = target.read_text(encoding="utf-8")
+    assert secret not in written and "Authorization" not in written
+    assert [m["model"] for m in json.loads(written)["models"]] == ["fresh"]
+    report = json.loads(out.out)
+    assert any("redact" in w.lower() for w in report["warnings"])
+
+
+def test_two_models_same_replacement_one_row(priced, tmp_path, monkeypatch, capsys):
+    path = _write(
+        tmp_path,
+        [_m("oldp", api_key_env="KEY_A"), _m("oldp2", api_key_env="KEY_B")],
+    )
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    rows_ = json.loads(target.read_text(encoding="utf-8"))["models"]
+    assert [(r["model"], r["api_key_env"]) for r in rows_] == [
+        ("gpt-5.6-luna", "KEY_A")
+    ]
+    warnings = json.loads(out.out)["warnings"]
+    assert any("KEY_A" in w and "KEY_B" in w for w in warnings)
+
+
+def test_same_replacement_same_key_is_deduplicated_silently(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp"), _m("oldp2")])
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    assert len(json.loads(target.read_text(encoding="utf-8"))["models"]) == 1
+    assert json.loads(out.out)["warnings"] == []
+
+
+def test_existing_output_needs_replace(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "migrate.json"
+    target.write_text("keep", encoding="utf-8")
+    code, out = _migrate(monkeypatch, capsys, path, "--output", str(target))
+    assert code == 2
+    assert target.read_text(encoding="utf-8") == "keep"
+    assert "--replace" in out.err
+    code, _ = _migrate(monkeypatch, capsys, path, "--output", str(target), "--replace")
+    assert code == 0
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert written["models"][0]["model"] == "gpt-5.6-luna"
+
+
+def test_output_outside_config_dir_rejected(priced, tmp_path, monkeypatch, capsys):
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    path = _write(sub, [_m("oldp")])
+    for target in (tmp_path / "out.json", sub / "nested" / "out.json"):
+        code, out = _migrate(monkeypatch, capsys, path, "--output", str(target))
+        assert code == 2
+        assert "directory" in out.err
+        assert not target.exists()
+
+
+def test_output_cannot_be_the_source_config(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp")])
+    before = path.read_bytes()
+    code, _ = _migrate(monkeypatch, capsys, path, "--output", str(path), "--replace")
+    assert code == 2
+    assert path.read_bytes() == before
+
+
+def test_without_output_nothing_is_written_and_plan_is_absent(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    listing = sorted(p.name for p in tmp_path.iterdir())
+    code, out = _migrate(monkeypatch, capsys, path, "--json")
+    report = json.loads(out.out)
+    assert code == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == listing
+    assert report["candidate_config"]["path"] is None
+    assert report["plan"] is None
+    assert any("--output" in step for step in report["next_steps"])
+
+
+def test_no_candidate_row_writes_nothing(rows, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("norepl")])
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    assert not target.exists()
+    report = json.loads(out.out)
+    assert report["candidate_config"] is None
+    assert report["plan"] is None
+
+
+def test_unpriced_replacement_is_unbounded(rows, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("cand")])
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    report = json.loads(out.out)
+    assert report["plan"]["maximum_estimated_cost_usd"] is None
+    assert any("unbounded" in step.lower() for step in report["next_steps"])
+
+
+def test_custom_base_url_never_reaches_candidate(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp", base_url="https://gw.example/v1"), _m("oldp2")])
+    target = tmp_path / "migrate.json"
+    _migrate(monkeypatch, capsys, path, "--output", str(target))
+    assert "gw.example" not in target.read_text(encoding="utf-8")
+
+
+def test_text_report_shows_candidate_plan_and_approval(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target))
+    assert f"Candidate config: {target}" in out.out
+    assert "Plan:" in out.out
+    assert "Approval: missing" in out.out
+    assert "--approval-receipt" in out.out and "--run" in out.out
+
+
+def test_replace_without_output_is_usage_error(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp")])
+    code, _ = _migrate(monkeypatch, capsys, path, "--replace")
+    assert code == 2

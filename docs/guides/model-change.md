@@ -29,6 +29,17 @@ plan, run `llm-preflight benchmark.json`. A direct CLI run has no separate
 approval prompt. Keep its JSON decision and compare it with the reviewed
 baseline; a successful API call alone is insufficient.
 
+If a model in the config is retired or retiring, `migrate` can write the
+provider-named replacement to a separate candidate config without a provider
+call. Your config is not changed:
+
+```bash
+llm-preflight migrate benchmark.json --output migrate.json
+```
+
+It prints the dry-run plan and the commands that record an approval receipt for
+that plan and run the smoke. See [Retirements](retirements.md#candidate-config).
+
 For a preliminary API compatibility check, preview the optional built-in pack:
 
 ```bash

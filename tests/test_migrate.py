@@ -526,3 +526,17 @@ def test_deeply_nested_json_is_a_config_error(rows, tmp_path, monkeypatch, capsy
     assert _run(monkeypatch, capsys, [str(path), "--ci"])[0] == 2
     path.write_text('{"models": [' + "[" * 100000, encoding="utf-8")
     assert _run(monkeypatch, capsys, [str(path), "--ci"])[0] == 2
+
+
+def test_deep_nesting_beyond_aliases_is_a_config_error(
+    rows, tmp_path, monkeypatch, capsys
+):
+    path = tmp_path / "deep-alias.json"
+    nested = "[" * 600 + "]" * 600
+    path.write_text(
+        '{"aliases": {"main": {"provider": "openai", "model": "cand"}}, '
+        f'"models": ["main"], "x": {nested}}}',
+        encoding="utf-8",
+    )
+    for flags in ([], ["--ci"], ["--json"]):
+        assert _run(monkeypatch, capsys, [str(path), *flags])[0] == 2

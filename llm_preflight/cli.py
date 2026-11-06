@@ -2677,7 +2677,7 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "migrate":
         try:
             _migrate_main(sys.argv[2:])
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RecursionError) as exc:
             print(
                 f"{_display_command()}: error: {redact_secrets(str(exc))}",
                 file=sys.stderr,

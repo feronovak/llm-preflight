@@ -17,7 +17,6 @@ from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 from . import retirements
 from .features import apply_model_aliases, apply_smoke_mode
@@ -30,7 +29,7 @@ EXIT_CODES = {"fail": 1, "inconclusive": 3}
 _AFFECTED = {"retired", "retiring", "stale"}
 _UNUSABLE = {"retired", "retiring"}
 _COPIED = ("provider", "base_url", "api_key_env", "api_version")
-_DROPPED = ("aliases", "environments", "discovery")
+_DROPPED = ("aliases", "environments", "discovery", "base_url")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -180,56 +179,47 @@ def _entry(
     }
 
 
-def _key_label(row: dict[str, Any]) -> str:
-    env = row.get("api_key_env")
-    return _printable(str(env)) if env else "the provider default"
+def _field_label(row: dict[str, Any], field: str) -> str:
+    value = row.get(field)
+    return _printable(str(value)) if value else "the provider default"
 
 
 def _row_for(
     model: dict[str, Any], entry: dict[str, Any], models: list[dict[str, Any]]
-) -> tuple[tuple[str, str, str], dict[str, Any]] | None:
+) -> tuple[tuple[str, str], dict[str, Any]] | None:
     """The candidate row for one entry: a new row, or the user's own, verbatim."""
     replacement = entry["replacement"]
+    key = (_provider(model), replacement)
     if entry["outcome"] == "candidate":
-        key = (_provider(model), replacement, _route(model))
         return key, {"model": replacement} | {
             k: model[k] for k in _COPIED if k in model
         }
     if entry["outcome"] == "replacement_in_config":
-        want = (_provider(model), replacement, _route(model))
-        own = next(m for m in models if _listed_key(m) == want)
-        return want, copy.deepcopy(own)
+        want = (*key, _route(model))
+        return key, copy.deepcopy(next(m for m in models if _listed_key(m) == want))
     return None
 
 
 def _hand_added(row: dict[str, Any]) -> str | None:
-    """Why an own row cannot be copied: redaction cannot make it safe to send."""
+    """Why an own row is not copied: only a public route can be copied safely."""
     if row.get("headers"):
         return "sets headers"
-    url = row.get("base_url")
-    if url is None:
-        return None
-    try:
-        parts = urlsplit(url) if isinstance(url, str) else None
-        bad = parts is None or bool(
-            parts.username or parts.password or parts.query or parts.fragment
-        )
-    except ValueError:
-        bad = True
-    return "sets a base_url with credentials or a query" if bad else None
+    if _custom_base_url(row):
+        return "sets a custom base_url"
+    return None
 
 
 def _unique_rows(
     models: list[dict[str, Any]], entries: list[dict[str, Any]]
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """One row per provider and replacement; the first row wins."""
+    """One public-route row per provider and replacement; the first row wins."""
     rows: dict[tuple[str, str], dict[str, Any]] = {}
     warnings: list[str] = []
     for model, entry in zip(models, entries):
         found = _row_for(model, entry, models)
         if found is None:
             continue
-        (provider, replacement, _), row = found
+        key, row = found
         name = _printable(row["model"])
         reason = _hand_added(row)
         if reason:
@@ -238,18 +228,36 @@ def _unique_rows(
                 "config by hand"
             )
             continue
-        kept = rows.setdefault((provider, replacement), row)
-        if _route(kept) != _route(row):
-            warnings.append(
-                f"{name} is named on another route; the first row was kept and "
-                "this route was not kept"
-            )
-        elif kept.get("api_key_env") != row.get("api_key_env"):
-            warnings.append(
-                f"{name} is named for several rows with different api_key_env; "
-                f"kept {_key_label(kept)}, dropped {_key_label(row)}"
-            )
-    return list(rows.values()), warnings
+        kept = rows.setdefault(key, row)
+        warnings.extend(
+            f"{name} is named for several rows with different {field}; kept "
+            f"{_field_label(kept, field)}, dropped {_field_label(row, field)}"
+            for field in ("api_key_env", "api_version")
+            if kept.get(field) != row.get(field)
+        )
+    return list(rows.values()), list(dict.fromkeys(warnings))
+
+
+def _redacted_structure(before: Any, after: Any, path: str = "") -> list[str]:
+    """JSON paths whose non-string value redaction replaced, keys only."""
+    if isinstance(before, dict) and isinstance(after, dict):
+        found: list[str] = []
+        for (_, value), (key, masked) in zip(before.items(), after.items()):
+            found += _redacted_structure(value, masked, f"{path}.{key}".lstrip("."))
+        return found
+    if isinstance(before, list) and isinstance(after, list):
+        found = []
+        for index, (value, masked) in enumerate(zip(before, after)):
+            found += _redacted_structure(value, masked, f"{path}[{index}]")
+        return found
+    return [] if isinstance(before, str) or before == after else [path]
+
+
+def _structure_message(paths: list[str]) -> str:
+    return (
+        "redaction would replace non-string values in the candidate config "
+        f"({_printable(', '.join(paths))}); no candidate is written"
+    )
 
 
 def _candidate_config(
@@ -268,7 +276,7 @@ def check_output(config_path: Path, output: Path, replace: bool) -> None:
     """Refuse an output path that could clobber or escape the config directory."""
     if output.parent.resolve() != config_path.parent.resolve():
         raise ValueError("--output must be in the config's directory")
-    if output.resolve() == config_path.resolve():
+    if output.exists() and output.samefile(config_path):
         raise ValueError("--output cannot be the source config")
     if output.is_symlink():
         raise ValueError("--output cannot be a symbolic link")
@@ -361,23 +369,32 @@ def build_report(
     if rows:
         candidate = _candidate_config(config, rows)
         safe = redact_secrets(candidate)
-        if safe != candidate:
+        broken = _redacted_structure(candidate, safe)
+        if broken and output is not None:
+            raise ValueError(_structure_message(broken))
+        if broken:
+            warnings.append(_structure_message(broken))
+        elif safe != candidate:
             warnings.append(
                 "secret-shaped values were redacted in the candidate config"
             )
-        candidate_config = {"path": None, "config": safe}
-        if output is None:
-            next_steps.append(
-                "add --output PATH to write the candidate config and see its plan"
-            )
-        else:
-            plan = _write_checked(output, safe, replace, plan_for)
-            candidate_config["path"] = str(output)
-            record, run = _commands(path, output)
-            approval |= {"record_command": record, "run_command": run}
-            if plan and plan["maximum_estimated_cost_usd"] is None:
-                next_steps.append(_UNBOUNDED_STEP)
-            next_steps += [f"record approval: {record}", f"then run the smoke: {run}"]
+        if not broken:
+            candidate_config = {"path": None, "config": safe}
+            if output is None:
+                next_steps.append(
+                    "add --output PATH to write the candidate config and see its plan"
+                )
+            else:
+                plan = _write_checked(output, safe, replace, plan_for)
+                candidate_config["path"] = str(output)
+                record, run = _commands(path, output)
+                approval |= {"record_command": record, "run_command": run}
+                if plan and plan["maximum_estimated_cost_usd"] is None:
+                    next_steps.append(_UNBOUNDED_STEP)
+                next_steps += [
+                    f"record approval: {record}",
+                    f"then run the smoke: {run}",
+                ]
     report = {
         "schema_version": SCHEMA_VERSION,
         "kind": "migrate",

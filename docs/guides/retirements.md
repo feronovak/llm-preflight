@@ -210,11 +210,14 @@ With `--output PATH`, `migrate` writes a candidate config next to the source
 config (`PATH` must be in the same directory, so `prompt_file` and image paths
 still resolve). It holds one row per replacement, deduplicated. A replacement
 you already list is written as your own row, verbatim with your prices, unless
-it sets `headers` or a `base_url` with credentials or a query (a warning says
-to add it by hand). Only one route is kept per replacement: the first row wins
-and a warning names a dropped row. A new row copies only
-`provider`, `base_url`, `api_key_env` and `api_version` from the old row. Only a
-public `base_url` can reach it; a custom one stops as `route_base_url`. Prices,
+it sets `headers` or a custom `base_url` (a warning says to add it by hand).
+Only a public `base_url` ever reaches the candidate, so a gateway row is never
+copied or printed; write that config by hand. A new row copies only `provider`,
+`base_url`, `api_key_env` and `api_version` from the old row, and a custom
+`base_url` stops it as `route_base_url`. A warning names rows that share a
+replacement but differ in `api_key_env` or `api_version`; the first row wins.
+The `base_url` promise covers that field only: a URL in `name`, a prompt or
+another setting is copied as written. Prices,
 capabilities and token settings of the old model are dropped, `aliases`,
 `environments` and `discovery` are left out, and the smoke settings, including
 `save_responses`, are written into the file. Secret-shaped values are redacted

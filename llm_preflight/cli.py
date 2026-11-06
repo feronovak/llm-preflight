@@ -2226,12 +2226,15 @@ def interactive_selection(
 
 def _migrate_plan(path: Path) -> dict[str, Any]:
     """The plan `--dry-run` would print for the candidate file at `path`."""
-    config = load_config(path)
-    config = apply_provider_presets(
-        apply_model_aliases(apply_environment(config, None))
-    )
-    validate_config_validations(config)
-    return dry_run_plan(config, None, today=today_utc())
+    try:
+        config = load_config(path)
+        config = apply_provider_presets(
+            apply_model_aliases(apply_environment(config, None))
+        )
+        validate_config_validations(config)
+        return dry_run_plan(config, None, today=today_utc())
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
 
 
 def _migrate_main(argv: list[str]) -> None:

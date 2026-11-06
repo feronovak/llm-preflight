@@ -39,6 +39,8 @@ All notable changes to this project are documented here.
   source config, which is never changed; an existing file needs `--replace`.
   Old-model prices and settings are not copied, and a replacement with no
   bundled price is reported as an unbounded plan.
+  Only a public `base_url` is ever written or printed; a row with a custom
+  `base_url` or `headers` is left for you to add by hand.
 - Retirement row for `gemini-3.1-flash-lite`: deprecated, retires 2027-05-07,
   replacement `gemini-3.5-flash-lite`. `--ci` now exits 3 for it instead of
   reporting unknown. The frontier candidates example now uses the active

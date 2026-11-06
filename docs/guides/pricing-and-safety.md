@@ -108,6 +108,8 @@ evidence for your route. Do not advance the date without checking the source:
 }
 ```
 
+`migrate --run` spends only after a recorded approval receipt matches the plan built from the candidate file, the plan has a maximum cost, and the budget check passes; otherwise it loads no env file and calls no provider.
+
 Run `--dry-run` or `--pricing-check` after pricing edits. The coverage report
 lists every selected direct model and OpenRouter route as `priced`, `undated`,
 `stale`, or `unknown`, together with its source and remediation. An invalid

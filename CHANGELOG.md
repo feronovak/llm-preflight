@@ -20,6 +20,12 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- `llm-preflight migrate CONFIG --output PATH --run --verify-approval-receipt R` runs one
+  bounded smoke on the written candidate, only when the receipt is recorded for that
+  plan, the plan has a maximum cost and the budget check passes. The report adds `smoke` and
+  `paid_requests_made`; `--run` exits 1 for `fail` and 3 for `inconclusive`.
+  `--verify-approval-receipt` alone reports the receipt state. `--doctor` and
+  `--dry-run` print a text-only pointer to `migrate`.
 - `llm-preflight migrate CONFIG [--ci] [--json]` reports which provider-named
   replacement applies to each retired or retiring model in a config, with the
   same outcome in text and JSON. It makes no provider call.

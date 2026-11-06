@@ -38,6 +38,7 @@ module names.
 | `--json` output contract, consumed by CI and the MCP server | live | `cli.py`, `docs/reference/results.md` |
 | Schema-versioned agent decision contract — pass, fail, or inconclusive with remediation and blocking warnings | live | `decision.py`, `runner.py`, `mcp.py` |
 | Secret-safe result provenance — configuration, contract, route, pricing, and combined evidence fingerprints with prompt hashes and spend limits | live | `contracts.py`, `runner.py` |
+| `migrate` — report provider-named replacements for retired models, write a candidate config, and run one bounded smoke with `--run` after a recorded approval receipt | live | `migrate.py`, `cli.py`, `approval.py` |
 | Expiring local approval receipts — bind a review note to one dry-run plan and its bounds, without granting paid-run authority | live | `approval.py`, `cli.py` |
 | Terminal report — label local mock evidence, exclude mock rankings, suppress incomplete-evidence value recommendations, and label estimated costs | live | `runner.py`, `docs/reference/decision.md` |
 | `report` — render saved schema-version-1 evidence as offline HTML or a privacy-filtered Markdown summary | live | `reporting.py`, `cli.py`, `action.yml` |

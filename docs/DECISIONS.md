@@ -112,3 +112,11 @@ authorization remains separate from a numeric rating.
 **Why:** It reports which provider-named replacement applies to a retired or retiring model and writes nothing. The command-line report is the reviewed contract; widening it to agent and CI surfaces needs its own review of what those callers may act on.
 
 **Consequence:** An agent that works only through MCP, the plugin or the Action cannot run `migrate` and has to ask the user to run it. The report format is not promised to those surfaces.
+
+## Migrate runs on an approval receipt
+
+**Decision:** `migrate --run` requires a recorded approval receipt that matches the plan rebuilt from the candidate file; `--run` is the authorizing act, and the receipt alone starts nothing.
+
+**Why:** The receipt is the only existing artifact that binds a human review to a plan and its cost bounds. Requiring it keeps the smoke inside what was reviewed, while the explicit flag keeps authorization with the user.
+
+**Consequence:** A receipt still has `authorizes_paid_run: false`. A missing, expired, mismatched or unbounded receipt, or a changed candidate, ends the run before any env file is loaded or provider is called.

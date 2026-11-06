@@ -191,10 +191,10 @@ page names on its own.
 
 Not in 2.23.1; on the main branch only.
 
-`llm-preflight migrate CONFIG [--output PATH [--replace]] [--ci] [--json]` reads the explicit `models` of a
+`llm-preflight migrate CONFIG [--output PATH [--replace]] [--run] [--verify-approval-receipt PATH] [--ci] [--json]` reads the explicit `models` of a
 benchmark config and reports which provider-named replacement applies to each
 retired or retiring model. It never edits your config and makes no provider
-request; without `--output` it writes nothing. `discovery` is ignored with a
+request unless you pass `--run` with a recorded approval receipt; without `--output` it writes nothing. `discovery` is ignored with a
 warning. Adopting a
 replacement stays your step.
 
@@ -235,7 +235,17 @@ The report then adds the dry-run plan for the candidate (an `unbounded` plan
 means a replacement has no bundled price: add it to your config with your own
 rates and run `migrate` again), `approval` with state `missing`, and the
 commands to record an approval receipt and to run the smoke. Nothing is run and
-no provider is called.
+no provider is called yet.
+
+### Run the smoke
+
+1. `migrate CONFIG --output migrate.json` writes the candidate and prints the plan.
+2. Record approval with the printed command (`--dry-run --approval-receipt ...`).
+3. `migrate CONFIG --output migrate.json --run --verify-approval-receipt R` runs the smoke.
+
+With `--run`, which needs `--output` pointing at the candidate already written, `migrate` runs the bounded smoke once, only if all hold: the candidate re-derived now equals the file on disk; the plan is rebuilt from that file the way `--dry-run` loads it; the receipt named by `--verify-approval-receipt` verifies as `recorded` with `bounds` equal to the plan's; `maximum_estimated_cost_usd` is not null; the budget check passes. Otherwise no env file is loaded and no provider is called. `--run` is the authorizing act: the receipt is a required precondition only and still has `authorizes_paid_run: false`. `--verify-approval-receipt` without `--run` only reports `approval.state` (`missing`, `recorded`, `expired`, `mismatch`, `invalid`, `candidate_changed` or `unbounded`); a missing or unreadable receipt is reported, not raised. After a smoke the report adds `smoke` and `paid_requests_made`, and the run's decision replaces the decision of each row whose replacement was written on the same route; a row that kept its own route (custom `base_url` or `headers`) keeps its decision. `--run` exits like `--ci`: 1 for `fail`, 3 for `inconclusive`. `--env-file`, `--no-env-file` and `--output-dir` apply to `--run` only; `--replace` cannot be combined with `--run`. A config with only `prompts` stops with `select a custom prompt before running the benchmark`.
+
+`--doctor` and `--dry-run` print one `Next:` line pointing at `migrate` when they name a replacement to preview; it is text only and no JSON key changes.
 
 A replacement the snapshot has no row for is reported as `unknown`, never as
 active. With `--ci`, `migrate` exits 1 for a retired model and 3 for retiring or

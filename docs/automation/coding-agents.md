@@ -132,7 +132,8 @@ credential-keyed values masked, including the request and each model's id,
 base URL and mock response. It does not cover the prompt body, which is not
 in the plan. Printed plans stay redacted. No CLI or MCP command accepts the
 receipt as paid-run authorization; the user must still explicitly authorize a
-live run.
+live run. `migrate --run` is the one command that requires a recorded receipt first, and it
+still only runs because you passed `--run`.
 
 The example below expires one hour from now; choose a duration matching the
 reviewed plan. The timestamp is computed, not a historical date to copy.

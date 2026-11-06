@@ -1,4 +1,5 @@
 import json
+import shlex
 import sys
 from datetime import date
 from pathlib import Path
@@ -1101,3 +1102,373 @@ def test_output_hard_link_to_source_rejected(priced, tmp_path, monkeypatch, caps
     code, _ = _migrate(monkeypatch, capsys, path, "--output", str(link), "--replace")
     assert code == 2
     assert path.read_bytes() == before
+
+
+# --- --run: approved bounded smoke --------------------------------------------
+
+PASS = {"state": "pass", "reason": "ok"}
+
+
+def _main(monkeypatch, capsys, argv):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+    try:
+        cli.main()
+        code = 0
+    except SystemExit as exc:
+        code = exc.code
+    return code, capsys.readouterr()
+
+
+@pytest.fixture
+def spend(monkeypatch):
+    """Count every provider call and env load; the fake smoke passes."""
+    calls = {"benchmark": 0, "env": 0, "decision": PASS}
+
+    def benchmark(config, **kwargs):
+        calls["benchmark"] += 1
+        return {
+            "decision": dict(calls["decision"]),
+            "models": [{"summary": {"requests": 2}}],
+        }
+
+    def load_env(path):
+        calls["env"] += 1
+        return set()
+
+    monkeypatch.setattr(cli, "run_benchmark", benchmark)
+    monkeypatch.setattr(cli, "load_env_file", load_env)
+    monkeypatch.setattr(cli, "redact_result", lambda result: result)
+    monkeypatch.setattr(cli, "save_result", lambda result, out: out / "saved.json")
+    return calls
+
+
+def _none_spent(spend):
+    return spend["benchmark"] == 0 and spend["env"] == 0
+
+
+def _setup(monkeypatch, capsys, tmp_path, models, **extra):
+    path = _write(tmp_path, models, **extra)
+    target = tmp_path / "migrate.json"
+    receipt = tmp_path / "migrate.approval.json"
+    _migrate(monkeypatch, capsys, path, "--output", str(target))
+    return path, target, receipt
+
+
+def _record(spend, monkeypatch, capsys, target, receipt, *flags):
+    code, out = _main(
+        monkeypatch,
+        capsys,
+        [
+            str(target),
+            "--dry-run",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "reviewed",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+            *flags,
+        ],
+    )
+    assert code == 0, out.err
+    spend["env"] = 0
+
+
+def _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, *flags):
+    return _migrate(
+        monkeypatch,
+        capsys,
+        path,
+        "--output",
+        str(target),
+        "--run",
+        "--verify-approval-receipt",
+        str(receipt),
+        "--output-dir",
+        str(tmp_path / "res"),
+        *flags,
+    )
+
+
+def _edit(path, change):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    change(data)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_run_without_receipt_ends_at_plan_and_names_approval(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, _receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    code, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--run")
+    assert code == 1  # a retired model is still unresolved
+    assert "Approval: missing" in out.out
+    assert "--approval-receipt" in out.out
+    assert _none_spent(spend)
+
+
+def test_run_without_output_is_usage_error(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    code, _ = _migrate(monkeypatch, capsys, path, "--run")
+    assert code == 2 and _none_spent(spend)
+
+
+def test_run_with_recorded_receipt_runs_smoke_once_and_reports(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    assert code == 0 and spend["benchmark"] == 1
+    assert report["approval"]["state"] == "recorded"
+    assert report["smoke"]["state"] == "pass"
+    assert report["paid_requests_made"] == 2
+    assert report["decision"] == "pass"
+    assert report["models"][0]["smoke"] == {"state": "pass"}
+
+
+def _case_expired(target, receipt):
+    _edit(receipt, lambda d: d.update(expires_at="2000-01-01T00:00:00+00:00"))
+
+
+def _case_mismatch(target, receipt):
+    _edit(receipt, lambda d: d.update(plan_sha256="0" * 64))
+
+
+def _case_invalid(target, receipt):
+    receipt.write_text("{not json", encoding="utf-8")
+
+
+def _case_candidate_changed(target, receipt):
+    _edit(target, lambda d: d.update(repetitions=3))
+
+
+@pytest.mark.parametrize(
+    "state, tamper",
+    [
+        ("missing", None),
+        ("expired", _case_expired),
+        ("mismatch", _case_mismatch),
+        ("invalid", _case_invalid),
+        ("candidate_changed", _case_candidate_changed),
+    ],
+)
+def test_no_provider_call_or_env_load_unless_gate_passes(
+    priced, spend, tmp_path, monkeypatch, capsys, state, tamper
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    if state != "missing":
+        _record(spend, monkeypatch, capsys, target, receipt)
+    if tamper:
+        tamper(target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    assert report["approval"]["state"] == state
+    assert report["smoke"] is None and report["paid_requests_made"] == 0
+    assert code == 1 and _none_spent(spend)
+
+
+def test_unbounded_plan_never_runs(rows, spend, tmp_path, monkeypatch, capsys):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("cand")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    assert json.loads(out.out)["approval"]["state"] == "unbounded"
+    assert _none_spent(spend)
+
+
+def test_receipt_without_run_only_reports_state(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    _, out = _migrate(
+        monkeypatch,
+        capsys,
+        path,
+        "--output",
+        str(target),
+        "--verify-approval-receipt",
+        str(receipt),
+        "--json",
+    )
+    report = json.loads(out.out)
+    assert report["approval"]["state"] == "recorded"
+    assert report["smoke"] is None and _none_spent(spend)
+
+
+def test_verify_receipt_without_output_is_usage_error(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    code, _ = _migrate(
+        monkeypatch, capsys, path, "--verify-approval-receipt", str(tmp_path / "r")
+    )
+    assert code == 2
+
+
+def test_budget_excess_stops_before_run(priced, spend, tmp_path, monkeypatch, capsys):
+    path, target, receipt = _setup(
+        monkeypatch,
+        capsys,
+        tmp_path,
+        [_m("oldp")],
+        max_estimated_cost_usd=0.0000001,
+    )
+    _record(spend, monkeypatch, capsys, target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 2 and "exceeds" in out.err
+    assert _none_spent(spend)
+
+
+def test_receipt_from_documented_command_verifies_in_migrate(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    approval = json.loads(out.out)["approval"]
+    command = approval["record_command"].replace(
+        "<ISO-8601 time with timezone>", "2099-01-01T00:00:00+00:00"
+    )
+    record = shlex.split(command)[1:]
+    record[record.index("--approval-note") + 1] = "reviewed"
+    code, out = _main(monkeypatch, capsys, record)
+    assert code == 0, out.err
+    run = shlex.split(approval["run_command"])[1:]
+    code, _ = _main(monkeypatch, capsys, [*run, "--output-dir", str(tmp_path / "r")])
+    assert code == 0 and spend["benchmark"] == 1
+
+
+def test_smoke_flag_on_candidate_keeps_receipt_valid(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt, "--smoke")
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    assert json.loads(out.out)["approval"]["state"] == "recorded"
+    assert code == 0 and spend["benchmark"] == 1
+
+
+def test_changed_retry_settings_invalidate_receipt(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    _edit(path, lambda d: d.update(request={"retry": {"max_attempts": 4}}))
+    _migrate(monkeypatch, capsys, path, "--output", str(target), "--replace")
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    assert json.loads(out.out)["approval"]["state"] == "mismatch"
+    assert _none_spent(spend)
+
+
+def test_run_accepts_existing_output_without_replace_and_never_writes(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    before = target.read_bytes()
+    code, _ = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 1 and target.read_bytes() == before
+
+
+def test_replace_cannot_combine_with_run(priced, spend, tmp_path, monkeypatch, capsys):
+    path, target, _ = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    code, _ = _migrate(
+        monkeypatch, capsys, path, "--output", str(target), "--run", "--replace"
+    )
+    assert code == 2
+
+
+def test_prompts_only_config_says_to_select_a_prompt(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = tmp_path / "bench.json"
+    config = {
+        "name": "b",
+        "prompts": [{"name": "a", "prompt": "hi"}],
+        "models": [_m("oldp")],
+    }
+    path.write_text(json.dumps(config), encoding="utf-8")
+    target = tmp_path / "migrate.json"
+    receipt = tmp_path / "r.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target))
+    assert "select a custom prompt before running the benchmark" in out.out
+    _record(spend, monkeypatch, capsys, target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 2 and "select a custom prompt" in out.err
+    assert _none_spent(spend)
+
+
+@pytest.mark.parametrize(
+    "model, plain, strict", [("old", 0, 1), ("soon", 0, 3), ("fine", 0, 0)]
+)
+def test_exit_codes_table_plain_and_ci(
+    rows, spend, tmp_path, monkeypatch, capsys, model, plain, strict
+):
+    path = _write(tmp_path, [_m(model)])
+    assert _migrate(monkeypatch, capsys, path)[0] == plain
+    assert _migrate(monkeypatch, capsys, path, "--ci")[0] == strict
+
+
+@pytest.mark.parametrize(
+    "state, expected", [("pass", 0), ("fail", 1), ("inconclusive", 3)]
+)
+def test_exit_codes_table_run(
+    priced, spend, tmp_path, monkeypatch, capsys, state, expected
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    spend["decision"] = {"state": state, "reason": "x"}
+    code, _ = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == expected
+
+
+def test_route_base_url_rows_keep_their_decision_after_smoke(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    models = [_m("oldp"), _m("old", base_url="https://gw.example/v1")]
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, models)
+    _record(spend, monkeypatch, capsys, target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    by = {m["model"]: m for m in report["models"]}
+    assert by["old"]["outcome"] == "route_base_url" and by["old"]["smoke"] is None
+    assert by["oldp"]["smoke"] == {"state": "pass"}
+    assert report["decision"] == "fail" and code == 1
+
+
+def test_custom_route_row_with_listed_replacement_keeps_its_decision(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    gateway = "https://gw.example/v1"
+    models = [
+        _m("oldp"),
+        _m("oldp2", base_url=gateway),
+        _m("gpt-5.6-luna", base_url=gateway),
+    ]
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, models)
+    _record(spend, monkeypatch, capsys, target, receipt)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    by = {m["model"]: m for m in json.loads(out.out)["models"]}
+    assert by["oldp"]["smoke"] == {"state": "pass"}
+    assert by["oldp2"]["smoke"] is None
+    assert code == 1
+
+
+def test_text_report_shows_smoke(priced, spend, tmp_path, monkeypatch, capsys):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert "Exit 0 (--run)." in out.out and "Smoke: pass (2 requests)" in out.out
+
+
+def test_next_pointer_is_text_only(rows, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("old")])
+    for flag in ("--doctor", "--dry-run"):
+        _, out = _main(monkeypatch, capsys, [str(path), flag])
+        assert "llm-preflight migrate" in out.out and "--output" in out.out
+        _, out = _main(monkeypatch, capsys, [str(path), flag, "--json"])
+        assert "llm-preflight migrate" not in out.out
+        json.loads(out.out)

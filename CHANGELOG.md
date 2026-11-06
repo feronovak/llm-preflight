@@ -7,14 +7,15 @@ All notable changes to this project are documented here.
 ### Fixed
 
 - `--change-plan` no longer stops with a permission error on a changed file it
-  cannot read. It lists the file under `unreadable_files`, counts it in
-  `files_unreadable`, and sets `plan_incomplete`. Meaning change: a file that is
-  not UTF-8 text (a binary file, a UTF-16 prompt) now counts as unreadable too,
-  so `plan_incomplete` and `requires_preflight_review` are true for it, where
-  `requires_preflight_review` was false before. An unreadable file now exits 0
-  instead of 2, so CI users who relied on that failure must check
-  `plan_incomplete`. Staged-only paths now appear in `changed_files`, and a path
-  in a directory the command may not open moves from `deleted_files` to
+  may not read. It lists the file under `unreadable_files`, counts it in
+  `files_unreadable`, and sets `plan_incomplete`; `requires_preflight_review`
+  is true when any file is unreadable. A file that is not UTF-8 text counts as
+  unreadable only where `--audit-source` would read it (its source suffixes),
+  so a binary asset such as `logo.png` changes nothing. A directory Git could
+  not open is listed too. A file it may not read now exits 0 instead of 2, so
+  CI users who relied on that failure must check `plan_incomplete`. Staged-only
+  paths now appear in `changed_files` and the staged content is read, and a
+  path in a directory the command may not open moves from `deleted_files` to
   `unreadable_files`.
 - Declare the MCP registry workspace argument as a required user-supplied
   value, and link discovery to the manual setup guide. Document the explicit

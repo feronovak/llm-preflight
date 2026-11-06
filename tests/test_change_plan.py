@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from llm_preflight import change_plan as change_plan_module
 from llm_preflight.approval import (
     create_approval_receipt,
     verify_approval_receipt,
@@ -530,8 +531,7 @@ def test_git_change_plan_reports_a_file_in_a_directory_it_may_not_enter(
     finally:
         sub.chmod(0o755)
 
-    assert plan["unreadable_files"] == ["sub/p.py"]
-    assert plan["files_unreadable"] == 1
+    assert "sub/p.py" in plan["unreadable_files"]
     assert "sub/p.py" not in plan["deleted_files"]
     assert plan["plan_incomplete"] is True
     assert plan["requires_preflight_review"] is True
@@ -562,12 +562,12 @@ def test_git_change_plan_counts_a_file_that_is_not_utf8_as_unreadable(tmp_path):
     (tmp_path / "keep.txt").write_text("x\n")
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "initial")
-    (tmp_path / "prompt.txt").write_bytes('prompt = "hi"\n'.encode("utf-16"))
+    (tmp_path / "prompt.py").write_bytes('prompt = "hi"\n'.encode("utf-16"))
 
     plan = git_change_plan(tmp_path, "HEAD")
 
     assert plan["files_unreadable"] == 1
-    assert plan["unreadable_files"] == ["prompt.txt"]
+    assert plan["unreadable_files"] == ["prompt.py"]
     assert plan["plan_incomplete"] is True
     assert plan["requires_preflight_review"] is True
     assert plan["triggers"] == []
@@ -602,10 +602,119 @@ def test_git_change_plan_lists_an_unreadable_name_that_is_not_utf8(tmp_path):
     (tmp_path / "keep.txt").write_text("x\n")
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "initial")
-    odd = os.fsdecode(b"bad-\xff.bin")
+    odd = os.fsdecode(b"bad-\xff.py")
     (tmp_path / odd).write_bytes(b"\xff\xfe\x00")
 
     plan = git_change_plan(tmp_path, "HEAD")
 
-    assert plan["unreadable_files"] == ["bad-\\xff.bin"]
+    assert plan["unreadable_files"] == ["bad-\\xff.py"]
     json.dumps(plan).encode("utf-8")
+
+
+def _commit_initial(workspace):
+    _git(workspace, "init")
+    _git(workspace, "config", "user.email", "test@example.invalid")
+    _git(workspace, "config", "user.name", "Test User")
+    (workspace / "keep.txt").write_text("x\n")
+    _git(workspace, "add", ".")
+    _git(workspace, "commit", "-m", "initial")
+
+
+def test_git_change_plan_leaves_a_non_utf8_file_the_audit_skips_alone(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "logo.png").write_bytes(b"\x89PNG\xff\xfe\x00")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["changed_files"] == ["logo.png"]
+    assert plan["files_unreadable"] == 0
+    assert plan["plan_incomplete"] is False
+    assert plan["requires_preflight_review"] is False
+
+
+def test_git_change_plan_reports_a_directory_git_could_not_open(tmp_path, monkeypatch):
+    _commit_initial(tmp_path)
+    secret = tmp_path / "secret"
+    secret.mkdir()
+    (secret / "new.py").write_text('model = "gpt-5.5"\n')
+    secret.chmod(0)
+    if os.geteuid() == 0:  # root opens it anyway: add Git's warning
+        real = change_plan_module.run_git
+
+        def warned(repository, *arguments, **kwargs):
+            done = real(repository, *arguments, **kwargs)
+            if "--others" in arguments:
+                done.stderr = "warning: could not open directory 'secret/': x\n"
+            return done
+
+        monkeypatch.setattr(change_plan_module, "run_git", warned)
+    try:
+        plan = git_change_plan(tmp_path, "HEAD")
+    finally:
+        secret.chmod(0o755)
+
+    assert plan["unreadable_files"] == ["secret/"]
+    assert plan["plan_incomplete"] is True
+    assert plan["requires_preflight_review"] is True
+
+
+def test_git_change_plan_reports_a_symlink_loop_as_unreadable(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "a.py").symlink_to("b.py")
+    (tmp_path / "b.py").symlink_to("a.py")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert sorted(plan["unreadable_files"]) == ["a.py", "b.py"]
+    assert plan["plan_incomplete"] is True
+
+
+def test_git_change_plan_reports_a_deleted_file_that_is_not_utf8(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "prompt.py").write_bytes('prompt = "hi"\n'.encode("utf-16"))
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "prompt")
+    (tmp_path / "prompt.py").unlink()
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["deleted_files"] == ["prompt.py"]
+    assert plan["unreadable_files"] == ["prompt.py"]
+    assert plan["plan_incomplete"] is True
+
+
+def test_git_change_plan_reads_a_file_removed_from_the_index_but_on_disk(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "same.py").write_text("x = 1\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "same")
+    _git(tmp_path, "rm", "--cached", "-q", "same.py")
+    (tmp_path / "same.py").write_text('model = "gpt-5.5"\n')
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert [item["model"] for item in plan["triggers"] if "change" not in item] == [
+        "gpt-5.5"
+    ]
+
+
+def test_git_change_plan_reads_the_staged_copy_of_a_file(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "f.py").write_text("x = 1\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "f")
+    (tmp_path / "f.py").write_text('prompt = "staged"\n')
+    _git(tmp_path, "add", "f.py")
+    (tmp_path / "f.py").write_text("x = 1\n")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["triggers"] == [
+        {
+            "kind": "contract_surface",
+            "path": "f.py",
+            "line": 1,
+            "field": "prompt",
+            "change": "staged",
+        }
+    ]

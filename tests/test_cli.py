@@ -4384,7 +4384,7 @@ def _unreadable_change_plan_repository(tmp_path, name):
 def test_change_plan_text_and_json_agree_on_an_unreadable_file(
     monkeypatch, tmp_path, capsys
 ):
-    config = _unreadable_change_plan_repository(tmp_path, "blob.bin")
+    config = _unreadable_change_plan_repository(tmp_path, "blob.py")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         sys, "argv", ["llm-preflight", str(config), "--change-plan", "HEAD", "--json"]
@@ -4398,14 +4398,14 @@ def test_change_plan_text_and_json_agree_on_an_unreadable_file(
     text = capsys.readouterr().out
 
     assert plan["files_unreadable"] == 1
-    assert plan["unreadable_files"] == ["blob.bin"]
+    assert plan["unreadable_files"] == ["blob.py"]
     assert plan["plan_incomplete"] is True
     assert plan["notes"][0] in text
-    assert "    blob.bin" in text.splitlines()
+    assert "    blob.py" in text.splitlines()
 
 
 def test_change_plan_text_escapes_an_unreadable_name(monkeypatch, tmp_path, capsys):
-    config = _unreadable_change_plan_repository(tmp_path, "bad\nname.bin")
+    config = _unreadable_change_plan_repository(tmp_path, "bad\nname.py")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         sys, "argv", ["llm-preflight", str(config), "--change-plan", "HEAD"]
@@ -4414,5 +4414,5 @@ def test_change_plan_text_escapes_an_unreadable_name(monkeypatch, tmp_path, caps
     cli.main()
 
     lines = capsys.readouterr().out.splitlines()
-    assert "    bad\\nname.bin" in lines
+    assert "    bad\\nname.py" in lines
     assert "name.bin" not in lines

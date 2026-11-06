@@ -22,6 +22,7 @@ from .cli import (
     _format_gate,
     _format_verify,
     _verify_exit_code,
+    dry_run_output,
     dry_run_plan,
 )
 from .env import load_env_file, resolve_config_env_file
@@ -890,7 +891,7 @@ def _call(
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
         plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
-        return _tool_result({"ok": True, **plan}, standard=standard)
+        return _tool_result({"ok": True, **dry_run_output(plan)}, standard=standard)
     if name == "diff_baseline":
         baseline = json.loads(_path(arguments["baseline"], workspace).read_text())
         current = json.loads(_path(arguments["current"], workspace).read_text())

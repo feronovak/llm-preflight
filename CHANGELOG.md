@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- `--dry-run --json` and the MCP `dry_run_plan` tool now print each model's
+  `base_url` as scheme and host[:port], with any path, query, userinfo or `;`
+  parameter shown as `/[REDACTED]`; an exact public provider route is kept. The
+  JSON value changed: read the route from your config. A token in a host name
+  stays visible. A base URL that is not http(s) with a plain host (for example
+  `https://host;tok=1`) prints as `[REDACTED]`. Masking does not change the approval receipt hash, which still
+  covers the unmasked plan, so a receipt recorded before this change verifies
+  against an unchanged plan; a receipt still reports `mismatch` when the plan
+  changes.
+
 ### Fixed
 
 - `--change-plan` no longer stops with a permission error on a changed file it

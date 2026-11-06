@@ -23,13 +23,16 @@ contains `=` cannot have that driver disabled, so the change plan refuses it.
 A changed file the command cannot read does not stop the plan. That covers no
 read permission, a directory it may not enter, a symlink loop, and a file that
 is not UTF-8 text where `--audit-source` would read it (its source suffixes,
-for example a UTF-16 `.py` prompt); a non-UTF-8 image or archive is not counted.
+for example a UTF-16 `.py` prompt). A non-UTF-8 file with any other suffix, an
+image or a UTF-16 `prompt.txt` for example, is not counted. A prompt in such a
+file is not flagged, so `plan_incomplete: false` does not mean every changed
+file was read.
 The JSON `change_plan` object reports `files_unreadable` (a count, named as in
 `--audit-source`), `unreadable_files` (the paths), and `plan_incomplete`
 (`true` when any file was unreadable). A path Git lists as deleted but the
 command may not look at is reported as unreadable, not as deleted. A directory
 Git could not open is listed with a trailing `/`, because the files in it were
-not listed. The plan does not treat a file it could not read as touching no
+not listed. The plan does not treat a file it counted as unreadable as touching no
 model ID, prompt, schema or tool definition, so `requires_preflight_review` is
 also `true`, and the first note says the plan is incomplete. The text output
 prints the same sentence and the paths. A deleted file is read from the Git

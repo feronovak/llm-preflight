@@ -46,7 +46,8 @@ class _Findings:
         shown = display_path(relative)
         if _not_utf8(text):
             # The audit counts a non-UTF-8 file only when it selects the
-            # file; other files (images, archives) hold no model ID to miss.
+            # file. Any other non-UTF-8 file is left uncounted, so a prompt
+            # in one is not flagged: an accepted limit, documented.
             if _audit_selects(relative, source):
                 self.unreadable.append(shown)
             return

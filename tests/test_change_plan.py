@@ -718,3 +718,21 @@ def test_git_change_plan_reads_the_staged_copy_of_a_file(tmp_path):
             "change": "staged",
         }
     ]
+
+
+def test_git_change_plan_scans_a_deleted_non_utf8_file_the_audit_skips(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "notes.txt").write_bytes(
+        'model = "gpt-5.5"  # caf\xe9\n'.encode("latin-1")
+    )
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "notes")
+    (tmp_path / "notes.txt").unlink()
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert [(item["model"], item["change"]) for item in plan["triggers"]] == [
+        ("gpt-5.5", "deleted")
+    ]
+    assert plan["files_unreadable"] == 0
+    assert plan["requires_preflight_review"] is True

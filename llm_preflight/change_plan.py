@@ -47,10 +47,13 @@ class _Findings:
         if _not_utf8(text):
             # The audit counts a non-UTF-8 file only when it selects the
             # file. Any other non-UTF-8 file is left uncounted, so a prompt
-            # in one is not flagged: an accepted limit, documented.
+            # in one is not flagged: an accepted limit, documented. A deleted
+            # file's old text is still scanned, as before.
             if _audit_selects(relative, source):
                 self.unreadable.append(shown)
-            return
+                return
+            if change != "deleted":
+                return
         marker = {"change": change} if change else {}
         findings = audit_source_text(source, text)["references"]
         if findings:

@@ -210,7 +210,9 @@ With `--output PATH`, `migrate` writes a candidate config next to the source
 config (`PATH` must be in the same directory, so `prompt_file` and image paths
 still resolve). It holds one row per replacement, deduplicated. A replacement
 you already list is written as your own row, verbatim with your prices, unless
-it sets `headers` (a warning says to add it by hand). A new row copies only
+it sets `headers` or a `base_url` with credentials or a query (a warning says
+to add it by hand). Only one route is kept per replacement: the first row wins
+and a warning names a dropped row. A new row copies only
 `provider`, `base_url`, `api_key_env` and `api_version` from the old row. Only a
 public `base_url` can reach it; a custom one stops as `route_base_url`. Prices,
 capabilities and token settings of the old model are dropped, `aliases`,

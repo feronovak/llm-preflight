@@ -869,3 +869,49 @@ def test_key_warning_names_provider_default(priced, tmp_path, monkeypatch, capsy
     _, out = _out(monkeypatch, capsys, path, tmp_path / "m.json", "--json")
     warning = json.loads(out.out)["warnings"][0]
     assert "None" not in warning and "provider default" in warning and "K_B" in warning
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://u:PASSWD123@gw.example/v1",
+        "https://gw.example/v1?api_key=QKEY456",
+        "https://gw.example/v1#FRAG789",
+    ],
+)
+def test_own_row_with_credential_url_is_not_written_or_printed(
+    rows, tmp_path, monkeypatch, capsys, url
+):
+    path = _write(
+        tmp_path,
+        [_m("cand", base_url=url), _m("fresh", base_url=url)],
+    )
+    target = tmp_path / "migrate.json"
+    for flags in ([], ["--output", str(target)]):
+        _, out = _migrate(monkeypatch, capsys, path, "--json", *flags)
+        for secret in ("PASSWD123", "QKEY456", "FRAG789"):
+            assert secret not in out.out
+        assert any("base_url" in w for w in json.loads(out.out)["warnings"])
+    assert not target.exists()
+
+
+def test_one_row_per_replacement_across_routes(priced, tmp_path, monkeypatch, capsys):
+    priced[("openai", "oldq")] = _row(
+        "retired", replacement="gpt-5.6-luna", date_="2026-10-01"
+    )
+    path = _write(
+        tmp_path,
+        [
+            _m("oldp"),
+            _m("oldq", base_url="https://gw.example/v1"),
+            _m("gpt-5.6-luna", base_url="https://gw.example/v1"),
+        ],
+    )
+    target = tmp_path / "migrate.json"
+    _, out = _migrate(monkeypatch, capsys, path, "--output", str(target), "--json")
+    report = json.loads(out.out)
+    written = json.loads(target.read_text(encoding="utf-8"))["models"]
+    assert len(written) == 1
+    assert [m["model"] for m in report["plan"]["models"]] == ["gpt-5.6-luna"]
+    assert any("route was not kept" in w for w in report["warnings"])
+    assert "gw.example" not in " ".join(report["warnings"])

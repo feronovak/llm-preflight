@@ -17,6 +17,7 @@ from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from . import retirements
 from .features import apply_model_aliases, apply_smoke_mode
@@ -201,29 +202,52 @@ def _row_for(
     return None
 
 
+def _hand_added(row: dict[str, Any]) -> str | None:
+    """Why an own row cannot be copied: redaction cannot make it safe to send."""
+    if row.get("headers"):
+        return "sets headers"
+    url = row.get("base_url")
+    if url is None:
+        return None
+    try:
+        parts = urlsplit(url) if isinstance(url, str) else None
+        bad = parts is None or bool(
+            parts.username or parts.password or parts.query or parts.fragment
+        )
+    except ValueError:
+        bad = True
+    return "sets a base_url with credentials or a query" if bad else None
+
+
 def _unique_rows(
     models: list[dict[str, Any]], entries: list[dict[str, Any]]
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """One row per replacement; the first row's key wins."""
-    rows: dict[tuple[str, str, str], dict[str, Any]] = {}
+    """One row per provider and replacement; the first row wins."""
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
     warnings: list[str] = []
     for model, entry in zip(models, entries):
         found = _row_for(model, entry, models)
         if found is None:
             continue
-        key, row = found
-        if row.get("headers"):
+        (provider, replacement, _), row = found
+        name = _printable(row["model"])
+        reason = _hand_added(row)
+        if reason:
             warnings.append(
-                f"{_printable(row['model'])} sets headers, which are not copied; "
-                "add it to a candidate config by hand"
+                f"{name} {reason}, which is not copied; add it to a candidate "
+                "config by hand"
             )
             continue
-        kept = rows.setdefault(key, row)
-        if kept.get("api_key_env") != row.get("api_key_env"):
+        kept = rows.setdefault((provider, replacement), row)
+        if _route(kept) != _route(row):
             warnings.append(
-                f"{_printable(row['model'])} is named for several rows with "
-                f"different api_key_env; kept {_key_label(kept)}, "
-                f"dropped {_key_label(row)}"
+                f"{name} is named on another route; the first row was kept and "
+                "this route was not kept"
+            )
+        elif kept.get("api_key_env") != row.get("api_key_env"):
+            warnings.append(
+                f"{name} is named for several rows with different api_key_env; "
+                f"kept {_key_label(kept)}, dropped {_key_label(row)}"
             )
     return list(rows.values()), warnings
 

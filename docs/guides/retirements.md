@@ -75,7 +75,7 @@ return `1`. Pricing snapshots have their own review dates and expiry.
 | Status | Meaning | Decision |
 |---|---|---|
 | `retired` | The retirement date is today (UTC) or earlier, or the page lists the model as retired. | fail |
-| `retiring` | A future retirement or deprecation is announced, including an alias redirected to another model without a shutdown date. | inconclusive |
+| `retiring` | A future retirement or deprecation is announced. An alias redirected to another model with no shutdown date is `active`, not `retiring`. | inconclusive |
 | `stale` | The snapshot row was reviewed more than 30 days ago, counted in UTC days like the pricing snapshot. Update llm-preflight or read the official page. | inconclusive |
 | `active` | The official page lists the model as active and the row is fresh. | pass |
 | `unknown` | No snapshot row. Absence is not evidence. | none |

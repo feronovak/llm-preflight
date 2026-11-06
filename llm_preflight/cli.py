@@ -43,7 +43,7 @@ from .catalog_watch import (
     save_snapshot,
     snapshot_catalog,
 )
-from .change_plan import git_change_plan
+from .change_plan import git_change_plan, unreadable_note
 from .client import PROVIDER_DEFAULTS
 from .contracts import check_contract, contract_fixtures_declared
 from .eligibility import eligibility_next_step, smoke_eligibility_report
@@ -64,6 +64,9 @@ from .features import (
     replay_config,
 )
 from .interactive import InteractiveServices, select_interactively
+from .migrate import build_report as build_migrate_report
+from .migrate import exit_code as migrate_exit_code
+from .migrate import format_report as format_migrate_report
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
@@ -2221,6 +2224,32 @@ def interactive_selection(
     )
 
 
+def _migrate_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(
+        prog="llm-preflight migrate",
+        description=(
+            "Report which provider-named replacement applies to each retired "
+            "model in a config; writes nothing and calls no provider"
+        ),
+    )
+    parser.add_argument("config", type=Path, help="benchmark config JSON to inspect")
+    parser.add_argument(
+        "--ci", action="store_true", help="exit 1 on fail and 3 on inconclusive"
+    )
+    parser.add_argument("--json", action="store_true", help="print the report as JSON")
+    args = parser.parse_args(argv)
+    report = build_migrate_report(args.config, today_utc())
+    print(
+        json.dumps(report, indent=2)
+        if args.json
+        else format_migrate_report(report, ci=args.ci),
+        end="\n" if args.json else "",
+    )
+    code = migrate_exit_code(report["decision"], args.ci)
+    if code:
+        raise SystemExit(code)
+
+
 def _report_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         description="Render a safe offline report from saved result JSON"
@@ -2645,6 +2674,16 @@ def main() -> None:
             )
             raise SystemExit(2) from None
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "migrate":
+        try:
+            _migrate_main(sys.argv[2:])
+        except (OSError, ValueError, RecursionError) as exc:
+            print(
+                f"{_display_command()}: error: {redact_secrets(str(exc))}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from None
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "watch-new":
         try:
             _watch_new_main(sys.argv[2:])
@@ -2973,6 +3012,10 @@ def main() -> None:
                     f"Changed files: {len(change_plan['changed_files'])}; "
                     f"preflight signals: {len(change_plan['triggers'])}."
                 )
+                if change_plan["plan_incomplete"]:
+                    print(unreadable_note(change_plan["files_unreadable"]))
+                    for unreadable_path in change_plan["unreadable_files"]:
+                        print(f"    {printable(unreadable_path)}")
                 for command in change_payload["recommended_commands"]:
                     print(command)
             return

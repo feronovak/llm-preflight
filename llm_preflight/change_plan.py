@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import re
+import stat
 
 # Only CalledProcessError is used; run_git starts Git.
 import subprocess  # nosec B404
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from .git import run_git
-from .source_audit import audit_source, audit_source_text, display_path
+from .source_audit import (
+    _SKIP_PARTS,
+    _SOURCE_SUFFIXES,
+    audit_source_text,
+    display_path,
+)
 
+_UNOPENED = re.compile(r"could not open directory '(?P<directory>.+?)'")
 _REFERENCE = re.compile(r"[A-Za-z0-9._/@^~-]+\Z")
 _CONTRACT_SURFACE = re.compile(
     r"\b(?P<field>prompt|system_prompt|validation|json_schema|tools?|tool_choice|"
@@ -20,29 +27,37 @@ _CONTRACT_SURFACE = re.compile(
 )
 
 
-def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]:
-    """Report static LLM-integration change signals without provider access."""
-    root = _repository_root(repository)
-    _validate_reference(reference)
-    changed_files, deleted_files = _changed_files(root, reference)
-    triggers: list[dict[str, Any]] = []
-    # Paths stay as Git listed them for file and Git access, and are displayed
-    # as UTF-8 text.
-    for relative_path in changed_files:
-        shown = display_path(relative_path)
-        path = (root / relative_path).resolve()
-        deleted = relative_path in deleted_files
-        if not deleted and root != path and root not in path.parents:
-            continue
-        if not deleted and not path.is_file():
-            continue
-        if deleted:
-            previous = _git(root, "show", f"{reference}:{relative_path}").stdout
-            findings = audit_source_text(Path(relative_path), previous)["references"]
-        else:
-            findings = audit_source(path)["references"]
+class _Listing(NamedTuple):
+    changed: list[str]
+    deleted: list[str]
+    staged: set[str]
+    # Directories Git could not open: the files in them were not listed.
+    unopened: list[str]
+
+
+class _Findings:
+    """Triggers and unreadable paths gathered while reading changed files."""
+
+    def __init__(self) -> None:
+        self.triggers: list[dict[str, Any]] = []
+        self.unreadable: list[str] = []
+
+    def add(self, text: str, relative: str, source: Path, change: str | None) -> None:
+        shown = display_path(relative)
+        if _not_utf8(text):
+            # The audit counts a non-UTF-8 file only when it selects the
+            # file. Any other non-UTF-8 file is left uncounted, so a prompt
+            # in one is not flagged: an accepted limit, documented. A deleted
+            # file's old text is still scanned, as before.
+            if _audit_selects(relative, source):
+                self.unreadable.append(shown)
+                return
+            if change != "deleted":
+                return
+        marker = {"change": change} if change else {}
+        findings = audit_source_text(source, text)["references"]
         if findings:
-            triggers.extend(
+            self.triggers.extend(
                 {
                     "kind": "model_id",
                     "path": shown,
@@ -50,34 +65,134 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
                     "provider": finding["provider"],
                     "model": finding["model"],
                     "pricing_status": finding["status"],
-                    **({"change": "deleted"} if deleted else {}),
+                    **marker,
                 }
                 for finding in findings
             )
-            continue
-        trigger = (
-            _contract_surface_trigger_text(previous, shown)
-            if deleted
-            else _contract_surface_trigger(path, shown)
-        )
+            return
+        trigger = _contract_surface_trigger_text(text, shown)
         if trigger:
-            if deleted:
-                trigger["change"] = "deleted"
-            triggers.append(trigger)
+            self.triggers.append({**trigger, **marker})
+
+
+def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]:
+    """Report static LLM-integration change signals without provider access."""
+    root = _repository_root(repository)
+    _validate_reference(reference)
+    listing = _changed_files(root, reference)
+    found = _Findings()
+    found.unreadable.extend(display_path(item) for item in listing.unopened)
+    # Git reports a path it cannot lstat as deleted; only a missing path is.
+    gone = {item for item in listing.deleted if _may_be_deleted(root / item)}
+    # Paths stay as Git listed them for file and Git access, and are displayed
+    # as UTF-8 text.
+    for relative in listing.changed:
+        if relative in listing.deleted and relative not in gone:
+            found.unreadable.append(display_path(relative))
+            continue
+        if relative in gone:
+            previous = _git(root, "show", f"{reference}:{relative}").stdout
+            found.add(previous, relative, Path(relative), "deleted")
+            if not _lstat_succeeds(root / relative):
+                continue
+        _scan_work_tree(root, relative, relative in listing.staged, found)
     return {
         "schema_version": 1,
         "reference": reference,
         "network_accessed": False,
         "paid_work_authorized": False,
-        "changed_files": [display_path(item) for item in changed_files],
-        "deleted_files": [display_path(item) for item in deleted_files],
-        "triggers": triggers,
-        "requires_preflight_review": bool(triggers),
+        "changed_files": [display_path(item) for item in listing.changed],
+        "deleted_files": [
+            display_path(item) for item in listing.deleted if item in gone
+        ],
+        "files_unreadable": len(found.unreadable),
+        "unreadable_files": found.unreadable,
+        "plan_incomplete": bool(found.unreadable),
+        "triggers": found.triggers,
+        "requires_preflight_review": bool(found.triggers or found.unreadable),
         "notes": [
+            *([unreadable_note(len(found.unreadable))] if found.unreadable else []),
             "Static findings cannot identify dynamic model selection; review application changes.",
             "This change plan is no-spend evidence and never authorizes paid work.",
         ],
     }
+
+
+def _scan_work_tree(root: Path, relative: str, staged: bool, found: _Findings) -> None:
+    try:
+        path = (root / relative).resolve()
+        if root != path and root not in path.parents:
+            return
+        text = _read_regular(path)
+    except (OSError, RuntimeError):
+        # Unknown is never "no contract surface": report it. A symlink loop
+        # raises RuntimeError from resolve() before Python 3.13.
+        found.unreadable.append(display_path(relative))
+        return
+    if text is not None:
+        found.add(text, relative, path, None)
+    if staged:
+        index = _index_text(root, relative)
+        if index is not None and index != text:
+            found.add(index, relative, Path(relative), "staged")
+
+
+def _read_regular(path: Path) -> str | None:
+    """The text of a regular file; None when nothing is there to read."""
+    try:
+        if not stat.S_ISREG(path.stat().st_mode):
+            return None
+        return path.read_text(encoding="utf-8", errors="surrogateescape")
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+
+
+def _index_text(root: Path, relative: str) -> str | None:
+    completed = run_git(root, "show", f":{relative}", check=False)
+    return completed.stdout if completed.returncode == 0 else None
+
+
+def _not_utf8(text: str) -> bool:
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return True
+    return False
+
+
+def _audit_selects(relative: str, source: Path) -> bool:
+    """Whether --audit-source would read this file: its suffix and skip list."""
+    return source.suffix.casefold() in _SOURCE_SUFFIXES and not any(
+        part in _SKIP_PARTS for part in Path(relative).parts
+    )
+
+
+def _lstat_succeeds(path: Path) -> bool:
+    try:
+        path.lstat()
+    except OSError:
+        return False
+    return True
+
+
+def _may_be_deleted(path: Path) -> bool:
+    """False only when Git listed path as deleted because it may not be seen."""
+    try:
+        path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def unreadable_note(count: int) -> str:
+    """The incomplete-plan statement shared by JSON notes and CLI text."""
+    subject, pronoun = ("1 file", "it") if count == 1 else (f"{count} files", "they")
+    return (
+        f"Plan incomplete: {subject} could not be read as UTF-8 text; "
+        f"{pronoun} may still change a model ID, prompt, schema or tool definition."
+    )
 
 
 def _repository_root(repository: Path) -> Path:
@@ -95,7 +210,7 @@ def _validate_reference(reference: str) -> None:
         raise ValueError("Git reference contains unsupported characters")
 
 
-def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
+def _changed_files(root: Path, reference: str) -> _Listing:
     # Looking for edits inside a submodule runs git status there, under the
     # submodule's own configuration. A changed submodule commit is still listed.
     changed = _git(
@@ -118,10 +233,26 @@ def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
         reference,
         "--",
     )
+    staged = _git(
+        root,
+        "diff",
+        "--cached",
+        "--name-only",
+        "--diff-filter=ACMRD",
+        "--ignore-submodules=dirty",
+        "-z",
+        reference,
+        "--",
+    )
     untracked = _git(root, "ls-files", "--others", "--exclude-standard", "-z")
+    staged_paths = {Path(item).as_posix() for item in staged.stdout.split("\0") if item}
     paths = [
         Path(item)
-        for item in [*changed.stdout.split("\0"), *untracked.stdout.split("\0")]
+        for item in [
+            *changed.stdout.split("\0"),
+            *staged.stdout.split("\0"),
+            *untracked.stdout.split("\0"),
+        ]
         if item
     ]
     safe = []
@@ -135,15 +266,26 @@ def _changed_files(root: Path, reference: str) -> tuple[list[str], list[str]]:
         for path in deleted_paths
         if not path.is_absolute() and ".." not in path.parts
     )
-    return sorted(set(safe)), safe_deleted
+    return _Listing(
+        sorted(set(safe)),
+        safe_deleted,
+        {item for item in staged_paths if item in safe},
+        _unopened_directories(untracked.stderr),
+    )
 
 
-def _contract_surface_trigger(path: Path, relative_path: str) -> dict[str, Any] | None:
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except UnicodeDecodeError:
-        return None
-    return _contract_surface_trigger_text("\n".join(lines), relative_path)
+def _unopened_directories(stderr: str) -> list[str]:
+    """Directories Git warned it could not open; any other warning is the root."""
+    found: list[str] = []
+    for line in stderr.splitlines():
+        match = _UNOPENED.search(line)
+        directory = Path(match["directory"]) if match else Path(".")
+        if directory.is_absolute() or ".." in directory.parts:
+            continue
+        shown = directory.as_posix()
+        if shown not in found:
+            found.append(shown if shown == "." else shown + "/")
+    return found
 
 
 def _contract_surface_trigger_text(

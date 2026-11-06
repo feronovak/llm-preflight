@@ -4359,3 +4359,60 @@ def test_dry_run_keeps_direct_replacement_command_for_providerless_proxy(
     assert plan["retirements"]["next_commands"] == [command]
     assert "already in this plan" not in retired["next_step"]
     assert command in cli._format_dry_run_plan(plan)
+
+
+def _unreadable_change_plan_repository(tmp_path, name):
+    def git(*args):
+        subprocess.run(
+            ["git", *args], cwd=tmp_path, check=True, text=True, capture_output=True
+        )
+
+    git("init")
+    git("config", "user.email", "test@example.invalid")
+    git("config", "user.name", "Test User")
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
+        '"models":[{"provider":"mock","model":"local","response":"ok"}]}'
+    )
+    git("add", "benchmark.json")
+    git("commit", "-m", "initial")
+    (tmp_path / name).write_bytes(b"\xff\xfe\x00")
+    return config
+
+
+def test_change_plan_text_and_json_agree_on_an_unreadable_file(
+    monkeypatch, tmp_path, capsys
+):
+    config = _unreadable_change_plan_repository(tmp_path, "blob.py")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--change-plan", "HEAD", "--json"]
+    )
+    cli.main()
+    plan = json.loads(capsys.readouterr().out)["change_plan"]
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--change-plan", "HEAD"]
+    )
+    cli.main()
+    text = capsys.readouterr().out
+
+    assert plan["files_unreadable"] == 1
+    assert plan["unreadable_files"] == ["blob.py"]
+    assert plan["plan_incomplete"] is True
+    assert plan["notes"][0] in text
+    assert "    blob.py" in text.splitlines()
+
+
+def test_change_plan_text_escapes_an_unreadable_name(monkeypatch, tmp_path, capsys):
+    config = _unreadable_change_plan_repository(tmp_path, "bad\nname.py")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--change-plan", "HEAD"]
+    )
+
+    cli.main()
+
+    lines = capsys.readouterr().out.splitlines()
+    assert "    bad\\nname.py" in lines
+    assert "name.bin" not in lines

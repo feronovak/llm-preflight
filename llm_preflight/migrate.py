@@ -354,6 +354,17 @@ _ADOPT = (
 )
 
 
+def _after_smoke(replacement: str, smoke: dict[str, Any]) -> str:
+    """Adoption only after a pass; otherwise the reason and the saved result."""
+    if smoke["state"] == "pass":
+        return _ADOPT.format(replacement=replacement)
+    return (
+        f"smoke {smoke['state']} for {replacement}: {smoke['reason']}; read the "
+        f"saved result at {_printable(str(smoke['result_path']))} and do not adopt "
+        f"{replacement} until a smoke passes"
+    )
+
+
 def _rewrite_command(config_path: Path, output: Path) -> str:
     return (
         f"llm-preflight migrate {_quoted(config_path)} --output {_quoted(output)} "
@@ -414,8 +425,13 @@ def _smoked_rows(
 
 
 def _attempts_sent(sample: dict[str, Any]) -> int:
-    """Provider attempts one sample made; a missing key stops before any call."""
-    if sample.get("failure_category") == "credentials":
+    """Provider attempts one sample made; a missing key stops before any call.
+
+    A rejected key (HTTP 401 or 403) shares the `credentials` category but was sent.
+    """
+    if sample.get(
+        "failure_category"
+    ) == "credentials" and "environment variable" in str(sample.get("error")):
         return 0
     return int(sample.get("attempts", 1))
 
@@ -525,8 +541,8 @@ def build_report(
                     for index in _smoked_rows(models, entries, rows):
                         decisions[index] = smoke["state"]
                         entries[index]["smoke"] = {"state": smoke["state"]}
-                        entries[index]["next_step"] = _ADOPT.format(
-                            replacement=entries[index]["replacement"]
+                        entries[index]["next_step"] = _after_smoke(
+                            entries[index]["replacement"], smoke
                         )
                     next_steps = list(
                         dict.fromkeys(entry["next_step"] for entry in entries)
@@ -566,7 +582,7 @@ def _exit_line(decision: str, ci: bool, run: bool) -> str:
 def _written_line(report: dict[str, Any], reading: bool) -> str:
     if report["smoke"]:
         return (
-            "Source config unchanged; nothing was written and "
+            "Source config unchanged; only the smoke result files were written and "
             f"{report['paid_requests_made']} provider requests were made."
         )
     if reading:

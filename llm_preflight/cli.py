@@ -2286,19 +2286,18 @@ def _migrate_smoke(path: Path, args: argparse.Namespace) -> dict[str, Any]:
     if any(model.get("provider") != "mock" for model in config["models"]):
         _load_config_env_file(path, args, config)
     config["_source_config_path"] = str(path.resolve())
-    with benchmark_run_lock(args.output_dir):
-        result = redact_result(
-            run_benchmark(
-                config,
-                selection={
-                    "prompt": None,
-                    "tests": None,
-                    "environment": None,
-                    "migration_check": False,
-                    "smoke": False,
-                },
-            )
-        )
+    selection = {
+        "prompt": None,
+        "tests": None,
+        "environment": None,
+        "migration_check": False,
+        "smoke": False,
+    }
+    try:
+        with benchmark_run_lock(args.output_dir):
+            result = redact_result(run_benchmark(config, selection=selection))
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
     return {"result": result, "path": str(save_result(result, args.output_dir))}
 
 

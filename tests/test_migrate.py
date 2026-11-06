@@ -1517,7 +1517,14 @@ def test_paid_requests_count_attempts_sent_from_real_sample_shape(
     spend["samples"] = [{"ok": False, "attempts": 3, "retry_count": 2}]
     _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
     assert json.loads(out.out)["paid_requests_made"] == 3
-    spend["samples"] = [{"ok": False, "attempts": 1, "failure_category": "credentials"}]
+    spend["samples"] = [
+        {
+            "ok": False,
+            "attempts": 1,
+            "error": "environment variable 'K' is not set",
+            "failure_category": "credentials",
+        }
+    ]
     _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
     assert json.loads(out.out)["paid_requests_made"] == 0
 
@@ -1595,3 +1602,78 @@ def test_keyboard_interrupt_during_smoke_exits_130(
     monkeypatch.setattr(cli, "run_benchmark", interrupted)
     code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
     assert code == 130 and "Benchmark cancelled" in out.err
+
+
+@pytest.mark.parametrize(
+    "state, adopts", [("pass", True), ("fail", False), ("inconclusive", False)]
+)
+def test_adoption_step_only_after_a_pass(
+    priced, spend, tmp_path, monkeypatch, capsys, state, adopts
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    spend["decision"] = {"state": state, "reason": "contract broke"}
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    steps = " ".join(report["next_steps"]) + report["models"][0]["next_step"]
+    assert "record approval" not in steps and "run the smoke" not in steps
+    if adopts:
+        assert "your step" in steps
+    else:
+        assert "your step" not in steps
+        assert "contract broke" in steps and "saved.json" in steps
+        assert "do not adopt" in steps
+    _, text = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert ("smoke done" in text.out) is adopts
+    assert "only the smoke result files were written" in text.out
+
+
+def _real_samples(monkeypatch, answers, key_set=True):
+    """Samples from the real client with the network answering `answers`."""
+    import io
+    import urllib.error
+
+    from llm_preflight import client
+
+    codes = iter(answers)
+
+    def refuse(request, timeout=None):
+        code = next(codes)
+        raise urllib.error.HTTPError(request.full_url, code, "x", {}, io.BytesIO(b"no"))
+
+    monkeypatch.setattr(client, "open_public_url", refuse)
+    monkeypatch.setattr(client, "require_http_url", lambda url, **_: None)
+    monkeypatch.setattr(client.time, "sleep", lambda _: None)
+    monkeypatch.setenv("MIGRATE_TEST_KEY", "k") if key_set else monkeypatch.delenv(
+        "MIGRATE_TEST_KEY", raising=False
+    )
+    model = {
+        "provider": "openai",
+        "model": "m",
+        "base_url": "https://api.example.test/v1",
+        "api_key_env": "MIGRATE_TEST_KEY",
+    }
+    options = {"retry": {"max_attempts": 3}}
+    sample = client.create_client(model, 5).run("hi", options)
+    return [sample]
+
+
+@pytest.mark.parametrize(
+    "answers, key_set, sent",
+    [([401], True, 1), ([403], True, 1), ([429, 429, 401], True, 3), ([], False, 0)],
+)
+def test_paid_requests_from_the_real_client(monkeypatch, answers, key_set, sent):
+    samples = _real_samples(monkeypatch, answers, key_set)
+    assert sum(migrate._attempts_sent(sample) for sample in samples) == sent
+
+
+def test_wrong_typed_setting_inside_the_run_is_a_config_error(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+
+    def broken(config, **kwargs):
+        raise TypeError("bad")
+
+    monkeypatch.setattr(cli, "run_benchmark", broken)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 2 and "Traceback" not in out.err

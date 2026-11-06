@@ -131,6 +131,7 @@ def test_standard_mcp_clients_negotiate_any_initialize_version_and_discover_tool
         "diff_baseline",
         "verify",
         "gate",
+        "migrate_plan",
     ]
     assert "resultType" not in listed["result"]
     assert plan["result"]["isError"] is False
@@ -328,6 +329,7 @@ def test_discover_and_mock_tools_are_modern_and_read_only(tmp_path):
         "diff_baseline",
         "verify",
         "gate",
+        "migrate_plan",
     ]
     assert plan["result"]["isError"] is False
     assert plan["result"]["structuredContent"]["pricing_coverage"]["summary"] == {
@@ -1554,8 +1556,8 @@ def test_agent_guidance_never_presents_a_gate_pass_as_approval(tmp_path):
         assert "a gate `pass` is not approval" in flat
     assert "| `verify` |" in guide
     assert "| `gate` |" in guide
-    assert "seven tools" in " ".join(guide.split())
-    assert "seven tools" in " ".join(readme.split())
+    assert "eight tools" in " ".join(guide.split())
+    assert "eight tools" in " ".join(readme.split())
 
 
 def test_gate_without_a_repository_cannot_decide(proof_workspace):
@@ -1654,3 +1656,140 @@ def test_gate_tool_refuses_a_repository_that_contradicts_github_repository(
     assert result["isError"] is False
     assert result["structuredContent"]["reason_code"] == "repository_unknown"
     assert "GITHUB_REPOSITORY is fork/app" in result["structuredContent"]["why"]
+
+
+def _migrate_rows(monkeypatch):
+    row = {"as_of": "2026-11-01", "source_url": "https://example.test/deprecations"}
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "old"): {
+                **row,
+                "status": "retired",
+                "replacement": "new",
+                "retirement_date": "2026-10-01",
+            },
+            ("openai", "new"): {**row, "status": "active"},
+        },
+    )
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 11, 5))
+
+
+def _migrate_call(tmp_path, arguments):
+    return mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "migrate_plan", "arguments": arguments},
+        },
+        tmp_path,
+    )["result"]
+
+
+def test_migrate_plan_tool_is_read_only_and_matches_cli(tmp_path, monkeypatch, capsys):
+    from llm_preflight import cli
+
+    _migrate_rows(monkeypatch)
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 5))
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "name": "bench",
+                "prompt": "hi",
+                "models": [{"provider": "openai", "model": "old"}],
+            }
+        )
+    )
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "migrate", str(config), "--json"]
+    )
+    cli.main()
+    cli_report = json.loads(capsys.readouterr().out)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("migrate_plan must not run, load env or open a socket")
+
+    monkeypatch.setattr(mcp, "run_benchmark", refuse)
+    monkeypatch.setattr(mcp, "load_env_file", refuse)
+    monkeypatch.setattr("socket.socket.connect", refuse)
+    result = _migrate_call(tmp_path, {"config": "benchmark.json"})
+
+    assert result["isError"] is False
+    assert result["structuredContent"] == cli_report
+    report = result["structuredContent"]
+    assert report["smoke"] is None
+    assert report["approval"] == {"state": "missing"}
+    assert report["paid_requests_made"] == 0
+    assert report["candidate_config"]["path"] is None
+    assert report["candidate_config"]["config"]["models"][0]["model"] == "new"
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
+def test_migrate_plan_redacts_secret_like_values_in_the_candidate(
+    tmp_path, monkeypatch
+):
+    _migrate_rows(monkeypatch)
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "name": "bench",
+                "prompt": "hi",
+                "api_key": "sk-abcdefghijklmnopqrstuvwxyz123456",
+                "models": [{"provider": "openai", "model": "old"}],
+            }
+        )
+    )
+    result = _migrate_call(tmp_path, {"config": "benchmark.json"})
+
+    assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in json.dumps(result)
+
+
+def test_migrate_plan_rejects_discovery_and_bad_arguments(tmp_path, monkeypatch):
+    _migrate_rows(monkeypatch)
+    (tmp_path / "discovery.json").write_text(
+        json.dumps(
+            {
+                "name": "d",
+                "prompt": "hi",
+                "discovery": {"provider": "openai"},
+                "models": [{"provider": "openai", "model": "old"}],
+            }
+        )
+    )
+    result = _migrate_call(tmp_path, {"config": "discovery.json"})
+    assert result["isError"] is True
+    assert "discovery" in result["structuredContent"]["error"]
+    for arguments in ({}, {"config": "x.json", "output": "y.json"}):
+        response = mcp._response(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "migrate_plan", "arguments": arguments},
+            },
+            tmp_path,
+        )
+        assert response["error"]["code"] == -32602
+
+
+def test_migrate_plan_declares_a_read_only_closed_world_schema(tmp_path):
+    listed = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, tmp_path
+    )
+    tool = {t["name"]: t for t in listed["result"]["tools"]}["migrate_plan"]
+
+    assert tool["annotations"] == {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "openWorldHint": False,
+    }
+    assert tool["inputSchema"] == {
+        "type": "object",
+        "properties": {"config": {"type": "string", "minLength": 1}},
+        "required": ["config"],
+        "additionalProperties": False,
+    }

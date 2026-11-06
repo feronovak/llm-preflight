@@ -229,8 +229,9 @@ Configure the installed stdio command in your MCP client:
 }
 ```
 
-The seven tools audit literal model IDs, validate a config, preview a plan, run
-a preflight, compare saved baselines, verify a record and gate CI evidence.
+The eight tools audit literal model IDs, validate a config, preview a plan, run
+a preflight, compare saved baselines, verify a record, gate CI evidence and plan
+a retired-model migration.
 For an existing contract, begin with `validate_config` and `dry_run_plan`.
 Agents must read the structured decision and report missing evidence.
 See the [MCP guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md)

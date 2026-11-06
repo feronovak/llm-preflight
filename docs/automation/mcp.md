@@ -2,8 +2,6 @@
 
 **Last reviewed:** 2026-10-19 · **As of:** v2.22.1
 
-The `migrate` command has no MCP tool yet, so an agent connected here cannot run it.
-
 Connect a coding agent to an existing project contract, validate it without
 provider access, then review a bounded plan. The local stdio server exposes
 structured results without granting arbitrary shell execution. A live run
@@ -224,7 +222,7 @@ explicit, project-local setup decision.
 On the standard protocol path, `tools/list` also declares a client-visible
 safety hint for every tool and a JSON output schema for its structured result.
 `audit_source`, `validate_config`, `dry_run_plan`, `diff_baseline`,
-`verify` and `gate` are read-only and closed to the external world;
+`verify`, `gate` and `migrate_plan` are read-only and closed to the external world;
 `audit_source`, `verify` and `gate` are also marked idempotent. `run_preflight` is marked as external-world capable,
 because a confirmed live configuration can contact a provider.
 
@@ -311,7 +309,7 @@ remains a user-controlled workspace decision.
 
 ## Available tools
 
-The server exposes seven tools.
+The server exposes eight tools.
 
 | Tool | What it does | Provider access |
 |---|---|---|
@@ -322,6 +320,7 @@ The server exposes seven tools.
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 | `verify` | Reports a record's integrity and freshness separately and returns the CLI `verify --json` object, with its first text line. | Never contacts a provider or loads credentials. |
 | `gate` | Decides whether the workspace has a fresh passing CI record for its contract under the given selection and returns the CLI `gate --json` object, with its first text line. A gate `pass` is not approval. | Never contacts a provider or loads credentials. |
+| `migrate_plan` | Takes `config` and returns the CLI `migrate --json` report: the provider-named replacement for each retired or retiring model, an inline redacted `candidate_config` (`path: null`), `smoke: null` and `approval.state: missing`, with the decision as the first text line. Writes no file and runs no smoke. A config with `discovery` is rejected. Follow it with `validate_config`, `dry_run_plan` and, after explicit approval, `run_preflight` with `confirm_paid_run`. | Never contacts a provider or loads credentials. |
 
 ## Discover the safe workflow
 

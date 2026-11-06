@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from . import __version__
+from . import __version__, migrate
 from .attestation import (
     DEFAULT_MAX_AGE_DAYS,
     gate,
@@ -148,6 +148,7 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         "audit_source": {"path"},
         "validate_config": {"config"},
         "dry_run_plan": {"config"},
+        "migrate_plan": {"config"},
         "run_preflight": {"config", "env_file", "confirm_paid_run"},
         "diff_baseline": {"baseline", "current"},
         "verify": {"record", "max_age_days"},
@@ -163,6 +164,7 @@ def _arguments(name: str, arguments: Any) -> dict[str, Any]:
         "audit_source": set(),
         "validate_config": {"config"},
         "dry_run_plan": {"config"},
+        "migrate_plan": {"config"},
         "run_preflight": {"config"},
         "diff_baseline": {"baseline", "current"},
         "verify": {"record"},
@@ -407,6 +409,35 @@ def _tools() -> list[dict[str, Any]]:
         },
         ["ok", "name", "models"],
         "Validated local configuration summary.",
+    )
+    error_or_migrate = _output_schema(
+        {
+            "schema_version": {"type": "integer", "minimum": 1},
+            "kind": {"const": "migrate"},
+            "decision": {"type": "string"},
+            "models": {"type": "array", "items": {"type": "object"}},
+            "candidate_config": {"type": ["object", "null"]},
+            "plan": {"type": "null"},
+            "approval": {"type": "object"},
+            "smoke": {"type": "null"},
+            "paid_requests_made": {"const": 0},
+            "warnings": {"type": "array", "items": {"type": "string"}},
+            "next_steps": {"type": "array", "items": {"type": "string"}},
+        },
+        [
+            "schema_version",
+            "kind",
+            "decision",
+            "models",
+            "candidate_config",
+            "plan",
+            "approval",
+            "smoke",
+            "paid_requests_made",
+            "warnings",
+            "next_steps",
+        ],
+        "Retired-model migration report with an inline redacted candidate config.",
     )
     error_or_dry_run = _output_schema(
         {
@@ -845,6 +876,23 @@ def _tools() -> list[dict[str, Any]]:
             "outputSchema": error_or_gate,
             "annotations": {**readonly_annotations, "idempotentHint": True},
         },
+        {
+            "name": "migrate_plan",
+            "description": (
+                "Report which provider-named replacement applies to each retired "
+                "or retiring model in a config, with the candidate config inline "
+                "and redacted. Writes no file, runs no smoke and makes no "
+                "provider request; approval is always missing."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {"config": path_schema},
+                "required": ["config"],
+                "additionalProperties": False,
+            },
+            "outputSchema": error_or_migrate,
+            "annotations": readonly_annotations,
+        },
     ]
 
 
@@ -891,6 +939,15 @@ def _call(
         config = _readonly_config(_path(arguments["config"], workspace))
         plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
         return _tool_result({"ok": True, **plan}, standard=standard)
+    if name == "migrate_plan":
+        config_path = _path(arguments["config"], workspace)
+        _readonly_config(config_path)
+        report = migrate.build_report(config_path, today_utc())
+        return _tool_result(
+            report,
+            standard=standard,
+            summary=migrate.format_report(report).splitlines()[0],
+        )
     if name == "diff_baseline":
         baseline = json.loads(_path(arguments["baseline"], workspace).read_text())
         current = json.loads(_path(arguments["current"], workspace).read_text())

@@ -1627,7 +1627,7 @@ def test_adoption_step_only_after_a_pass(
     assert "only the smoke result files were written" in text.out
 
 
-def _real_samples(monkeypatch, answers, key_set=True):
+def _real_samples(monkeypatch, answers, key_set=True, body=b"no"):
     """Samples from the real client with the network answering `answers`."""
     import io
     import urllib.error
@@ -1638,7 +1638,7 @@ def _real_samples(monkeypatch, answers, key_set=True):
 
     def refuse(request, timeout=None):
         code = next(codes)
-        raise urllib.error.HTTPError(request.full_url, code, "x", {}, io.BytesIO(b"no"))
+        raise urllib.error.HTTPError(request.full_url, code, "x", {}, io.BytesIO(body))
 
     monkeypatch.setattr(client, "open_public_url", refuse)
     monkeypatch.setattr(client, "require_http_url", lambda url, **_: None)
@@ -1659,10 +1659,25 @@ def _real_samples(monkeypatch, answers, key_set=True):
 
 @pytest.mark.parametrize(
     "answers, key_set, sent",
-    [([401], True, 1), ([403], True, 1), ([429, 429, 401], True, 3), ([], False, 0)],
+    [
+        ([401], True, 1),
+        ([403], True, 1),
+        ([429, 429, 401], True, 3),
+        ([], False, 0),
+        ([500, 500, 500], True, 3),
+    ],
 )
 def test_paid_requests_from_the_real_client(monkeypatch, answers, key_set, sent):
     samples = _real_samples(monkeypatch, answers, key_set)
+    assert sum(migrate._attempts_sent(sample) for sample in samples) == sent
+
+
+@pytest.mark.parametrize("answers, sent", [([401], 1), ([500], 1)])
+def test_provider_body_naming_an_env_variable_still_counts_as_sent(
+    monkeypatch, answers, sent
+):
+    body = b"environment variable 'OPENAI_API_KEY' is not set"
+    samples = _real_samples(monkeypatch, answers, True, body)
     assert sum(migrate._attempts_sent(sample) for sample in samples) == sent
 
 
@@ -1677,3 +1692,123 @@ def test_wrong_typed_setting_inside_the_run_is_a_config_error(
     monkeypatch.setattr(cli, "run_benchmark", broken)
     code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
     assert code == 2 and "Traceback" not in out.err
+
+
+def test_next_pointer_does_not_reuse_the_source_name(
+    rows, tmp_path, monkeypatch, capsys
+):
+    path = tmp_path / "migrate.json"
+    path.write_text(
+        json.dumps({"name": "b", "prompt": "hi", "models": [_m("old")]}),
+        encoding="utf-8",
+    )
+    _, out = _main(monkeypatch, capsys, [str(path), "--doctor"])
+    line = next(ln for ln in out.out.splitlines() if "llm-preflight migrate" in ln)
+    command = shlex.split(line.split(": ", 2)[2])
+    assert command[command.index("--output") + 1] != str(path)
+    code, _ = _main(monkeypatch, capsys, ["migrate", *command[2:]])
+    assert code == 0
+
+
+def test_smoke_loads_the_env_file_once_and_honours_env_flags(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert spend["env"] == 1 and spend["benchmark"] == 1
+    _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--no-env-file")
+    assert spend["env"] == 1 and spend["benchmark"] == 2
+    other = tmp_path / "other.env"
+    loaded = []
+    monkeypatch.setattr(cli, "load_env_file", lambda p: loaded.append(p) or set())
+    _smoke(
+        monkeypatch, capsys, tmp_path, path, target, receipt, "--env-file", str(other)
+    )
+    assert loaded == [other]
+
+
+def test_flags_for_the_run_alone_are_usage_errors_without_it(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    for flag in (["--no-env-file"], ["--output-dir", str(tmp_path / "r")]):
+        code, _ = _migrate(monkeypatch, capsys, path, *flag)
+        assert code == 2
+
+
+def _unauthorised_network(monkeypatch):
+    """The real client against a network that answers every request 401."""
+    import io
+    import urllib.error
+
+    from llm_preflight import client
+
+    sent = []
+
+    def refuse(request, timeout=None):
+        sent.append(request.full_url)
+        raise urllib.error.HTTPError(request.full_url, 401, "x", {}, io.BytesIO(b"no"))
+
+    monkeypatch.setattr(client, "open_public_url", refuse)
+    monkeypatch.setattr(client, "require_http_url", lambda url, **_: None)
+    return sent
+
+
+def _real_run(priced, tmp_path, monkeypatch, capsys, *flags, env_text=None):
+    monkeypatch.setenv("OPENAI_API_KEY", "placeholder")
+    monkeypatch.delenv("OPENAI_API_KEY")
+    sent = _unauthorised_network(monkeypatch)
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record({}, monkeypatch, capsys, target, receipt)
+    if env_text is not None:
+        (tmp_path / ".env.production").write_text(env_text, encoding="utf-8")
+    out_dir = tmp_path / "res"
+    _, out = _migrate(
+        monkeypatch,
+        capsys,
+        path,
+        "--output",
+        str(target),
+        "--run",
+        "--verify-approval-receipt",
+        str(receipt),
+        "--output-dir",
+        str(out_dir),
+        "--json",
+        *flags,
+    )
+    return json.loads(out.out), sent, out_dir
+
+
+def test_real_run_reads_the_key_from_the_config_env_file(
+    priced, tmp_path, monkeypatch, capsys
+):
+    report, sent, out_dir = _real_run(
+        priced, tmp_path, monkeypatch, capsys, env_text="OPENAI_API_KEY=k\n"
+    )
+    assert len(sent) == 1 and report["paid_requests_made"] == 1
+    assert report["decision"] == "fail"
+    assert any(out_dir.glob("*.json"))
+
+
+def test_real_run_without_env_file_sends_nothing_when_the_key_is_unset(
+    priced, tmp_path, monkeypatch, capsys
+):
+    report, sent, _ = _real_run(
+        priced,
+        tmp_path,
+        monkeypatch,
+        capsys,
+        "--no-env-file",
+        env_text="OPENAI_API_KEY=k\n",
+    )
+    assert sent == [] and report["paid_requests_made"] == 0
+
+
+def test_real_run_uses_an_explicit_env_file(priced, tmp_path, monkeypatch, capsys):
+    other = tmp_path / "other.env"
+    other.write_text("OPENAI_API_KEY=k\n", encoding="utf-8")
+    report, sent, _ = _real_run(
+        priced, tmp_path, monkeypatch, capsys, "--env-file", str(other)
+    )
+    assert len(sent) == 1 and report["paid_requests_made"] == 1

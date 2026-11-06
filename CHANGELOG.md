@@ -57,6 +57,12 @@ All notable changes to this project are documented here.
   bundled price is reported as an unbounded plan.
   Only a public `base_url` is ever written or printed; a row with a custom
   `base_url` or `headers` is left for you to add by hand.
+- MCP tool `migrate_plan` takes a config path and returns the `migrate --json`
+  report with the redacted candidate config inline. It is read-only: it
+  writes no file, runs no smoke, makes no provider request and always reports
+  approval as missing; a config with `discovery` is rejected. Follow it with
+  `validate_config`, `dry_run_plan` and `run_preflight` with
+  `confirm_paid_run`.
 
 ## 2.23.1 - 2026-11-06
 

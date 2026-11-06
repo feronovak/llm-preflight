@@ -429,9 +429,9 @@ def _attempts_sent(sample: dict[str, Any]) -> int:
 
     A rejected key (HTTP 401 or 403) shares the `credentials` category but was sent.
     """
-    if sample.get(
-        "failure_category"
-    ) == "credentials" and "environment variable" in str(sample.get("error")):
+    if sample.get("failure_category") == "credentials" and str(
+        sample.get("error")
+    ).startswith("environment variable "):
         return 0
     return int(sample.get("attempts", 1))
 

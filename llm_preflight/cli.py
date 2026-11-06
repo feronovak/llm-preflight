@@ -860,7 +860,12 @@ def _migrate_pointer(retirements: dict[str, Any], config_path: Path | None) -> s
     """A text-only pointer to `migrate` where the report names a replacement to preview."""
     if config_path is None or not retirements.get("next_commands"):
         return ""
-    target = shlex.quote(str(config_path.with_name("migrate.json")))
+    name = (
+        "migrate.json"
+        if config_path.name != "migrate.json"
+        else "migrate-candidate.json"
+    )
+    target = shlex.quote(str(config_path.with_name(name)))
     return (
         "Next: preview the provider-named replacements without a provider call: "
         f"{_display_command()} migrate {shlex.quote(str(config_path))} "
@@ -2297,7 +2302,10 @@ def _migrate_smoke(path: Path, args: argparse.Namespace) -> dict[str, Any]:
         with benchmark_run_lock(args.output_dir):
             result = redact_result(run_benchmark(config, selection=selection))
     except (TypeError, AttributeError):
-        raise ValueError("candidate config has a value of the wrong type") from None
+        raise ValueError(
+            "candidate config has a value of the wrong type; a provider request "
+            "may already have been sent"
+        ) from None
     return {"result": result, "path": str(save_result(result, args.output_dir))}
 
 

@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import shlex
+import tempfile
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -177,24 +179,51 @@ def _entry(
     }
 
 
+def _key_label(row: dict[str, Any]) -> str:
+    env = row.get("api_key_env")
+    return _printable(str(env)) if env else "the provider default"
+
+
+def _row_for(
+    model: dict[str, Any], entry: dict[str, Any], models: list[dict[str, Any]]
+) -> tuple[tuple[str, str, str], dict[str, Any]] | None:
+    """The candidate row for one entry: a new row, or the user's own, verbatim."""
+    replacement = entry["replacement"]
+    if entry["outcome"] == "candidate":
+        key = (_provider(model), replacement, _route(model))
+        return key, {"model": replacement} | {
+            k: model[k] for k in _COPIED if k in model
+        }
+    if entry["outcome"] == "replacement_in_config":
+        want = (_provider(model), replacement, _route(model))
+        own = next(m for m in models if _listed_key(m) == want)
+        return want, copy.deepcopy(own)
+    return None
+
+
 def _unique_rows(
     models: list[dict[str, Any]], entries: list[dict[str, Any]]
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """One replacement row per provider and model; the first row's key wins."""
-    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    """One row per replacement; the first row's key wins."""
+    rows: dict[tuple[str, str, str], dict[str, Any]] = {}
     warnings: list[str] = []
     for model, entry in zip(models, entries):
-        if entry["outcome"] != "candidate":
+        found = _row_for(model, entry, models)
+        if found is None:
             continue
-        replacement = entry["replacement"]
-        key = (_provider(model), replacement)
-        row = {"model": replacement} | {k: model[k] for k in _COPIED if k in model}
+        key, row = found
+        if row.get("headers"):
+            warnings.append(
+                f"{_printable(row['model'])} sets headers, which are not copied; "
+                "add it to a candidate config by hand"
+            )
+            continue
         kept = rows.setdefault(key, row)
         if kept.get("api_key_env") != row.get("api_key_env"):
             warnings.append(
-                f"{replacement} is named for several rows with different "
-                f"api_key_env; kept {_printable(str(kept.get('api_key_env')))}, "
-                f"dropped {_printable(str(row.get('api_key_env')))}"
+                f"{_printable(row['model'])} is named for several rows with "
+                f"different api_key_env; kept {_key_label(kept)}, "
+                f"dropped {_key_label(row)}"
             )
     return list(rows.values()), warnings
 
@@ -202,6 +231,8 @@ def _unique_rows(
 def _candidate_config(
     config: dict[str, Any], rows: list[dict[str, Any]]
 ) -> dict[str, Any]:
+    if not isinstance(config.get("name", ""), str):
+        raise ValueError("'name' must be a string")  # noqa: TRY004
     candidate = {k: copy.deepcopy(v) for k, v in config.items() if k not in _DROPPED}
     candidate["models"] = rows
     candidate = apply_smoke_mode(candidate)
@@ -221,9 +252,34 @@ def check_output(config_path: Path, output: Path, replace: bool) -> None:
         raise ValueError(f"{output} exists; add --replace to overwrite it")
 
 
-def _write_candidate(output: Path, candidate: dict[str, Any], replace: bool) -> None:
-    with output.open("w" if replace else "x", encoding="utf-8") as handle:
-        handle.write(json.dumps(candidate, indent=2) + "\n")
+def _publish(temp: Path, output: Path, replace: bool) -> None:
+    if replace:
+        os.replace(temp, output)
+        return
+    os.link(temp, output)
+    temp.unlink()
+
+
+def _write_checked(
+    output: Path,
+    candidate: dict[str, Any],
+    replace: bool,
+    plan_for: Callable[[Path], dict[str, Any]] | None,
+) -> dict[str, Any] | None:
+    """Write beside `output`, plan from that file, and only then publish it."""
+    handle, name = tempfile.mkstemp(
+        dir=output.parent, prefix=".migrate-", suffix=".json"
+    )
+    temp = Path(name)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(candidate, indent=2) + "\n")
+        plan = plan_for(temp) if plan_for else None
+        _publish(temp, output, replace)
+    except BaseException:
+        temp.unlink(missing_ok=True)
+        raise
+    return plan
 
 
 def _quoted(path: Path) -> str:
@@ -291,14 +347,13 @@ def build_report(
                 "add --output PATH to write the candidate config and see its plan"
             )
         else:
-            _write_candidate(output, safe, replace)
+            plan = _write_checked(output, safe, replace, plan_for)
             candidate_config["path"] = str(output)
-            plan = plan_for(output) if plan_for else None
             record, run = _commands(path, output)
             approval |= {"record_command": record, "run_command": run}
-            next_steps += [f"record approval: {record}", f"then run the smoke: {run}"]
             if plan and plan["maximum_estimated_cost_usd"] is None:
                 next_steps.append(_UNBOUNDED_STEP)
+            next_steps += [f"record approval: {record}", f"then run the smoke: {run}"]
     report = {
         "schema_version": SCHEMA_VERSION,
         "kind": "migrate",
@@ -341,10 +396,11 @@ def _written_line(report: dict[str, Any]) -> str:
 
 def _plan_line(plan: dict[str, Any]) -> str:
     maximum = plan["maximum_estimated_cost_usd"]
-    bound = "unbounded (a model has no price)" if maximum is None else f"${maximum}"
+    estimated = plan["estimated_cost_usd"]
     return (
-        f"Plan: {plan['requests']} requests, estimated ${plan['estimated_cost_usd']}, "
-        f"maximum {bound}"
+        f"Plan: {plan['requests']} requests, estimated "
+        f"{'unknown' if estimated is None else f'${estimated}'}, maximum "
+        f"{'unbounded (a model has no price)' if maximum is None else f'${maximum}'}"
     )
 
 
@@ -358,6 +414,8 @@ def _candidate_lines(report: dict[str, Any]) -> list[str]:
     lines = [f"Candidate config: {_printable(candidate['path'])}"]
     if report["plan"]:
         lines.append(_plan_line(report["plan"]))
+        if report["plan"]["maximum_estimated_cost_usd"] is None:
+            lines.append(f"Next: {_UNBOUNDED_STEP}")
     lines += [
         f"Approval: {approval['state']} — no receipt is recorded for this plan",
         f"  Record approval: {approval['record_command']}",

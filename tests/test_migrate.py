@@ -783,3 +783,89 @@ def test_replace_without_output_is_usage_error(priced, tmp_path, monkeypatch, ca
     path = _write(tmp_path, [_m("oldp")])
     code, _ = _migrate(monkeypatch, capsys, path, "--replace")
     assert code == 2
+
+
+def _out(monkeypatch, capsys, path, target, *flags):
+    return _migrate(monkeypatch, capsys, path, "--output", str(target), *flags)
+
+
+def test_second_replacement_already_in_config_reaches_plan(
+    priced, tmp_path, monkeypatch, capsys
+):
+    priced[("openai", "oldq")] = _row(
+        "retired", replacement="gpt-5.6-terra", date_="2026-10-01"
+    )
+    path = _write(
+        tmp_path,
+        [_m("oldp"), _m("oldq"), _m("gpt-5.6-terra", api_key_env="OWN", extra_x=1)],
+    )
+    target = tmp_path / "migrate.json"
+    _, out = _out(monkeypatch, capsys, path, target, "--json")
+    written = json.loads(target.read_text(encoding="utf-8"))["models"]
+    assert [m["model"] for m in written] == ["gpt-5.6-luna", "gpt-5.6-terra"]
+    assert written[1] == _m("gpt-5.6-terra", api_key_env="OWN", extra_x=1)
+    assert [m["model"] for m in json.loads(out.out)["plan"]["models"]] == [
+        "gpt-5.6-luna",
+        "gpt-5.6-terra",
+    ]
+
+
+def test_priced_own_row_for_unpriced_replacement_reaches_plan(
+    rows, tmp_path, monkeypatch, capsys
+):
+    own = _m("fresh", input_cost_per_million=1, output_cost_per_million=2)
+    path = _write(tmp_path, [_m("cand"), own])
+    target = tmp_path / "migrate.json"
+    code, out = _out(monkeypatch, capsys, path, target, "--json")
+    report = json.loads(out.out)
+    assert code == 0
+    assert json.loads(target.read_text(encoding="utf-8"))["models"] == [own]
+    assert report["plan"]["maximum_estimated_cost_usd"] is not None
+
+
+def test_own_row_with_headers_is_not_written(rows, tmp_path, monkeypatch, capsys):
+    own = _m("fresh", headers={"X-Team": "a"})
+    path = _write(
+        tmp_path, [_m("cand"), own, _m("cand", base_url="https://gw.example/v1")]
+    )
+    target = tmp_path / "migrate.json"
+    _, out = _out(monkeypatch, capsys, path, target, "--json")
+    assert not target.exists()
+    assert any("headers" in w for w in json.loads(out.out)["warnings"])
+
+
+def test_non_string_name_is_a_config_error(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp")], name=123)
+    for flags in ([], ["--ci"], ["--output", str(tmp_path / "o.json")]):
+        assert _migrate(monkeypatch, capsys, path, *flags)[0] == 2
+    assert not (tmp_path / "o.json").exists()
+
+
+def test_unbounded_step_and_no_none_in_text(rows, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("cand")])
+    target = tmp_path / "migrate.json"
+    _, out = _out(monkeypatch, capsys, path, target)
+    assert "None" not in out.out
+    assert migrate._UNBOUNDED_STEP in out.out
+
+
+def test_invalid_candidate_leaves_no_file_and_keeps_the_old_one(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = tmp_path / "bench.json"
+    path.write_text(json.dumps({"name": "b", "models": [_m("oldp")]}), encoding="utf-8")
+    target = tmp_path / "migrate.json"
+    code, _ = _out(monkeypatch, capsys, path, target)
+    assert code == 2 and not target.exists()
+    target.write_text("keep", encoding="utf-8")
+    code, _ = _out(monkeypatch, capsys, path, target, "--replace")
+    assert code == 2
+    assert target.read_text(encoding="utf-8") == "keep"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["bench.json", "migrate.json"]
+
+
+def test_key_warning_names_provider_default(priced, tmp_path, monkeypatch, capsys):
+    path = _write(tmp_path, [_m("oldp"), _m("oldp2", api_key_env="K_B")])
+    _, out = _out(monkeypatch, capsys, path, tmp_path / "m.json", "--json")
+    warning = json.loads(out.out)["warnings"][0]
+    assert "None" not in warning and "provider default" in warning and "K_B" in warning

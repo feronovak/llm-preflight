@@ -348,6 +348,19 @@ _PROMPTS_ONLY_STEP = (
 )
 
 
+_ADOPT = (
+    "smoke done for {replacement}; adopting it in your config and code is your "
+    "step, migrate never edits them and the source config is unchanged"
+)
+
+
+def _rewrite_command(config_path: Path, output: Path) -> str:
+    return (
+        f"llm-preflight migrate {_quoted(config_path)} --output {_quoted(output)} "
+        "--replace"
+    )
+
+
 def _approval(receipt_path: Path, plan: dict[str, Any]) -> dict[str, Any]:
     """Receipt state against the plan; an unreadable receipt is reported."""
     try:
@@ -356,7 +369,10 @@ def _approval(receipt_path: Path, plan: dict[str, Any]) -> dict[str, Any]:
         return {"state": "missing", "reason": "no receipt file at that path"}
     except (OSError, ValueError, RecursionError):
         return {"state": "invalid", "reason": "receipt file is unreadable"}
-    verdict = verify_approval_receipt(receipt, plan)
+    try:
+        verdict = verify_approval_receipt(receipt, plan)
+    except (ValueError, OverflowError):
+        return {"state": "invalid", "reason": "receipt expiry is invalid"}
     state, reason = verdict["state"], verdict["reason"]
     if state == "recorded":
         bounds = {
@@ -370,11 +386,15 @@ def _approval(receipt_path: Path, plan: dict[str, Any]) -> dict[str, Any]:
     return {"state": state, "reason": reason}
 
 
-def _on_disk_matches(output: Path, candidate: dict[str, Any]) -> bool:
+def _disk_difference(output: Path, candidate: dict[str, Any]) -> str | None:
+    """Why the file on disk is not the derived candidate; None when it is."""
+    if not output.exists():
+        return "the candidate file does not exist"
     try:
-        return bool(json.loads(output.read_text(encoding="utf-8")) == candidate)
+        same = json.loads(output.read_text(encoding="utf-8")) == candidate
     except (OSError, ValueError, RecursionError):
-        return False
+        same = False
+    return None if same else "the file on disk is not what migrate derives now"
 
 
 def _smoked_rows(
@@ -393,6 +413,13 @@ def _smoked_rows(
     return covered
 
 
+def _attempts_sent(sample: dict[str, Any]) -> int:
+    """Provider attempts one sample made; a missing key stops before any call."""
+    if sample.get("failure_category") == "credentials":
+        return 0
+    return int(sample.get("attempts", 1))
+
+
 def _smoke_summary(outcome: dict[str, Any]) -> dict[str, Any]:
     result = outcome["result"]
     decision = result["decision"]
@@ -401,7 +428,9 @@ def _smoke_summary(outcome: dict[str, Any]) -> dict[str, Any]:
         "reason": decision.get("reason"),
         "result_path": outcome["path"],
         "requests": sum(
-            model.get("summary", {}).get("requests", 0) for model in result["models"]
+            _attempts_sent(sample)
+            for model in result["models"]
+            for sample in model.get("samples", [])
         ),
     }
 
@@ -464,11 +493,9 @@ def build_report(
                     and "prompt" not in safe
                     and "profiles" not in safe
                 )
-                if reading and not _on_disk_matches(output, safe):
-                    approval = {
-                        "state": "candidate_changed",
-                        "reason": "the file on disk is not what migrate derives now",
-                    }
+                difference = _disk_difference(output, safe) if reading else None
+                if difference:
+                    approval = {"state": "candidate_changed", "reason": difference}
                 elif reading:
                     plan = plan_for(output) if plan_for else None
                 else:
@@ -477,21 +504,33 @@ def build_report(
                 record, run_command = _commands(path, output)
                 if plan and receipt is not None:
                     approval = _approval(receipt, plan)
-                approval |= {"record_command": record, "run_command": run_command}
                 if plan and plan["maximum_estimated_cost_usd"] is None:
                     next_steps.append(_UNBOUNDED_STEP)
                 if prompts_only:
                     warnings.append(_PROMPTS_ONLY_STEP)
                     next_steps.append(_PROMPTS_ONLY_STEP)
-                next_steps += [
-                    f"record approval: {record}",
-                    f"then run the smoke: {run_command}",
-                ]
+                if difference:
+                    next_steps.append(
+                        f"{difference}; rewrite it, then record a new approval: "
+                        f"{_rewrite_command(path, output)}"
+                    )
+                else:
+                    approval |= {"record_command": record, "run_command": run_command}
+                    next_steps += [
+                        f"record approval: {record}",
+                        f"then run the smoke: {run_command}",
+                    ]
                 if run and approval["state"] == "recorded" and smoke_for:
                     smoke = _smoke_summary(smoke_for(output))
                     for index in _smoked_rows(models, entries, rows):
                         decisions[index] = smoke["state"]
                         entries[index]["smoke"] = {"state": smoke["state"]}
+                        entries[index]["next_step"] = _ADOPT.format(
+                            replacement=entries[index]["replacement"]
+                        )
+                    next_steps = list(
+                        dict.fromkeys(entry["next_step"] for entry in entries)
+                    )
     report = {
         "schema_version": SCHEMA_VERSION,
         "kind": "migrate",
@@ -524,11 +563,15 @@ def _exit_line(decision: str, ci: bool, run: bool) -> str:
     return "Exit 0 — --ci also exits 0 on this decision."
 
 
-def _written_line(report: dict[str, Any]) -> str:
+def _written_line(report: dict[str, Any], reading: bool) -> str:
     if report["smoke"]:
         return (
-            "Source config unchanged; only the candidate config was written "
-            f"and {report['paid_requests_made']} provider requests were made."
+            "Source config unchanged; nothing was written and "
+            f"{report['paid_requests_made']} provider requests were made."
+        )
+    if reading:
+        return (
+            "Source config unchanged; nothing was written and no provider was called."
         )
     candidate = report["candidate_config"]
     if candidate and candidate["path"]:
@@ -570,19 +613,28 @@ def _candidate_lines(report: dict[str, Any]) -> list[str]:
             f"result {_printable(str(smoke['result_path']))}"
         )
         return lines
-    lines += [
-        f"  Record approval: {approval['record_command']}",
-        f"  Then run the smoke: {approval['run_command']}",
-    ]
+    if approval["state"] == "candidate_changed":
+        lines.extend(
+            f"Next: {step}"
+            for step in report["next_steps"]
+            if step.startswith(approval["reason"])
+        )
+    if "record_command" in approval:
+        lines += [
+            f"  Record approval: {approval['record_command']}",
+            f"  Then run the smoke: {approval['run_command']}",
+        ]
     return lines
 
 
-def format_report(report: dict[str, Any], ci: bool = False, run: bool = False) -> str:
+def format_report(
+    report: dict[str, Any], ci: bool = False, run: bool = False, reading: bool = False
+) -> str:
     """Text rendered from the report dict only."""
     lines = [
         f"Decision: {report['decision']}",
         _exit_line(report["decision"], ci, run),
-        _written_line(report),
+        _written_line(report, reading or run),
     ]
     lines.extend(f"Warning: {warning}" for warning in report["warnings"])
     for entry in report["models"]:

@@ -2264,7 +2264,10 @@ def _migrate_smoke(path: Path, args: argparse.Namespace) -> dict[str, Any]:
     config = _migrate_config(path)
     if "prompt" not in config and not selected_profiles(config, None):
         raise ValueError("select a custom prompt before running the benchmark")
-    check_budget(config)
+    try:
+        check_budget(config)
+    except (TypeError, AttributeError):
+        raise ValueError("candidate config has a value of the wrong type") from None
     if any(model.get("provider") != "mock" for model in config["models"]):
         _load_config_env_file(path, args, config)
     config["_source_config_path"] = str(path.resolve())
@@ -2352,7 +2355,12 @@ def _migrate_main(argv: list[str]) -> None:
     print(
         json.dumps(report, indent=2)
         if args.json
-        else format_migrate_report(report, ci=args.ci, run=args.run),
+        else format_migrate_report(
+            report,
+            ci=args.ci,
+            run=args.run,
+            reading=bool(args.verify_approval_receipt),
+        ),
         end="\n" if args.json else "",
     )
     code = migrate_exit_code(report["decision"], args.ci, args.run)
@@ -2787,6 +2795,9 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "migrate":
         try:
             _migrate_main(sys.argv[2:])
+        except (KeyboardInterrupt, EOFError):
+            print("Benchmark cancelled; no artifacts saved.", file=sys.stderr)
+            raise SystemExit(130) from None
         except (OSError, ValueError, RecursionError) as exc:
             print(
                 f"{_display_command()}: error: {redact_secrets(str(exc))}",

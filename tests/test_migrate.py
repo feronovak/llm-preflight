@@ -1122,13 +1122,18 @@ def _main(monkeypatch, capsys, argv):
 @pytest.fixture
 def spend(monkeypatch):
     """Count every provider call and env load; the fake smoke passes."""
-    calls = {"benchmark": 0, "env": 0, "decision": PASS}
+    calls = {
+        "benchmark": 0,
+        "env": 0,
+        "decision": PASS,
+        "samples": [{"ok": True, "attempts": 1}, {"ok": True}],
+    }
 
     def benchmark(config, **kwargs):
         calls["benchmark"] += 1
         return {
             "decision": dict(calls["decision"]),
-            "models": [{"summary": {"requests": 2}}],
+            "models": [{"samples": list(calls["samples"])}],
         }
 
     def load_env(path):
@@ -1242,6 +1247,15 @@ def _case_invalid(target, receipt):
     receipt.write_text("{not json", encoding="utf-8")
 
 
+def _case_overflow_expiry(target, receipt):
+    _edit(receipt, lambda d: d.update(expires_at="0001-01-01T00:00:00+23:59"))
+
+
+def _case_bounds(target, receipt):
+    bounds = {"possible_requests": 1, "maximum_estimated_cost_usd": 9}
+    _edit(receipt, lambda d: d.update(bounds=bounds))
+
+
 def _case_candidate_changed(target, receipt):
     _edit(target, lambda d: d.update(repetitions=3))
 
@@ -1253,6 +1267,8 @@ def _case_candidate_changed(target, receipt):
         ("expired", _case_expired),
         ("mismatch", _case_mismatch),
         ("invalid", _case_invalid),
+        ("invalid", _case_overflow_expiry),
+        ("mismatch", _case_bounds),
         ("candidate_changed", _case_candidate_changed),
     ],
 )
@@ -1472,3 +1488,110 @@ def test_next_pointer_is_text_only(rows, tmp_path, monkeypatch, capsys):
         _, out = _main(monkeypatch, capsys, [str(path), flag, "--json"])
         assert "llm-preflight migrate" not in out.out
         json.loads(out.out)
+
+
+def _approved_smoke(spend, monkeypatch, capsys, tmp_path, *flags):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    return path, target, receipt
+
+
+def test_next_steps_after_smoke_name_adoption_and_not_a_second_run(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    steps = " ".join(report["next_steps"]) + report["models"][0]["next_step"]
+    assert "record approval" not in steps and "run the smoke" not in steps
+    assert "preview it with" not in steps
+    assert "your step" in steps and "source config is unchanged" in steps
+    _, text = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert "Next: smoke done for gpt-5.6-luna" in text.out
+
+
+def test_paid_requests_count_attempts_sent_from_real_sample_shape(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    spend["samples"] = [{"ok": False, "attempts": 3, "retry_count": 2}]
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    assert json.loads(out.out)["paid_requests_made"] == 3
+    spend["samples"] = [{"ok": False, "attempts": 1, "failure_category": "credentials"}]
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    assert json.loads(out.out)["paid_requests_made"] == 0
+
+
+def test_candidate_changed_names_the_rewrite_and_not_record_or_run(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    _edit(target, lambda d: d.update(repetitions=3))
+    _, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt, "--json")
+    report = json.loads(out.out)
+    steps = " ".join(report["next_steps"])
+    assert "--replace" in steps and "record approval" not in steps
+    assert "run_command" not in report["approval"]
+    _, text = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert "nothing was written" in text.out and "--replace" in text.out
+    assert "only the candidate config was written" not in text.out
+
+
+def test_absent_candidate_file_is_named_and_not_claimed_written(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "nofile.json"
+    _, out = _migrate(
+        monkeypatch, capsys, path, "--output", str(target), "--run", "--json"
+    )
+    report = json.loads(out.out)
+    assert report["approval"]["state"] == "candidate_changed"
+    assert "does not exist" in report["approval"]["reason"]
+    assert not target.exists() and _none_spent(spend)
+    _, text = _migrate(monkeypatch, capsys, path, "--output", str(target), "--run")
+    assert "was written" not in text.out.replace("nothing was written", "")
+
+
+def test_receipt_check_text_does_not_claim_a_write(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+    _, out = _migrate(
+        monkeypatch,
+        capsys,
+        path,
+        "--output",
+        str(target),
+        "--verify-approval-receipt",
+        str(receipt),
+    )
+    assert "nothing was written" in out.out
+
+
+@pytest.mark.parametrize(
+    "key, value", [("max_requests", []), ("max_estimated_cost_usd", {})]
+)
+def test_wrong_typed_budget_setting_is_a_config_error(
+    priced, spend, tmp_path, monkeypatch, capsys, key, value
+):
+    path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
+    _record(spend, monkeypatch, capsys, target, receipt)
+    _edit(path, lambda d: d.update({key: value}))
+    _migrate(monkeypatch, capsys, path, "--output", str(target), "--replace")
+    _record(spend, monkeypatch, capsys, target, receipt, "--replace-approval-receipt")
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 2 and "Traceback" not in out.err and _none_spent(spend)
+
+
+def test_keyboard_interrupt_during_smoke_exits_130(
+    priced, spend, tmp_path, monkeypatch, capsys
+):
+    path, target, receipt = _approved_smoke(spend, monkeypatch, capsys, tmp_path)
+
+    def interrupted(config, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, "run_benchmark", interrupted)
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 130 and "Benchmark cancelled" in out.err

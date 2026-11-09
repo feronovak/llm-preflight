@@ -1627,6 +1627,35 @@ def test_benchmark_reports_partial_cost_and_unpriced_models():
     ) in report(result)
 
 
+def _unpriced_mock_result():
+    return run_benchmark(
+        {
+            "prompt": "test",
+            "models": [{"provider": "mock", "model": "unpriced"}],
+            "warmups": 1,
+            "repetitions": 1,
+        }
+    )
+
+
+def test_cost_reason_names_one_hour_writes_counted_in_a_warmup_summary():
+    result = _unpriced_mock_result()
+    result["models"][0]["warmup_summary"]["cost_coverage"][
+        "unpriced_one_hour_requests"
+    ] = 1
+
+    assert "unavailable; 1h cache writes cannot be priced at the bundled" in report(
+        result
+    )
+
+
+def test_cost_reason_ignores_one_hour_writes_that_an_owner_rate_prices():
+    result = _unpriced_mock_result()
+    result["models"][0]["samples"][0]["cache_write_1h"] = True
+
+    assert "unavailable; one or more models lack pricing" in report(result)
+
+
 def test_wholly_unpriced_run_with_no_warmups_has_unknown_cost_confidence():
     result = run_benchmark(
         {

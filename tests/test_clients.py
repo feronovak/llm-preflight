@@ -987,6 +987,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         "claude-fable-5",
         "claude-fable-5-1",
         "claude-fable-5-2",
+        "claude-mythos-5-2",
         "claude-opus-4-8",
         "claude-opus-5",
         "claude-opus-5-5",
@@ -2333,7 +2334,9 @@ def test_gemini_tool_finish_reason_is_a_failed_request(monkeypatch, reason):
     assert sample["error"] == TOOL_CALL_ERROR
 
 
-@pytest.mark.parametrize("model_id", ["claude-fable-5-1", "claude-fable-5-2"])
+@pytest.mark.parametrize(
+    "model_id", ["claude-fable-5-1", "claude-fable-5-2", "claude-mythos-5-2"]
+)
 def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch, model_id):
     model = {"provider": "anthropic", "model": model_id}
     events = _anthropic_events(_TOOL_USE, stop="tool_use")

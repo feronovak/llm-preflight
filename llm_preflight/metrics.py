@@ -4,7 +4,11 @@ import math
 from collections.abc import Iterable
 from typing import Any, cast
 
-from .pricing import sample_cost_evidence, valid_token_count
+from .pricing import (
+    sample_cost_evidence,
+    unpriced_one_hour_writes,
+    valid_token_count,
+)
 
 
 def percentile(values: Iterable[float], p: float) -> float | None:
@@ -109,6 +113,9 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
     known_sample_costs = [
         cast(float, value) for value in sample_costs if value is not None
     ]
+    one_hour_requests = sum(
+        unpriced_one_hour_writes(sample, model) for sample in samples
+    )
     unobserved_retries = sum(int(sample.get("retry_count") or 0) for sample in samples)
     cost = (
         sum(known_sample_costs)
@@ -171,6 +178,11 @@ def summarize(samples: list[dict[str, Any]], model: dict[str, Any]) -> dict[str,
             ),
             "missing_price_requests": sum(
                 missing_price for _, _, missing_price in evidence
+            ),
+            **(
+                {"unpriced_one_hour_requests": one_hour_requests}
+                if one_hour_requests
+                else {}
             ),
         },
         "failure_reasons": failure_reasons,

@@ -705,6 +705,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-04"),
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-04"),
         ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
+        ("anthropic", "claude-mythos-5-2"): (8.0, 40.0, "2026-11-09"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),

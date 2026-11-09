@@ -251,6 +251,7 @@ PRICES = [
     ("zai", "glm-5.3-flash", 0.15, 0.50, 0.03, None),
     ("zai", "glm-5.3-flashx", 0.37, 1.25, 0.075, None),
     ("anthropic", "claude-mythos-5-1", 10, 50, 0.25, 12.5),
+    ("anthropic", "claude-mythos-5-2", 8, 40, 0.20, None),
     ("moonshot", "kimi-k3.1-pro", 2, 10, 0.20, 2),
     ("moonshot", "kimi-k3.1-pro-highspeed", 4, 20, 0.20, 4),
     ("minimax", "MiniMax-M3.1-Flash", 0.15, 0.60, 0.015, None),
@@ -276,7 +277,7 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     assert priced.get("cached_input_cost_per_million") == cache_rate
     assert priced.get("cache_write_input_cost_per_million") == write_rate
     as_of = priced["pricing_metadata"]["as_of"]
-    assert as_of == "2026-11-04"
+    assert as_of == ("2026-11-09" if model.endswith("-5-2") else "2026-11-04")
     assert priced["pricing_metadata"]["source_url"].startswith("https://")
     sample = {
         "input_tokens": 1000,
@@ -455,6 +456,9 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("openai", "gpt-6.1-terra", {"prompt_cache_retention": "12h"}),
         ("anthropic", "claude-mythos-5-1", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-1", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-mythos-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-mythos-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-mythos-5-2", {"tool_choice": {"type": "any"}}),
         (
             "anthropic",
             "claude-fable-5-1",
@@ -471,6 +475,9 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
         ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
         ("anthropic", "claude-fable-5-2", {"top_k": 5}),
+        ("anthropic", "claude-mythos-5-2", {"temperature": 0.5}),
+        ("anthropic", "claude-mythos-5-2", {"top_p": 0.9}),
+        ("anthropic", "claude-mythos-5-2", {"top_k": 5}),
     ],
 )
 def test_unsupported_native_billing_and_reasoning_settings_are_refused_by_plan_and_transport(
@@ -619,10 +626,14 @@ def test_deepseek_flash_alias_image_fixture_keeps_observed_identity_and_top_leve
 
 
 @pytest.mark.parametrize(
+    ("model_id", "expected_cost"),
+    [("claude-mythos-5-1", 0.00345), ("claude-mythos-5-2", None)],
+)
+@pytest.mark.parametrize(
     "failure", [None, "event-error", "truncated", "limit", "http403"]
 )
 def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidence(
-    monkeypatch, failure
+    monkeypatch, failure, model_id, expected_cost
 ):
     from llm_preflight.pricing import apply_public_pricing
 
@@ -631,7 +642,7 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         {
             "type": "message_start",
             "message": {
-                "model": "claude-mythos-5-1",
+                "model": model_id,
                 "usage": {
                     "input_tokens": 100,
                     "cache_read_input_tokens": 800,
@@ -681,9 +692,7 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         return Stream(events[:-1] if failure == "truncated" else events)
 
     monkeypatch.setattr("llm_preflight.client.open_public_url", transport)
-    model = apply_public_pricing(
-        {"provider": "anthropic", "model": "claude-mythos-5-1"}
-    )
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
     sample = create_client(model, 10).run("hi", {"retry": {"max_attempts": 1}})
     if failure:
         assert sample["ok"] is False
@@ -691,11 +700,118 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
     else:
         assert sample["ok"] is True
         assert sample["response"] == "billing"
-        assert sample["observed_model"] == "claude-mythos-5-1"
+        assert sample["observed_model"] == model_id
         assert sample["input_tokens"] == 1000
         assert sample["cached_input_tokens"] == 800
         assert sample["cache_write_input_tokens"] == 100
-        assert estimate_sample_cost(sample, model) == pytest.approx(0.00345)
+        assert estimate_sample_cost(sample, model) == (
+            pytest.approx(expected_cost) if expected_cost is not None else None
+        )
+
+
+@pytest.mark.parametrize("model_id", ["claude-mythos-5-1"])
+def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
+    monkeypatch, model_id
+):
+    from llm_preflight.pricing import apply_public_pricing
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fixture-key")
+    events = [
+        {
+            "type": "message_start",
+            "message": {
+                "model": model_id,
+                "usage": {
+                    "input_tokens": 0,
+                    "cache_creation_input_tokens": 1000,
+                    "cache_creation": {
+                        "ephemeral_5m_input_tokens": 0,
+                        "ephemeral_1h_input_tokens": 1000,
+                    },
+                },
+            },
+        },
+        {
+            "type": "content_block_delta",
+            "delta": {"type": "text_delta", "text": "ok"},
+        },
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": "end_turn"},
+            "usage": {
+                "input_tokens": 0,
+                "cache_creation_input_tokens": 1000,
+                "cache_read_input_tokens": 0,
+                "output_tokens": 10,
+            },
+        },
+        {"type": "message_stop"},
+    ]
+    monkeypatch.setattr(
+        "llm_preflight.client.open_public_url", lambda *a, **k: Stream(events)
+    )
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+    sample = create_client(model, 10).run("hi", {"retry": {"max_attempts": 1}})
+    assert sample["cache_write_input_tokens"] == 1000
+    assert estimate_sample_cost(sample, model) is None
+    owner = {**model, "pricing_metadata": {"source": "user override"}}
+    owner["cache_write_input_cost_per_million"] = 16
+    assert estimate_sample_cost(sample, owner) == pytest.approx(
+        (1000 * 16 + 10 * model["output_cost_per_million"]) / 1e6
+    )
+
+
+def test_owner_rates_price_one_hour_writes_on_a_row_with_a_bundled_write_rate():
+    from llm_preflight.pricing import resolve_pricing
+
+    sample = {
+        "input_tokens": 1000,
+        "output_tokens": 0,
+        "cache_write_input_tokens": 1000,
+        "cache_write_1h": True,
+    }
+    base = {"provider": "anthropic", "model": "claude-mythos-5-1"}
+    full = {
+        **base,
+        "input_cost_per_million": 10,
+        "output_cost_per_million": 50,
+        "cache_write_input_cost_per_million": 20,
+    }
+    owner = resolve_pricing([full])["models"][0]
+    assert estimate_sample_cost(sample, owner) == pytest.approx(0.02)
+    only_write = resolve_pricing([{**base, "cache_write_input_cost_per_million": 20}])[
+        "models"
+    ][0]
+    assert estimate_sample_cost(sample, only_write) is None
+
+
+def test_owner_write_rate_prices_one_hour_writes_on_a_row_without_a_bundled_rate():
+    from llm_preflight.pricing import resolve_pricing
+
+    model = resolve_pricing(
+        [
+            {
+                "provider": "anthropic",
+                "model": "claude-sonnet-5-5",
+                "cache_write_input_cost_per_million": 4,
+            }
+        ]
+    )["models"][0]
+    sample = {
+        "input_tokens": 1000,
+        "output_tokens": 0,
+        "cache_write_input_tokens": 1000,
+        "cache_write_1h": True,
+    }
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.004)
+
+
+@pytest.mark.parametrize("speed", ["standard", None])
+def test_standard_speed_is_accepted_for_mythos_5_2(speed):
+    settings = {} if speed is None else {"speed": speed}
+    options = {"max_output_tokens": 16, "provider_options": {"anthropic": settings}}
+    model = {"provider": "anthropic", "model": "claude-mythos-5-2"}
+    assert create_client(model, 10).body("hi", options)["model"] == model["model"]
 
 
 @pytest.mark.parametrize("model", ["glm-5.3-flash", "glm-5.3-flashx"])

@@ -50,6 +50,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-04"),
     ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-04"),
     ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
+    ("anthropic", "claude-mythos-5-2"): (8.0, 40.0, "2026-11-09"),
     ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
     ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
     ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),
@@ -403,6 +404,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     ("anthropic", "claude-fable-5-2"): {
         "cached_input_cost_per_million": 0.2,
     },
+    ("anthropic", "claude-mythos-5-2"): {
+        "cached_input_cost_per_million": 0.2,
+    },
     ("anthropic", "claude-opus-5-5"): {
         "cached_input_cost_per_million": 0.2,
     },
@@ -531,6 +535,18 @@ def valid_token_count(value: Any) -> TypeGuard[int | float]:
     )
 
 
+def unpriced_one_hour_writes(sample: dict[str, Any], model: dict[str, Any]) -> bool:
+    """True when 1h writes would be billed at the bundled 5-minute write rate."""
+    bundled = PUBLIC_PRICING_DETAILS.get(
+        (str(model.get("provider")), str(model.get("model")))
+    )
+    return (
+        sample.get("cache_write_1h") is True
+        and "cache_write_input_cost_per_million" in (bundled or {})
+        and (model.get("pricing_metadata") or {}).get("source") == "official snapshot"
+    )
+
+
 def sample_cost_evidence(
     sample: dict[str, Any], model: dict[str, Any]
 ) -> tuple[float | None, bool, bool]:
@@ -564,7 +580,8 @@ def sample_cost_evidence(
         required_prices.append(cached_price)
     if written_tokens and valid_token_count(written_tokens):
         required_prices.append(write_price)
-    missing_price = any(
+    # The bundled write rate is the 5-minute one; an owner rate is trusted.
+    missing_price = unpriced_one_hour_writes(sample, model) or any(
         not isinstance(value, (int, float))
         or isinstance(value, bool)
         or not math.isfinite(value)

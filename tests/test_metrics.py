@@ -42,6 +42,24 @@ def test_summary_excludes_failed_latency_but_preserves_unknown_request_cost():
     }
 
 
+def test_summary_counts_one_hour_writes_priced_at_the_bundled_five_minute_rate():
+    from llm_preflight.pricing import apply_public_pricing
+
+    model = apply_public_pricing(
+        {"provider": "anthropic", "model": "claude-mythos-5-1"}
+    )
+    sample = {
+        "ok": True,
+        "input_tokens": 1000,
+        "output_tokens": 0,
+        "cache_write_input_tokens": 1000,
+        "cache_write_1h": True,
+    }
+    summary = summarize([sample], model)
+    assert summary["cost_coverage"]["unpriced_one_hour_requests"] == 1
+    assert summary["estimated_cost_usd"] is None
+
+
 @pytest.mark.parametrize("missing_field", ["input_tokens", "output_tokens"])
 @pytest.mark.parametrize(
     "value", [None, -1, True, "10", 1.5, float("nan"), float("inf")]

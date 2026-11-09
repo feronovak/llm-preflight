@@ -10,9 +10,9 @@ Package version: **2.23.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. On the main branch only, the `claude-fable-5-2`
-row was reviewed on 2026-11-09 and becomes stale on 2026-12-10; the 2.23.1
-table does not list it. Explicit owner overrides retain their
-own evidence and review dates.
+and `claude-mythos-5-2` rows were reviewed on 2026-11-09 and become stale on
+2026-12-10; the 2.23.1 table does not list them. Explicit owner overrides
+retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
 on 2026-10-29, with eight cases each: 144 of 152 validated outputs, three contract
@@ -75,6 +75,7 @@ unknown until you supply your own rates.
 | `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-04 |
 | `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-04 |
 | `anthropic` | `claude-fable-5-2` | 8.00 | 40.00 | 2026-11-09 |
+| `anthropic` | `claude-mythos-5-2` | 8.00 | 40.00 | 2026-11-09 |
 | `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-04 |
@@ -244,10 +245,16 @@ the previous cache-read rate.
 
 Anthropic reports uncached input, cache reads and cache writes separately.
 The adapter now sums them into total input and retains the cache-write count.
-No Anthropic cache-write rate is bundled: five-minute and one-hour writes
-have different prices. Supply a reviewed `cache_write_input_cost_per_million`
-matching the configured cache lifetime, including any applicable input tiers,
-or reported writes make the cost estimate unavailable.
+Five-minute and one-hour writes have different prices. Only
+`claude-mythos-5-1` bundles the five-minute write rate. When a response
+reports one-hour writes (`cache_creation.ephemeral_1h_input_tokens` above
+zero), its cost estimate is unavailable. An owner override that supplies
+input, output and write rates together keeps precedence and is used as given;
+a write rate alone does not replace the bundled one. `speed` other than `standard` is refused on
+`claude-fable-5-2` and `claude-mythos-5-2`. For any other Anthropic row, supply a reviewed
+`cache_write_input_cost_per_million` matching the configured cache lifetime,
+including any applicable input tiers, or reported writes make the cost
+estimate unavailable.
 
 ### OpenAI cache-write pricing correction
 

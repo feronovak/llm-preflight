@@ -1362,6 +1362,14 @@ def _executive_summary(result: dict[str, Any]) -> list[str]:
         if result.get("cost_coverage", {}).get("missing_usage_requests", 0)
         else "unobserved retry usage prevents complete cost evidence"
         if result.get("cost_coverage", {}).get("unobserved_retry_requests", 0)
+        else "1h cache writes cannot be priced at the bundled 5-minute write rate"
+        if any(
+            item.get(key, {})
+            .get("cost_coverage", {})
+            .get("unpriced_one_hour_requests", 0)
+            for item in result.get("models", [])
+            for key in ("summary", "warmup_summary")
+        )
         else "one or more models lack pricing"
     )
     lines.append(

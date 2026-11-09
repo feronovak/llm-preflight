@@ -53,6 +53,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             "claude-fable-5-1",
             "claude-fable-5-2",
             "claude-mythos-5-1",
+            "claude-mythos-5-2",
             "claude-opus-4-8",
             "claude-opus-5",
             "claude-opus-5-5",
@@ -83,6 +84,7 @@ def validate_native_request_options(
         "claude-fable-5-1",
         "claude-fable-5-2",
         "claude-mythos-5-1",
+        "claude-mythos-5-2",
     }
     if provider == "openai" and model.get("adapter") == "openai_responses":
         supported = {
@@ -138,18 +140,21 @@ def validate_native_request_options(
         thinking = provider_options.get("thinking", {"type": "adaptive"})
         if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
             raise ValueError(
-                "Fable/Mythos 5.1 and Fable 5.2 require adaptive reasoning"
+                "Fable/Mythos 5.1 and Fable/Mythos 5.2 require adaptive reasoning"
             )
         choice = provider_options.get("tool_choice", {"type": "auto"})
         if not isinstance(choice, dict) or choice.get("type") not in {"auto", "none"}:
             raise ValueError(
-                "Fable/Mythos 5.1 and Fable 5.2 do not support forced tool choice"
+                "Fable/Mythos 5.1 and Fable/Mythos 5.2 do not support forced tool choice"
             )
-    if provider == "anthropic" and model_id == "claude-fable-5-2":
-        if provider_options.get("speed", "standard") != "standard":
-            raise ValueError("Fable 5.2 preflight supports standard speed only")
-        if {"temperature", "top_p", "top_k"} & provider_options.keys():
-            raise ValueError("Fable 5.2 does not accept sampling parameters")
+    new_generation = provider == "anthropic" and model_id in {
+        "claude-fable-5-2",
+        "claude-mythos-5-2",
+    }
+    if new_generation and provider_options.get("speed", "standard") != "standard":
+        raise ValueError("Fable/Mythos 5.2 preflight supports standard speed only")
+    if new_generation and {"temperature", "top_p", "top_k"} & provider_options.keys():
+        raise ValueError("Fable/Mythos 5.2 do not accept sampling parameters")
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"
@@ -489,6 +494,7 @@ class ProviderClient(ABC):
                         if "cache_write_input_tokens" in usage
                         else {}
                     ),
+                    **({"cache_write_1h": True} if usage.get("cache_write_1h") else {}),
                     "output_tokens": output_tokens,
                     "response_chars": sum(map(len, content)),
                     "response": "".join(content),
@@ -933,6 +939,14 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
         )
 
 
+def _one_hour_cache_writes(usage: dict[str, Any]) -> bool:
+    detail = usage.get("cache_creation")
+    if not isinstance(detail, dict):
+        return False
+    hourly = detail.get("ephemeral_1h_input_tokens")
+    return isinstance(hourly, (int, float)) and hourly > 0
+
+
 class AnthropicClient(ProviderClient):
     def __init__(self, model: dict[str, Any], timeout: float):
         super().__init__(model, timeout)
@@ -940,6 +954,7 @@ class AnthropicClient(ProviderClient):
             "claude-fable-5-1",
             "claude-fable-5-2",
             "claude-mythos-5-1",
+            "claude-mythos-5-2",
         }
 
     def terminal_event(self, event: dict[str, Any]) -> bool:
@@ -1012,6 +1027,10 @@ class AnthropicClient(ProviderClient):
             normalized["cache_write_input_tokens"] = usage[
                 "cache_creation_input_tokens"
             ]
+        if _one_hour_cache_writes(usage):
+            # A later event repeats cumulative counts without this detail, so
+            # keep the signal in its own key for the cost estimate.
+            normalized["cache_write_1h"] = True
         delta = event.get("delta") or {}
         return delta.get("text"), normalized
 

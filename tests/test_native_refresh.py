@@ -459,6 +459,9 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("anthropic", "claude-mythos-5-1", {"tool_choice": {"type": "any"}}),
         ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-mythos-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-mythos-5-1", {"speed": "fast"}),
         ("anthropic", "claude-mythos-5-2", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-2", {"tool_choice": {"type": "any"}}),
         (
@@ -693,6 +696,60 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         assert sample["cached_input_tokens"] == 800
         assert sample["cache_write_input_tokens"] == 100
         assert estimate_sample_cost(sample, model) == pytest.approx(expected_cost)
+
+
+@pytest.mark.parametrize(
+    "model_id", ["claude-fable-5-2", "claude-mythos-5-2", "claude-mythos-5-1"]
+)
+def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
+    monkeypatch, model_id
+):
+    from llm_preflight.pricing import apply_public_pricing
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fixture-key")
+    events = [
+        {
+            "type": "message_start",
+            "message": {
+                "model": model_id,
+                "usage": {
+                    "input_tokens": 0,
+                    "cache_creation_input_tokens": 1000,
+                    "cache_creation": {
+                        "ephemeral_5m_input_tokens": 0,
+                        "ephemeral_1h_input_tokens": 1000,
+                    },
+                },
+            },
+        },
+        {
+            "type": "content_block_delta",
+            "delta": {"type": "text_delta", "text": "ok"},
+        },
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": "end_turn"},
+            "usage": {"output_tokens": 10},
+        },
+        {"type": "message_stop"},
+    ]
+    monkeypatch.setattr(
+        "llm_preflight.client.open_public_url", lambda *a, **k: Stream(events)
+    )
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+    sample = create_client(model, 10).run("hi", {"retry": {"max_attempts": 1}})
+    assert estimate_sample_cost(sample, model) is None
+
+
+@pytest.mark.parametrize("speed", ["standard", None])
+def test_standard_speed_is_accepted_for_strict_claude_models(speed):
+    settings = {} if speed is None else {"speed": speed}
+    options = {"max_output_tokens": 16, "provider_options": {"anthropic": settings}}
+    for model_id in ("claude-fable-5-2", "claude-mythos-5-2"):
+        body = create_client({"provider": "anthropic", "model": model_id}, 10).body(
+            "hi", options
+        )
+        assert body["model"] == model_id
 
 
 @pytest.mark.parametrize("model", ["glm-5.3-flash", "glm-5.3-flashx"])

@@ -137,6 +137,10 @@ def validate_native_request_options(
         if provider_options.get("prompt_cache_retention", "30m") != "30m":
             raise ValueError("GPT-6 preflight supports 30m cache-write pricing only")
     if strict_claude:
+        if provider_options.get("speed", "standard") != "standard":
+            raise ValueError(
+                "Fable/Mythos preflight supports standard-speed pricing only"
+            )
         thinking = provider_options.get("thinking", {"type": "adaptive"})
         if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
             raise ValueError("Fable/Mythos 5.1 and 5.2 require adaptive reasoning")
@@ -928,6 +932,14 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
         )
 
 
+def _one_hour_cache_writes(usage: dict[str, Any]) -> bool:
+    detail = usage.get("cache_creation")
+    if not isinstance(detail, dict):
+        return False
+    hourly = detail.get("ephemeral_1h_input_tokens")
+    return isinstance(hourly, (int, float)) and hourly > 0
+
+
 class AnthropicClient(ProviderClient):
     def __init__(self, model: dict[str, Any], timeout: float):
         super().__init__(model, timeout)
@@ -1008,6 +1020,10 @@ class AnthropicClient(ProviderClient):
             normalized["cache_write_input_tokens"] = usage[
                 "cache_creation_input_tokens"
             ]
+        if _one_hour_cache_writes(usage):
+            # Only 5-minute write rates are bundled: an invalid count makes
+            # the cost unavailable instead of pricing 1h writes too low.
+            normalized["cache_write_input_tokens"] = -1
         delta = event.get("delta") or {}
         return delta.get("text"), normalized
 

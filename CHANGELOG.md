@@ -24,6 +24,9 @@ All notable changes to this project are documented here.
   apply the Fable/Mythos 5.1 request rules to them: no `temperature`, adaptive
   reasoning only, no forced tool choice and a complete stream. The two rows
   are dated 2026-11-09; the other rows keep their 2026-11-04 review date.
+- A response that reports one-hour Anthropic cache writes now makes the cost
+  estimate unavailable instead of pricing them at the five-minute rate, and the
+  Fable/Mythos 5.1 and 5.2 models refuse a `speed` other than `standard`.
 - A provider response that returns a tool call no longer passes on the
   Chat Completions, Anthropic and Gemini routes. Preflight reads text only, so
   the call was discarded and a response with text followed by a tool call, or a

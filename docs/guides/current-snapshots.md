@@ -8,8 +8,9 @@ are described in [native provider checks](native-providers.md).
 
 Package version: **2.23.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
-Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
-pricing then blocks execution. Explicit owner overrides retain their
+All but two rows were reviewed on 2026-11-04 UTC and become stale on
+2026-12-05; the `claude-fable-5-2` and `claude-mythos-5-2` rows were reviewed on
+2026-11-09 and go stale on 2026-12-10. Strict pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
@@ -243,10 +244,15 @@ the previous cache-read rate.
 
 Anthropic reports uncached input, cache reads and cache writes separately.
 The adapter now sums them into total input and retains the cache-write count.
-No Anthropic cache-write rate is bundled: five-minute and one-hour writes
-have different prices. Supply a reviewed `cache_write_input_cost_per_million`
-matching the configured cache lifetime, including any applicable input tiers,
-or reported writes make the cost estimate unavailable.
+Five-minute and one-hour writes have different prices. Only
+`claude-mythos-5-1`, `claude-fable-5-2` and `claude-mythos-5-2` bundle the
+five-minute write rate. A response that reports one-hour writes
+(`cache_creation.ephemeral_1h_input_tokens` above zero) makes the cost estimate
+unavailable on every Anthropic row, and `speed` other than `standard` is
+refused on the Fable and Mythos 5.1 and 5.2 rows. For any other Anthropic row, supply a reviewed
+`cache_write_input_cost_per_million` matching the configured cache lifetime,
+including any applicable input tiers, or reported writes make the cost
+estimate unavailable.
 
 ### OpenAI cache-write pricing correction
 

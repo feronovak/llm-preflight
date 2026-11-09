@@ -8,7 +8,8 @@ are described in [native provider checks](native-providers.md).
 
 Package version: **2.23.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
-Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
+Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05, except
+`claude-fable-5-2`, reviewed on 2026-11-09 UTC and stale on 2026-12-10. Strict
 pricing then blocks execution. Explicit owner overrides retain their
 own evidence and review dates.
 

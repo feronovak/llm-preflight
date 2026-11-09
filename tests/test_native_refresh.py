@@ -951,3 +951,19 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
             estimate_budget(
                 {"prompt": "billing", "models": [config], "request": request}
             )
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {},
+        {"thinking": {"type": "adaptive"}},
+        {"tool_choice": {"type": "auto"}},
+        {"tool_choice": {"type": "none"}},
+    ],
+)
+def test_fable_5_2_accepts_adaptive_thinking_and_non_forcing_tool_choice(settings):
+    config = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    options = {"max_output_tokens": 512, "provider_options": settings}
+    validate_native_request_options(config, options)
+    assert create_client(config, 10).body("hi", options)["model"] == "claude-fable-5-2"

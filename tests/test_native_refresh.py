@@ -729,7 +729,12 @@ def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
         {
             "type": "message_delta",
             "delta": {"stop_reason": "end_turn"},
-            "usage": {"output_tokens": 10},
+            "usage": {
+                "input_tokens": 0,
+                "cache_creation_input_tokens": 1000,
+                "cache_read_input_tokens": 0,
+                "output_tokens": 10,
+            },
         },
         {"type": "message_stop"},
     ]
@@ -738,7 +743,13 @@ def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
     )
     model = apply_public_pricing({"provider": "anthropic", "model": model_id})
     sample = create_client(model, 10).run("hi", {"retry": {"max_attempts": 1}})
+    assert sample["cache_write_input_tokens"] == 1000
     assert estimate_sample_cost(sample, model) is None
+    owner = {**model, "pricing_metadata": {"source": "user override"}}
+    owner["cache_write_input_cost_per_million"] = 16
+    assert estimate_sample_cost(sample, owner) == pytest.approx(
+        (1000 * 16 + 10 * model["output_cost_per_million"]) / 1e6
+    )
 
 
 @pytest.mark.parametrize("speed", ["standard", None])

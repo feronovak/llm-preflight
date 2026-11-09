@@ -570,7 +570,12 @@ def sample_cost_evidence(
         required_prices.append(cached_price)
     if written_tokens and valid_token_count(written_tokens):
         required_prices.append(write_price)
-    missing_price = any(
+    # The bundled write rate is the 5-minute one; an owner rate is trusted.
+    unpriced_one_hour = (
+        sample.get("cache_write_1h") is True
+        and (model.get("pricing_metadata") or {}).get("source") == "official snapshot"
+    )
+    missing_price = unpriced_one_hour or any(
         not isinstance(value, (int, float))
         or isinstance(value, bool)
         or not math.isfinite(value)

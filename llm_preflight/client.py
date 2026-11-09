@@ -488,6 +488,7 @@ class ProviderClient(ABC):
                         if "cache_write_input_tokens" in usage
                         else {}
                     ),
+                    **({"cache_write_1h": True} if usage.get("cache_write_1h") else {}),
                     "output_tokens": output_tokens,
                     "response_chars": sum(map(len, content)),
                     "response": "".join(content),
@@ -1021,9 +1022,9 @@ class AnthropicClient(ProviderClient):
                 "cache_creation_input_tokens"
             ]
         if _one_hour_cache_writes(usage):
-            # Only 5-minute write rates are bundled: an invalid count makes
-            # the cost unavailable instead of pricing 1h writes too low.
-            normalized["cache_write_input_tokens"] = -1
+            # A later event repeats cumulative counts without this detail, so
+            # keep the signal in its own key for the cost estimate.
+            normalized["cache_write_1h"] = True
         delta = event.get("delta") or {}
         return delta.get("text"), normalized
 

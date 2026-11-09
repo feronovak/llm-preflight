@@ -246,9 +246,10 @@ Anthropic reports uncached input, cache reads and cache writes separately.
 The adapter now sums them into total input and retains the cache-write count.
 Five-minute and one-hour writes have different prices. Only
 `claude-mythos-5-1`, `claude-fable-5-2` and `claude-mythos-5-2` bundle the
-five-minute write rate. A response that reports one-hour writes
-(`cache_creation.ephemeral_1h_input_tokens` above zero) makes the cost estimate
-unavailable on every Anthropic row, and `speed` other than `standard` is
+five-minute write rate. When a response reports one-hour writes
+(`cache_creation.ephemeral_1h_input_tokens` above zero), the cost estimate is
+unavailable for a bundled rate; an owner-supplied rate keeps precedence and is
+used as given. `speed` other than `standard` is
 refused on the Fable and Mythos 5.1 and 5.2 rows. For any other Anthropic row, supply a reviewed
 `cache_write_input_cost_per_million` matching the configured cache lifetime,
 including any applicable input tiers, or reported writes make the cost

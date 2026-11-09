@@ -137,18 +137,28 @@ def validate_native_request_options(
         if provider_options.get("prompt_cache_retention", "30m") != "30m":
             raise ValueError("GPT-6 preflight supports 30m cache-write pricing only")
     if strict_claude:
-        if provider_options.get("speed", "standard") != "standard":
-            raise ValueError(
-                "Fable/Mythos preflight supports standard-speed pricing only"
-            )
         thinking = provider_options.get("thinking", {"type": "adaptive"})
         if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
-            raise ValueError("Fable/Mythos 5.1 and 5.2 require adaptive reasoning")
+            raise ValueError(
+                "Fable/Mythos 5.1 and Fable 5.2 require adaptive reasoning"
+            )
         choice = provider_options.get("tool_choice", {"type": "auto"})
         if not isinstance(choice, dict) or choice.get("type") not in {"auto", "none"}:
             raise ValueError(
-                "Fable/Mythos 5.1 and 5.2 do not support forced tool choice"
+                "Fable/Mythos 5.1 and Fable 5.2 do not support forced tool choice"
             )
+    new_generation = provider == "anthropic" and model_id in {
+        "claude-fable-5-2",
+        "claude-mythos-5-2",
+    }
+    if new_generation and provider_options.get("speed", "standard") != "standard":
+        raise ValueError("Fable/Mythos 5.2 preflight supports standard speed only")
+    if (
+        provider == "anthropic"
+        and model_id == "claude-fable-5-2"
+        and {"temperature", "top_p", "top_k"} & provider_options.keys()
+    ):
+        raise ValueError("Fable 5.2 does not accept sampling parameters")
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"

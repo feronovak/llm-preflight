@@ -2343,6 +2343,14 @@ def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch, mode
     assert _run_stream(monkeypatch, model, events)["error"] == TOOL_CALL_ERROR
 
 
+def test_fable_5_2_rejects_incomplete_stop_reason(monkeypatch):
+    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    events = _anthropic_events({"type": "text", "text": "cut"}, stop="max_tokens")
+    sample = _run_stream(monkeypatch, model, events)
+    assert sample["ok"] is False
+    assert sample["error"] == "Anthropic did not finish a complete text response"
+
+
 def test_native_chat_tool_call_delta_is_a_failed_request(monkeypatch):
     model = {"provider": "mistral", "model": "m"}
     events = [_chat_delta(_TOOL_DELTA), _chat_delta({}, "stop")]

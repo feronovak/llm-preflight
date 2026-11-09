@@ -18,15 +18,15 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- Add bundled pricing and retirement rows for `claude-fable-5-2` and
-  `claude-mythos-5-2` ($8 input, $40 output, $0.20 cache read and $10 cache
-  write per million tokens, from the official Anthropic pricing page), and
-  apply the Fable/Mythos 5.1 request rules to them: no `temperature`, adaptive
-  reasoning only, no forced tool choice and a complete stream. The two rows
-  are dated 2026-11-09; the other rows keep their 2026-11-04 review date.
+- Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,
+  $40 output, $0.20 cache read per million tokens, from the official Anthropic
+  pricing page; reported cache writes leave the cost unknown) and apply the
+  Fable/Mythos 5.1 request rules to it: no `temperature`, adaptive reasoning
+  only, no forced tool choice, a complete stream and standard speed only. The
+  row is dated 2026-11-09; the other rows keep their review dates.
 - A response that reports one-hour Anthropic cache writes now makes the cost
-  estimate unavailable instead of pricing them at the five-minute rate, and the
-  Fable/Mythos 5.1 and 5.2 models refuse a `speed` other than `standard`.
+  estimate unavailable for `claude-mythos-5-1`'s bundled five-minute write rate
+  instead of pricing them at it; an owner-supplied write rate is used as given.
 - A provider response that returns a tool call no longer passes on the
   Chat Completions, Anthropic and Gemini routes. Preflight reads text only, so
   the call was discarded and a response with text followed by a tool call, or a
@@ -48,6 +48,11 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Bundled pricing and retirement data now list Anthropic `claude-fable-5-2` ($8 / $40 per
+  million tokens, cache read $0.20; reported cache writes leave the cost unknown). Requests to it omit `temperature`,
+  use adaptive thinking, reject forced tool choice, `speed` other than `standard`, and `temperature`,
+  `top_p` or `top_k` in `provider_options.anthropic`, and require a complete stream. The
+  reported snapshot review date moves to 2026-11-09.
 - `llm-preflight migrate CONFIG --output PATH --run --verify-approval-receipt R` runs one
   bounded smoke on the written candidate, only when the receipt is recorded for that
   plan, the plan has a maximum cost and the budget check passes. The report adds `smoke` and

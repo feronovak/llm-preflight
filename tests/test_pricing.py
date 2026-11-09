@@ -625,17 +625,26 @@ def test_claude_fable_5_1_official_snapshot_pricing():
     assert model["pricing_metadata"]["as_of"] == "2026-11-04"
 
 
-@pytest.mark.parametrize("model_id", ["claude-fable-5-2", "claude-mythos-5-2"])
-def test_claude_fable_and_mythos_5_2_official_snapshot_pricing(model_id):
-    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+def test_claude_fable_5_2_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-fable-5-2"})
 
     assert model["input_cost_per_million"] == 8.0
     assert model["output_cost_per_million"] == 40.0
     assert model["cached_input_cost_per_million"] == 0.2
-    assert model["cache_write_input_cost_per_million"] == 10.0
+    assert "cache_write_input_cost_per_million" not in model
     assert model["pricing_metadata"]["as_of"] == "2026-11-09"
     assert model["pricing_metadata"]["source_url"] == (
         "https://platform.claude.com/docs/en/about-claude/pricing"
+    )
+    sample = {
+        "input_tokens": 1000,
+        "cached_input_tokens": 100,
+        "output_tokens": 10,
+    }
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.00762)
+    # Five-minute and one-hour writes are priced differently: unknown, not guessed.
+    assert (
+        estimate_sample_cost({**sample, "cache_write_input_tokens": 100}, model) is None
     )
 
 

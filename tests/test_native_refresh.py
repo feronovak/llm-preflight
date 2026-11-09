@@ -251,8 +251,7 @@ PRICES = [
     ("zai", "glm-5.3-flash", 0.15, 0.50, 0.03, None),
     ("zai", "glm-5.3-flashx", 0.37, 1.25, 0.075, None),
     ("anthropic", "claude-mythos-5-1", 10, 50, 0.25, 12.5),
-    ("anthropic", "claude-fable-5-2", 8, 40, 0.20, 10),
-    ("anthropic", "claude-mythos-5-2", 8, 40, 0.20, 10),
+    ("anthropic", "claude-mythos-5-2", 8, 40, 0.20, None),
     ("moonshot", "kimi-k3.1-pro", 2, 10, 0.20, 2),
     ("moonshot", "kimi-k3.1-pro-highspeed", 4, 20, 0.20, 4),
     ("minimax", "MiniMax-M3.1-Flash", 0.15, 0.60, 0.015, None),
@@ -457,11 +456,7 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("openai", "gpt-6.1-terra", {"prompt_cache_retention": "12h"}),
         ("anthropic", "claude-mythos-5-1", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-1", {"tool_choice": {"type": "any"}}),
-        ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
-        ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
-        ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
         ("anthropic", "claude-mythos-5-2", {"speed": "fast"}),
-        ("anthropic", "claude-mythos-5-1", {"speed": "fast"}),
         ("anthropic", "claude-mythos-5-2", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-2", {"tool_choice": {"type": "any"}}),
         (
@@ -469,6 +464,12 @@ def test_mistral_request_omits_undocumented_stream_options():
             "claude-fable-5-1",
             {"thinking": {"type": "enabled", "budget_tokens": 100}},
         ),
+        ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
+        ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
+        ("anthropic", "claude-fable-5-2", {"top_k": 5}),
     ],
 )
 def test_unsupported_native_billing_and_reasoning_settings_are_refused_by_plan_and_transport(
@@ -618,7 +619,7 @@ def test_deepseek_flash_alias_image_fixture_keeps_observed_identity_and_top_leve
 
 @pytest.mark.parametrize(
     ("model_id", "expected_cost"),
-    [("claude-mythos-5-1", 0.00345), ("claude-mythos-5-2", 0.00276)],
+    [("claude-mythos-5-1", 0.00345), ("claude-mythos-5-2", None)],
 )
 @pytest.mark.parametrize(
     "failure", [None, "event-error", "truncated", "limit", "http403"]
@@ -695,12 +696,12 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         assert sample["input_tokens"] == 1000
         assert sample["cached_input_tokens"] == 800
         assert sample["cache_write_input_tokens"] == 100
-        assert estimate_sample_cost(sample, model) == pytest.approx(expected_cost)
+        assert estimate_sample_cost(sample, model) == (
+            pytest.approx(expected_cost) if expected_cost is not None else None
+        )
 
 
-@pytest.mark.parametrize(
-    "model_id", ["claude-fable-5-2", "claude-mythos-5-2", "claude-mythos-5-1"]
-)
+@pytest.mark.parametrize("model_id", ["claude-mythos-5-1"])
 def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
     monkeypatch, model_id
 ):
@@ -752,15 +753,33 @@ def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
     )
 
 
+def test_owner_write_rate_prices_one_hour_writes_on_a_row_without_a_bundled_rate():
+    from llm_preflight.pricing import resolve_pricing
+
+    model = resolve_pricing(
+        [
+            {
+                "provider": "anthropic",
+                "model": "claude-sonnet-5-5",
+                "cache_write_input_cost_per_million": 4,
+            }
+        ]
+    )["models"][0]
+    sample = {
+        "input_tokens": 1000,
+        "output_tokens": 0,
+        "cache_write_input_tokens": 1000,
+        "cache_write_1h": True,
+    }
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.004)
+
+
 @pytest.mark.parametrize("speed", ["standard", None])
-def test_standard_speed_is_accepted_for_strict_claude_models(speed):
+def test_standard_speed_is_accepted_for_mythos_5_2(speed):
     settings = {} if speed is None else {"speed": speed}
     options = {"max_output_tokens": 16, "provider_options": {"anthropic": settings}}
-    for model_id in ("claude-fable-5-2", "claude-mythos-5-2"):
-        body = create_client({"provider": "anthropic", "model": model_id}, 10).body(
-            "hi", options
-        )
-        assert body["model"] == model_id
+    model = {"provider": "anthropic", "model": "claude-mythos-5-2"}
+    assert create_client(model, 10).body("hi", options)["model"] == model["model"]
 
 
 @pytest.mark.parametrize("model", ["glm-5.3-flash", "glm-5.3-flashx"])
@@ -1015,3 +1034,9 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
             estimate_budget(
                 {"prompt": "billing", "models": [config], "request": request}
             )
+
+
+@pytest.mark.parametrize("model", ["claude-fable-5-1", "claude-mythos-5-1"])
+def test_fable_5_2_only_refusals_do_not_widen_to_5_1(model):
+    options = {"provider_options": {"anthropic": {"top_p": 0.9, "speed": "fast"}}}
+    validate_native_request_options({"provider": "anthropic", "model": model}, options)

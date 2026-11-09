@@ -403,11 +403,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("anthropic", "claude-fable-5-2"): {
         "cached_input_cost_per_million": 0.2,
-        "cache_write_input_cost_per_million": 10,
     },
     ("anthropic", "claude-mythos-5-2"): {
         "cached_input_cost_per_million": 0.2,
-        "cache_write_input_cost_per_million": 10,
     },
     ("anthropic", "claude-opus-5-5"): {
         "cached_input_cost_per_million": 0.2,
@@ -571,8 +569,10 @@ def sample_cost_evidence(
     if written_tokens and valid_token_count(written_tokens):
         required_prices.append(write_price)
     # The bundled write rate is the 5-minute one; an owner rate is trusted.
+    bundled = PUBLIC_PRICING_DETAILS.get((model.get("provider"), model.get("model")))
     unpriced_one_hour = (
         sample.get("cache_write_1h") is True
+        and "cache_write_input_cost_per_million" in (bundled or {})
         and (model.get("pricing_metadata") or {}).get("source") == "official snapshot"
     )
     missing_price = unpriced_one_hour or any(

@@ -9,7 +9,9 @@ are described in [native provider checks](native-providers.md).
 Package version: **2.23.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
-pricing then blocks execution. Explicit owner overrides retain their
+pricing then blocks execution. On the main branch only, the `claude-fable-5-2`
+row was reviewed on 2026-11-09 and becomes stale on 2026-12-10; the 2.23.1
+table does not list it. Explicit owner overrides retain their
 own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
@@ -72,6 +74,7 @@ unknown until you supply your own rates.
 | `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-11-04 |
 | `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-04 |
 | `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-04 |
+| `anthropic` | `claude-fable-5-2` | 8.00 | 40.00 | 2026-11-09 |
 | `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-04 |

@@ -62,6 +62,8 @@ def _reader(pages=None):
         name = pages.get(url, "page_v1.html")
         if name is None:
             raise _load().FetchError("HTTP 503")
+        if name.startswith("<"):
+            return name.encode()
         return (FIXTURES / name).read_bytes()
 
     return read
@@ -322,6 +324,205 @@ def test_fetch_rejects_an_oversize_body(sw, monkeypatch):
         sw.fetch("https://example.test/x")
 
 
+PAD = "<p>" + "Reference text for this model page. " * 12 + "</p>"
+
+
+def _single(sw, monkeypatch, provider, model):
+    """Only `model` cites LIMIT, so sibling-row scoping applies."""
+    monkeypatch.setattr(sw, "PUBLIC_PRICING_SOURCES", {(provider, model): LIMIT})
+    monkeypatch.setattr(sw, "PUBLIC_RETIREMENTS", {})
+
+
+def _second_run(sw, first, second):
+    _, snapshot = sw.run(None, _reader({LIMIT: first, PAGE: first}))
+    findings, _ = sw.run(snapshot, _reader({LIMIT: second, PAGE: second}))
+    return _by_type(findings, "page-changed")
+
+
+def test_openai_chrome_change_is_silent(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    assert _second_run(sw, "openai_model_v1.html", "openai_model_v2_chrome.html") == []
+
+
+def test_openai_deprecations_chrome_change_is_silent(sw):
+    changes = _second_run(
+        sw, "openai_deprecations_v1.html", "openai_deprecations_v2_chrome.html"
+    )
+    assert changes == []
+
+
+@pytest.mark.parametrize("model", ["claude-sonnet-5-5", "claude-haiku-4-5-20251001"])
+def test_anthropic_sibling_row_change_is_silent(sw, monkeypatch, model):
+    _single(sw, monkeypatch, "anthropic", model)
+    changes = _second_run(
+        sw, "anthropic_overview_v1.html", "anthropic_overview_v2_sibling.html"
+    )
+    assert changes == []
+
+
+def test_price_change_in_main_is_reported(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    [change] = _second_run(
+        sw, "openai_model_v2_chrome.html", "openai_model_v3_price.html"
+    )
+    assert any("$2.50" in line for line in change["changed_lines"])
+    assert not any("Codex" in line for line in change["changed_lines"])
+
+
+def test_retirement_date_change_in_article_is_reported(sw):
+    [change] = [
+        c
+        for c in _second_run(
+            sw, "openai_deprecations_v2_chrome.html", "openai_deprecations_v3_date.html"
+        )
+        if c["url"] == PAGE
+    ]
+    assert any("2027-01-15" in line for line in change["changed_lines"])
+
+
+def test_cited_row_in_comparison_table_is_reported(sw, monkeypatch):
+    _single(sw, monkeypatch, "anthropic", "claude-sonnet-5-5")
+    [change] = _second_run(
+        sw, "anthropic_overview_v1.html", "anthropic_overview_v3_price.html"
+    )
+    assert any(
+        line.startswith("+ ") and "$4" in line for line in change["changed_lines"]
+    )
+
+
+def test_catalog_page_reports_any_row(sw):
+    [change] = [
+        c
+        for c in _second_run(
+            sw, "openai_deprecations_v1.html", "openai_deprecations_v4_other_row.html"
+        )
+        if c["url"] == PAGE
+    ]
+    assert any("2026-11-20" in line for line in change["changed_lines"])
+
+
+def _legacy(sw, html):
+    return {
+        "version": 1,
+        "pages": {LIMIT: {"hash": "old", "lines": sw.normalise_html(html)}},
+    }
+
+
+def _legacy_run(sw, monkeypatch, old_html, new_html):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    old = (FIXTURES / old_html).read_text() if old_html.endswith("html") else old_html
+    findings, snapshot = sw.run(_legacy(sw, old), _reader({LIMIT: new_html}))
+    return findings, snapshot
+
+
+def test_legacy_entry_unchanged_page_is_silent(sw, monkeypatch):
+    html = (
+        "<nav><a>Pricing</a></nav><main><p>Pricing</p>"
+        + PAD
+        + "<p>Input $2.00 per million tokens</p></main>"
+    )
+    findings, snapshot = _legacy_run(sw, monkeypatch, html, html)
+    assert _by_type(findings, "page-changed") == []
+    assert snapshot["pages"][LIMIT]["scoped"] is True
+
+
+def test_legacy_entry_chrome_change_is_silent(sw, monkeypatch):
+    findings, _ = _legacy_run(
+        sw, monkeypatch, "openai_model_v1.html", "openai_model_v2_chrome.html"
+    )
+    assert _by_type(findings, "page-changed") == []
+
+
+def test_legacy_entry_real_change_is_reported(sw, monkeypatch):
+    findings, _ = _legacy_run(
+        sw, monkeypatch, "openai_model_v1.html", "openai_model_v3_price.html"
+    )
+    [change] = _by_type(findings, "page-changed")
+    assert any(
+        line.startswith("+ ") and "$2.50" in line for line in change["changed_lines"]
+    )
+    assert any(
+        line.startswith("- ") and "$2.00" in line for line in change["changed_lines"]
+    )
+
+
+def test_legacy_entry_is_not_collapsed(sw, monkeypatch):
+    chrome = "<nav>" + "".join(f"<li>Link {i}</li>" for i in range(80)) + "</nav>"
+    html = chrome + "<main>" + PAD + "<p>Input $2.00</p></main>"
+    findings, _ = _legacy_run(sw, monkeypatch, html, html)
+    assert _by_type(findings, "fetch-failed") == []
+    assert _by_type(findings, "page-changed") == []
+
+
+def test_fetch_failure_keeps_legacy_entry_unmarked(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    legacy = _legacy(sw, (FIXTURES / "openai_model_v1.html").read_text())
+    _, snapshot = sw.run(legacy, _reader({LIMIT: None}))
+    assert snapshot["pages"][LIMIT] == legacy["pages"][LIMIT]
+    assert "scoped" not in snapshot["pages"][LIMIT]
+
+
+def test_second_run_compares_scoped_entries(sw, monkeypatch):
+    _, snapshot = _legacy_run(
+        sw, monkeypatch, "openai_model_v1.html", "openai_model_v2_chrome.html"
+    )
+    findings, _ = sw.run(snapshot, _reader({LIMIT: "openai_model_v3_price.html"}))
+    [change] = _by_type(findings, "page-changed")
+    assert [line[:2] for line in change["changed_lines"]] == ["- ", "+ "]
+
+
+def test_empty_main_is_fetch_failed(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    html = "<nav>" + "<a>Docs link</a>" * 40 + "</nav><main></main>"
+    findings, _ = sw.run(None, _reader({LIMIT: html}))
+    [failed] = _by_type(findings, "fetch-failed")
+    assert failed["reason"] == "near-empty text"
+
+
+def test_access_denied_in_short_scoped_content_is_not_a_bot_wall(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    html = (
+        "<nav>"
+        + "<a>Documentation link</a>" * 200
+        + "</nav><main>"
+        + PAD
+        + "<p>Requests without a key get access denied.</p></main>"
+    )
+    findings, _ = sw.run(None, _reader({LIMIT: html}))
+    assert _by_type(findings, "fetch-failed") == []
+
+
+def test_page_without_landmarks_uses_whole_page(sw, monkeypatch):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    html = (FIXTURES / "page_v1.html").read_text()
+    _, snapshot = sw.run(None, _reader({LIMIT: "page_v1.html"}))
+    assert snapshot["pages"][LIMIT]["lines"] == sw.normalise_html(html)
+
+
+def test_unclosed_nav_does_not_swallow_content(sw):
+    html = "<main><nav>unclosed menu</main><main>" + PAD + "Second container</main>"
+    assert any("Second container" in line for line in sw.scoped_lines(html, []))
+    assert "unclosed menu" not in sw.scoped_lines(html, [])
+
+
+def test_nested_article_is_kept(sw):
+    html = "<article><article>inner text</article>after inner</article><p>outside</p>"
+    lines = sw.scoped_lines(html, [])
+    assert "inner text" in lines and "after inner" in lines
+    assert "outside" not in lines
+
+
+def test_cited_model_variant_row_is_kept(sw):
+    rows = ["pricing anthropic/claude-sonnet-5-5"]
+    html = (
+        "<main><table><tr><th>Claude Sonnet 5.5 (1M context)</th><td>$6</td></tr>"
+        "<tr><th>Claude Fäble 5.2 — ünï</th><td>$8</td></tr></table></main>"
+    )
+    lines = sw.scoped_lines(html, rows)
+    assert any("1M context" in line for line in lines)
+    assert not any("ünï" in line or "$8" in line for line in lines)
+
+
 GEMINI = "https://aistudio.google.com/docs/pricing"
 GEMINI_MD = GEMINI + ".md"
 
@@ -331,7 +532,7 @@ def _gemini(sw, monkeypatch):
     monkeypatch.setattr(sw, "PUBLIC_RETIREMENTS", {})
 
 
-def _gemini_reader(md="gemini_page.md", html="gemini_shell.html"):
+def _gemini_reader(md="gemini_page.txt", html="gemini_shell.html"):
     def read(url):
         if url == ROUTER:
             return (FIXTURES / "openrouter.json").read_bytes()
@@ -351,6 +552,7 @@ def test_gemini_docs_are_read_through_markdown_twins(sw, monkeypatch):
     lines = snapshot["pages"][GEMINI_MD]["lines"]
     assert "| example-flash | $0.30 | $2.50 |" in lines
     assert any("Café" in line for line in lines)
+    assert snapshot["pages"][GEMINI_MD]["scoped"] is True
 
 
 def test_cited_urls_watch_gemini_docs_through_markdown_twins():
@@ -368,7 +570,7 @@ def test_cited_urls_watch_gemini_docs_through_markdown_twins():
 def test_markdown_page_change_reports_excerpt_and_citing_rows(sw, monkeypatch):
     _gemini(sw, monkeypatch)
     _, snapshot = sw.run(None, _gemini_reader())
-    findings, _ = sw.run(snapshot, _gemini_reader(md="gemini_page_v2.md"))
+    findings, _ = sw.run(snapshot, _gemini_reader(md="gemini_page_v2.txt"))
     [change] = _by_type(findings, "page-changed")
     assert change["url"] == GEMINI_MD
     assert any(l.startswith("+ ") and "$0.35" in l for l in change["changed_lines"])
@@ -377,7 +579,7 @@ def test_markdown_page_change_reports_excerpt_and_citing_rows(sw, monkeypatch):
 
 def test_markdown_is_not_parsed_as_html(sw, monkeypatch):
     _gemini(sw, monkeypatch)
-    body = (FIXTURES / "gemini_page.md").read_text() + "\n<script>\nlast line kept\n"
+    body = (FIXTURES / "gemini_page.txt").read_text() + "\n<script>\nlast line kept\n"
     findings, snapshot = sw.run(
         None,
         lambda u: (
@@ -389,6 +591,7 @@ def test_markdown_is_not_parsed_as_html(sw, monkeypatch):
     lines = snapshot["pages"][GEMINI_MD]["lines"]
     assert any("`<model>`" in line for line in lines)
     assert lines[-1] == "last line kept"
+    assert snapshot["pages"][GEMINI_MD]["scoped"] is True
     assert _by_type(findings, "fetch-failed") == []
 
 

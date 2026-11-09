@@ -17,6 +17,8 @@ import os
 import re
 import sys
 import urllib.request
+from collections import Counter
+from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -69,6 +71,7 @@ _BLOCK_TAGS = {
 }  # fmt: skip
 _SKIPPED_TAGS = {"script", "style", "noscript", "template", "svg"}
 GEMINI_DOCS_PREFIX = "https://aistudio.google.com/docs/"
+_CHROME_TAGS = {"nav", "footer"}
 _DATED_SUFFIX = re.compile(r"-\d{8}$")
 
 
@@ -97,31 +100,65 @@ def fetch(url: str) -> bytes:
 
 
 class _TextExtractor(HTMLParser):
-    def __init__(self) -> None:
+    """Page text; with `container` set, only that landmark's content.
+
+    Inside the container `nav` and `footer` subtrees are dropped, and so is a
+    table row for which `is_sibling(first text)` is true.
+    """
+
+    def __init__(
+        self,
+        container: str | None = None,
+        is_sibling: Callable[[str], bool] | None = None,
+    ) -> None:
         super().__init__()
         self.parts: list[str] = []
+        self._container = container
+        self._is_sibling = is_sibling
         self._skip = 0
+        self._inside = 0 if container else 1
+        self._chrome = 0
+        self._row_open = False
+        self._row_dropped = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in _SKIPPED_TAGS:
             self._skip += 1
-        elif tag in _BLOCK_TAGS:
+            return
+        if tag == self._container:
+            self._inside += 1
+        elif tag in _CHROME_TAGS and self._container and self._inside:
+            self._chrome += 1
+        elif tag == "tr" and self._is_sibling:
+            self._row_open, self._row_dropped = True, False
+        if tag in _BLOCK_TAGS:
             self.parts.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
         if tag in _SKIPPED_TAGS:
             self._skip = max(0, self._skip - 1)
-        elif tag in _BLOCK_TAGS:
+            return
+        if tag == self._container:
+            self._inside = max(0, self._inside - 1)
+            if not self._inside:
+                self._chrome = 0
+        elif tag in _CHROME_TAGS:
+            self._chrome = max(0, self._chrome - 1)
+        elif tag == "tr":
+            self._row_open = self._row_dropped = False
+        if tag in _BLOCK_TAGS:
             self.parts.append("\n")
 
     def handle_data(self, data: str) -> None:
-        if not self._skip:
+        if self._row_open and data.strip():
+            self._row_open = False
+            assert self._is_sibling is not None
+            self._row_dropped = self._is_sibling(data)
+        if not (self._skip or self._chrome or self._row_dropped) and self._inside:
             self.parts.append(data)
 
 
-def normalise_html(html: str) -> list[str]:
-    """Reduce a page to its non-empty, whitespace-collapsed text lines."""
-    extractor = _TextExtractor()
+def _lines(html: str, extractor: _TextExtractor) -> list[str]:
     try:
         extractor.feed(html)
         extractor.close()
@@ -131,21 +168,65 @@ def normalise_html(html: str) -> list[str]:
     return [line for line in lines if line]
 
 
+def normalise_html(html: str) -> list[str]:
+    """Reduce a page to its non-empty, whitespace-collapsed text lines."""
+    return _lines(html, _TextExtractor())
+
+
+def _container_tag(html: str) -> str | None:
+    for tag in ("article", "main"):
+        if re.search(rf"<{tag}[\s>/]", html, re.IGNORECASE):
+            return tag
+    return None
+
+
+def _sibling_matcher(rows: list[str]) -> Callable[[str], bool] | None:
+    """Match other models' table rows, only when `rows` cite one model."""
+    models = {row.split("/", 1)[1] if "/" in row else None for row in rows}
+    if len(models) != 1 or None in models:
+        return None
+    cited = _comparable_id(models.pop() or "")
+    prefix = cited.split("-")[0] + "-"
+
+    def is_sibling(text: str) -> bool:
+        slug = _comparable_id("-".join(text.casefold().split()))
+        return (
+            slug.startswith(prefix)
+            and slug != cited
+            and not slug.startswith(cited + "-")
+        )
+
+    return is_sibling
+
+
+def scoped_lines(html: str, rows: list[str]) -> list[str]:
+    """Text lines of the content that cites the bundle, without page chrome.
+
+    Anything that cannot be classified stays in, so a miss is noise, not silence.
+    """
+    container = _container_tag(html)
+    return _lines(html, _TextExtractor(container, _sibling_matcher(rows)))
+
+
 def unreadable_reason(
-    lines: list[str], before: dict[str, Any] | None = None
+    full: list[str], scoped: list[str], before: dict[str, Any] | None = None
 ) -> str | None:
-    """Why normalised text is clearly not the content, or None.
+    """Why a page is clearly not the content, or None.
 
     A page that shrank to a fifth of its previous line count is a JS shell or
-    a stripped page, not an edit.
+    a stripped page, not an edit. Compare like with like: scoped lines against
+    a scoped entry, the whole page against an older whole-page entry. The bot
+    wall check reads the whole page, since scoped content is often short.
     """
-    text = "\n".join(lines)
-    if len(text) < MIN_TEXT_CHARS:
+    full_text = "\n".join(full)
+    if len(full_text) < MIN_TEXT_CHARS or len("\n".join(scoped)) < MIN_TEXT_CHARS:
         return "near-empty text"
-    if before and len(lines) * COLLAPSE_RATIO < len(before["lines"]):
-        return "content collapsed against previous snapshot"
-    if len(text) < BOT_WALL_MAX_CHARS and any(
-        m in text.casefold() for m in BOT_WALL_MARKERS
+    if before:
+        current = scoped if before.get("scoped") else full
+        if len(current) * COLLAPSE_RATIO < len(before["lines"]):
+            return "content collapsed against previous snapshot"
+    if len(full_text) < BOT_WALL_MAX_CHARS and any(
+        m in full_text.casefold() for m in BOT_WALL_MARKERS
     ):
         return "bot wall"
     return None
@@ -166,10 +247,12 @@ def normalise_markdown(text: str) -> list[str]:
     return [line for line in lines if line]
 
 
-def page_lines(url: str, body: str) -> list[str]:
+def page_lines(url: str, body: str, rows: list[str]) -> tuple[list[str], list[str]]:
+    """The whole-page lines and the scoped lines; markdown is both, unparsed."""
     if url.startswith(GEMINI_DOCS_PREFIX) and url.endswith(".md"):
-        return normalise_markdown(body)
-    return normalise_html(body)
+        lines = normalise_markdown(body)
+        return lines, lines
+    return normalise_html(body), scoped_lines(body, rows)
 
 
 def text_hash(lines: list[str]) -> str:
@@ -245,13 +328,34 @@ def openrouter_findings(payload: Any) -> list[dict[str, Any]]:
     return findings
 
 
+def _excerpt(lines: list[str]) -> list[str]:
+    return [line[:EXCERPT_CHARS] for line in lines][:EXCERPT_LINES]
+
+
 def changed_excerpt(old: list[str], new: list[str]) -> list[str]:
     """Bounded `-`/`+` lines between two page versions."""
     body = list(difflib.unified_diff(old, new, lineterm="", n=0))[2:]
-    diff = [
-        f"{line[0]} {line[1 : EXCERPT_CHARS + 1]}" for line in body if line[0] in "+-"
-    ]
-    return diff[:EXCERPT_LINES]
+    return _excerpt([f"{line[0]} {line[1:]}" for line in body if line[0] in "+-"])
+
+
+def _legacy_changes(before: list[str], scoped: list[str], full: list[str]) -> list[str]:
+    """Changes of scoped content against an old whole-page entry, once.
+
+    Sets, not a sequence diff: lines like `Pricing` occur in both chrome and
+    content. A line removed outside the first and last scoped anchor is missed.
+    """
+    outside = set(Counter(full) - Counter(scoped))
+    anchors = set(scoped) - outside
+    seen = set(before)
+    added = [line for line in scoped if line not in seen]
+    spots = [i for i, line in enumerate(before) if line in anchors]
+    present = set(full)
+    removed = (
+        [line for line in before[spots[0] : spots[-1] + 1] if line not in present]
+        if spots
+        else []
+    )
+    return _excerpt([f"- {line}" for line in removed] + [f"+ {line}" for line in added])
 
 
 def watch_pages(
@@ -263,8 +367,10 @@ def watch_pages(
     findings = []
     for url, rows in cited_urls().items():
         try:
-            lines = page_lines(url, read(url).decode("utf-8", errors="replace"))
-            reason = unreadable_reason(lines, old_pages.get(url))
+            full, lines = page_lines(
+                url, read(url).decode("utf-8", errors="replace"), rows
+            )
+            reason = unreadable_reason(full, lines, old_pages.get(url))
             if reason:
                 raise FetchError(reason)
         except FetchError as error:
@@ -275,12 +381,22 @@ def watch_pages(
                 pages[url] = old_pages[url]
             continue
         digest = text_hash(lines)
-        pages[url] = {"hash": digest, "lines": lines}
+        pages[url] = {"hash": digest, "lines": lines, "scoped": True}
         before = old_pages.get(url)
-        if previous is not None and before and before["hash"] != digest:
+        if previous is None or not before:
+            continue
+        if before.get("scoped"):
+            changed = (
+                changed_excerpt(before["lines"], lines)
+                if before["hash"] != digest
+                else []
+            )
+        else:
+            changed = _legacy_changes(before["lines"], lines, full)
+        if changed:
             findings.append(
                 {"key": f"page-changed:{url}:{digest}", "type": "page-changed", "url": url,
-                 "changed_lines": changed_excerpt(before["lines"], lines), "cited_by": rows}
+                 "changed_lines": changed, "cited_by": rows}
             )  # fmt: skip
     return findings, pages
 

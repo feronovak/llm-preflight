@@ -72,8 +72,9 @@ make check-dist
   is the maintainer's nightly source watch. It fetches the public OpenRouter
   model list and every official pricing and retirement page the bundle cites
   (Google's client-rendered docs are read through their `.md` form),
-  then reports new models, OpenRouter price signals, changed pages and pages
-  it could not read, each with a stable `key`. It needs no API keys and never
+  then reports new models, OpenRouter price signals, changed pages (changes to
+  the page content that cites the bundle, not site chrome or other models'
+  rows) and pages it could not read, each with a stable `key`. It needs no API keys and never
   edits bundled data: a bundle change still comes from the official page
   through a normal pull request.
 

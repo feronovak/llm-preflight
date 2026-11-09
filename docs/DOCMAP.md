@@ -14,6 +14,8 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`AGENTS.md`](../AGENTS.md) | Development Contract | unstamped | — | — |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | unstamped | — | — |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
+| [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
+| [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Contributing | unstamped | — | — |
 | [`README.md`](../README.md) | LLM Preflight | stamped | 2026-10-29 | v2.23.0 |
 | [`SECURITY.md`](../SECURITY.md) | Security policy | unstamped | — | — |
 | [`docs/DECISIONS.md`](DECISIONS.md) | Product decisions | stamped | 2026-10-14 | v2.21.1 |
@@ -54,5 +56,3 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-10-18 | v2.22.1 |
 | [`examples/reports/README.md`](../examples/reports/README.md) | Reviewable report gallery | unstamped | — | — |
 | [`plugins/llm-preflight/skills/llm-preflight/SKILL.md`](../plugins/llm-preflight/skills/llm-preflight/SKILL.md) | LLM Preflight | unstamped | — | — |
-| [`tests/fixtures/source_watch/gemini_page.md`](../tests/fixtures/source_watch/gemini_page.md) | Example model pricing | unstamped | — | — |
-| [`tests/fixtures/source_watch/gemini_page_v2.md`](../tests/fixtures/source_watch/gemini_page_v2.md) | Example model pricing | unstamped | — | — |

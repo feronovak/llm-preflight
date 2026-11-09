@@ -945,3 +945,9 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
             estimate_budget(
                 {"prompt": "billing", "models": [config], "request": request}
             )
+
+
+@pytest.mark.parametrize("model", ["claude-fable-5-1", "claude-mythos-5-1"])
+def test_fable_5_2_only_refusals_do_not_widen_to_5_1(model):
+    options = {"provider_options": {"anthropic": {"top_p": 0.9, "speed": "fast"}}}
+    validate_native_request_options({"provider": "anthropic", "model": model}, options)

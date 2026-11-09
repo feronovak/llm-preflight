@@ -176,7 +176,8 @@ Golden samples include normalized `golden_expected`, `golden_observed`, and
 A plain-prompt `samples[]` entry includes `ok`, `valid_output`,
 `quality_score`, `evaluation_error`, `failure_category`, `attempts`,
 `retry_count`, `retry_reasons`, timing, token counts, cost inputs,
-`observed_model` (that request's reported model, with the same string, list or
+`inference_geo` (only when the route was not `global`: `us`, as reported by
+the response or requested), `observed_model` (that request's reported model, with the same string, list or
 `null` rule as the model result), and an optional response or response preview
 according to `save_responses`.
 

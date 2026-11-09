@@ -18,6 +18,13 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- `inference_geo: us` on a bundled Anthropic row is now priced at the
+  official 1.1x multiplier on every token category, in the plan estimate, budget
+  caps and run samples, instead of at standard rates. A response that reports
+  `us` is priced the same way, and an unrecognised value leaves the cost
+  unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
+  receipt for a `us` config reports `mismatch` once, because the estimate it
+  covers changed.
 - Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,
   $40 output, $0.20 cache read per million tokens, from the official Anthropic
   pricing page; reported cache writes leave the cost unknown) and apply the

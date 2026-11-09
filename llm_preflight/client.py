@@ -163,8 +163,6 @@ def validate_native_request_options(
         "claude-fable-5-2",
         "claude-mythos-5-2",
     }
-    if new_generation and provider_options.get("speed", "standard") != "standard":
-        raise ValueError("Fable/Mythos 5.2 preflight supports standard speed only")
     if new_generation and {"temperature", "top_p", "top_k"} & provider_options.keys():
         raise ValueError("Fable/Mythos 5.2 do not accept sampling parameters")
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:

@@ -309,18 +309,18 @@ remains a user-controlled workspace decision.
 
 ## Available tools
 
-The server exposes eight tools. `migrate_plan` is on the main branch only, not in 2.23.1; the other seven are in 2.23.1.
+The server exposes eight tools.
 
 | Tool | What it does | Provider access |
 |---|---|---|
 | `audit_source` | Audits literal model IDs under an optional workspace-relative `path` (default: the workspace) and returns the CLI `--audit-source --json` object, with secret-like strings redacted, and the decision as the first text line. Needs no benchmark config. | Never contacts a provider or loads credentials. |
 | `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. | Never contacts a provider or loads credentials. |
-| `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, `models[].base_url` masked to scheme and host[:port] with any path, query or userinfo shown as `/[REDACTED]` (not in 2.23.1; main branch only; a base URL that is not http(s) with a plain host prints as `[REDACTED]`), per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
+| `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, `models[].base_url` masked to scheme and host[:port] with any path, query or userinfo shown as `/[REDACTED]` (a base URL that is not http(s) with a plain host prints as `[REDACTED]`), per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 | `verify` | Reports a record's integrity and freshness separately and returns the CLI `verify --json` object, with its first text line. | Never contacts a provider or loads credentials. |
 | `gate` | Decides whether the workspace has a fresh passing CI record for its contract under the given selection and returns the CLI `gate --json` object, with its first text line. A gate `pass` is not approval. | Never contacts a provider or loads credentials. |
-| `migrate_plan` | Main branch only, not in 2.23.1. Takes `config` and returns the CLI `migrate --json` report: the provider-named replacement for each retired or retiring model, an inline redacted `candidate_config` (`path: null`), `smoke: null` and `approval.state: missing`, with the decision as the first text line. Writes no file and runs no smoke. A config with `discovery` is rejected. The candidate is inline only and `next_steps` uses CLI wording (`--output PATH`), which this tool has no argument for: save `candidate_config.config` as a workspace file beside the source config, then run `validate_config`, `dry_run_plan` and, after explicit approval, `run_preflight` with `confirm_paid_run`. | Never contacts a provider or loads credentials. |
+| `migrate_plan` | Takes `config` and returns the CLI `migrate --json` report: the provider-named replacement for each retired or retiring model, an inline redacted `candidate_config` (`path: null`), `smoke: null` and `approval.state: missing`, with the decision as the first text line. Writes no file and runs no smoke. A config with `discovery` is rejected. The candidate is inline only and `next_steps` uses CLI wording (`--output PATH`), which this tool has no argument for: save `candidate_config.config` as a workspace file beside the source config, then run `validate_config`, `dry_run_plan` and, after explicit approval, `run_preflight` with `confirm_paid_run`. | Never contacts a provider or loads credentials. |
 
 ## Discover the safe workflow
 

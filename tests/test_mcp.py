@@ -1887,8 +1887,8 @@ def test_decision_and_docs_label_migrate_as_main_branch_only():
         for name in ("docs/automation/mcp.md", "README.md", "docs/DECISIONS.md")
     }
 
-    assert "main branch only, not in 2.23.1" in flat["docs/automation/mcp.md"]
-    assert "main branch only, not in 2.23.1" in flat["README.md"]
+    assert "not in 2.23.1" not in flat["docs/automation/mcp.md"]
+    assert "not in 2.23.1" not in flat["README.md"]
     assert (
         "`migrate --run` is command-line only and has no MCP tool"
         in flat["docs/DECISIONS.md"]

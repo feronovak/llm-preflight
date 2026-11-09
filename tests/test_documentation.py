@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.1" in page
+    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -678,7 +678,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.1" in guide
+    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()

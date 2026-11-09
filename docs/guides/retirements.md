@@ -1,9 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
-
-> The [Migrate report](#migrate-report) section describes the `migrate` command,
-> which is not in 2.23.1 and is on the main branch only.
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -167,8 +164,8 @@ from the ID.
 
 ## Release retirement review
 
-The 2.23.1 snapshot contains 117 rows: 36 Anthropic, 75 OpenAI and six Gemini,
-all reviewed on the date stamped above. On the main branch only, two more
+The 2.24.0 snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini.
+The 117 older rows were reviewed on the date stamped above; the two newer
 Anthropic rows, `claude-fable-5-2` and `claude-mythos-5-2`, were reviewed on
 2026-11-09 and become stale on 2026-12-10. Non-retired rows become stale on
 2026-12-05; retired rows remain failures. The added dated OpenAI IDs
@@ -190,8 +187,6 @@ use the ID exactly as the page prints it, and record only a replacement the
 page names on its own.
 
 ## Migrate report
-
-Not in 2.23.1; on the main branch only.
 
 `llm-preflight migrate CONFIG [--output PATH [--replace]] [--run] [--verify-approval-receipt PATH] [--ci] [--json]` reads the explicit `models` of a
 benchmark config and reports which provider-named replacement applies to each

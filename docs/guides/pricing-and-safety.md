@@ -164,7 +164,7 @@ explicitly approved the bounded paid smoke.
 
 Secrets are read from environment variables or the selected env file. The CLI
 redacts common secret names, custom headers, dry-run output, saved results, and
-provider errors. Not in 2.23.1; main branch only: `--dry-run --json` and the MCP
+provider errors. `--dry-run --json` and the MCP
 `dry_run_plan` tool print a model's `base_url` as scheme and host[:port], with
 any path, query, userinfo or parameter shown as `/[REDACTED]`. A token in a host
 name stays visible. A base URL that is not http(s) with a plain host (for example

@@ -31,7 +31,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/development/visual-assets.md`](development/visual-assets.md) | Visual asset specification | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-10-19 | v2.22.2 |
-| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-04 | v2.23.1 |
+| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-10-09 | v2.19.2 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |
@@ -42,7 +42,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-10-13 | v2.21.0 |
 | [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-18 | v2.22.1 |
 | [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-10-19 | v2.22.2 |
-| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-11-04 | v2.23.1 |
+| [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |

@@ -98,9 +98,10 @@ the three commands above do not need a key or contact the provider.
 - Mythos 5.1 requires verified access and the provider's applicable retention
   arrangement. It shares Fable 5.1's published rates. Fable 5.2 is priced at
   $8 / $40, and Mythos 5.2 at the same rates. All four require adaptive thinking
-  and reject forced tool choice. Fable 5.2 and Mythos 5.2 also refuse `speed`
-  other than `standard` (fast mode is priced higher) and `temperature`, `top_p`
-  or `top_k` in `provider_options.anthropic`. On bundled Anthropic rows
+  and reject forced tool choice. Fable 5.2 and Mythos 5.2 also refuse
+  `temperature`, `top_p` or `top_k` in `provider_options.anthropic`. Every
+  Anthropic row refuses `speed` other than `standard`, because fast mode has its
+  own rates that preflight does not price. On bundled Anthropic rows
   except `claude-haiku-4-5-20251001` (which refuses any `inference_geo`),
   `inference_geo: us` is priced at 1.1x on every token category; a response that
   reports `us` is priced the same way. A workspace `default_inference_geo` is not visible to the plan estimate, so the estimate stays about 9% low there until the run reports its actual cost. A price row does not establish account

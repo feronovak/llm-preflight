@@ -44,7 +44,7 @@ one top-level `prompt` or one or more named `prompts`.
 | `max_output_tokens` | `256` | Maximum generated tokens for native providers. `max_tokens` is accepted for compatibility. |
 | `system_prompt` | — | Shared system instructions. |
 | `input_images` | — | Explicit local PNG, JPEG, WEBP, or GIF fixtures for supported image-to-text routes. |
-| `provider_options` | `{}` | Provider request body fields; one object or `{all, provider}` maps (`openai_compatible` is valid for a custom OpenAI-style endpoint). |
+| `provider_options` | `{}` | Provider request body fields; one object or `{all, provider}` maps (`openai_compatible` is valid for a custom OpenAI-style endpoint). On `anthropic` rows `speed` other than `standard` is refused. |
 | `retry` | two attempts | `true` or an object described below. |
 
 For the `mock` provider only, `response` supplies the returned text when it is

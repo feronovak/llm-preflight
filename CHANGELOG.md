@@ -27,6 +27,12 @@ All notable changes to this project are documented here.
   and another unrecognised reported value leaves the cost unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
   receipt for a `us` config reports `mismatch` once, because the estimate it
   covers changed.
+- Anthropic rows now refuse `speed` other than `standard` before planning, so a
+  fast-mode request is no longer estimated at the standard rate. Migration:
+  `speed: fast` on Anthropic rows is refused until fast-mode rates are priced;
+  remove it from `provider_options`. Breaking: `speed` other than `standard` on
+  Anthropic rows is refused before planning; a config that set it ran before and
+  now stops (no key or output shape changes).
 - Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,
   $40 output, $0.20 cache read per million tokens, from the official Anthropic
   pricing page; reported cache writes leave the cost unknown) and apply the

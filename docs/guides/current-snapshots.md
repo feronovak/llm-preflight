@@ -251,7 +251,7 @@ reports one-hour writes (`cache_creation.ephemeral_1h_input_tokens` above
 zero), its cost estimate is unavailable. An owner override that supplies
 input, output and write rates together keeps precedence and is used as given;
 a write rate alone does not replace the bundled one. `speed` other than `standard` is refused on
-`claude-fable-5-2` and `claude-mythos-5-2`. `inference_geo: us` in
+every Anthropic row, because fast mode has its own rates. `inference_geo: us` in
 `provider_options.anthropic` multiplies every token category by 1.1 on bundled
 Anthropic rows, as the official pricing page lists; `claude-haiku-4-5-20251001`
 does not support the option and refuses any `inference_geo` at plan time.
@@ -259,7 +259,7 @@ does not support the option and refuses any `inference_geo` at plan time.
 standard cost even when `us` was requested, any other requested value leaves the
 cost unavailable, and an owner override is used as given. A response that
 reports `us` is priced the same way.
-A workspace `default_inference_geo` is not visible to the plan estimate, so the estimate stays about 9% low there until the run reports its actual cost. For any other Anthropic row, supply a reviewed
+A workspace `default_inference_geo` is not visible to the plan estimate, so the estimate stays about 9% low there until the run reports its actual cost. For any Anthropic row other than `claude-mythos-5-1`, supply a reviewed
 `cache_write_input_cost_per_million` matching the configured cache lifetime,
 including any applicable input tiers, or reported writes make the cost
 estimate unavailable.

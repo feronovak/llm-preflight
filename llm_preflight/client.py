@@ -67,8 +67,12 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
         return {}
     provider_keys = set(PROVIDER_DEFAULTS) | {"openai_compatible", "all"}
     if any(key in provider_keys for key in configured):
-        merged = dict(configured.get("all", {}))
-        merged.update(configured.get(provider, {}))
+        merged: dict[str, Any] = {}
+        for section in ("all", provider):
+            value = configured.get(section, {})
+            if not isinstance(value, dict):
+                raise ValueError(f"provider_options.{section} must be an object")  # noqa: TRY004 - callers catch ValueError
+            merged.update(value)
         return merged
     return dict(configured)
 
@@ -101,6 +105,14 @@ def validate_native_request_options(
                 + ", ".join(sorted(unsupported))
                 + "; use the configured prompt and request.max_output_tokens"
             )
+    if (
+        provider == "anthropic"
+        and _provider_options(options, provider).get("speed", "standard") != "standard"
+    ):
+        raise ValueError(
+            "Anthropic preflight prices standard-speed requests only; "
+            "fast mode is not priced"
+        )
     if (
         provider == "anthropic"
         and model_id == "claude-haiku-4-5-20251001"
@@ -157,8 +169,6 @@ def validate_native_request_options(
         "claude-fable-5-2",
         "claude-mythos-5-2",
     }
-    if new_generation and provider_options.get("speed", "standard") != "standard":
-        raise ValueError("Fable/Mythos 5.2 preflight supports standard speed only")
     if new_generation and {"temperature", "top_p", "top_k"} & provider_options.keys():
         raise ValueError("Fable/Mythos 5.2 do not accept sampling parameters")
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:

@@ -21,12 +21,14 @@ All notable changes to this project are documented here.
 - Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,
   $40 output, $0.20 cache read per million tokens, from the official Anthropic
   pricing page; reported cache writes leave the cost unknown) and apply the
-  Fable/Mythos 5.1 request rules to it: no `temperature`, adaptive reasoning
-  only, no forced tool choice, a complete stream and standard speed only. The
-  row is dated 2026-11-09; the other rows keep their review dates.
+  Fable/Mythos 5.1 request rules to it: adaptive reasoning only, no forced
+  tool choice, no sampling parameters (`temperature`, `top_p`, `top_k`), a complete stream and
+  standard speed only. The row is dated 2026-11-09; the other rows keep their review dates.
 - A response that reports one-hour Anthropic cache writes now makes the cost
   estimate unavailable for `claude-mythos-5-1`'s bundled five-minute write rate
-  instead of pricing them at it; an owner-supplied write rate is used as given.
+  instead of pricing them at it; an override that supplies input, output and
+  write rates together is used as given, and the report names 1h cache writes
+  as the reason.
 - A provider response that returns a tool call no longer passes on the
   Chat Completions, Anthropic and Gemini routes. Preflight reads text only, so
   the call was discarded and a response with text followed by a tool call, or a

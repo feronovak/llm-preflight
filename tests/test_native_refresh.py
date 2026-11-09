@@ -475,6 +475,9 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
         ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
         ("anthropic", "claude-fable-5-2", {"top_k": 5}),
+        ("anthropic", "claude-mythos-5-2", {"temperature": 0.5}),
+        ("anthropic", "claude-mythos-5-2", {"top_p": 0.9}),
+        ("anthropic", "claude-mythos-5-2", {"top_k": 5}),
     ],
 )
 def test_unsupported_native_billing_and_reasoning_settings_are_refused_by_plan_and_transport(
@@ -756,6 +759,30 @@ def test_anthropic_one_hour_cache_writes_make_the_cost_unavailable(
     assert estimate_sample_cost(sample, owner) == pytest.approx(
         (1000 * 16 + 10 * model["output_cost_per_million"]) / 1e6
     )
+
+
+def test_owner_rates_price_one_hour_writes_on_a_row_with_a_bundled_write_rate():
+    from llm_preflight.pricing import resolve_pricing
+
+    sample = {
+        "input_tokens": 1000,
+        "output_tokens": 0,
+        "cache_write_input_tokens": 1000,
+        "cache_write_1h": True,
+    }
+    base = {"provider": "anthropic", "model": "claude-mythos-5-1"}
+    full = {
+        **base,
+        "input_cost_per_million": 10,
+        "output_cost_per_million": 50,
+        "cache_write_input_cost_per_million": 20,
+    }
+    owner = resolve_pricing([full])["models"][0]
+    assert estimate_sample_cost(sample, owner) == pytest.approx(0.02)
+    only_write = resolve_pricing([{**base, "cache_write_input_cost_per_million": 20}])[
+        "models"
+    ][0]
+    assert estimate_sample_cost(sample, only_write) is None
 
 
 def test_owner_write_rate_prices_one_hour_writes_on_a_row_without_a_bundled_rate():

@@ -535,6 +535,18 @@ def valid_token_count(value: Any) -> TypeGuard[int | float]:
     )
 
 
+def unpriced_one_hour_writes(sample: dict[str, Any], model: dict[str, Any]) -> bool:
+    """True when 1h writes would be billed at the bundled 5-minute write rate."""
+    bundled = PUBLIC_PRICING_DETAILS.get(
+        (str(model.get("provider")), str(model.get("model")))
+    )
+    return (
+        sample.get("cache_write_1h") is True
+        and "cache_write_input_cost_per_million" in (bundled or {})
+        and (model.get("pricing_metadata") or {}).get("source") == "official snapshot"
+    )
+
+
 def sample_cost_evidence(
     sample: dict[str, Any], model: dict[str, Any]
 ) -> tuple[float | None, bool, bool]:
@@ -569,15 +581,7 @@ def sample_cost_evidence(
     if written_tokens and valid_token_count(written_tokens):
         required_prices.append(write_price)
     # The bundled write rate is the 5-minute one; an owner rate is trusted.
-    bundled = PUBLIC_PRICING_DETAILS.get(
-        (str(model.get("provider")), str(model.get("model")))
-    )
-    unpriced_one_hour = (
-        sample.get("cache_write_1h") is True
-        and "cache_write_input_cost_per_million" in (bundled or {})
-        and (model.get("pricing_metadata") or {}).get("source") == "official snapshot"
-    )
-    missing_price = unpriced_one_hour or any(
+    missing_price = unpriced_one_hour_writes(sample, model) or any(
         not isinstance(value, (int, float))
         or isinstance(value, bool)
         or not math.isfinite(value)

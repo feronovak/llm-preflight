@@ -625,6 +625,29 @@ def test_claude_fable_5_1_official_snapshot_pricing():
     assert model["pricing_metadata"]["as_of"] == "2026-11-04"
 
 
+def test_claude_fable_5_2_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-fable-5-2"})
+
+    assert model["input_cost_per_million"] == 8.0
+    assert model["output_cost_per_million"] == 40.0
+    assert model["cached_input_cost_per_million"] == 0.2
+    assert model["cache_write_input_cost_per_million"] == 10.0
+    assert model["pricing_metadata"]["as_of"] == "2026-11-09"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://platform.claude.com/docs/en/about-claude/pricing"
+    )
+    cost = estimate_sample_cost(
+        {
+            "input_tokens": 1000,
+            "cached_input_tokens": 100,
+            "cache_write_input_tokens": 100,
+            "output_tokens": 10,
+        },
+        model,
+    )
+    assert cost == pytest.approx(0.00782)
+
+
 def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():
     model = apply_public_pricing({"provider": "deepseek", "model": "deepseek-v4-pro"})
 
@@ -681,6 +704,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-04"),
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-04"),
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-04"),
+        ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),

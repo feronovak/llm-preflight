@@ -43,7 +43,8 @@ All notable changes to this project are documented here.
   million tokens, cache read $0.20; reported cache writes leave the cost unknown). Requests to it omit `temperature`,
   use adaptive thinking, reject forced tool choice, `speed` other than `standard`, and `temperature`,
   `top_p` or `top_k` in `provider_options.anthropic`, and require a complete stream. The
-  reported snapshot review date moves to 2026-11-09.
+  reported snapshot review date moves to 2026-11-09, so approval receipts recorded
+  before this change must be re-recorded.
 - `llm-preflight migrate CONFIG --output PATH --run --verify-approval-receipt R` runs one
   bounded smoke on the written candidate, only when the receipt is recorded for that
   plan, the plan has a maximum cost and the budget check passes. The report adds `smoke` and

@@ -462,6 +462,11 @@ def test_mistral_request_omits_undocumented_stream_options():
         ),
         ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        (
+            "anthropic",
+            "claude-fable-5-2",
+            {"tool_choice": {"type": "tool", "name": "lookup"}},
+        ),
         ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
         ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
         ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
@@ -951,3 +956,19 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
 def test_fable_5_2_only_refusals_do_not_widen_to_5_1(model):
     options = {"provider_options": {"anthropic": {"top_p": 0.9, "speed": "fast"}}}
     validate_native_request_options({"provider": "anthropic", "model": model}, options)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {},
+        {"thinking": {"type": "adaptive"}},
+        {"tool_choice": {"type": "auto"}},
+        {"tool_choice": {"type": "none"}},
+    ],
+)
+def test_fable_5_2_accepts_adaptive_thinking_and_non_forcing_tool_choice(settings):
+    config = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    options = {"max_output_tokens": 512, "provider_options": {"anthropic": settings}}
+    validate_native_request_options(config, options)
+    assert create_client(config, 10).body("hi", options)["model"] == "claude-fable-5-2"

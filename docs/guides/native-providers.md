@@ -96,9 +96,10 @@ the three commands above do not need a key or contact the provider.
   currently accept text inputs only; model vision capabilities do not imply
   this adapter validates image contracts.
 - Mythos 5.1 requires verified access and the provider's applicable retention
-  arrangement. It shares Fable 5.1's published rates. Fable 5.1, Fable 5.2 and
-  Mythos 5.1 require adaptive thinking and reject forced tool choice; Fable 5.2
-  is priced at $8 / $40 per million tokens. A price row does not establish account
+  arrangement. It shares Fable 5.1's published rates. Fable 5.2 is priced at
+  $8 / $40. All three require adaptive thinking and reject forced tool choice. Fable 5.2
+  also refuses `speed` other than `standard` (fast mode is priced higher) and
+  `temperature`, `top_p` or `top_k` in `provider_options.anthropic`. A price row does not establish account
   eligibility or zero-data-retention availability.
 
 The new native text adapters reject truncated streams, output-limit stops,

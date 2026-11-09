@@ -319,6 +319,11 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
     # o3's only dated snapshot retires 2026-12-11, so it is not a replacement.
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-preview")]
+    assert PUBLIC_RETIREMENTS[("anthropic", "claude-fable-5-2")] == {
+        "status": "active",
+        "as_of": "2026-11-09",
+        "source_url": ANTHROPIC_DEPRECATIONS_URL,
+    }
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "gemini", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 37
@@ -443,19 +448,6 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
         in {"deprecated", "retired"}
     )
     assert chained == []
-
-
-def test_claude_fable_5_2_is_active_without_a_retirement_date():
-    row = PUBLIC_RETIREMENTS[("anthropic", "claude-fable-5-2")]
-    assert row["status"] == "active"
-    assert row["as_of"] == "2026-11-09"
-    assert "retirement_date" not in row
-    assert (
-        retirement_verdict("anthropic", "claude-fable-5-2", date(2026, 11, 9))[
-            "decision"
-        ]
-        == "pass"
-    )
 
 
 def test_release_retirement_review_date_and_exact_freshness_boundary():

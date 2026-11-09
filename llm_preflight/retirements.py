@@ -69,7 +69,6 @@ def _openai(
 # their own schedules and are not represented.
 _ANTHROPIC: dict[str, dict[str, Any]] = {
     "claude-fable-5-1": _anthropic("active"),
-    # Reviewed after the last full snapshot review; drop as_of at the next one.
     "claude-fable-5-2": _row(
         "active", source_url=ANTHROPIC_DEPRECATIONS_URL, as_of="2026-11-09"
     ),

@@ -138,13 +138,18 @@ def validate_native_request_options(
         thinking = provider_options.get("thinking", {"type": "adaptive"})
         if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
             raise ValueError(
-                "Fable 5.1, Fable 5.2 and Mythos 5.1 require adaptive reasoning"
+                "Fable/Mythos 5.1 and Fable 5.2 require adaptive reasoning"
             )
         choice = provider_options.get("tool_choice", {"type": "auto"})
         if not isinstance(choice, dict) or choice.get("type") not in {"auto", "none"}:
             raise ValueError(
-                "Fable 5.1, Fable 5.2 and Mythos 5.1 do not support forced tool choice"
+                "Fable/Mythos 5.1 and Fable 5.2 do not support forced tool choice"
             )
+    if provider == "anthropic" and model_id == "claude-fable-5-2":
+        if provider_options.get("speed", "standard") != "standard":
+            raise ValueError("Fable 5.2 preflight supports standard speed only")
+        if {"temperature", "top_p", "top_k"} & provider_options.keys():
+            raise ValueError("Fable 5.2 does not accept sampling parameters")
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"

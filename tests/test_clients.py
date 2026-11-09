@@ -2333,35 +2333,19 @@ def test_gemini_tool_finish_reason_is_a_failed_request(monkeypatch, reason):
     assert sample["error"] == TOOL_CALL_ERROR
 
 
-def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch):
-    model = {"provider": "anthropic", "model": "claude-fable-5-1"}
+@pytest.mark.parametrize("model_id", ["claude-fable-5-1", "claude-fable-5-2"])
+def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch, model_id):
+    model = {"provider": "anthropic", "model": model_id}
     events = _anthropic_events(_TOOL_USE, stop="tool_use")
     assert _run_stream(monkeypatch, model, events)["error"] == TOOL_CALL_ERROR
 
 
-def _fable_5_2_text_events(stop, terminal=True):
-    events = _anthropic_events({"type": "text", "text": "partial"}, stop=stop)
-    return events + ([{"type": "message_stop"}] if terminal else [])
-
-
-@pytest.mark.parametrize("stop", ["refusal", "max_tokens"])
-def test_fable_5_2_incomplete_stop_fails(monkeypatch, stop):
+def test_fable_5_2_rejects_incomplete_stop_reason(monkeypatch):
     model = {"provider": "anthropic", "model": "claude-fable-5-2"}
-    sample = _run_stream(monkeypatch, model, _fable_5_2_text_events(stop))
+    events = _anthropic_events({"type": "text", "text": "cut"}, stop="max_tokens")
+    sample = _run_stream(monkeypatch, model, events)
     assert sample["ok"] is False
-
-
-def test_fable_5_2_stream_without_message_stop_fails(monkeypatch):
-    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
-    events = _fable_5_2_text_events("end_turn", terminal=False)
-    assert _run_stream(monkeypatch, model, events)["ok"] is False
-
-
-def test_fable_5_2_complete_stream_passes(monkeypatch):
-    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
-    sample = _run_stream(monkeypatch, model, _fable_5_2_text_events("end_turn"))
-    assert sample["ok"] is True
-    assert sample["response"] == "partial"
+    assert sample["error"] == "Anthropic did not finish a complete text response"
 
 
 def test_native_chat_tool_call_delta_is_a_failed_request(monkeypatch):

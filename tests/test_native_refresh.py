@@ -472,6 +472,12 @@ def test_mistral_request_omits_undocumented_stream_options():
             {"tool_choice": {"type": "tool", "name": "lookup"}},
         ),
         ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-opus-5-5", {"speed": "fast"}),
+        ("anthropic", "claude-opus-5", {"speed": "fast"}),
+        ("anthropic", "claude-opus-4-8", {"speed": "fast"}),
+        ("anthropic", "claude-fable-5-1", {"speed": "fast"}),
+        ("anthropic", "claude-mythos-5-1", {"speed": "fast"}),
+        ("anthropic", "claude-sonnet-5-5", {"speed": "fast"}),
         ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
         ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
         ("anthropic", "claude-fable-5-2", {"top_k": 5}),
@@ -1070,8 +1076,52 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
 
 @pytest.mark.parametrize("model", ["claude-fable-5-1", "claude-mythos-5-1"])
 def test_fable_5_2_only_refusals_do_not_widen_to_5_1(model):
-    options = {"provider_options": {"anthropic": {"top_p": 0.9, "speed": "fast"}}}
+    options = {"provider_options": {"anthropic": {"top_p": 0.9}}}
     validate_native_request_options({"provider": "anthropic", "model": model}, options)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [{}, {"speed": "standard"}, {"speed": "standard", "inference_geo": "us"}],
+)
+def test_anthropic_standard_speed_is_accepted_and_forwarded(settings):
+    config = {"provider": "anthropic", "model": "claude-opus-5-5"}
+    options = {"max_output_tokens": 512, "provider_options": {"anthropic": settings}}
+    validate_native_request_options(config, options)
+    body = create_client(config, 10).body("hi", options)
+    if "speed" in settings:
+        assert body["speed"] == "standard"
+
+
+@pytest.mark.parametrize(
+    "provider_options,refused",
+    [
+        ({"all": {"speed": "fast"}}, True),
+        ({"speed": "fast"}, True),
+        ({"all": {"speed": "fast"}, "anthropic": {"speed": "standard"}}, False),
+    ],
+)
+def test_anthropic_speed_refusal_reads_all_and_flat_provider_options(
+    provider_options, refused
+):
+    config = {"provider": "anthropic", "model": "claude-opus-5-5"}
+    options = {"max_output_tokens": 512, "provider_options": provider_options}
+    if refused:
+        with pytest.raises(ValueError, match="standard-speed"):
+            validate_native_request_options(config, options)
+    else:
+        validate_native_request_options(config, options)
+
+
+def test_speed_refusal_is_anthropic_only():
+    config = {
+        "provider": "openai_compatible",
+        "model": "m",
+        "base_url": "https://x.example/v1",
+    }
+    options = {"max_output_tokens": 512, "provider_options": {"speed": "fast"}}
+    validate_native_request_options(config, options)
+    assert create_client(config, 10).body("hi", options)["speed"] == "fast"
 
 
 @pytest.mark.parametrize(
@@ -1088,3 +1138,11 @@ def test_fable_5_2_accepts_adaptive_thinking_and_non_forcing_tool_choice(setting
     options = {"max_output_tokens": 512, "provider_options": {"anthropic": settings}}
     validate_native_request_options(config, options)
     assert create_client(config, 10).body("hi", options)["model"] == "claude-fable-5-2"
+
+
+@pytest.mark.parametrize("section", ["anthropic", "all"])
+def test_non_object_provider_options_section_is_refused_not_a_traceback(section):
+    config = {"provider": "anthropic", "model": "claude-opus-5-5"}
+    options = {"provider_options": {section: None}}
+    with pytest.raises(ValueError, match="must be an object"):
+        validate_native_request_options(config, options)

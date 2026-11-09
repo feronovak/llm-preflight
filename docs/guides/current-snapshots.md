@@ -251,7 +251,7 @@ reports one-hour writes (`cache_creation.ephemeral_1h_input_tokens` above
 zero), its cost estimate is unavailable. An owner override that supplies
 input, output and write rates together keeps precedence and is used as given;
 a write rate alone does not replace the bundled one. `speed` other than `standard` is refused on
-`claude-fable-5-2` and `claude-mythos-5-2`. For any other Anthropic row, supply a reviewed
+every Anthropic row, because fast mode has its own rates. For any Anthropic row other than `claude-mythos-5-1`, supply a reviewed
 `cache_write_input_cost_per_million` matching the configured cache lifetime,
 including any applicable input tiers, or reported writes make the cost
 estimate unavailable.

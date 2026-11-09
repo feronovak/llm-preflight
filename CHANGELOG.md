@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- `claude-fable-5-2` has a bundled price snapshot ($8 / $40 per million
+  tokens, cached input $0.20) and an active retirement row. It takes the same
+  request handling as Fable 5.1: no `temperature`, adaptive reasoning only, no
+  forced tool choice, and an incomplete stream is a failed sample. Fable 5.1,
+  Fable 5.2 and Mythos 5.1 now refuse a non-standard `speed` option, because
+  fast-mode rates are not priced. The reported retirement snapshot date moves
+  to 2026-11-09, so earlier approval receipts report `mismatch`.
+
 ### Changed
 
 - `--dry-run --json` and the MCP `dry_run_plan` tool now print each model's

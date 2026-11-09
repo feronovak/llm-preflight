@@ -321,9 +321,28 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-preview")]
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "gemini", "openai"}
-    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 36
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 37
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 75
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 6
+
+
+def test_fable_5_2_retirement_row_is_active_without_a_date():
+    assert PUBLIC_RETIREMENTS[("anthropic", "claude-fable-5-2")] == {
+        "status": "active",
+        "as_of": "2026-11-09",
+        "source_url": ANTHROPIC_DEPRECATIONS_URL,
+    }
+    verdict = retirement_verdict("anthropic", "claude-fable-5-2", date(2026, 11, 9))
+    assert verdict["status"] == "active"
+    assert verdict["decision"] == "pass"
+
+
+def test_fable_5_1_stays_active_without_replacement():
+    row = PUBLIC_RETIREMENTS[("anthropic", "claude-fable-5-1")]
+    assert row["status"] == "active"
+    assert row["as_of"] == "2026-11-04"
+    assert "replacement" not in row
+    assert "retirement_date" not in row
 
 
 def test_gemini_3_1_flash_lite_retires_on_2027_05_07():
@@ -447,7 +466,8 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
-    assert summary["oldest_as_of"] == summary["newest_as_of"] == "2026-11-04"
+    assert summary["oldest_as_of"] == "2026-11-04"
+    assert summary["newest_as_of"] == "2026-11-09"
     assert (
         retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 4))[
             "decision"

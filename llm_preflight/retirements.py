@@ -68,6 +68,9 @@ def _openai(
 # dates are floors, not retirements. Partner platforms (Bedrock, Vertex) set
 # their own schedules and are not represented.
 _ANTHROPIC: dict[str, dict[str, Any]] = {
+    "claude-fable-5-2": _row(
+        "active", source_url=ANTHROPIC_DEPRECATIONS_URL, as_of="2026-11-09"
+    ),
     "claude-fable-5-1": _anthropic("active"),
     "claude-mythos-5-1": _anthropic("active"),
     "claude-fable-5": _anthropic("active"),

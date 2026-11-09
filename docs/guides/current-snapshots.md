@@ -72,6 +72,7 @@ unknown until you supply your own rates.
 | `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-11-04 |
 | `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-04 |
 | `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-04 |
+| `anthropic` | `claude-fable-5-2` | 8.00 | 40.00 | 2026-11-09 |
 | `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-04 |
 | `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-04 |

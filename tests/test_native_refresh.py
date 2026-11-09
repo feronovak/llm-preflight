@@ -460,6 +460,11 @@ def test_mistral_request_omits_undocumented_stream_options():
             "claude-fable-5-1",
             {"thinking": {"type": "enabled", "budget_tokens": 100}},
         ),
+        ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-fable-5-1", {"speed": "fast"}),
+        ("anthropic", "claude-mythos-5-1", {"speed": "fast"}),
     ],
 )
 def test_unsupported_native_billing_and_reasoning_settings_are_refused_by_plan_and_transport(

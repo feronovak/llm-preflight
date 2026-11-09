@@ -47,6 +47,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-04"),
     ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-04"),
     ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-04"),
+    ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-04"),
     ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-04"),
     ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
@@ -92,6 +93,9 @@ _PROVIDER_PRICING_PAGES = {
     "typesafe": "https://docs.typesafe.ai/models",
 }
 _MODEL_PRICING_PAGES = {
+    ("anthropic", "claude-fable-5-2"): (
+        "https://platform.claude.com/docs/en/models/fable-5-2/overview"
+    ),
     (
         "anthropic",
         "claude-mythos-5-1",
@@ -395,6 +399,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
                 "cached_input_cost_per_million": 0.24,
             },
         ],
+    },
+    ("anthropic", "claude-fable-5-2"): {
+        "cached_input_cost_per_million": 0.2,
     },
     ("anthropic", "claude-fable-5-1"): {
         "cached_input_cost_per_million": 0.25,

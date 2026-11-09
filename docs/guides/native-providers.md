@@ -96,8 +96,10 @@ the three commands above do not need a key or contact the provider.
   currently accept text inputs only; model vision capabilities do not imply
   this adapter validates image contracts.
 - Mythos 5.1 requires verified access and the provider's applicable retention
-  arrangement. It shares Fable 5.1's published rates. Both require adaptive
-  thinking and reject forced tool choice. A price row does not establish account
+  arrangement. It shares Fable 5.1's published rates. Fable 5.2 has the same
+  restrictions at its own rates. All three require adaptive thinking and reject
+  forced tool choice, and only standard speed is priced: a fast-mode request is
+  refused. A price row does not establish account
   eligibility or zero-data-retention availability.
 
 The new native text adapters reject truncated streams, output-limit stops,
@@ -141,4 +143,5 @@ Provider specifications and prices: [Terra](https://developers.openai.com/api/do
 [Cohere](https://docs.cohere.com/docs/command-a-plus),
 [GLM Flash](https://docs.z.ai/guides/vlm/glm-5.3-flash),
 [Fable/Mythos](https://platform.claude.com/docs/en/models/fable-5-1/overview),
+[Fable 5.2](https://platform.claude.com/docs/en/models/fable-5-2/overview),
 [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing/).

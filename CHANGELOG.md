@@ -21,7 +21,7 @@ All notable changes to this project are documented here.
 - `inference_geo: us` on a bundled Anthropic row is now priced at the
   official 1.1x multiplier on every token category, in the plan estimate, budget
   caps and run samples, instead of at standard rates. A response that reports
-  `us` is priced the same way, and an unrecognised value leaves the cost
+  `us` is priced the same way, and a `not_available` report keeps the standard cost, and another unrecognised value leaves the cost
   unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
   receipt for a `us` config reports `mismatch` once, because the estimate it
   covers changed.

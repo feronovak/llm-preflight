@@ -1237,6 +1237,15 @@ def test_owner_rates_are_not_multiplied_by_inference_geo():
     assert estimate_sample_cost(sample, model) == pytest.approx(0.015)
 
 
+@pytest.mark.parametrize("reported", ["not_available", "", "x" * 5000, "u\x00s"])
+def test_unusable_or_not_available_reported_geo_keeps_the_standard_cost(
+    monkeypatch, reported
+):
+    sample, model = _geo_run(monkeypatch, _geo_events(usage_geo=reported))
+    assert "inference_geo" not in sample
+    assert estimate_sample_cost(sample, model) is not None
+
+
 def test_default_run_sample_has_no_inference_geo_key(monkeypatch):
     sample, _ = _geo_run(monkeypatch, _geo_events())
     assert "inference_geo" not in sample

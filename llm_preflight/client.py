@@ -1051,9 +1051,11 @@ class AnthropicClient(ProviderClient):
             normalized["cache_write_input_tokens"] = usage[
                 "cache_creation_input_tokens"
             ]
-        if isinstance(usage.get("inference_geo"), str):
-            # Kept with this event's counts; a later event may omit it.
-            normalized["inference_geo"] = usage["inference_geo"]
+        geo = reported_model(usage.get("inference_geo"))
+        if geo and geo != "not_available":
+            # Kept with this event's counts; a later event may omit it. Models
+            # without the option report `not_available`: the standard route.
+            normalized["inference_geo"] = geo
         if _one_hour_cache_writes(usage):
             # A later event repeats cumulative counts without this detail, so
             # keep the signal in its own key for the cost estimate.

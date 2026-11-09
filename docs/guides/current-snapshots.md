@@ -254,7 +254,7 @@ a write rate alone does not replace the bundled one. `speed` other than `standar
 `claude-fable-5-2` and `claude-mythos-5-2`. `inference_geo: us` in
 `provider_options.anthropic` multiplies every token category by 1.1 on bundled
 Anthropic rows, as the official pricing page lists; `global` or no option is
-the standard cost, any other value leaves the cost unavailable, and an owner
+the standard cost, a `not_available` report from a model without the option is the standard cost, any other value leaves the cost unavailable, and an owner
 override is used as given. A response that reports `us` is priced the same way.
 A workspace `default_inference_geo` is not visible to the plan estimate, so the estimate stays about 9% low there until the run reports its actual cost. For any other Anthropic row, supply a reviewed
 `cache_write_input_cost_per_million` matching the configured cache lifetime,

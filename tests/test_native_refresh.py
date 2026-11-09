@@ -1156,15 +1156,35 @@ def test_us_inference_geo_prices_every_token_category_on_fable_5_2():
     )
 
 
+HAIKU_4_5 = "claude-haiku-4-5-20251001"
+
+
 @pytest.mark.parametrize(
-    "model_id", sorted(m for p, m in PUBLIC_PRICING if p == "anthropic")
+    "model_id",
+    sorted(m for p, m in PUBLIC_PRICING if p == "anthropic" and m != HAIKU_4_5),
 )
-def test_us_inference_geo_raises_the_plan_estimate_on_every_bundled_anthropic_row(
+def test_us_inference_geo_raises_the_plan_estimate_on_every_supporting_anthropic_row(
     model_id,
 ):
     standard = _geo_budget(model_id, None)
     assert standard
     assert _geo_budget(model_id, "us") == pytest.approx(standard * 1.1)
+
+
+@pytest.mark.parametrize("geo", ["us", "global"])
+def test_haiku_4_5_refuses_any_inference_geo_at_plan_time(geo):
+    with pytest.raises(ValueError, match="does not support inference_geo"):
+        _geo_budget(HAIKU_4_5, geo)
+    assert _geo_budget(HAIKU_4_5, None)
+
+
+def test_reported_not_available_wins_over_a_requested_us_geo(monkeypatch):
+    options = {"provider_options": {"anthropic": {"inference_geo": "us"}}}
+    sample, model = _geo_run(
+        monkeypatch, _geo_events(usage_geo="not_available"), options
+    )
+    assert "inference_geo" not in sample
+    assert estimate_sample_cost(sample, model) is not None
 
 
 def test_us_inference_geo_applies_to_the_haiku_5_5_long_context_tier():

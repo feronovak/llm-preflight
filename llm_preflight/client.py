@@ -101,6 +101,12 @@ def validate_native_request_options(
                 + ", ".join(sorted(unsupported))
                 + "; use the configured prompt and request.max_output_tokens"
             )
+    if (
+        provider == "anthropic"
+        and model_id == "claude-haiku-4-5-20251001"
+        and "inference_geo" in _provider_options(options, provider)
+    ):
+        raise ValueError("claude-haiku-4-5-20251001 does not support inference_geo")
     if provider not in {
         "zai",
         "deepseek",
@@ -982,7 +988,9 @@ class AnthropicClient(ProviderClient):
         geo = usage.get("inference_geo") or requested_inference_geo(
             self.model, request_options
         )
-        return {"inference_geo": geo} if geo and geo != "global" else {}
+        if geo is None or geo in {"global", "not_available"}:
+            return {}
+        return {"inference_geo": geo}
 
     def endpoint(self) -> str:
         return self.model["base_url"].rstrip("/") + "/messages"
@@ -1052,9 +1060,10 @@ class AnthropicClient(ProviderClient):
                 "cache_creation_input_tokens"
             ]
         geo = reported_model(usage.get("inference_geo"))
-        if geo and geo != "not_available":
+        if geo:
             # Kept with this event's counts; a later event may omit it. Models
-            # without the option report `not_available`: the standard route.
+            # without the option report `not_available`, the standard route,
+            # which must win over a requested option.
             normalized["inference_geo"] = geo
         if _one_hour_cache_writes(usage):
             # A later event repeats cumulative counts without this detail, so

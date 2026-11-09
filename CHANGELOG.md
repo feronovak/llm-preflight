@@ -20,9 +20,11 @@ All notable changes to this project are documented here.
 
 - `inference_geo: us` on a bundled Anthropic row is now priced at the
   official 1.1x multiplier on every token category, in the plan estimate, budget
-  caps and run samples, instead of at standard rates. A response that reports
-  `us` is priced the same way, and a `not_available` report keeps the standard cost, and another unrecognised value leaves the cost
-  unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
+  caps and run samples, instead of at standard rates. `claude-haiku-4-5-20251001`
+  does not support the option, so any `inference_geo` for it is refused at plan
+  time. A response that reports `us` is priced the same way; a reported
+  `not_available` keeps the standard cost even when the option was requested,
+  and another unrecognised reported value leaves the cost unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
   receipt for a `us` config reports `mismatch` once, because the estimate it
   covers changed.
 - Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,

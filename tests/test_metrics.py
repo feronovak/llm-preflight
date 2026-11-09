@@ -45,7 +45,9 @@ def test_summary_excludes_failed_latency_but_preserves_unknown_request_cost():
 def test_summary_counts_one_hour_writes_priced_at_the_bundled_five_minute_rate():
     from llm_preflight.pricing import apply_public_pricing
 
-    model = apply_public_pricing({"provider": "anthropic", "model": "claude-mythos-5-1"})
+    model = apply_public_pricing(
+        {"provider": "anthropic", "model": "claude-mythos-5-1"}
+    )
     sample = {
         "ok": True,
         "input_tokens": 1000,

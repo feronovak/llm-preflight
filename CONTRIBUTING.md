@@ -70,7 +70,8 @@ make check-dist
   the bundled examples are still priced and free of retired models.
 - `python3 scripts/source_watch.py --previous snap.json --write snap.json --json`
   is the maintainer's nightly source watch. It fetches the public OpenRouter
-  model list and every official pricing and retirement page the bundle cites,
+  model list and every official pricing and retirement page the bundle cites
+  (Google's client-rendered docs are read through their `.md` form),
   then reports new models, OpenRouter price signals, changed pages (changes to
   the page content that cites the bundle, not site chrome or other models'
   rows) and pages it could not read, each with a stable `key`. It needs no API keys and never

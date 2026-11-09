@@ -112,7 +112,10 @@ with `mean`, `min`, `p50`, `p95`, and `max` (except where a metric only has a
 meaningful subset). They are `null` when unavailable. `estimated_cost_usd` is
 `null` when any sample lacks usable usage or pricing. Each summary also includes
 `priced_cost_usd`, `cost_coverage`, and `usage_coverage` with the same meanings
-as the run fields, scoped to that summary. A zero-request summary has a zero
+as the run fields, scoped to that summary. `cost_coverage.unpriced_one_hour_requests`
+is summary-only (also on `warmup_summary`) and present only when above zero: it
+counts requests whose one-hour cache writes the bundled five-minute write rate
+cannot price. A zero-request summary has a zero
 cost and zero coverage counts; it creates no missing-evidence warning.
 Token fields sum only valid reported counts; a partial subtotal is not a full
 usage total. Summaries also include `cached_input_tokens` for cache reads and

@@ -42,13 +42,17 @@ def _row(
 
 
 def _anthropic(
-    status: str, retirement_date: str | None = None, replacement: str | None = None
+    status: str,
+    retirement_date: str | None = None,
+    replacement: str | None = None,
+    as_of: str = _REVIEWED,
 ) -> dict[str, Any]:
     return _row(
         status,
         source_url=ANTHROPIC_DEPRECATIONS_URL,
         retirement_date=retirement_date,
         replacement=replacement,
+        as_of=as_of,
     )
 
 
@@ -68,6 +72,8 @@ def _openai(
 # dates are floors, not retirements. Partner platforms (Bedrock, Vertex) set
 # their own schedules and are not represented.
 _ANTHROPIC: dict[str, dict[str, Any]] = {
+    "claude-fable-5-2": _anthropic("active", as_of="2026-11-09"),
+    "claude-mythos-5-2": _anthropic("active", as_of="2026-11-09"),
     "claude-fable-5-1": _anthropic("active"),
     "claude-mythos-5-1": _anthropic("active"),
     "claude-fable-5": _anthropic("active"),

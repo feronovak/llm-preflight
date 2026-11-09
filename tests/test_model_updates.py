@@ -378,8 +378,20 @@ def test_october_dated_openai_ids_reach_their_announced_retirement_boundary(
 def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
-    assert {rates[2] for rates in PUBLIC_PRICING.values()} == {"2026-11-04"}
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-04"}
+    new_ids = {"claude-fable-5-2", "claude-mythos-5-2"}
+    dates = {"2026-11-04", "2026-11-09"}
+    assert {rates[2] for rates in PUBLIC_PRICING.values()} == dates
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == dates
+    assert {
+        model
+        for (_, model), rates in PUBLIC_PRICING.items()
+        if rates[2] == "2026-11-09"
+    } == new_ids
+    assert {
+        model
+        for (_, model), row in PUBLIC_RETIREMENTS.items()
+        if row["as_of"] == "2026-11-09"
+    } == new_ids
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

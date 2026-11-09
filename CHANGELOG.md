@@ -18,6 +18,12 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Add bundled pricing and retirement rows for `claude-fable-5-2` and
+  `claude-mythos-5-2` ($8 input, $40 output, $0.20 cache read and $10 cache
+  write per million tokens, from the official Anthropic pricing page), and
+  apply the Fable/Mythos 5.1 request rules to them: no `temperature`, adaptive
+  reasoning only, no forced tool choice and a complete stream. The two rows
+  are dated 2026-11-09; the other rows keep their 2026-11-04 review date.
 - A provider response that returns a tool call no longer passes on the
   Chat Completions, Anthropic and Gemini routes. Preflight reads text only, so
   the call was discarded and a response with text followed by a tool call, or a

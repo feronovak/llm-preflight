@@ -251,6 +251,8 @@ PRICES = [
     ("zai", "glm-5.3-flash", 0.15, 0.50, 0.03, None),
     ("zai", "glm-5.3-flashx", 0.37, 1.25, 0.075, None),
     ("anthropic", "claude-mythos-5-1", 10, 50, 0.25, 12.5),
+    ("anthropic", "claude-fable-5-2", 8, 40, 0.20, 10),
+    ("anthropic", "claude-mythos-5-2", 8, 40, 0.20, 10),
     ("moonshot", "kimi-k3.1-pro", 2, 10, 0.20, 2),
     ("moonshot", "kimi-k3.1-pro-highspeed", 4, 20, 0.20, 4),
     ("minimax", "MiniMax-M3.1-Flash", 0.15, 0.60, 0.015, None),
@@ -276,7 +278,7 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     assert priced.get("cached_input_cost_per_million") == cache_rate
     assert priced.get("cache_write_input_cost_per_million") == write_rate
     as_of = priced["pricing_metadata"]["as_of"]
-    assert as_of == "2026-11-04"
+    assert as_of == ("2026-11-09" if model.endswith("-5-2") else "2026-11-04")
     assert priced["pricing_metadata"]["source_url"].startswith("https://")
     sample = {
         "input_tokens": 1000,
@@ -455,6 +457,10 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("openai", "gpt-6.1-terra", {"prompt_cache_retention": "12h"}),
         ("anthropic", "claude-mythos-5-1", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-1", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-mythos-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-mythos-5-2", {"tool_choice": {"type": "any"}}),
         (
             "anthropic",
             "claude-fable-5-1",
@@ -608,10 +614,14 @@ def test_deepseek_flash_alias_image_fixture_keeps_observed_identity_and_top_leve
 
 
 @pytest.mark.parametrize(
+    ("model_id", "expected_cost"),
+    [("claude-mythos-5-1", 0.00345), ("claude-mythos-5-2", 0.00276)],
+)
+@pytest.mark.parametrize(
     "failure", [None, "event-error", "truncated", "limit", "http403"]
 )
 def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidence(
-    monkeypatch, failure
+    monkeypatch, failure, model_id, expected_cost
 ):
     from llm_preflight.pricing import apply_public_pricing
 
@@ -620,7 +630,7 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         {
             "type": "message_start",
             "message": {
-                "model": "claude-mythos-5-1",
+                "model": model_id,
                 "usage": {
                     "input_tokens": 100,
                     "cache_read_input_tokens": 800,
@@ -670,9 +680,7 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
         return Stream(events[:-1] if failure == "truncated" else events)
 
     monkeypatch.setattr("llm_preflight.client.open_public_url", transport)
-    model = apply_public_pricing(
-        {"provider": "anthropic", "model": "claude-mythos-5-1"}
-    )
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
     sample = create_client(model, 10).run("hi", {"retry": {"max_attempts": 1}})
     if failure:
         assert sample["ok"] is False
@@ -680,11 +688,11 @@ def test_restricted_mythos_stream_preserves_cache_and_rejects_incomplete_evidenc
     else:
         assert sample["ok"] is True
         assert sample["response"] == "billing"
-        assert sample["observed_model"] == "claude-mythos-5-1"
+        assert sample["observed_model"] == model_id
         assert sample["input_tokens"] == 1000
         assert sample["cached_input_tokens"] == 800
         assert sample["cache_write_input_tokens"] == 100
-        assert estimate_sample_cost(sample, model) == pytest.approx(0.00345)
+        assert estimate_sample_cost(sample, model) == pytest.approx(expected_cost)
 
 
 @pytest.mark.parametrize("model", ["glm-5.3-flash", "glm-5.3-flashx"])

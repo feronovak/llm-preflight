@@ -167,9 +167,11 @@ from the ID.
 
 ## Release retirement review
 
-The 2.23.1 snapshot contains 117 rows: 36 Anthropic, 75 OpenAI and six Gemini,
-all reviewed on the date stamped above. Non-retired rows become stale on
-2026-12-05; retired rows remain failures. The added dated OpenAI IDs
+The snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini. All
+but two were reviewed on the date stamped above; non-retired rows become stale
+on 2026-12-05, and retired rows remain failures. The Anthropic rows for
+`claude-fable-5-2` and `claude-mythos-5-2` were reviewed on 2026-11-09 and go
+stale on 2026-12-10. The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
 2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and
 GPT-4.1 mini aliases follow the schedule of the dated snapshots their official

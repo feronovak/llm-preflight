@@ -9,7 +9,11 @@ from typing import Any, cast
 from unicodedata import east_asian_width
 
 from .catalog import resolve_models
-from .client import PROVIDER_DEFAULTS, validate_native_request_options
+from .client import (
+    PROVIDER_DEFAULTS,
+    requested_inference_geo,
+    validate_native_request_options,
+)
 from .contracts import profile_request_options
 from .decision import legacy_cost_evidence
 from .eligibility import incompatible_text_smoke_reason
@@ -181,7 +185,13 @@ def _request_cost(
     max_output_tokens = int(
         options.get("max_output_tokens") or options.get("max_tokens") or 256
     )
-    sample = {"input_tokens": input_tokens, "output_tokens": max_output_tokens}
+    sample: dict[str, Any] = {
+        "input_tokens": input_tokens,
+        "output_tokens": max_output_tokens,
+    }
+    geo = requested_inference_geo(model, options)
+    if geo:
+        sample["inference_geo"] = geo
     ordinary_cost = estimate_sample_cost(sample, model)
     if any(
         "cache_write_input_cost_per_million" in tier

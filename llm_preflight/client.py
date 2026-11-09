@@ -16,7 +16,7 @@ from .pricing import valid_token_count
 from .providers import PROVIDER_DEFAULTS
 from .security import open_public_url, require_http_url
 
-TokenUsage = dict[str, int | None]
+TokenUsage = dict[str, Any]
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
@@ -113,6 +113,12 @@ def validate_native_request_options(
             "Anthropic preflight prices standard-speed requests only; "
             "fast mode is not priced"
         )
+    if (
+        provider == "anthropic"
+        and model_id == "claude-haiku-4-5-20251001"
+        and "inference_geo" in _provider_options(options, provider)
+    ):
+        raise ValueError("claude-haiku-4-5-20251001 does not support inference_geo")
     if provider not in {
         "zai",
         "deepseek",
@@ -384,6 +390,11 @@ class ProviderClient(ABC):
         """The model an event says answered; OpenAI-compatible chunks name it."""
         return event.get("model")
 
+    def _geo_fields(
+        self, usage: dict[str, Any], request_options: dict[str, Any]
+    ) -> dict[str, str]:
+        return {}
+
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
         started = time.perf_counter()
         key_env = self.model.get("api_key_env")
@@ -405,7 +416,7 @@ class ProviderClient(ABC):
             attempt_started = time.perf_counter()
             first_token_at: float | None = None
             content: list[str] = []
-            usage: dict[str, int] = {}
+            usage: dict[str, Any] = {}
             models: list[Any] = []
             completed = False
             try:
@@ -505,6 +516,7 @@ class ProviderClient(ABC):
                         else {}
                     ),
                     **({"cache_write_1h": True} if usage.get("cache_write_1h") else {}),
+                    **self._geo_fields(usage, request_options),
                     "output_tokens": output_tokens,
                     "response_chars": sum(map(len, content)),
                     "response": "".join(content),
@@ -949,6 +961,16 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
         )
 
 
+def requested_inference_geo(
+    model: dict[str, Any], options: dict[str, Any]
+) -> str | None:
+    """The non-global `inference_geo` an Anthropic request asks for."""
+    if model.get("provider") != "anthropic":
+        return None
+    geo = _provider_options(options, "anthropic").get("inference_geo")
+    return geo if geo is not None and geo != "global" else None
+
+
 def _one_hour_cache_writes(usage: dict[str, Any]) -> bool:
     detail = usage.get("cache_creation")
     if not isinstance(detail, dict):
@@ -969,6 +991,16 @@ class AnthropicClient(ProviderClient):
 
     def terminal_event(self, event: dict[str, Any]) -> bool:
         return event.get("type") == "message_stop"
+
+    def _geo_fields(
+        self, usage: dict[str, Any], request_options: dict[str, Any]
+    ) -> dict[str, str]:
+        geo = usage.get("inference_geo") or requested_inference_geo(
+            self.model, request_options
+        )
+        if geo is None or geo in {"global", "not_available"}:
+            return {}
+        return {"inference_geo": geo}
 
     def endpoint(self) -> str:
         return self.model["base_url"].rstrip("/") + "/messages"
@@ -1037,6 +1069,12 @@ class AnthropicClient(ProviderClient):
             normalized["cache_write_input_tokens"] = usage[
                 "cache_creation_input_tokens"
             ]
+        geo = reported_model(usage.get("inference_geo"))
+        if geo:
+            # Kept with this event's counts; a later event may omit it. Models
+            # without the option report `not_available`, the standard route,
+            # which must win over a requested option.
+            normalized["inference_geo"] = geo
         if _one_hour_cache_writes(usage):
             # A later event repeats cumulative counts without this detail, so
             # keep the signal in its own key for the cost estimate.

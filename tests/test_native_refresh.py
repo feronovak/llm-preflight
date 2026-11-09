@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from llm_preflight.client import create_client, validate_native_request_options
-from llm_preflight.pricing import estimate_sample_cost
+from llm_preflight.pricing import PUBLIC_PRICING, estimate_sample_cost
 
 NATIVE_CASES = [
     (
@@ -1146,3 +1146,184 @@ def test_non_object_provider_options_section_is_refused_not_a_traceback(section)
     options = {"provider_options": {section: None}}
     with pytest.raises(ValueError, match="must be an object"):
         validate_native_request_options(config, options)
+
+
+def _geo_events(usage_geo=None):
+    start_usage = {"input_tokens": 1000, "output_tokens": 1}
+    if usage_geo is not None:
+        start_usage["inference_geo"] = usage_geo
+    return [
+        {
+            "type": "message_start",
+            "message": {"model": "claude-fable-5-2", "usage": start_usage},
+        },
+        {
+            "type": "content_block_delta",
+            "delta": {"type": "text_delta", "text": "ok"},
+        },
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": "end_turn"},
+            "usage": {"output_tokens": 10},
+        },
+        {"type": "message_stop"},
+    ]
+
+
+def _geo_run(monkeypatch, events, options=None):
+    from llm_preflight.pricing import apply_public_pricing
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fixture-key")
+    monkeypatch.setattr(
+        "llm_preflight.client.open_public_url", lambda *a, **k: Stream(events)
+    )
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-fable-5-2"})
+    request = {"retry": {"max_attempts": 1}, **(options or {})}
+    return create_client(model, 10).run("hi", request), model
+
+
+def _geo_budget(model_id, geo):
+    from llm_preflight.features import estimate_budget
+
+    options = {"max_output_tokens": 100}
+    if geo is not None:
+        options["provider_options"] = {"anthropic": {"inference_geo": geo}}
+    return estimate_budget(
+        {
+            "prompt": "hello",
+            "models": [{"provider": "anthropic", "model": model_id}],
+            "repetitions": 1,
+            "warmups": 0,
+            "request": options,
+        }
+    )["estimated_cost_usd"]
+
+
+def _public_model(model_id):
+    from llm_preflight.pricing import apply_public_pricing
+
+    return apply_public_pricing({"provider": "anthropic", "model": model_id})
+
+
+def test_us_inference_geo_prices_every_token_category_on_fable_5_2():
+    model = _public_model("claude-fable-5-2")
+    sample = {"input_tokens": 1000, "cached_input_tokens": 400, "output_tokens": 100}
+    standard = estimate_sample_cost(sample, model)
+    assert estimate_sample_cost({**sample, "inference_geo": "us"}, model) == (
+        pytest.approx(standard * 1.1)
+    )
+
+
+HAIKU_4_5 = "claude-haiku-4-5-20251001"
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    sorted(m for p, m in PUBLIC_PRICING if p == "anthropic" and m != HAIKU_4_5),
+)
+def test_us_inference_geo_raises_the_plan_estimate_on_every_supporting_anthropic_row(
+    model_id,
+):
+    standard = _geo_budget(model_id, None)
+    assert standard
+    assert _geo_budget(model_id, "us") == pytest.approx(standard * 1.1)
+
+
+@pytest.mark.parametrize("geo", ["us", "global"])
+def test_haiku_4_5_refuses_any_inference_geo_at_plan_time(geo):
+    with pytest.raises(ValueError, match="does not support inference_geo"):
+        _geo_budget(HAIKU_4_5, geo)
+    assert _geo_budget(HAIKU_4_5, None)
+
+
+def test_reported_not_available_wins_over_a_requested_us_geo(monkeypatch):
+    options = {"provider_options": {"anthropic": {"inference_geo": "us"}}}
+    sample, model = _geo_run(
+        monkeypatch, _geo_events(usage_geo="not_available"), options
+    )
+    assert "inference_geo" not in sample
+    assert estimate_sample_cost(sample, model) is not None
+
+
+def test_us_inference_geo_applies_to_the_haiku_5_5_long_context_tier():
+    model = _public_model("claude-haiku-5-5")
+    sample = {"input_tokens": 150_000, "output_tokens": 100}
+    standard = estimate_sample_cost(sample, model)
+    assert standard is not None
+    assert estimate_sample_cost({**sample, "inference_geo": "us"}, model) == (
+        pytest.approx(standard * 1.1)
+    )
+
+
+@pytest.mark.parametrize("geo", [None, "global"])
+def test_global_or_absent_inference_geo_keeps_the_standard_cost(geo):
+    model = _public_model("claude-fable-5-2")
+    sample = {"input_tokens": 1000, "output_tokens": 100}
+    extra = {} if geo is None else {"inference_geo": geo}
+    assert estimate_sample_cost({**sample, **extra}, model) == estimate_sample_cost(
+        sample, model
+    )
+    assert _geo_budget("claude-fable-5-2", geo) == _geo_budget("claude-fable-5-2", None)
+
+
+def test_response_reported_us_geo_prices_a_sample_with_no_request_option(monkeypatch):
+    sample, model = _geo_run(monkeypatch, _geo_events(usage_geo="us"))
+    assert sample["inference_geo"] == "us"
+    plain = {k: v for k, v in sample.items() if k != "inference_geo"}
+    assert estimate_sample_cost(sample, model) == pytest.approx(
+        estimate_sample_cost(plain, model) * 1.1
+    )
+
+
+def test_request_us_geo_prices_a_sample_when_the_response_omits_the_field(
+    monkeypatch,
+):
+    options = {"provider_options": {"anthropic": {"inference_geo": "us"}}}
+    sample, _ = _geo_run(monkeypatch, _geo_events(), options)
+    assert sample["inference_geo"] == "us"
+
+
+def test_reported_inference_geo_survives_the_later_usage_event(monkeypatch):
+    sample, _ = _geo_run(monkeypatch, _geo_events(usage_geo="us"))
+    assert sample["output_tokens"] == 10
+    assert sample["inference_geo"] == "us"
+
+
+def test_unknown_inference_geo_leaves_the_cost_unknown():
+    from llm_preflight.pricing import sample_cost_evidence
+
+    model = _public_model("claude-fable-5-2")
+    sample = {"input_tokens": 10, "output_tokens": 10, "inference_geo": "eu"}
+    assert sample_cost_evidence(sample, model) == (None, False, True)
+    assert _geo_budget("claude-fable-5-2", "eu") is None
+
+
+def test_owner_rates_are_not_multiplied_by_inference_geo():
+    from llm_preflight.pricing import resolve_pricing
+
+    model = resolve_pricing(
+        [
+            {
+                "provider": "anthropic",
+                "model": "claude-fable-5-2",
+                "input_cost_per_million": 10,
+                "output_cost_per_million": 50,
+            }
+        ]
+    )["models"][0]
+    sample = {"input_tokens": 1000, "output_tokens": 100, "inference_geo": "us"}
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.015)
+
+
+@pytest.mark.parametrize("reported", ["not_available", "", "x" * 5000, "u\x00s"])
+def test_unusable_or_not_available_reported_geo_keeps_the_standard_cost(
+    monkeypatch, reported
+):
+    sample, model = _geo_run(monkeypatch, _geo_events(usage_geo=reported))
+    assert "inference_geo" not in sample
+    assert estimate_sample_cost(sample, model) is not None
+
+
+def test_default_run_sample_has_no_inference_geo_key(monkeypatch):
+    sample, _ = _geo_run(monkeypatch, _geo_events())
+    assert "inference_geo" not in sample

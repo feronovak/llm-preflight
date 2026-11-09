@@ -547,6 +547,23 @@ def unpriced_one_hour_writes(sample: dict[str, Any], model: dict[str, Any]) -> b
     )
 
 
+ANTHROPIC_US_INFERENCE_MULTIPLIER = 1.1
+
+
+def _inference_geo_multiplier(
+    sample: dict[str, Any], model: dict[str, Any]
+) -> float | None:
+    """Official-snapshot Anthropic multiplier for the route; None = unknown."""
+    geo = sample.get("inference_geo")
+    if (
+        model.get("provider") != "anthropic"
+        or (model.get("pricing_metadata") or {}).get("source") != "official snapshot"
+        or geo in (None, "global")
+    ):
+        return 1.0
+    return ANTHROPIC_US_INFERENCE_MULTIPLIER if geo == "us" else None
+
+
 def sample_cost_evidence(
     sample: dict[str, Any], model: dict[str, Any]
 ) -> tuple[float | None, bool, bool]:
@@ -581,12 +598,17 @@ def sample_cost_evidence(
     if written_tokens and valid_token_count(written_tokens):
         required_prices.append(write_price)
     # The bundled write rate is the 5-minute one; an owner rate is trusted.
-    missing_price = unpriced_one_hour_writes(sample, model) or any(
-        not isinstance(value, (int, float))
-        or isinstance(value, bool)
-        or not math.isfinite(value)
-        or value < 0
-        for value in required_prices
+    multiplier = _inference_geo_multiplier(sample, model)
+    missing_price = (
+        multiplier is None
+        or unpriced_one_hour_writes(sample, model)
+        or any(
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            or value < 0
+            for value in required_prices
+        )
     )
     if missing_usage or missing_price:
         return None, missing_usage, missing_price
@@ -604,7 +626,7 @@ def sample_cost_evidence(
         + (written_input * float(write_price) if written_input else 0)
         + int(output_tokens) * float(output_price)
     ) / 1_000_000
-    return cost, False, False
+    return cost * cast(float, multiplier), False, False
 
 
 def estimate_sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float | None:

@@ -18,6 +18,15 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- `inference_geo: us` on a bundled Anthropic row is now priced at the
+  official 1.1x multiplier on every token category, in the plan estimate, budget
+  caps and run samples, instead of at standard rates. `claude-haiku-4-5-20251001`
+  does not support the option, so any `inference_geo` for it is refused at plan
+  time. A response that reports `us` is priced the same way; a reported
+  `not_available` keeps the standard cost even when the option was requested,
+  and another unrecognised reported value leaves the cost unavailable. Result `samples[]` gain an optional `inference_geo`. An approval
+  receipt for a `us` config reports `mismatch` once, because the estimate it
+  covers changed.
 - Anthropic rows now refuse `speed` other than `standard` before planning, so a
   fast-mode request is no longer estimated at the standard rate. Migration:
   `speed: fast` on Anthropic rows is refused until fast-mode rates are priced;

@@ -68,6 +68,7 @@ _BLOCK_TAGS = {
     "h1", "h2", "h3", "h4", "h5", "h6", "pre", "header", "footer", "main",
 }  # fmt: skip
 _SKIPPED_TAGS = {"script", "style", "noscript", "template", "svg"}
+GEMINI_DOCS_PREFIX = "https://aistudio.google.com/docs/"
 _DATED_SUFFIX = re.compile(r"-\d{8}$")
 
 
@@ -150,6 +151,27 @@ def unreadable_reason(
     return None
 
 
+def watched_url(url: str) -> str:
+    """The URL the watch reads: Google's client-rendered docs serve text as `.md`."""
+    if url.startswith(GEMINI_DOCS_PREFIX) and not url.endswith(".md"):
+        return url + ".md"
+    return url
+
+
+def normalise_markdown(text: str) -> list[str]:
+    """Whitespace-collapsed non-empty lines of a markdown page; never parsed as HTML."""
+    if text.lstrip().lower().startswith(("<!doctype", "<html")):
+        raise FetchError("not markdown")
+    lines = (" ".join(line.split()) for line in text.splitlines())
+    return [line for line in lines if line]
+
+
+def page_lines(url: str, body: str) -> list[str]:
+    if url.startswith(GEMINI_DOCS_PREFIX) and url.endswith(".md"):
+        return normalise_markdown(body)
+    return normalise_html(body)
+
+
 def text_hash(lines: list[str]) -> str:
     return hashlib.sha256("\n".join(lines).encode()).hexdigest()[:16]
 
@@ -158,11 +180,13 @@ def cited_urls() -> dict[str, list[str]]:
     """Every official URL the bundle cites, with the rows that cite it."""
     cites: dict[str, list[str]] = {}
     for (provider, model), url in PUBLIC_PRICING_SOURCES.items():
-        cites.setdefault(url, []).append(f"pricing {provider}/{model}")
+        cites.setdefault(watched_url(url), []).append(f"pricing {provider}/{model}")
     for (provider, model), row in PUBLIC_RETIREMENTS.items():
-        cites.setdefault(row["source_url"], []).append(f"retirement {provider}/{model}")
+        cites.setdefault(watched_url(row["source_url"]), []).append(
+            f"retirement {provider}/{model}"
+        )
     for name, url in DEPRECATION_URLS.items():
-        cites.setdefault(url, []).append(f"retirements constant {name}")
+        cites.setdefault(watched_url(url), []).append(f"retirements constant {name}")
     return {url: sorted(rows) for url, rows in sorted(cites.items())}
 
 
@@ -239,7 +263,7 @@ def watch_pages(
     findings = []
     for url, rows in cited_urls().items():
         try:
-            lines = normalise_html(read(url).decode("utf-8", errors="replace"))
+            lines = page_lines(url, read(url).decode("utf-8", errors="replace"))
             reason = unreadable_reason(lines, old_pages.get(url))
             if reason:
                 raise FetchError(reason)

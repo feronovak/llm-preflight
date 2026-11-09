@@ -108,7 +108,7 @@ in all three commands, and a scan that read no file exits 3.
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
 stale 30 days after their review date (the bundled rows are stale from the 31st
-day after the review date stamped above), after which `--ci` returns 3 for
+day after the 2026-11-04 review date), after which `--ci` returns 3 for
 every non-retired model in the snapshot (retired stays 1) until the package is
 updated; models with no row stay at 0.
 
@@ -165,7 +165,7 @@ from the ID.
 ## Release retirement review
 
 The 2.24.0 snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini.
-The 117 older rows were reviewed on the date stamped above; the two newer
+The 117 older rows were reviewed on 2026-11-04; the two newer
 Anthropic rows, `claude-fable-5-2` and `claude-mythos-5-2`, were reviewed on
 2026-11-09 and become stale on 2026-12-10. Non-retired rows become stale on
 2026-12-05; retired rows remain failures. The added dated OpenAI IDs

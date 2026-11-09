@@ -736,7 +736,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
-    assert "stale from the 31st day after the review date stamped above" in guide
+    assert "stale from the 31st day after the 2026-11-04 review date" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 

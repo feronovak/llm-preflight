@@ -460,6 +460,12 @@ def test_mistral_request_omits_undocumented_stream_options():
             "claude-fable-5-1",
             {"thinking": {"type": "enabled", "budget_tokens": 100}},
         ),
+        ("anthropic", "claude-fable-5-2", {"thinking": {"type": "disabled"}}),
+        ("anthropic", "claude-fable-5-2", {"tool_choice": {"type": "any"}}),
+        ("anthropic", "claude-fable-5-2", {"speed": "fast"}),
+        ("anthropic", "claude-fable-5-2", {"temperature": 0.5}),
+        ("anthropic", "claude-fable-5-2", {"top_p": 0.9}),
+        ("anthropic", "claude-fable-5-2", {"top_k": 5}),
     ],
 )
 def test_unsupported_native_billing_and_reasoning_settings_are_refused_by_plan_and_transport(
@@ -939,3 +945,9 @@ def test_minimax_disabled_reasoning_support_is_model_specific(model, allowed):
             estimate_budget(
                 {"prompt": "billing", "models": [config], "request": request}
             )
+
+
+@pytest.mark.parametrize("model", ["claude-fable-5-1", "claude-mythos-5-1"])
+def test_fable_5_2_only_refusals_do_not_widen_to_5_1(model):
+    options = {"provider_options": {"anthropic": {"top_p": 0.9, "speed": "fast"}}}
+    validate_native_request_options({"provider": "anthropic", "model": model}, options)

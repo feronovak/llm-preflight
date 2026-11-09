@@ -521,3 +521,117 @@ def test_cited_model_variant_row_is_kept(sw):
     lines = sw.scoped_lines(html, rows)
     assert any("1M context" in line for line in lines)
     assert not any("ünï" in line or "$8" in line for line in lines)
+
+
+GEMINI = "https://aistudio.google.com/docs/pricing"
+GEMINI_MD = GEMINI + ".md"
+
+
+def _gemini(sw, monkeypatch):
+    monkeypatch.setattr(sw, "PUBLIC_PRICING_SOURCES", {("gemini", "example"): GEMINI})
+    monkeypatch.setattr(sw, "PUBLIC_RETIREMENTS", {})
+
+
+def _gemini_reader(md="gemini_page.txt", html="gemini_shell.html"):
+    def read(url):
+        if url == ROUTER:
+            return (FIXTURES / "openrouter.json").read_bytes()
+        name = {GEMINI: html, GEMINI_MD: md}.get(url)
+        if name is None:
+            raise _load().FetchError("HTTP 404")
+        return (FIXTURES / name).read_bytes()
+
+    return read
+
+
+def test_gemini_docs_are_read_through_markdown_twins(sw, monkeypatch):
+    _gemini(sw, monkeypatch)
+    findings, snapshot = sw.run(None, _gemini_reader())
+    assert _by_type(findings, "fetch-failed") == []
+    assert set(snapshot["pages"]) == {GEMINI_MD}
+    lines = snapshot["pages"][GEMINI_MD]["lines"]
+    assert "| example-flash | $0.30 | $2.50 |" in lines
+    assert any("Café" in line for line in lines)
+    assert snapshot["pages"][GEMINI_MD]["scoped"] is True
+
+
+def test_cited_urls_watch_gemini_docs_through_markdown_twins():
+    sw = _load()
+    cites = sw.cited_urls()
+    gemini = {u for u in cites if u.startswith("https://aistudio.google.com/docs/")}
+    assert gemini and all(u.endswith(".md") for u in gemini)
+    assert "https://aistudio.google.com/docs/models/gemini-4-argon.md" in gemini
+    assert (
+        "retirement gemini/gemini-4-argon"
+        in cites["https://aistudio.google.com/docs/models/gemini-4-argon.md"]
+    )
+
+
+def test_markdown_page_change_reports_excerpt_and_citing_rows(sw, monkeypatch):
+    _gemini(sw, monkeypatch)
+    _, snapshot = sw.run(None, _gemini_reader())
+    findings, _ = sw.run(snapshot, _gemini_reader(md="gemini_page_v2.txt"))
+    [change] = _by_type(findings, "page-changed")
+    assert change["url"] == GEMINI_MD
+    assert any(l.startswith("+ ") and "$0.35" in l for l in change["changed_lines"])
+    assert change["cited_by"] == ["pricing gemini/example"]
+
+
+def test_markdown_is_not_parsed_as_html(sw, monkeypatch):
+    _gemini(sw, monkeypatch)
+    body = (FIXTURES / "gemini_page.txt").read_text() + "\n<script>\nlast line kept\n"
+    findings, snapshot = sw.run(
+        None,
+        lambda u: (
+            body.encode()
+            if u == GEMINI_MD
+            else (FIXTURES / "openrouter.json").read_bytes()
+        ),
+    )
+    lines = snapshot["pages"][GEMINI_MD]["lines"]
+    assert any("`<model>`" in line for line in lines)
+    assert lines[-1] == "last line kept"
+    assert snapshot["pages"][GEMINI_MD]["scoped"] is True
+    assert _by_type(findings, "fetch-failed") == []
+
+
+def test_html_served_at_markdown_url_is_fetch_failed(sw, monkeypatch):
+    _gemini(sw, monkeypatch)
+    _, snapshot = sw.run(None, _gemini_reader())
+    findings, pages = sw.watch_pages(snapshot, _gemini_reader(md="gemini_shell.html"))
+    [failed] = _by_type(findings, "fetch-failed")
+    assert failed["reason"] == "not markdown"
+    assert _by_type(findings, "page-changed") == []
+    assert pages[GEMINI_MD] == snapshot["pages"][GEMINI_MD]
+
+
+@pytest.mark.parametrize("body", ["", "# Title\n\nshort"])
+def test_short_markdown_body_is_near_empty(sw, monkeypatch, body):
+    _gemini(sw, monkeypatch)
+    findings, _ = sw.run(
+        None,
+        lambda u: (
+            body.encode()
+            if u == GEMINI_MD
+            else (FIXTURES / "openrouter.json").read_bytes()
+        ),
+    )
+    [failed] = _by_type(findings, "fetch-failed")
+    assert failed["reason"] == "near-empty text"
+
+
+def test_old_html_snapshot_entry_is_not_compared_with_markdown(sw, monkeypatch):
+    _gemini(sw, monkeypatch)
+    old = {"hash": "x", "lines": [f"old html line {i}" for i in range(500)]}
+    previous = {"version": 1, "pages": {GEMINI: old}}
+    findings, snapshot = sw.run(previous, _gemini_reader())
+    assert _by_type(findings, "page-changed") == []
+    assert _by_type(findings, "fetch-failed") == []
+    assert GEMINI not in snapshot["pages"]
+
+
+def test_other_providers_keep_their_html_url(sw):
+    assert sw.watched_url(PAGE) == PAGE
+    _, snapshot = sw.run(None, _reader())
+    assert "<" not in " ".join(snapshot["pages"][PAGE]["lines"])
+    assert set(snapshot["pages"]) == {PAGE, LIMIT}

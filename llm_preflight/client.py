@@ -145,6 +145,14 @@ def validate_native_request_options(
             raise ValueError(
                 "Fable/Mythos 5.1 and Fable 5.2 do not support forced tool choice"
             )
+        if provider_options.get("speed", "standard") != "standard":
+            raise ValueError(
+                "Fable/Mythos 5.1 and Fable 5.2 support standard speed only"
+            )
+        if {"temperature", "top_p", "top_k"} & provider_options.keys():
+            raise ValueError(
+                "Fable/Mythos 5.1 and Fable 5.2 do not accept sampling parameters"
+            )
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"

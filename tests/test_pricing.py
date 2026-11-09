@@ -631,21 +631,21 @@ def test_claude_fable_5_2_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 8.0
     assert model["output_cost_per_million"] == 40.0
     assert model["cached_input_cost_per_million"] == 0.2
-    assert model["cache_write_input_cost_per_million"] == 10.0
+    assert "cache_write_input_cost_per_million" not in model
     assert model["pricing_metadata"]["as_of"] == "2026-11-09"
     assert model["pricing_metadata"]["source_url"] == (
         "https://platform.claude.com/docs/en/about-claude/pricing"
     )
-    cost = estimate_sample_cost(
-        {
-            "input_tokens": 1000,
-            "cached_input_tokens": 100,
-            "cache_write_input_tokens": 100,
-            "output_tokens": 10,
-        },
-        model,
+    sample = {
+        "input_tokens": 1000,
+        "cached_input_tokens": 100,
+        "output_tokens": 10,
+    }
+    assert estimate_sample_cost(sample, model) == pytest.approx(0.00762)
+    # Five-minute and one-hour writes are priced differently: unknown, not guessed.
+    assert (
+        estimate_sample_cost({**sample, "cache_write_input_tokens": 100}, model) is None
     )
-    assert cost == pytest.approx(0.00782)
 
 
 def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():

@@ -402,7 +402,6 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("anthropic", "claude-fable-5-2"): {
         "cached_input_cost_per_million": 0.2,
-        "cache_write_input_cost_per_million": 10.0,
     },
     ("anthropic", "claude-opus-5-5"): {
         "cached_input_cost_per_million": 0.2,

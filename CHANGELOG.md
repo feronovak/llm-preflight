@@ -40,7 +40,7 @@ All notable changes to this project are documented here.
 ### Added
 
 - Bundled pricing and retirement data now list Anthropic `claude-fable-5-2` ($8 / $40 per
-  million tokens, cache read $0.20, cache write $10). Requests to it omit `temperature`,
+  million tokens, cache read $0.20; reported cache writes leave the cost unknown). Requests to it omit `temperature`,
   use adaptive thinking, reject forced tool choice and require a complete stream. The
   reported snapshot review date moves to 2026-11-09.
 - `llm-preflight migrate CONFIG --output PATH --run --verify-approval-receipt R` runs one

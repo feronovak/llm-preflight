@@ -284,7 +284,7 @@ separate objects; neither implies the other.
   route; `observed_model` is `null` when the record has none.
 - `repository` and `server_url`: the record's GitHub Actions repository and
   server, `null` for a local record.
-- `retirement_snapshot` (the verifier's own snapshot date), `result`,
+- `retirement_snapshot` (the newest review date in the verifier's own snapshot), `result`,
   `origin`, `url` and `signature`, which is always "not checked here — use gh
   attestation verify".
 

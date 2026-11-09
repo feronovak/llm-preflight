@@ -986,6 +986,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         "claude-haiku-5-5",
         "claude-fable-5",
         "claude-fable-5-1",
+        "claude-fable-5-2",
         "claude-opus-4-8",
         "claude-opus-5",
         "claude-opus-5-5",
@@ -2336,6 +2337,31 @@ def test_strict_anthropic_tool_use_reports_the_tool_call_error(monkeypatch):
     model = {"provider": "anthropic", "model": "claude-fable-5-1"}
     events = _anthropic_events(_TOOL_USE, stop="tool_use")
     assert _run_stream(monkeypatch, model, events)["error"] == TOOL_CALL_ERROR
+
+
+def _fable_5_2_text_events(stop, terminal=True):
+    events = _anthropic_events({"type": "text", "text": "partial"}, stop=stop)
+    return events + ([{"type": "message_stop"}] if terminal else [])
+
+
+@pytest.mark.parametrize("stop", ["refusal", "max_tokens"])
+def test_fable_5_2_incomplete_stop_fails(monkeypatch, stop):
+    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    sample = _run_stream(monkeypatch, model, _fable_5_2_text_events(stop))
+    assert sample["ok"] is False
+
+
+def test_fable_5_2_stream_without_message_stop_fails(monkeypatch):
+    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    events = _fable_5_2_text_events("end_turn", terminal=False)
+    assert _run_stream(monkeypatch, model, events)["ok"] is False
+
+
+def test_fable_5_2_complete_stream_passes(monkeypatch):
+    model = {"provider": "anthropic", "model": "claude-fable-5-2"}
+    sample = _run_stream(monkeypatch, model, _fable_5_2_text_events("end_turn"))
+    assert sample["ok"] is True
+    assert sample["response"] == "partial"
 
 
 def test_native_chat_tool_call_delta_is_a_failed_request(monkeypatch):

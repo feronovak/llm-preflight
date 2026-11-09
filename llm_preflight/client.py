@@ -51,6 +51,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
             "claude-haiku-5-5",
             "claude-fable-5",
             "claude-fable-5-1",
+            "claude-fable-5-2",
             "claude-mythos-5-1",
             "claude-opus-4-8",
             "claude-opus-5",
@@ -80,6 +81,7 @@ def validate_native_request_options(
     strict_openai = provider == "openai" and model_id.startswith(("gpt-6-", "gpt-6.1-"))
     strict_claude = provider == "anthropic" and model_id in {
         "claude-fable-5-1",
+        "claude-fable-5-2",
         "claude-mythos-5-1",
     }
     if provider == "openai" and model.get("adapter") == "openai_responses":
@@ -135,10 +137,14 @@ def validate_native_request_options(
     if strict_claude:
         thinking = provider_options.get("thinking", {"type": "adaptive"})
         if not isinstance(thinking, dict) or thinking.get("type") != "adaptive":
-            raise ValueError("Fable/Mythos 5.1 require adaptive reasoning")
+            raise ValueError(
+                "Fable 5.1, Fable 5.2 and Mythos 5.1 require adaptive reasoning"
+            )
         choice = provider_options.get("tool_choice", {"type": "auto"})
         if not isinstance(choice, dict) or choice.get("type") not in {"auto", "none"}:
-            raise ValueError("Fable/Mythos 5.1 do not support forced tool choice")
+            raise ValueError(
+                "Fable 5.1, Fable 5.2 and Mythos 5.1 do not support forced tool choice"
+            )
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"
@@ -927,6 +933,7 @@ class AnthropicClient(ProviderClient):
         super().__init__(model, timeout)
         self.requires_complete_stream = model["model"] in {
             "claude-fable-5-1",
+            "claude-fable-5-2",
             "claude-mythos-5-1",
         }
 

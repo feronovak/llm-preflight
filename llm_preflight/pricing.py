@@ -49,6 +49,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-04"),
     ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-04"),
     ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-04"),
+    ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
     ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
     ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
     ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),
@@ -398,6 +399,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("anthropic", "claude-fable-5-1"): {
         "cached_input_cost_per_million": 0.25,
+    },
+    ("anthropic", "claude-fable-5-2"): {
+        "cached_input_cost_per_million": 0.2,
     },
     ("anthropic", "claude-opus-5-5"): {
         "cached_input_cost_per_million": 0.2,

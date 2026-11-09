@@ -18,6 +18,10 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Anthropic rows now refuse `speed` other than `standard` before planning, so a
+  fast-mode request is no longer estimated at the standard rate. Migration:
+  `speed: fast` on Anthropic rows is refused until fast-mode rates are priced;
+  remove it from `provider_options`.
 - Add bundled pricing and retirement rows for `claude-mythos-5-2` ($8 input,
   $40 output, $0.20 cache read per million tokens, from the official Anthropic
   pricing page; reported cache writes leave the cost unknown) and apply the

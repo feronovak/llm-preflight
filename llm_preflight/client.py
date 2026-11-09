@@ -101,6 +101,14 @@ def validate_native_request_options(
                 + ", ".join(sorted(unsupported))
                 + "; use the configured prompt and request.max_output_tokens"
             )
+    if (
+        provider == "anthropic"
+        and _provider_options(options, provider).get("speed", "standard") != "standard"
+    ):
+        raise ValueError(
+            "Anthropic preflight prices standard-speed requests only; "
+            "fast mode is not priced"
+        )
     if provider not in {
         "zai",
         "deepseek",

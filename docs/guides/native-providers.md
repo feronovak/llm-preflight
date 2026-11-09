@@ -98,9 +98,10 @@ the three commands above do not need a key or contact the provider.
 - Mythos 5.1 requires verified access and the provider's applicable retention
   arrangement. It shares Fable 5.1's published rates. Fable 5.2 is priced at
   $8 / $40, and Mythos 5.2 at the same rates. All four require adaptive thinking
-  and reject forced tool choice. Fable 5.2 and Mythos 5.2 also refuse `speed`
-  other than `standard` (fast mode is priced higher) and `temperature`, `top_p`
-  or `top_k` in `provider_options.anthropic`. A price row does not establish account
+  and reject forced tool choice. Fable 5.2 and Mythos 5.2 also refuse
+  `temperature`, `top_p` or `top_k` in `provider_options.anthropic`. Every
+  Anthropic row refuses `speed` other than `standard`, because fast mode has its
+  own rates that preflight does not price. A price row does not establish account
   eligibility or zero-data-retention availability.
 
 The new native text adapters reject truncated streams, output-limit stops,

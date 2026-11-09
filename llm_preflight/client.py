@@ -67,8 +67,12 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
         return {}
     provider_keys = set(PROVIDER_DEFAULTS) | {"openai_compatible", "all"}
     if any(key in provider_keys for key in configured):
-        merged = dict(configured.get("all", {}))
-        merged.update(configured.get(provider, {}))
+        merged: dict[str, Any] = {}
+        for section in ("all", provider):
+            value = configured.get(section, {})
+            if not isinstance(value, dict):
+                raise ValueError(f"provider_options.{section} must be an object")  # noqa: TRY004 - callers catch ValueError
+            merged.update(value)
         return merged
     return dict(configured)
 

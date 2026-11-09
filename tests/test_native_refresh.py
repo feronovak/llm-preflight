@@ -1089,7 +1089,8 @@ def test_anthropic_standard_speed_is_accepted_and_forwarded(settings):
     options = {"max_output_tokens": 512, "provider_options": {"anthropic": settings}}
     validate_native_request_options(config, options)
     body = create_client(config, 10).body("hi", options)
-    assert body.get("speed", "standard") == "standard"
+    if "speed" in settings:
+        assert body["speed"] == "standard"
 
 
 @pytest.mark.parametrize(
@@ -1137,3 +1138,11 @@ def test_fable_5_2_accepts_adaptive_thinking_and_non_forcing_tool_choice(setting
     options = {"max_output_tokens": 512, "provider_options": {"anthropic": settings}}
     validate_native_request_options(config, options)
     assert create_client(config, 10).body("hi", options)["model"] == "claude-fable-5-2"
+
+
+@pytest.mark.parametrize("section", ["anthropic", "all"])
+def test_non_object_provider_options_section_is_refused_not_a_traceback(section):
+    config = {"provider": "anthropic", "model": "claude-opus-5-5"}
+    options = {"provider_options": {section: None}}
+    with pytest.raises(ValueError, match="must be an object"):
+        validate_native_request_options(config, options)

@@ -3373,37 +3373,51 @@ def test_load_config_rejects_malformed_profiles(tmp_path, profiles):
         load_config(_write_config(tmp_path, config))
 
 
-@pytest.mark.parametrize("presets", [5, "fast", {"a": 1}, [5], [["a"]]])
+@pytest.mark.parametrize("presets", [5, None, False, [5], [["a"]]])
 def test_load_config_rejects_malformed_presets(tmp_path, presets):
     config = {"prompt": "hi", "models": MODELS, "presets": presets}
     with pytest.raises(ValueError, match="'presets' must be a list of strings"):
         load_config(_write_config(tmp_path, config))
 
 
-def test_load_config_rejects_malformed_prompt_presets(tmp_path):
-    config = {"models": MODELS, "prompts": [{"name": "a", "prompt": "x", "presets": 5}]}
-    with pytest.raises(
-        ValueError, match=r"prompts\[0\]\.presets' must be a list of strings"
-    ):
-        load_config(_write_config(tmp_path, config))
-
-
-@pytest.mark.parametrize("extra", [{"profiles": ""}, {"profiles": []}, {"presets": []}])
-def test_load_config_keeps_empty_profiles_and_presets(tmp_path, extra):
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"profiles": ""},
+        {"profiles": []},
+        {"profiles": {}},
+        {"profiles": None},
+        {"profiles": False},
+        {"profiles": 0},
+        {"presets": []},
+        {"presets": ""},
+        {"presets": {}},
+        {"presets": {"structured": True}},
+        {"presets": "fast"},
+    ],
+)
+def test_load_config_keeps_values_that_loaded_before(tmp_path, extra):
     config = {"prompt": "hi", "models": MODELS, **extra}
     assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"
 
 
-@pytest.mark.parametrize("profiles", [None, False])
-def test_load_config_treats_null_or_false_profiles_as_unset(tmp_path, profiles):
-    config = {"prompt": "hi", "models": MODELS, "profiles": profiles}
-    assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"
-
-
-@pytest.mark.parametrize("presets", [None, False])
-def test_load_config_treats_null_or_false_prompt_presets_as_unset(tmp_path, presets):
+@pytest.mark.parametrize("presets", [5, None, False, 0, "", {}, "fast", ["a"]])
+def test_load_config_keeps_any_prompt_presets(tmp_path, presets):
     config = {
         "models": MODELS,
         "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
     }
     assert load_config(_write_config(tmp_path, config))["prompts"][0]["name"] == "a"
+
+
+@pytest.mark.parametrize("presets", [None, False, 0, "", {}])
+def test_custom_prompt_profile_treats_falsy_presets_as_none(presets):
+    prompt = {"name": "a", "prompt": "x", "presets": presets}
+    assert custom_prompt_profile(prompt)["presets"] == []
+
+
+@pytest.mark.parametrize("presets", [5, 1.5, True])
+def test_custom_prompt_profile_rejects_numeric_presets(presets):
+    prompt = {"name": "a", "prompt": "x", "presets": presets}
+    with pytest.raises(ValueError, match="'presets' of prompt 'a' must be a list"):
+        custom_prompt_profile(prompt)

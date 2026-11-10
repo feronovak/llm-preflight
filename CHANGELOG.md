@@ -6,10 +6,13 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- A config that is not a JSON object, or has a malformed `profiles` or `presets`
-  (also inside a selected `environments` entry or a prompt), now gives a config
-  error naming the field and exits 2, with no traceback. The MCP
-  `validate_config` and `dry_run_plan` tools report the same error.
+- A config that is not a JSON object, or has a `profiles` or `presets` value
+  that used to fail with a traceback (a number, object items in `profiles`, a
+  numeric `presets` on a selected prompt, `presets: null`, also inside a
+  selected `environments` entry), now gives a config error naming the field and
+  exits 2. The MCP `validate_config` and `dry_run_plan` tools report the same
+  error. Values that loaded before, such as `profiles: {}` or `presets: ""`,
+  still load.
 
 ## 2.24.0 - 2026-11-10
 

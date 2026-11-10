@@ -4633,8 +4633,7 @@ def test_malformed_config_shape_is_a_config_error(
         5,
         {"prompt": "hi", "models": _MOCK_MODELS, "profiles": 5},
         {"prompt": "hi", "models": _MOCK_MODELS, "profiles": {"a": 1}},
-        {"prompt": "hi", "models": _MOCK_MODELS, "presets": "fast"},
-        {"prompt": "hi", "models": _MOCK_MODELS, "presets": {"a": 1}},
+        {"prompt": "hi", "models": _MOCK_MODELS, "presets": None},
         {"prompt": "hi", "models": _MOCK_MODELS, "presets": [5]},
         {"prompt": "hi", "models": []},
         {"prompt": "hi", "models": "x"},
@@ -4683,3 +4682,45 @@ def test_environment_overlay_with_malformed_presets_is_a_config_error(
     err = capsys.readouterr().err
     assert exc.value.code == 2
     assert "'presets' must be a list of strings" in err
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize("presets", [None, False, 0, "", {}])
+def test_selected_prompt_with_unset_presets_is_not_a_traceback(
+    monkeypatch, tmp_path, capsys, presets, flag
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "models": _MOCK_MODELS,
+                "profiles": "a",
+                "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+            }
+        )
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    try:
+        cli.main()
+    except SystemExit as exc:
+        assert not exc.code
+
+    assert "Traceback" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize(
+    "extra", [{"presets": ""}, {"presets": {}}, {"presets": {"structured": True}}]
+)
+def test_top_level_empty_presets_still_load(monkeypatch, tmp_path, capsys, extra, flag):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"prompt": "hi", "models": _MOCK_MODELS, **extra}))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    try:
+        cli.main()
+    except SystemExit as exc:
+        assert not exc.code
+
+    assert "Traceback" not in capsys.readouterr().err

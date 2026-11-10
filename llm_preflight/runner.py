@@ -145,32 +145,24 @@ def _is_string_list(value: Any) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
-def _check_presets_shape(
-    owner: dict[str, Any], location: str, *, allow_unset: bool = False
-) -> None:
-    value = owner.get("presets", [])
-    if allow_unset and value in (None, False):
-        return
-    if not _is_string_list(value):
-        raise ValueError(
-            f"'{location}presets' must be a list of strings, got {type(value).__name__}"
-        )
-
-
 def validate_config_shape(config: Any) -> None:
-    """Raise a config error naming the field when a config key has the wrong type."""
+    """Raise a config error naming the field when a config key has the wrong type.
+
+    Only values that failed with a traceback are rejected; falsy and iterable
+    values that earlier versions accepted still load.
+    """
     if not isinstance(config, dict):
         raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
     profiles = config.get("profiles")
-    if profiles not in (None, False) and not (
+    if profiles and not (
         isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))
     ):
         raise ValueError("'profiles' must be a string or a list of strings")
-    _check_presets_shape(config, "")
-    prompts = config.get("prompts")
-    for index, prompt in enumerate(prompts if isinstance(prompts, list) else []):
-        if isinstance(prompt, dict):
-            _check_presets_shape(prompt, f"prompts[{index}].", allow_unset=True)
+    presets = config.get("presets", [])
+    if not (isinstance(presets, (str, dict)) or _is_string_list(presets)):
+        raise ValueError(
+            f"'presets' must be a list of strings, got {type(presets).__name__}"
+        )
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -301,8 +293,14 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
     }
     if "request" in prompt:
         profile["request"] = dict(prompt["request"])
+    presets = prompt.get("presets") or []
+    if isinstance(presets, (int, float)):
+        raise ValueError(  # noqa: TRY004
+            f"'presets' of prompt {prompt['name']!r} must be a list of strings, "
+            f"got {type(presets).__name__}"
+        )
     if "presets" in prompt:
-        profile["presets"] = list(prompt["presets"])
+        profile["presets"] = list(presets)
     if prompt.get("system_prompt"):
         profile["system_prompt"] = prompt["system_prompt"]
     return profile

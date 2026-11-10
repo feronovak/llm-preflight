@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from llm_preflight.contracts import check_contract, provenance
+from llm_preflight.contracts import check_contract, provenance, validation_evaluator
 from llm_preflight.features import compare_results
 from llm_preflight.profiles import evaluate_response
 from llm_preflight.runner import validate_config_validations
@@ -237,6 +237,43 @@ def test_omitted_or_true_extra_field_rule_preserves_permissive_behavior(constrai
     )["valid"]
 
 
+@pytest.mark.parametrize("response", ["", "  \n", "　"])
+@pytest.mark.parametrize(
+    "validation",
+    [
+        {},
+        {"no_markdown": True},
+        {"regex": "^.*$"},
+        {"regex": "^$"},
+        {"max_chars": 240},
+        {"max_chars": 0},
+        {"exact": ""},
+        {"no_markdown": True, "max_chars": 240},
+    ],
+)
+def test_empty_response_fails_every_validation(validation, response):
+    result = evaluate_response(response, validation_evaluator(validation))
+    assert result == {"score": 0.0, "valid": False, "error": "empty response"}
+
+
+def test_leading_whitespace_still_counts_toward_max_chars():
+    evaluator = validation_evaluator({"max_chars": 3})
+    assert evaluate_response("  a", evaluator)["valid"]
+    assert not evaluate_response("   a", evaluator)["valid"]
+
+
+def test_contract_check_rejects_empty_accept_fixture():
+    config = {
+        "validation": {"max_chars": 240},
+        "validation_fixtures": [
+            {"name": "ok", "response": "fine", "expect": "pass"},
+            {"name": "empty", "response": "", "expect": "pass"},
+            {"name": "long", "response": "x" * 241, "expect": "fail"},
+        ],
+    }
+    assert not check_contract(config)["ok"]
+
+
 def test_output_rule_configuration_and_negative_fixtures_are_accepted():
     config = {
         "validation": {"json_schema": routing_schema()},
@@ -297,9 +334,9 @@ def test_validator_semantics_are_bound_to_contract_provenance(monkeypatch):
     original = provenance(
         {"validation": {"json_schema": routing_schema()}}, [], "price"
     )
-    assert original["validator_version"] == "output-schema-3"
+    assert original["validator_version"] == "output-schema-4"
     monkeypatch.setattr(
-        "llm_preflight.contracts.OUTPUT_VALIDATOR_VERSION", "output-schema-4"
+        "llm_preflight.contracts.OUTPUT_VALIDATOR_VERSION", "output-schema-5"
     )
     changed = provenance({"validation": {"json_schema": routing_schema()}}, [], "price")
     assert original["config_sha256"] == changed["config_sha256"]
@@ -315,6 +352,7 @@ def test_validator_semantics_are_bound_to_contract_provenance(monkeypatch):
         ("output-schema-1", "output-schema-1", "compatible"),
         ("output-schema-1", "output-schema-2", "incompatible"),
         ("output-schema-2", "output-schema-3", "incompatible"),
+        ("output-schema-3", "output-schema-4", "incompatible"),
     ],
 )
 def test_baselines_require_matching_known_validator_semantics(

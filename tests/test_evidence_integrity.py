@@ -117,7 +117,7 @@ def test_bounded_routing_contract_through_cli_and_mcp(
     assert result["decision"]["state"] == state
     assert result["total_estimated_cost_usd"] == pytest.approx(0.00014)
     assert result["cost_confidence"] == "complete"
-    assert result["provenance"]["validator_version"] == "output-schema-3"
+    assert result["provenance"]["validator_version"] == "output-schema-4"
     if state == "fail":
         assert result["decision"]["reason_code"] == "contract_failure"
 
@@ -210,7 +210,7 @@ def test_enum_boolean_identity_through_cli_and_mcp(
         result = reply["result"]["structuredContent"]
     assert len(calls) == 1
     assert result["decision"]["state"] == ("pass" if matches else "fail")
-    assert result["provenance"]["validator_version"] == "output-schema-3"
+    assert result["provenance"]["validator_version"] == "output-schema-4"
     assert result["total_estimated_cost_usd"] == pytest.approx(0.00014)
     if not matches:
         assert result["decision"]["reason_code"] == "contract_failure"
@@ -459,3 +459,46 @@ def test_usage_evidence_survives_protocol_and_automation(
     else:
         assert result["total_estimated_cost_usd"] is None
         assert result["priced_cost_usd"] is None
+
+
+def test_empty_streamed_response_fails_no_markdown_run(monkeypatch, tmp_path, capsys):
+    event = {
+        "choices": [{"delta": {"content": ""}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 0},
+    }
+    body = ("data: " + json.dumps(event) + "\n\ndata: [DONE]\n").encode()
+    monkeypatch.setattr(
+        "llm_preflight.client.open_public_url",
+        lambda request, timeout: io.BytesIO(body),
+    )
+    monkeypatch.setattr(
+        "llm_preflight.security.socket.getaddrinfo",
+        lambda *args: [(2, 1, 6, "", ("8.8.8.8", 443))],
+    )
+    config = {
+        "models": [
+            {
+                "provider": "openai",
+                "model": "fixture-model",
+                "api_key_env": None,
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+            }
+        ],
+        "prompt": "Reply briefly",
+        "validation": {"no_markdown": True},
+        "repetitions": 1,
+        "suite_repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(path), "--json", "--no-save", "--no-env-file"],
+    )
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert exc.value.code == 1
+    assert json.loads(capsys.readouterr().out)["decision"]["state"] == "fail"

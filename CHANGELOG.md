@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- A config that is not a JSON object, or has a malformed `profiles` or `presets`
+  (also inside a selected `environments` entry or a prompt), now gives a config
+  error naming the field and exits 2, with no traceback. The MCP
+  `validate_config` and `dry_run_plan` tools report the same error.
+
 ## 2.24.0 - 2026-11-10
 
 Three changes below are marked `Breaking:` (the `speed` refusal,

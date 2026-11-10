@@ -3349,3 +3349,46 @@ def test_prompt_selection_keeps_the_published_contract_fingerprint():
     result = run_benchmark(select_custom_prompt(config, "p1"))
 
     assert result["provenance"]["contract_sha256"] == PUBLISHED_2_19_1_CONTRACT_SHA256
+
+
+MODELS = [{"provider": "mock", "model": "local", "response": "ok"}]
+
+
+def _write_config(tmp_path, config):
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    return path
+
+
+@pytest.mark.parametrize("config", [[], "text", None])
+def test_load_config_rejects_a_config_that_is_not_an_object(tmp_path, config):
+    with pytest.raises(ValueError, match="config must be a JSON object, got"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("profiles", [5, {"a": 1}, [{"a": 1}], [5], [""]])
+def test_load_config_rejects_malformed_profiles(tmp_path, profiles):
+    config = {"prompt": "hi", "models": MODELS, "profiles": profiles}
+    with pytest.raises(ValueError, match="'profiles' must be a string or a list"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("presets", [5, "fast", {"a": 1}, [5], [["a"]]])
+def test_load_config_rejects_malformed_presets(tmp_path, presets):
+    config = {"prompt": "hi", "models": MODELS, "presets": presets}
+    with pytest.raises(ValueError, match="'presets' must be a list of strings"):
+        load_config(_write_config(tmp_path, config))
+
+
+def test_load_config_rejects_malformed_prompt_presets(tmp_path):
+    config = {"models": MODELS, "prompts": [{"name": "a", "prompt": "x", "presets": 5}]}
+    with pytest.raises(
+        ValueError, match=r"prompts\[0\]\.presets' must be a list of strings"
+    ):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("extra", [{"profiles": ""}, {"profiles": []}, {"presets": []}])
+def test_load_config_keeps_empty_profiles_and_presets(tmp_path, extra):
+    config = {"prompt": "hi", "models": MODELS, **extra}
+    assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"

@@ -141,8 +141,37 @@ def _add_response_preview(sample: dict[str, Any], limit: int = 240) -> None:
     sample["response_preview"] = preview[:limit]
 
 
+def _is_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _check_presets_shape(owner: dict[str, Any], location: str) -> None:
+    if "presets" in owner and not _is_string_list(owner["presets"]):
+        raise ValueError(
+            f"'{location}presets' must be a list of strings, "
+            f"got {type(owner['presets']).__name__}"
+        )
+
+
+def validate_config_shape(config: Any) -> None:
+    """Raise a config error naming the field when a config key has the wrong type."""
+    if not isinstance(config, dict):
+        raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
+    profiles = config.get("profiles")
+    if "profiles" in config and not (
+        isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))
+    ):
+        raise ValueError("'profiles' must be a string or a list of strings")
+    _check_presets_shape(config, "")
+    prompts = config.get("prompts")
+    for index, prompt in enumerate(prompts if isinstance(prompts, list) else []):
+        if isinstance(prompt, dict):
+            _check_presets_shape(prompt, f"prompts[{index}].")
+
+
 def load_config(path: Path) -> dict[str, Any]:
     config = json.loads(path.read_text(encoding="utf-8"))
+    validate_config_shape(config)
     config_dir = path.parent.resolve()
     prompts = config.get("prompts", [])
     if "prompt" not in config and not prompts:

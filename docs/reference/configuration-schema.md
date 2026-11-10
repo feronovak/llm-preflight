@@ -15,7 +15,7 @@ one top-level `prompt` or one or more named `prompts`.
 | `models` | `[]` | Explicit model objects or alias strings. |
 | `discovery` | `[]` | Provider-catalog sources. |
 | `prompts` | `[]` | Named reusable custom prompt tests. |
-| `profiles` | — | Built-in/custom test selector; use `all` for built-ins. |
+| `profiles` | — | Built-in/custom test selector (string or list of strings); use `all` for built-ins. |
 | `repetitions` | `5` | Measured runs per model for a single top-level prompt. |
 | `suite_repetitions` | `1` | Repetitions of each case in selected test profiles. |
 | `warmups` | `1` | Per-model warmup calls; per profile when tests are selected. |
@@ -25,7 +25,7 @@ one top-level `prompt` or one or more named `prompts`.
 | `validation` | non-empty | Top-level response checks. |
 | `validation_fixtures` | — | Optional local accepted/rejected responses used by `--contract-check`; when set, include at least one `pass` and one `fail` expectation. |
 | `tools` | `[]` | Optional canonical tool definitions checked locally for portable names, descriptions, and parameter schemas. They are not sent to providers by this release. |
-| `presets` | `[]` | Shared provider-aware presets. |
+| `presets` | `[]` | Shared provider-aware presets (list of strings). |
 | `save_responses` | `false` | `true`, `false`, or `failures`. |
 | `stop_on` | none | `api-error`, `test-fail`, or `any-fail`. |
 | `fail_fast` | `false` | Legacy boolean equivalent to `stop_on: any-fail`. |

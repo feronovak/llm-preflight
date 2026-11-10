@@ -55,7 +55,8 @@ in environment variables. `provenance.routes_sha256` and the other hashes are
 computed from the unmasked route, so two routes that mask alike still differ.
 `--replay` and `models approve` copy a route from a result into a runnable
 config: when a result masks it, they restore it from the config named by
-`source_config_path`, and stop with exit 2 when that config is missing or does
+`source_config_path` as that file is now, not as it ran (an edited route with
+the same masked value is used as written), and stop with exit 2 when that config is missing or does
 not name exactly one matching route. A result saved before 2.24.0 holds the
 route as run and replays unchanged. A masked route never reaches a provider: a
 `base_url` containing `[REDACTED]` is refused before any request.

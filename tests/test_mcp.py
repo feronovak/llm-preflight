@@ -1883,7 +1883,7 @@ def test_migrate_plan_follow_up_is_stated_in_band(tmp_path):
         assert "`confirm_paid_run`" in flat
 
 
-def test_decision_and_docs_label_migrate_as_without_main_branch_notes():
+def test_decision_and_docs_without_main_branch_notes():
     root = Path(__file__).parent.parent
     flat = {
         name: " ".join((root / name).read_text().split())

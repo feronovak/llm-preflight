@@ -64,7 +64,7 @@ claim savings. Strict pricing freshness checks every source description.
 | `init [PATH]` | `benchmark.json` | Create a mock config, or use `--template provider` with explicit provider, model, API-key environment-variable name, and optional config-relative `--env-file` reference. Add `--interactive` to collect the config path, provider, model, key-variable name, and optional env reference without prompting for a secret. `--agent-instructions PATH` opt-in writes only the marker-delimited managed block in that file. `--check` requires that flag and exits nonzero when the block is missing or drifted; it writes nothing. |
 | `--models LIST` | — | Comma-separated `provider:model` list for `--quick`. An unprefixed ID is accepted only for recognizable OpenAI IDs. |
 | `--diff BASELINE CURRENT` | — | Compare two saved JSON result files; no benchmark run. |
-| `--replay PATH` | — | Re-run the saved source configuration in a result artifact. A route the result masks is restored from the config at its `source_config_path`; without that config the command exits 2. |
+| `--replay PATH` | — | Re-run the saved source configuration in a result artifact. A route the result masks is restored from the config at its `source_config_path` as that file is now, not as it ran; without that config the command exits 2. |
 | `--changed-since PATH` | — | With discovery, run models absent from a prior catalog JSON. |
 | `--catalog` | off | Discover and print selected models; no generation. Each `base_url` prints as scheme and host[:port], as in `--dry-run --json`. |
 | `--tests LIST` | — | Comma-separated built-in/custom test selector; `agent-smoke` is the recommended five-check suite. |

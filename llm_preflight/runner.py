@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from .catalog import resolve_models
 from .client import create_client, observed_model
@@ -141,7 +141,7 @@ def _add_response_preview(sample: dict[str, Any], limit: int = 240) -> None:
     sample["response_preview"] = preview[:limit]
 
 
-def _is_string_list(value: Any) -> bool:
+def _is_string_list(value: Any) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 

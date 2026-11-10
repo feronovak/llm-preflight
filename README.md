@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.1
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -29,6 +29,16 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 *Real CLI output with synthetic response fixtures. This checks the validator;
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
+
+## New in 2.24.1
+
+This patch release fixes written and saved configs that kept `prompt_file` and
+failed to load, reports malformed `profiles` and `presets` values as config
+errors, and fails an empty or whitespace-only response under every output
+validation. Existing attestation records report `contract_changed` and
+baselines compare as `incompatible` until you re-run once. A config that passed
+only on an empty reply (`exact: ""`, `regex: "^$"`, `max_chars: 0`) now fails.
+See the [changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md).
 
 ## New in 2.24.0
 

@@ -88,8 +88,8 @@ route as run and replays unchanged. A masked route never reaches a provider: a
 
 ## Model result
 
-In 2.18.0, `provenance.validator_version` identifies the output-schema
-enforcement semantics (`output-schema-4`). Revision 4 fails an empty or
+Since 2.18.0, `provenance.validator_version` identifies the output-schema
+enforcement semantics. From 2.24.1 it is `output-schema-4`: revision 4 fails an empty or
 whitespace-only response under every validation; earlier records report
 `contract_changed` and earlier baselines compare as `incompatible`. Revision 3
 distinguishes JSON

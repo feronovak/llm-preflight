@@ -11,7 +11,7 @@ from typing import Any
 
 from .contracts import check_contract, contract_fixtures_declared
 from .profiles import BUILTIN_PROFILES
-from .redaction import redact_secrets, without_private_fields
+from .redaction import mask_base_urls, redact_secrets, without_private_fields
 from .runner import select_test_profiles
 
 
@@ -517,7 +517,7 @@ def _select_once(
                             )
                         payload = _export_config(selected_config)
                     else:
-                        payload = redact_secrets(plan)
+                        payload = mask_base_urls(redact_secrets(plan))
                     services.write_json(target, payload)
                 except (OSError, ValueError) as exc:
                     output_fn(f"Cannot export: {redact_secrets(str(exc))}")

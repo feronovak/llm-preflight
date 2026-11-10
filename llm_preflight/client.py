@@ -1246,6 +1246,8 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
             f"model {model.get('name', model.get('model'))!r} requires base_url "
             f"for provider {provider!r}"
         )
+    if "[REDACTED]" in str(resolved["base_url"]):
+        raise ValueError("base_url is masked; copy the route from your config")
     require_http_url(resolved["base_url"], resolve_host=False)
     if provider in {"moonshot", "minimax", "mistral", "cohere"}:
         validate_native_request_options(resolved, {})

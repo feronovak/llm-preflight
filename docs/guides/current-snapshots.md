@@ -6,7 +6,7 @@ This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.24.0**. The table records this version's reviewed
+Package version: **2.24.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`

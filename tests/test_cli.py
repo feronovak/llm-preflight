@@ -4589,3 +4589,165 @@ def test_catalog_write_config_keeps_its_base_url(
     )
 
     assert json.loads(output.read_text())["models"][0]["base_url"] == _URL_PARTS
+
+
+_MOCK_MODELS = [{"provider": "mock", "model": "local", "response": "ok"}]
+_ISSUE_SHAPES = {
+    "list": ([], "config must be a JSON object"),
+    "profiles-object": (
+        {"prompt": "hi", "models": _MOCK_MODELS, "profiles": [{"a": 1}]},
+        "'profiles'",
+    ),
+    "presets-int": (
+        {"prompt": "hi", "models": _MOCK_MODELS, "presets": 5},
+        "'presets'",
+    ),
+}
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize("shape", sorted(_ISSUE_SHAPES))
+def test_malformed_config_shape_is_a_config_error(
+    monkeypatch, tmp_path, capsys, shape, flag
+):
+    config_data, field = _ISSUE_SHAPES[shape]
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps(config_data))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert field in err
+    assert "Traceback" not in err
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize(
+    "config_data",
+    [
+        "text",
+        None,
+        5,
+        {"prompt": "hi", "models": _MOCK_MODELS, "profiles": 5},
+        {"prompt": "hi", "models": _MOCK_MODELS, "profiles": {"a": 1}},
+        {"prompt": "hi", "models": _MOCK_MODELS, "presets": None},
+        {"prompt": "hi", "models": _MOCK_MODELS, "presets": [5]},
+        {"prompt": "hi", "models": []},
+        {"prompt": "hi", "models": "x"},
+        {"prompts": 5, "models": _MOCK_MODELS},
+        {"prompt": "hi", "models": _MOCK_MODELS, "environments": 5},
+        {"prompt": "hi", "models": _MOCK_MODELS, "validation": 5},
+    ],
+)
+def test_malformed_config_probe_shapes_never_traceback(
+    monkeypatch, tmp_path, capsys, config_data, flag
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps(config_data))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    try:
+        cli.main()
+        code = 0
+    except SystemExit as exc:
+        code = exc.code or 0
+
+    assert code in {0, 2}
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_environment_overlay_with_malformed_presets_is_a_config_error(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": _MOCK_MODELS,
+                "environments": {"ci": {"presets": 5}},
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--env", "ci"]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert "'presets' must be a list of strings" in err
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize("presets", [None, False, 0, "", {}])
+def test_selected_prompt_with_unset_presets_is_not_a_traceback(
+    monkeypatch, tmp_path, capsys, presets, flag
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "models": _MOCK_MODELS,
+                "profiles": "a",
+                "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+            }
+        )
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    try:
+        cli.main()
+    except SystemExit as exc:
+        assert not exc.code
+
+    assert "Traceback" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])
+@pytest.mark.parametrize(
+    "extra", [{"presets": ""}, {"presets": {}}, {"presets": {"structured": True}}]
+)
+def test_top_level_empty_presets_still_load(monkeypatch, tmp_path, capsys, extra, flag):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"prompt": "hi", "models": _MOCK_MODELS, **extra}))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), flag])
+
+    try:
+        cli.main()
+    except SystemExit as exc:
+        assert not exc.code
+
+    assert "Traceback" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flags", [["--dry-run"], []])
+@pytest.mark.parametrize("presets", [5, True])
+def test_prompt_selected_with_numeric_presets_is_a_config_error(
+    monkeypatch, tmp_path, capsys, presets, flags
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "models": _MOCK_MODELS,
+                "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--prompt", "a", *flags]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert "prompt 'a'" in err
+    assert "Traceback" not in err

@@ -923,3 +923,26 @@ def test_doctor_reports_unknown_retirement_without_a_check(monkeypatch):
     report = _doctor(monkeypatch, "gpt-new-unknown")
     assert report["retirement"]["decision"] == "none"
     assert all("retire" not in c["message"] for c in report["checks"])
+
+
+def test_apply_environment_rejects_an_overlay_that_is_not_an_object():
+    config = {"prompt": "hi", "environments": {"ci": [1]}}
+    with pytest.raises(ValueError, match=r"environments\.ci must be an object"):
+        apply_environment(config, "ci")
+
+
+def test_apply_environment_rejects_malformed_presets_in_the_overlay():
+    config = {"prompt": "hi", "environments": {"ci": {"presets": 5}}}
+    with pytest.raises(ValueError, match="'presets' must be a list of strings"):
+        apply_environment(config, "ci")
+
+
+def test_apply_environment_ignores_an_unselected_malformed_environment():
+    config = {"prompt": "hi", "environments": {"ci": {}, "bad": {"presets": 5}}}
+    assert apply_environment(config, "ci")["prompt"] == "hi"
+
+
+@pytest.mark.parametrize("environments", [5, ["ci"]])
+def test_apply_environment_rejects_environments_that_is_not_an_object(environments):
+    with pytest.raises(ValueError, match="'environments' must be an object"):
+        apply_environment({"prompt": "hi", "environments": environments}, "ci")

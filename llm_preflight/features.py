@@ -26,7 +26,11 @@ from .pricing import (
 )
 from .redaction import mask_base_url
 from .retirements import retirement_report, today_utc
-from .runner import profile_selector_text, select_test_profiles
+from .runner import (
+    profile_selector_text,
+    select_test_profiles,
+    validate_config_shape,
+)
 
 
 def apply_smoke_mode(config: dict[str, Any]) -> dict[str, Any]:
@@ -58,12 +62,17 @@ def apply_environment(config: dict[str, Any], name: str | None) -> dict[str, Any
     if not name:
         return config
     environments = config.get("environments", {})
+    if not isinstance(environments, dict):
+        raise ValueError("'environments' must be an object")  # noqa: TRY004
     if name not in environments:
         raise ValueError(f"unknown environment {name!r}")
     updated = copy.deepcopy(config)
     overlay = environments[name]
+    if not isinstance(overlay, dict):
+        raise ValueError(f"environments.{name} must be an object")  # noqa: TRY004
     for key, value in overlay.items():
         updated[key] = copy.deepcopy(value)
+    validate_config_shape(updated)
     return updated
 
 

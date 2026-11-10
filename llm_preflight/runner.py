@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from .catalog import resolve_models
 from .client import create_client, observed_model
@@ -141,8 +141,33 @@ def _add_response_preview(sample: dict[str, Any], limit: int = 240) -> None:
     sample["response_preview"] = preview[:limit]
 
 
+def _is_string_list(value: Any) -> TypeGuard[list[str]]:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def validate_config_shape(config: Any) -> None:
+    """Raise a config error naming the field when a config key has the wrong type.
+
+    Only values that failed with a traceback are rejected; falsy and iterable
+    values that earlier versions accepted still load.
+    """
+    if not isinstance(config, dict):
+        raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
+    profiles = config.get("profiles")
+    if profiles and not (
+        isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))
+    ):
+        raise ValueError("'profiles' must be a string or a list of strings")
+    presets = config.get("presets", [])
+    if not (isinstance(presets, (str, dict)) or _is_string_list(presets)):
+        raise ValueError(
+            f"'presets' must be a list of strings, got {type(presets).__name__}"
+        )
+
+
 def load_config(path: Path) -> dict[str, Any]:
     config = json.loads(path.read_text(encoding="utf-8"))
+    validate_config_shape(config)
     config_dir = path.parent.resolve()
     prompts = config.get("prompts", [])
     if "prompt" not in config and not prompts:
@@ -220,6 +245,17 @@ def _prepare_config_image_inputs(
             )
 
 
+def _prompt_presets(prompt: dict[str, Any]) -> list[str]:
+    """A prompt's `presets` as a list; falsy is unset, a number is a config error."""
+    presets = prompt.get("presets") or []
+    if isinstance(presets, (int, float)):
+        raise ValueError(  # noqa: TRY004
+            f"'presets' of prompt {prompt['name']!r} must be a list of strings, "
+            f"got {type(presets).__name__}"
+        )
+    return list(presets)
+
+
 def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     matches = [prompt for prompt in config.get("prompts", []) if prompt["name"] == name]
     if not matches:
@@ -232,13 +268,14 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     selected["prompt"] = prompt["prompt"]
     # Same merge as the prompt under --tests: prompt fields replace the parent
     # request, then prompt presets and top-level presets fill only keys left unset.
-    if "request" in prompt or prompt.get("presets") or prompt.get("system_prompt"):
+    presets = _prompt_presets(prompt)
+    if "request" in prompt or presets or prompt.get("system_prompt"):
         selected["request"] = profile_request_options(
             dict(selected.get("request") or {}),
             {
                 "_custom_prompt": True,
                 "request": prompt.get("request") or {},
-                "presets": prompt.get("presets"),
+                "presets": presets,
                 "system_prompt": prompt.get("system_prompt"),
             },
             selected.get("presets"),
@@ -268,8 +305,9 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
     }
     if "request" in prompt:
         profile["request"] = dict(prompt["request"])
+    presets = _prompt_presets(prompt)
     if "presets" in prompt:
-        profile["presets"] = list(prompt["presets"])
+        profile["presets"] = presets
     if prompt.get("system_prompt"):
         profile["system_prompt"] = prompt["system_prompt"]
     return profile

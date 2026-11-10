@@ -4724,3 +4724,30 @@ def test_top_level_empty_presets_still_load(monkeypatch, tmp_path, capsys, extra
         assert not exc.code
 
     assert "Traceback" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flags", [["--dry-run"], []])
+@pytest.mark.parametrize("presets", [5, True])
+def test_prompt_selected_with_numeric_presets_is_a_config_error(
+    monkeypatch, tmp_path, capsys, presets, flags
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "models": _MOCK_MODELS,
+                "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--prompt", "a", *flags]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert "prompt 'a'" in err
+    assert "Traceback" not in err

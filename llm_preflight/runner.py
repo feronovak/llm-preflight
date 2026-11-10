@@ -245,6 +245,17 @@ def _prepare_config_image_inputs(
             )
 
 
+def _prompt_presets(prompt: dict[str, Any]) -> list[str]:
+    """A prompt's `presets` as a list; falsy is unset, a number is a config error."""
+    presets = prompt.get("presets") or []
+    if isinstance(presets, (int, float)):
+        raise ValueError(  # noqa: TRY004
+            f"'presets' of prompt {prompt['name']!r} must be a list of strings, "
+            f"got {type(presets).__name__}"
+        )
+    return list(presets)
+
+
 def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     matches = [prompt for prompt in config.get("prompts", []) if prompt["name"] == name]
     if not matches:
@@ -257,13 +268,14 @@ def select_custom_prompt(config: dict[str, Any], name: str) -> dict[str, Any]:
     selected["prompt"] = prompt["prompt"]
     # Same merge as the prompt under --tests: prompt fields replace the parent
     # request, then prompt presets and top-level presets fill only keys left unset.
-    if "request" in prompt or prompt.get("presets") or prompt.get("system_prompt"):
+    presets = _prompt_presets(prompt)
+    if "request" in prompt or presets or prompt.get("system_prompt"):
         selected["request"] = profile_request_options(
             dict(selected.get("request") or {}),
             {
                 "_custom_prompt": True,
                 "request": prompt.get("request") or {},
-                "presets": prompt.get("presets"),
+                "presets": presets,
                 "system_prompt": prompt.get("system_prompt"),
             },
             selected.get("presets"),
@@ -293,14 +305,9 @@ def custom_prompt_profile(prompt: dict[str, Any]) -> dict[str, Any]:
     }
     if "request" in prompt:
         profile["request"] = dict(prompt["request"])
-    presets = prompt.get("presets") or []
-    if isinstance(presets, (int, float)):
-        raise ValueError(  # noqa: TRY004
-            f"'presets' of prompt {prompt['name']!r} must be a list of strings, "
-            f"got {type(presets).__name__}"
-        )
+    presets = _prompt_presets(prompt)
     if "presets" in prompt:
-        profile["presets"] = list(presets)
+        profile["presets"] = presets
     if prompt.get("system_prompt"):
         profile["system_prompt"] = prompt["system_prompt"]
     return profile

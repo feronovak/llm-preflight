@@ -89,7 +89,10 @@ route as run and replays unchanged. A masked route never reaches a provider: a
 ## Model result
 
 In 2.18.0, `provenance.validator_version` identifies the output-schema
-enforcement semantics (`output-schema-3`). This revision distinguishes JSON
+enforcement semantics (`output-schema-4`). Revision 4 fails an empty or
+whitespace-only response under every validation; earlier records report
+`contract_changed` and earlier baselines compare as `incompatible`. Revision 3
+distinguishes JSON
 booleans from numbers recursively in object/array enum members; numerical
 equivalents such as `1` and `1.0` remain equal. All structured-output parsing
 policies reject non-JSON `NaN` and `Infinity` constants and numbers whose

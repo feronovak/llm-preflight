@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, NoReturn
 
 # Bump when output-schema enforcement changes the meaning of retained evidence.
-OUTPUT_VALIDATOR_VERSION = "output-schema-3"
+OUTPUT_VALIDATOR_VERSION = "output-schema-4"
 
 BUILTIN_PROFILES: list[dict[str, Any]] = [
     {
@@ -523,6 +523,8 @@ def normalize_golden(value: str) -> str:
 
 
 def evaluate_response(response: str, evaluator: dict[str, Any]) -> dict[str, Any]:
+    if not response.strip():
+        return {"score": 0.0, "valid": False, "error": "empty response"}
     evaluator_type = evaluator["type"]
     if evaluator_type == "all":
         for child in evaluator["evaluators"]:

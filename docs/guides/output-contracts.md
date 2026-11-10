@@ -106,6 +106,8 @@ other fields. It accepts a raw JSON array with two items, at most 240 characters
 `no_markdown` rejects fenced blocks, headings, and list formatting. `max_chars`
 counts the response exactly as received, including whitespace. `allowed_values`
 matches a whole response without regard to case or surrounding whitespace.
+Every validation rejects an empty or whitespace-only response, so a refused,
+truncated or tool-only reply never passes a text contract.
 
 ## A production JSON contract
 

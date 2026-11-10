@@ -2,15 +2,15 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.24.1 - 2026-11-10
+
+One change below is marked `Breaking:` (an empty response now fails every output
+validation) and can stop an existing config or script.
 
 ### Fixed
 
-- `catalog test` and `watch-new --write-config` no longer keep `prompt_file` next to the inlined `prompt`, so the
-  written file loads again instead of failing with exit 2.
-
-- Saving a selection from interactive mode no longer keeps `prompt_file` next to the inlined `prompt`, so the
-  saved config loads again instead of failing with exit 2.
+- `catalog test`, `watch-new --write-config` and the interactive save no longer keep `prompt_file` next to the
+  inlined `prompt`, so the written config loads again instead of failing with exit 2.
 
 - A config that is not a JSON object, or has a `profiles` or `presets` value
   that used to fail with a traceback (a number, object items in `profiles`, a
@@ -19,7 +19,7 @@ All notable changes to this project are documented here.
   exits 2. The MCP `validate_config` and `dry_run_plan` tools report the same
   error. Values that loaded before, such as `profiles: {}` or `presets: ""`,
   still load.
-- An empty or whitespace-only response now fails every output validation. It
+- Breaking: an empty or whitespace-only response now fails every output validation. It
   used to pass `no_markdown`, `regex` (such as `^.*$`), `max_chars` and `exact`
   checks, in runs, built-in tests and `--contract-check` fixtures. The validator
   version is now `output-schema-4`, so existing attestation records report

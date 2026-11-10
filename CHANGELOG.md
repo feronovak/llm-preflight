@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- `catalog test` and `watch-new --write-config` no longer keep `prompt_file` next to the inlined `prompt`, so the
+  written file loads again instead of failing with exit 2.
+
 ## 2.24.0 - 2026-11-10
 
 Three changes below are marked `Breaking:` (the `speed` refusal,

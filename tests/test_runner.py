@@ -3339,7 +3339,7 @@ def test_selected_prompt_without_its_own_validation_keeps_top_level_fixtures_onc
 # Pinned from llm-preflight 2.19.1 running
 # `llm-preflight tests/fixtures/two-prompts.json --prompt p1 --no-save --json`.
 PUBLISHED_2_19_1_CONTRACT_SHA256 = (
-    "b904260fcda07fb9349d4652fec2ffe87eff55bd62bbea7629103d0571dde21e"
+    "d72abff162b411837c1353c3615086763f6517ed7492e14119ea26b32b0f54c9"
 )
 
 

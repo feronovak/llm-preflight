@@ -102,7 +102,8 @@ name, and either non-empty `prompt` or a relative
 Validation supports non-empty `contains`, `regex`, `exact`, `golden`, `json_schema`,
 `json_set`, `json_object`, `json_array`, `exact_count`, `allowed_values`, `numeric_answer`,
 `numeric_tolerance`, `max_chars`, and `no_markdown`; an absent custom validation
-means non-empty output. `exact_count` requires `json_array`, and
+means non-empty output, and every validation rejects an empty or
+whitespace-only response. `exact_count` requires `json_array`, and
 `numeric_tolerance` requires `numeric_answer`. `json_schema` is strict raw JSON
 by default. Set `"allow_fenced_json": true` alongside it only when the deployed
 consumer accepts exactly one complete Markdown-fenced JSON block; surrounding

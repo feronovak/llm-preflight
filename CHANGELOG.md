@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- An empty or whitespace-only response now fails every output validation. It
+  used to pass `no_markdown`, `regex` (such as `^.*$`), `max_chars` and `exact`
+  checks, in runs, built-in tests and `--contract-check` fixtures. The validator
+  version is now `output-schema-4`, so existing attestation records report
+  `contract_changed` and old baselines compare as `incompatible`: re-run once
+  after upgrading. Configs that only pass on an empty reply (`exact: ""`,
+  `regex: "^$"`, `max_chars: 0`) now always fail.
+
 ## 2.24.0 - 2026-11-10
 
 Three changes below are marked `Breaking:` (the `speed` refusal,

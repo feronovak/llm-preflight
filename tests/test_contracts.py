@@ -559,20 +559,20 @@ def _provenance_shapes():
 # hash, so listing only the prompts that ran must never change it.
 CONTRACT_SHA256 = {
     "configured prompts only": (
-        "72d3e04d34843b2fae953e10fdacf27f4c2e943ce09cdf5bc0db1d06f8139554"
+        "572fbdba1dd2f82351eac698cc67792c018b692565940f105231b7b4e9aa807b"
     ),
     "top-level prompt with configured prompts": (
-        "87bb9da2644b9db7581be2a3d8bb791488910ca1fa26c531c34e8bbecf51b394"
+        "651a2f9b27f1736f3cb1d15593d2f79cf1aa1d06cf3fd679df12b5c36fcde561"
     ),
     "top-level prompt only": (
-        "9fe974807587de00ee73269859d16bee30cb513975792eb9555bec4e247e97dc"
+        "54c562410072573156d7382f717d70a91f0f06d1d86d5921451aec11d871d403"
     ),
 }
 # Pinned in 2.22.0, when each listed prompt gained the fingerprint of the
 # request sent with it and each route the settings that shape its requests.
 # 2.21.2 recorded f4c54b5c… for the same run.
 TOP_LEVEL_ONLY_EVIDENCE_SHA256 = (
-    "3ff22ff485766df47c61f9ec555aca9614d53ebd8180e37ae99e736dd9f97422"
+    "53781c510e1e92ece120346e037559cee8f55a44c7f7f9ba714f8aee80e518af"
 )
 # Pinned from llm-preflight 2.21.2, which also listed the configured prompts
 # that did not run.

@@ -45,7 +45,11 @@ from .catalog_watch import (
 )
 from .change_plan import git_change_plan, unreadable_note
 from .client import PROVIDER_DEFAULTS
-from .contracts import check_contract, contract_fixtures_declared
+from .contracts import (
+    check_contract,
+    contract_fixtures_declared,
+    without_prompt_files,
+)
 from .eligibility import eligibility_next_step, smoke_eligibility_report
 from .env import load_env_file, resolve_config_env_file
 from .features import (
@@ -222,15 +226,6 @@ def _write_instruction_block(path: Path, content: str) -> None:
     finally:
         if temporary_path.exists():
             temporary_path.unlink()
-
-
-def _without_prompt_files(config: dict[str, Any]) -> dict[str, Any]:
-    """Copy a loaded config, dropping `prompt_file` (its text is already inlined)."""
-    prompts = [
-        {key: value for key, value in prompt.items() if key != "prompt_file"}
-        for prompt in config.get("prompts", [])
-    ]
-    return {**config, "prompts": prompts} if prompts else dict(config)
 
 
 def catalog_output(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1679,7 +1674,7 @@ def _watch_new_main(argv: list[str]) -> None:
             raise ValueError(
                 f"{args.write_config} already exists; use --replace to update it"
             )
-        config = _without_prompt_files(watch_config)
+        config = without_prompt_files(watch_config)
         config["models"] = catalog_output(candidates)
         config["discovery"] = []
         args.write_config.write_text(
@@ -2090,7 +2085,7 @@ def _catalog_main(argv: list[str]) -> None:
         approved_config = load_json(args.approved)
         if not approved_config.get("models"):
             raise ValueError(f"{args.approved} has no approved models yet")
-        config = _without_prompt_files(
+        config = without_prompt_files(
             build_candidate_config(watch_config, approved_config, [])
         )
         args.output.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")

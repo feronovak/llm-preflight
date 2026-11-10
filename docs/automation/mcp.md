@@ -44,7 +44,7 @@ select the MCP executable explicitly from the published package:
     "llm-preflight": {
       "command": "uvx",
       "args": [
-        "--from", "llm-preflight==2.23.1",
+        "--from", "llm-preflight==2.24.0",
         "llm-preflight-mcp",
         "--workspace", "/absolute/path/to/repository"
       ]

@@ -1851,6 +1851,38 @@ def test_catalog_test_writes_a_runnable_plan_for_approved_models(monkeypatch, tm
     assert plan["discovery"] == []
 
 
+def test_catalog_test_output_reloads_with_prompt_file(monkeypatch, tmp_path, capsys):
+    (tmp_path / "ask.txt").write_text("hello from file", encoding="utf-8")
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        json.dumps(
+            {
+                "prompts": [{"name": "ask", "prompt_file": "ask.txt"}],
+                "discovery": [{"provider": "openai", "limit": 1}],
+            }
+        )
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models":[{"provider":"openai","model":"gpt-5.6-luna"}]}')
+    output = tmp_path / "out" / "approved-tests.json"
+    output.parent.mkdir()
+
+    _run_cli(
+        monkeypatch,
+        capsys,
+        "catalog",
+        "test",
+        str(watch),
+        "--approved",
+        str(approved),
+        "--output",
+        str(output),
+    )
+
+    reloaded = cli.load_config(output)
+    assert reloaded["prompts"] == [{"name": "ask", "prompt": "hello from file"}]
+
+
 def test_catalog_refresh_lists_all_missing_provider_keys_before_discovery(
     monkeypatch, tmp_path, capsys
 ):

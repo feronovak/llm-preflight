@@ -39,7 +39,7 @@ def require_http_url(url: str, *, resolve_host: bool = True) -> None:
 class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Fail closed: provider calls must not cross an unvalidated redirect."""
 
-    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise urllib.error.HTTPError(
             req.full_url,
             code,

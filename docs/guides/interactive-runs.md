@@ -1,6 +1,6 @@
 # Interactive benchmark mode
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 Interactive mode helps you choose models and workload from an existing project
 configuration, review local evidence, and decide what to do next. Version
@@ -140,7 +140,7 @@ contract rather than weaken a validator to make the run pass.
 
 - `p` or Enter: print the selected plan and finish without generation.
 - `s`: save the selected config at an explicit path, then return to this menu.
-- `x`: export the shared plan JSON at an explicit path, then return to this menu.
+- `x`: export the shared plan JSON at an explicit path, then return to this menu. Each `base_url` is masked as in `--dry-run --json`; `s` keeps the route so the saved config still runs.
 - `e` or `back`: edit choices. Valid choices remain available for reuse.
 - `r`: review execution. Mock-only configurations ask to run a **local mock**;
   a configuration containing a provider model asks to run a **paid benchmark**.

@@ -201,6 +201,9 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "properties": {"path": {"type": "string", "minLength": 1}},
         "additionalProperties": False,
     }
+    migrate_schema = by_name["migrate_plan"]["outputSchema"]["oneOf"][1]["properties"]
+    assert migrate_schema["paid_requests_made"] == {"const": 0}
+    assert migrate_schema["smoke"] == {"type": "null"}
     assert by_name["run_preflight"]["annotations"] == {
         "readOnlyHint": False,
         "destructiveHint": False,

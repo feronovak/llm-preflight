@@ -1,7 +1,7 @@
 import json
 import shlex
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -1812,3 +1812,23 @@ def test_real_run_uses_an_explicit_env_file(priced, tmp_path, monkeypatch, capsy
         priced, tmp_path, monkeypatch, capsys, "--env-file", str(other)
     )
     assert len(sent) == 1 and report["paid_requests_made"] == 1
+
+
+def test_output_symlink_is_rejected_and_its_target_untouched(
+    priced, tmp_path, monkeypatch, capsys
+):
+    path = _write(tmp_path, [_m("oldp")])
+    target = tmp_path / "other.json"
+    target.write_text("keep")
+    link = tmp_path / "candidate.json"
+    link.symlink_to(target)
+    code, _ = _migrate(monkeypatch, capsys, path, "--output", str(link), "--replace")
+    assert code == 2
+    assert target.read_text() == "keep"
+
+
+@pytest.mark.parametrize(("age_days", "stale"), [(30, False), (31, True)])
+def test_migrate_staleness_boundary_is_day_31(age_days, stale):
+    today = date(2026, 12, 31)
+    verdict = {"as_of": (today - timedelta(days=age_days)).isoformat()}
+    assert migrate._is_stale(verdict, today) is stale

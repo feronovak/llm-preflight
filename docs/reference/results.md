@@ -1,6 +1,6 @@
 # Result JSON schema
 
-**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 `llm-preflight CONFIG --json` writes one result object to standard output. Saved
 `results/*.json` files use the same schema. The current `schema_version` is
@@ -47,6 +47,18 @@ provider route stays. A token in a host name stays visible. A base URL that is n
 the config. Masking does not change the approval receipt hash, which still
 covers the unmasked plan; a receipt still reports `mismatch` when the plan
 changes.
+
+A result masks every `base_url` the same way: `models[].base_url` and each
+`base_url` under `source_config` (run `--json`, the saved result files and the MCP
+`run_preflight` result). A host-name token stays visible, so keep credentials
+in environment variables. `provenance.routes_sha256` and the other hashes are
+computed from the unmasked route, so two routes that mask alike still differ.
+`--replay` and `models approve` copy a route from a result into a runnable
+config: when a result masks it, they restore it from the config named by
+`source_config_path`, and stop with exit 2 when that config is missing or does
+not name exactly one matching route. A result saved before 2.24.0 holds the
+route as run and replays unchanged. A masked route never reaches a provider: a
+`base_url` containing `[REDACTED]` is refused before any request.
 
 ## Top-level fields
 

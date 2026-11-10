@@ -1,6 +1,6 @@
 # MCP server for coding agents
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 Connect a coding agent to an existing project contract, validate it without
 provider access, then review a bounded plan. The local stdio server exposes
@@ -316,7 +316,7 @@ The server exposes eight tools.
 | `audit_source` | Audits literal model IDs under an optional workspace-relative `path` (default: the workspace) and returns the CLI `--audit-source --json` object, with secret-like strings redacted, and the decision as the first text line. Needs no benchmark config. | Never contacts a provider or loads credentials. |
 | `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. | Never contacts a provider or loads credentials. |
 | `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, `models[].base_url` masked to scheme and host[:port] with any path, query or userinfo shown as `/[REDACTED]` (a base URL that is not http(s) with a plain host prints as `[REDACTED]`), per-model `smoke_eligibility`, `retirements`, configuration warnings) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
-| `run_preflight` | Runs the configured benchmark. | A live-provider run requires explicit paid-run confirmation. |
+| `run_preflight` | Runs the configured benchmark. The result masks each `base_url` as `--dry-run --json` does. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
 | `verify` | Reports a record's integrity and freshness separately and returns the CLI `verify --json` object, with its first text line. | Never contacts a provider or loads credentials. |
 | `gate` | Decides whether the workspace has a fresh passing CI record for its contract under the given selection and returns the CLI `gate --json` object, with its first text line. A gate `pass` is not approval. | Never contacts a provider or loads credentials. |

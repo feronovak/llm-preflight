@@ -108,7 +108,7 @@ evidence for your route. Do not advance the date without checking the source:
 }
 ```
 
-`migrate --run` spends only after a recorded approval receipt matches the plan built from the candidate file, the plan has a maximum cost, and the budget check passes; otherwise it loads no env file and calls no provider.
+`migrate --run` spends only after a recorded approval receipt matches the plan built from the candidate file, the plan has a maximum cost, and the budget check passes; otherwise it loads no env file and calls no provider. The receipt bounds each run, not their total: until it expires, every `--run` on the same candidate spends up to `maximum_estimated_cost_usd` again. For a single run, choose a short `--approval-expires-at` or delete the receipt afterwards.
 
 Run `--dry-run` or `--pricing-check` after pricing edits. The coverage report
 lists every selected direct model and OpenRouter route as `priced`, `undated`,

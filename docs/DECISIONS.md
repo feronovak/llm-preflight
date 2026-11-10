@@ -120,3 +120,11 @@ authorization remains separate from a numeric rating.
 **Why:** The receipt is the only existing artifact that binds a human review to a plan and its cost bounds. Requiring it keeps the smoke inside what was reviewed, while the explicit flag keeps authorization with the user.
 
 **Consequence:** A receipt still has `authorizes_paid_run: false`. A missing, expired, mismatched or unbounded receipt, or a changed candidate, ends the run before any env file is loaded or provider is called.
+
+## Repeat migrate runs under one receipt
+
+**Decision:** A recorded receipt bounds each `migrate --run`, not their total; repeat runs on one receipt are not limited in code.
+
+**Why:** `--run` is the authorizing act, so each run is a separate explicit choice, as with a direct paid run or `run_preflight` with `confirm_paid_run`. A limit would need state outside the receipt format, and the receipt's expiry already bounds the window.
+
+**Consequence:** Until the receipt expires, each `--run` on the same candidate may spend up to `maximum_estimated_cost_usd` again. For a single run, choose a short expiry or delete the receipt afterwards. The receipt format and `authorizes_paid_run: false` are unchanged.

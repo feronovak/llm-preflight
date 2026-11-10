@@ -1897,3 +1897,27 @@ def test_decision_and_docs_without_main_branch_notes():
         in flat["docs/DECISIONS.md"]
     )
     assert "behind an approval receipt" not in flat["docs/DECISIONS.md"]
+
+
+@pytest.mark.parametrize("tool", ["validate_config", "dry_run_plan"])
+def test_mcp_malformed_config_shape_is_an_error_naming_the_field(tmp_path, tool):
+    config = {
+        "prompt": "hi",
+        "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+        "profiles": [{"a": 1}],
+    }
+    (tmp_path / "benchmark.json").write_text(json.dumps(config))
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool, "arguments": {"config": "benchmark.json"}},
+        },
+        tmp_path,
+    )
+    result = response["result"]
+    assert result["isError"] is True
+    text = json.dumps(result)
+    assert "'profiles' must be a string or a list of strings" in text
+    assert "has no attribute" not in text

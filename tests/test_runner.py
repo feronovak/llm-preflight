@@ -3349,3 +3349,75 @@ def test_prompt_selection_keeps_the_published_contract_fingerprint():
     result = run_benchmark(select_custom_prompt(config, "p1"))
 
     assert result["provenance"]["contract_sha256"] == PUBLISHED_2_19_1_CONTRACT_SHA256
+
+
+MODELS = [{"provider": "mock", "model": "local", "response": "ok"}]
+
+
+def _write_config(tmp_path, config):
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    return path
+
+
+@pytest.mark.parametrize("config", [[], "text", None])
+def test_load_config_rejects_a_config_that_is_not_an_object(tmp_path, config):
+    with pytest.raises(ValueError, match="config must be a JSON object, got"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("profiles", [5, {"a": 1}, [{"a": 1}], [5], [""]])
+def test_load_config_rejects_malformed_profiles(tmp_path, profiles):
+    config = {"prompt": "hi", "models": MODELS, "profiles": profiles}
+    with pytest.raises(ValueError, match="'profiles' must be a string or a list"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("presets", [5, None, False, [5], [["a"]]])
+def test_load_config_rejects_malformed_presets(tmp_path, presets):
+    config = {"prompt": "hi", "models": MODELS, "presets": presets}
+    with pytest.raises(ValueError, match="'presets' must be a list of strings"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"profiles": ""},
+        {"profiles": []},
+        {"profiles": {}},
+        {"profiles": None},
+        {"profiles": False},
+        {"profiles": 0},
+        {"presets": []},
+        {"presets": ""},
+        {"presets": {}},
+        {"presets": {"structured": True}},
+        {"presets": "fast"},
+    ],
+)
+def test_load_config_keeps_values_that_loaded_before(tmp_path, extra):
+    config = {"prompt": "hi", "models": MODELS, **extra}
+    assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"
+
+
+@pytest.mark.parametrize("presets", [5, None, False, 0, "", {}, "fast", ["a"]])
+def test_load_config_keeps_any_prompt_presets(tmp_path, presets):
+    config = {
+        "models": MODELS,
+        "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+    }
+    assert load_config(_write_config(tmp_path, config))["prompts"][0]["name"] == "a"
+
+
+@pytest.mark.parametrize("presets", [None, False, 0, "", {}])
+def test_custom_prompt_profile_treats_falsy_presets_as_none(presets):
+    prompt = {"name": "a", "prompt": "x", "presets": presets}
+    assert custom_prompt_profile(prompt)["presets"] == []
+
+
+@pytest.mark.parametrize("presets", [5, 1.5, True])
+def test_custom_prompt_profile_rejects_numeric_presets(presets):
+    prompt = {"name": "a", "prompt": "x", "presets": presets}
+    with pytest.raises(ValueError, match="'presets' of prompt 'a' must be a list"):
+        custom_prompt_profile(prompt)

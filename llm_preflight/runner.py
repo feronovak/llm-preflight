@@ -145,11 +145,15 @@ def _is_string_list(value: Any) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
-def _check_presets_shape(owner: dict[str, Any], location: str) -> None:
-    if "presets" in owner and not _is_string_list(owner["presets"]):
+def _check_presets_shape(
+    owner: dict[str, Any], location: str, *, allow_unset: bool = False
+) -> None:
+    value = owner.get("presets", [])
+    if allow_unset and value in (None, False):
+        return
+    if not _is_string_list(value):
         raise ValueError(
-            f"'{location}presets' must be a list of strings, "
-            f"got {type(owner['presets']).__name__}"
+            f"'{location}presets' must be a list of strings, got {type(value).__name__}"
         )
 
 
@@ -158,7 +162,7 @@ def validate_config_shape(config: Any) -> None:
     if not isinstance(config, dict):
         raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
     profiles = config.get("profiles")
-    if "profiles" in config and not (
+    if profiles not in (None, False) and not (
         isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))
     ):
         raise ValueError("'profiles' must be a string or a list of strings")
@@ -166,7 +170,7 @@ def validate_config_shape(config: Any) -> None:
     prompts = config.get("prompts")
     for index, prompt in enumerate(prompts if isinstance(prompts, list) else []):
         if isinstance(prompt, dict):
-            _check_presets_shape(prompt, f"prompts[{index}].")
+            _check_presets_shape(prompt, f"prompts[{index}].", allow_unset=True)
 
 
 def load_config(path: Path) -> dict[str, Any]:

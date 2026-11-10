@@ -940,3 +940,9 @@ def test_apply_environment_rejects_malformed_presets_in_the_overlay():
 def test_apply_environment_ignores_an_unselected_malformed_environment():
     config = {"prompt": "hi", "environments": {"ci": {}, "bad": {"presets": 5}}}
     assert apply_environment(config, "ci")["prompt"] == "hi"
+
+
+@pytest.mark.parametrize("environments", [5, ["ci"]])
+def test_apply_environment_rejects_environments_that_is_not_an_object(environments):
+    with pytest.raises(ValueError, match="'environments' must be an object"):
+        apply_environment({"prompt": "hi", "environments": environments}, "ci")

@@ -62,6 +62,8 @@ def apply_environment(config: dict[str, Any], name: str | None) -> dict[str, Any
     if not name:
         return config
     environments = config.get("environments", {})
+    if not isinstance(environments, dict):
+        raise ValueError("'environments' must be an object")  # noqa: TRY004
     if name not in environments:
         raise ValueError(f"unknown environment {name!r}")
     updated = copy.deepcopy(config)

@@ -3392,3 +3392,18 @@ def test_load_config_rejects_malformed_prompt_presets(tmp_path):
 def test_load_config_keeps_empty_profiles_and_presets(tmp_path, extra):
     config = {"prompt": "hi", "models": MODELS, **extra}
     assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"
+
+
+@pytest.mark.parametrize("profiles", [None, False])
+def test_load_config_treats_null_or_false_profiles_as_unset(tmp_path, profiles):
+    config = {"prompt": "hi", "models": MODELS, "profiles": profiles}
+    assert load_config(_write_config(tmp_path, config))["prompt"] == "hi"
+
+
+@pytest.mark.parametrize("presets", [None, False])
+def test_load_config_treats_null_or_false_prompt_presets_as_unset(tmp_path, presets):
+    config = {
+        "models": MODELS,
+        "prompts": [{"name": "a", "prompt": "x", "presets": presets}],
+    }
+    assert load_config(_write_config(tmp_path, config))["prompts"][0]["name"] == "a"

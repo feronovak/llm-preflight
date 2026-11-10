@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- `catalog test` and `watch-new --write-config` no longer keep `prompt_file` next to the inlined `prompt`, so the
+  written file loads again instead of failing with exit 2.
+
 - A config that is not a JSON object, or has a `profiles` or `presets` value
   that used to fail with a traceback (a number, object items in `profiles`, a
   numeric `presets` on a selected prompt, `presets: null`, also inside a

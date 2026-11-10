@@ -1851,6 +1851,38 @@ def test_catalog_test_writes_a_runnable_plan_for_approved_models(monkeypatch, tm
     assert plan["discovery"] == []
 
 
+def test_catalog_test_output_reloads_with_prompt_file(monkeypatch, tmp_path, capsys):
+    (tmp_path / "ask.txt").write_text("hello from file", encoding="utf-8")
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        json.dumps(
+            {
+                "prompts": [{"name": "ask", "prompt_file": "ask.txt"}],
+                "discovery": [{"provider": "openai", "limit": 1}],
+            }
+        )
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models":[{"provider":"openai","model":"gpt-5.6-luna"}]}')
+    output = tmp_path / "out" / "approved-tests.json"
+    output.parent.mkdir()
+
+    _run_cli(
+        monkeypatch,
+        capsys,
+        "catalog",
+        "test",
+        str(watch),
+        "--approved",
+        str(approved),
+        "--output",
+        str(output),
+    )
+
+    reloaded = cli.load_config(output)
+    assert reloaded["prompts"] == [{"name": "ask", "prompt": "hello from file"}]
+
+
 def test_catalog_refresh_lists_all_missing_provider_keys_before_discovery(
     monkeypatch, tmp_path, capsys
 ):
@@ -4589,6 +4621,62 @@ def test_catalog_write_config_keeps_its_base_url(
     )
 
     assert json.loads(output.read_text())["models"][0]["base_url"] == _URL_PARTS
+
+
+def test_catalog_write_config_reloads_with_prompt_file(
+    monkeypatch, tmp_path, capsys, august_catalog_review
+):
+    (tmp_path / "ask.txt").write_text("hello from file", encoding="utf-8")
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        json.dumps(
+            {
+                "prompts": [{"name": "ask", "prompt_file": "ask.txt"}],
+                "max_requests": 2,
+                "max_estimated_cost_usd": 0.01,
+                "models": [{"model": "old"}],
+            }
+        )
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models":[{"provider":"openai","model":"old"}]}')
+    snapshot = tmp_path / "snapshot.json"
+    snapshot.write_text(
+        json.dumps({"models": [{"provider": "openai", "model": "old"}]})
+    )
+    output = tmp_path / "out" / "candidates.json"
+    output.parent.mkdir()
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [
+            {
+                "provider": "openai",
+                "model": "new",
+                "catalog_type": "text-ready",
+                "capabilities": {"adapter": "openai_responses"},
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 2,
+                "pricing_metadata": {"as_of": "2026-08-31"},
+            }
+        ],
+    )
+
+    _run_cli(
+        monkeypatch,
+        capsys,
+        "watch-new",
+        str(watch),
+        "--against",
+        str(approved),
+        "--snapshot",
+        str(snapshot),
+        "--write-config",
+        str(output),
+    )
+
+    reloaded = cli.load_config(output)
+    assert reloaded["prompts"] == [{"name": "ask", "prompt": "hello from file"}]
 
 
 _MOCK_MODELS = [{"provider": "mock", "model": "local", "response": "ok"}]

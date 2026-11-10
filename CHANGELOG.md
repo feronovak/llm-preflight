@@ -4,11 +4,9 @@ All notable changes to this project are documented here.
 
 ## 2.24.0 - 2026-11-10
 
-Release decision: three changes below are marked `Breaking:` (the `speed`
-refusal, `--change-plan` exiting 0 for an unreadable file, and `base_url`
-masking). The owner accepted them under a minor version because each corrects
-wrong behavior: an under-stated cost, an exit code, and credential exposure.
-The 2.23.0 release followed the same rule.
+Three changes below are marked `Breaking:` (the `speed` refusal,
+`--change-plan` exiting 0 for an unreadable file, and `base_url` masking) and can
+stop an existing config or script.
 
 ### Changed
 

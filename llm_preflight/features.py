@@ -667,7 +667,12 @@ def restored_base_url(
     if "base_url" in PROVIDER_DEFAULTS.get(provider, {}):
         candidates.add(PROVIDER_DEFAULTS[provider]["base_url"])
     matches = {item for item in candidates if mask_base_url(item) == recorded}
-    if len(matches) != 1:
+    if len(matches) > 1:
+        raise ValueError(
+            f"result masks base_url for {provider}:{model.get('model')}; several "
+            f"routes in the source config mask to the same value"
+        )
+    if not matches:
         raise ValueError(
             f"result masks base_url for {provider}:{model.get('model')}; "
             f"{action} needs the source config that ran it"

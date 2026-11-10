@@ -216,7 +216,7 @@ def test_replay_refuses_ambiguous_masked_base_url():
             {"base_url": "https://user:B@mock.local/v1"},
         ]
     }
-    with pytest.raises(ValueError, match="needs the source config"):
+    with pytest.raises(ValueError, match="several routes in the source config"):
         features.replay_config(result, source)
 
 

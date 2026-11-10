@@ -222,8 +222,12 @@ The `base_url` promise covers that field only: a URL in `name`, a prompt or
 another setting is copied as written. Prices,
 capabilities and token settings of the old model are dropped, `aliases`,
 `environments` and `discovery` are left out, and the smoke settings, including
-`save_responses`, are written into the file. Secret-shaped values are redacted
-and reported as a warning. If two old rows share a replacement but name
+`save_responses`, are written into the file. Secret-shaped text is redacted.
+A redaction that would replace a non-string value (for example a schema
+property named `token` or `password`) is a config error with `--output`: the
+command exits 2 and names the JSON path. Without `--output` it is a warning and
+no candidate is written. To get past it, rename the property or write the
+candidate config by hand. If two old rows share a replacement but name
 different `api_key_env` values, the first row's key is used and a warning says
 so. An existing `PATH` needs `--replace`, and `PATH` cannot be the source
 config.

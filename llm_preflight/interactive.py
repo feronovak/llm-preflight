@@ -9,7 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .contracts import check_contract, contract_fixtures_declared
+from .contracts import (
+    check_contract,
+    contract_fixtures_declared,
+    without_prompt_files,
+)
 from .profiles import BUILTIN_PROFILES
 from .redaction import mask_base_urls, redact_secrets, without_private_fields
 from .runner import select_test_profiles
@@ -275,6 +279,7 @@ def _choose_stop(
 
 
 def _export_config(config: dict[str, Any]) -> dict[str, Any]:
+    config = without_prompt_files(config)
     payload = redact_secrets(without_private_fields(config))
     scopes = [(config, payload)]
     scopes.extend(zip(config.get("prompts", []), payload.get("prompts", [])))

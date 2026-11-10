@@ -226,6 +226,29 @@ def test_export_refuses_overwrite_and_recovers_at_the_action_menu(tmp_path):
     assert "refusing to overwrite" in "\n".join(output)
 
 
+def test_saved_config_with_prompt_file_reloads(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "_display_command", lambda: "llm-preflight")
+    (tmp_path / "ask.txt").write_text("hello from file", encoding="utf-8")
+    source = tmp_path / "source.json"
+    source.write_text(
+        json.dumps(
+            {
+                "prompts": [{"name": "ask", "prompt_file": "ask.txt"}],
+                "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+                "repetitions": 1,
+                "warmups": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = cli.load_config(source)
+    config["_source_config_path"] = str(source)
+    target = tmp_path / "saved.json"
+    select(config, ["all", "all", "1", "4", "s", str(target), "p"], workflow=True)
+    reloaded = cli.load_config(target)
+    assert reloaded["prompts"] == [{"name": "ask", "prompt": "hello from file"}]
+
+
 @pytest.mark.parametrize("scope", ["top", "prompt", "tool"])
 def test_saved_config_preserves_schema_property_names_and_constraints(tmp_path, scope):
     schema = {

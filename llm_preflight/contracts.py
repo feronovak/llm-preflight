@@ -607,3 +607,12 @@ def selection_fingerprint(selection: Mapping[str, Any]) -> str:
     share a digest. A saved result may still store the selection redacted.
     """
     return _fingerprint(without_credentials(dict(selection)))
+
+
+def without_prompt_files(config: dict[str, Any]) -> dict[str, Any]:
+    """Copy a loaded config, dropping `prompt_file` (its text is already inlined)."""
+    prompts = [
+        {key: value for key, value in prompt.items() if key != "prompt_file"}
+        for prompt in config.get("prompts", [])
+    ]
+    return {**config, "prompts": prompts} if prompts else dict(config)

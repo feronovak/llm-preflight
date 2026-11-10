@@ -201,6 +201,9 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "properties": {"path": {"type": "string", "minLength": 1}},
         "additionalProperties": False,
     }
+    migrate_schema = by_name["migrate_plan"]["outputSchema"]["oneOf"][1]["properties"]
+    assert migrate_schema["paid_requests_made"] == {"const": 0}
+    assert migrate_schema["smoke"] == {"type": "null"}
     assert by_name["run_preflight"]["annotations"] == {
         "readOnlyHint": False,
         "destructiveHint": False,
@@ -1880,15 +1883,15 @@ def test_migrate_plan_follow_up_is_stated_in_band(tmp_path):
         assert "`confirm_paid_run`" in flat
 
 
-def test_decision_and_docs_label_migrate_as_main_branch_only():
+def test_decision_and_docs_without_main_branch_notes():
     root = Path(__file__).parent.parent
     flat = {
         name: " ".join((root / name).read_text().split())
         for name in ("docs/automation/mcp.md", "README.md", "docs/DECISIONS.md")
     }
 
-    assert "main branch only, not in 2.23.1" in flat["docs/automation/mcp.md"]
-    assert "main branch only, not in 2.23.1" in flat["README.md"]
+    assert "not in 2.23.1" not in flat["docs/automation/mcp.md"]
+    assert "not in 2.23.1" not in flat["README.md"]
     assert (
         "`migrate --run` is command-line only and has no MCP tool"
         in flat["docs/DECISIONS.md"]

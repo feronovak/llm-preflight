@@ -2,16 +2,29 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.24.0 - 2026-11-10
+
+Three changes below are marked `Breaking:` (the `speed` refusal,
+`--change-plan` exiting 0 for an unreadable file, and `base_url` masking) and can
+stop an existing config or script.
 
 ### Changed
 
-- `--dry-run --json` and the MCP `dry_run_plan` tool now print each model's
+- Breaking: `--dry-run --json`, the MCP `dry_run_plan` tool, run `--json`, saved
+  result files (JSON, Markdown and summary), the MCP `run_preflight` result,
+  `--catalog` output and the interactive `x` plan export now print each model's
   `base_url` as scheme and host[:port], with any path, query, userinfo or `;`
-  parameter shown as `/[REDACTED]`; an exact public provider route is kept. The
-  JSON value changed: read the route from your config. A token in a host name
+  parameter shown as `/[REDACTED]`; an exact public provider route is kept. A
+  result masks every `base_url` in `models[]` and `source_config`, where it
+  used to hold a credential-bearing route verbatim. The
+  JSON value changed: read the route from your config. `--replay` and
+  `models approve` restore a masked route from the config at the result's
+  `source_config_path` and stop with exit 2 when that config is missing or does
+  not name exactly one matching route; results saved before this change replay
+  unchanged. A masked `base_url` is refused before any request. `--catalog`
+  written configs and the interactive `s` save keep the route. A token in a host name
   stays visible. A base URL that is not http(s) with a plain host (for example
-  `https://host;tok=1`) prints as `[REDACTED]`. Masking does not change the approval receipt hash, which still
+  `https://host;tok=1`) prints as `[REDACTED]`. Masking does not change the approval receipt hash or the provenance hashes, which still
   covers the unmasked plan, so a receipt recorded before this change verifies
   against an unchanged plan; a receipt still reports `mismatch` when the plan
   changes.
@@ -51,7 +64,7 @@ All notable changes to this project are documented here.
   error (`provider_error`, decision `api_failure`) with unknown token counts.
   `request.provider_options.tools` is still forwarded on those routes;
   top-level `tools` entries stay local.
-- `--change-plan` no longer stops with a permission error on a changed file it
+- Breaking: `--change-plan` no longer stops with a permission error on a changed file it
   may not read. It lists the file under `unreadable_files`, counts it in
   `files_unreadable`, and sets `plan_incomplete`; `requires_preflight_review`
   is true when any file is unreadable. A file that is not UTF-8 text counts as

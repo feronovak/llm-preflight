@@ -118,7 +118,7 @@ plan without asking for execution consent.
 `--change-plan` is a local static Git review. It includes modified, staged, and
 untracked files, then reports literal model IDs and likely prompt/schema/tool
 surface changes. It cannot see dynamic selection, imports no application code,
-loads no credentials, and never authorizes paid work. On the main branch only (not in 2.23.1), check `plan_incomplete`:
+loads no credentials, and never authorizes paid work. Check `plan_incomplete`:
 when it is `true`, some changed files could not be read and need human review.
 
 ```bash

@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -30,12 +30,19 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
-## New in 2.23.0
+## New in 2.24.0
 
-This release adds GPT-6.1 Terra pricing and native Kimi,
-MiniMax, Mistral and Cohere text checks, plus GLM Flash and restricted Mythos
-coverage. See [native provider checks](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/native-providers.md) for
-bounded examples and request limits.
+This release adds pricing and retirement rows for Claude Fable 5.2 and Claude
+Mythos 5.2, and the `migrate` command and read-only `migrate_plan` MCP tool,
+which report the provider-named replacement for a retired or retiring model.
+It also prices `inference_geo: us` on Anthropic rows, refuses `speed` other than
+`standard` on them, fails a provider response that returns a tool call, and
+masks `base_url` values in result output. See the
+[changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)
+for the three changes that can stop an existing config or script.
+The 2.23.0 native provider checks (Kimi, MiniMax, Mistral, Cohere, GLM Flash and
+restricted Mythos) remain: see
+[native provider checks](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/native-providers.md).
 New coverage has deterministic protocol fixtures; live observations below cover
 the listed 19 routes. Other added providers retain fixture-only coverage.
 
@@ -229,7 +236,7 @@ Configure the installed stdio command in your MCP client:
 }
 ```
 
-The eight tools (`migrate_plan` is main branch only, not in 2.23.1) audit literal model IDs, validate a config, preview a plan, run
+The eight tools audit literal model IDs, validate a config, preview a plan, run
 a preflight, compare saved baselines, verify a record, gate CI evidence and plan
 a retired-model migration.
 For an existing contract, begin with `validate_config` and `dry_run_plan`.

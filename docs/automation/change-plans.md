@@ -20,7 +20,7 @@ when its recorded commit changes. Files inside an untracked nested
 repository are not inspected. A repository whose filter driver name
 contains `=` cannot have that driver disabled, so the change plan refuses it.
 
-Not in 2.23.1; the rest of this section describes the main branch only. Before it, a changed file the command may not read stopped the plan with an error.
+Before 2.24.0, a changed file the command may not read stopped the plan with an error.
 
 A changed file the command cannot read does not stop the plan. That covers no
 read permission, a directory it may not enter, a symlink loop, and a file that

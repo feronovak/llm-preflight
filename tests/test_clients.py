@@ -2278,6 +2278,14 @@ _TOOL_CASES = {
         _GENERIC,
         [_chat_delta({"content": "x"}, "function_call")],
     ),
+    "generic-finish-tool-calls": (
+        _GENERIC,
+        [_chat_delta({"content": "x"}, "tool_calls")],
+    ),
+    "anthropic-tool-block-without-message-delta": (
+        _ANTHROPIC,
+        _anthropic_events(_TOOL_USE)[:2],
+    ),
     "anthropic-only": (_ANTHROPIC, _anthropic_events(_TOOL_USE, stop="tool_use")),
     "anthropic-text-then-call": (
         _ANTHROPIC,
@@ -2490,3 +2498,19 @@ def test_tool_call_on_a_second_gemini_candidate_is_a_failed_request(monkeypatch)
     sample = _run_stream(monkeypatch, _GEMINI, [event])
     assert sample["ok"] is False
     assert sample["error"] == TOOL_CALL_ERROR
+
+
+@pytest.mark.parametrize(
+    ("usage", "expected"),
+    [
+        ({"cache_creation": {"ephemeral_1h_input_tokens": 0}}, False),
+        ({"cache_creation": {"ephemeral_1h_input_tokens": 1}}, True),
+        ({"cache_creation": {"ephemeral_5m_input_tokens": 9}}, False),
+        ({"cache_creation": None}, False),
+        ({}, False),
+    ],
+)
+def test_only_nonzero_one_hour_cache_writes_are_flagged(usage, expected):
+    from llm_preflight.client import _one_hour_cache_writes
+
+    assert _one_hour_cache_writes(usage) is expected

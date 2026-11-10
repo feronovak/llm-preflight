@@ -64,6 +64,18 @@ def mask_base_url(value: Any) -> Any:
     return f"{scheme}://{authority}" + (f"/{REDACTED}" if hidden else "")
 
 
+def mask_base_urls(value: Any) -> Any:
+    """Copy of `value` with every `base_url` entry masked by `mask_base_url`."""
+    if isinstance(value, dict):
+        return {
+            key: mask_base_url(item) if key == "base_url" else mask_base_urls(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [mask_base_urls(item) for item in value]
+    return value
+
+
 def _is_sensitive_key(key: str) -> bool:
     normalized = key.casefold().replace("-", "_")
     if normalized.endswith("_env"):

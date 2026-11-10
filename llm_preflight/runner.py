@@ -49,7 +49,7 @@ from .profiles import (
     normalize_profile_selector,
     select_profiles,
 )
-from .redaction import redact_secrets, without_private_fields
+from .redaction import mask_base_urls, redact_secrets, without_private_fields
 
 
 @contextmanager
@@ -1136,13 +1136,13 @@ def run_benchmark(
 
 
 def redact_result(result: dict[str, Any]) -> dict[str, Any]:
-    """`result` with secret-like values redacted, except its run identity.
+    """`result` with secret-like values and base URLs masked, except its run identity.
 
     A well-formed `ci` holds names and numbers that github_actions checks
     field by field, never a token; redacting it would turn a repository such
     as acme/sk-app into one no record can name.
     """
-    redacted = redact_secrets(result)
+    redacted = mask_base_urls(redact_secrets(result))
     if valid_ci_identity(result.get("ci")):
         redacted["ci"] = dict(result["ci"])
     return redacted

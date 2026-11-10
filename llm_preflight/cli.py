@@ -60,8 +60,10 @@ from .features import (
     estimate_budget,
     filter_changed_models,
     load_json,
+    load_source_config,
     matrix_report,
     replay_config,
+    restored_base_url,
 )
 from .interactive import InteractiveServices, select_interactively
 from .migrate import build_report as build_migrate_report
@@ -70,7 +72,12 @@ from .migrate import format_report as format_migrate_report
 from .presets import preset_warnings
 from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
 from .profiles import BUILTIN_PROFILES
-from .redaction import mask_base_url, redact_secrets, without_credentials
+from .redaction import (
+    mask_base_url,
+    mask_base_urls,
+    redact_secrets,
+    without_credentials,
+)
 from .reporting import render_card_svg, render_job_summary, render_report_html
 from .retirements import retirement_report, today_utc, unique_next_commands
 from .runner import (
@@ -1856,7 +1863,15 @@ def _approve_model_main(argv: list[str]) -> None:
         "input_cost_per_million",
         "output_cost_per_million",
     )
-    models.append({key: match[key] for key in model_keys if key in match})
+    approved_model = {key: match[key] for key in model_keys if key in match}
+    if "base_url" in approved_model:
+        try:
+            approved_model["base_url"] = restored_base_url(
+                match, load_source_config(result.get("source_config_path")), "approving"
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+    models.append(approved_model)
     approvals = approved.setdefault("approvals", [])
     approvals.append(
         {
@@ -3109,8 +3124,13 @@ def main() -> None:
             }
         elif args.replay:
             replay_result = load_json(args.replay)
-            config = replay_config(replay_result)
             source_config_path = replay_result.get("source_config_path")
+            try:
+                config = replay_config(
+                    replay_result, load_source_config(source_config_path)
+                )
+            except ValueError as exc:
+                parser.error(str(exc))
             if config.get("request", {}).get("input_images"):
                 if not source_config_path:
                     parser.error(
@@ -3250,7 +3270,11 @@ def main() -> None:
             )
             config["discovery"] = []
         if args.catalog:
-            print(json.dumps(catalog_output(resolve_models(config)), indent=2))
+            print(
+                json.dumps(
+                    mask_base_urls(catalog_output(resolve_models(config))), indent=2
+                )
+            )
             return
         profile_selector = (
             "quick-migration-check"

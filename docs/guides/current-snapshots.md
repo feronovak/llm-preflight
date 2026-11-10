@@ -1,17 +1,16 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
+**Last reviewed:** 2026-11-10 · **As of:** v2.24.0
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.23.1**. The table records this version's reviewed
+Package version: **2.24.0**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
-pricing then blocks execution. On the main branch only, the `claude-fable-5-2`
-and `claude-mythos-5-2` rows were reviewed on 2026-11-09 and become stale on
-2026-12-10; the 2.23.1 table does not list them. Explicit owner overrides
+pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
+rows were reviewed on 2026-11-09 and become stale on 2026-12-10. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes

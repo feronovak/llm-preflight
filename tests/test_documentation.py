@@ -15,7 +15,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.1" in page
+    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -440,7 +440,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
-        assert "**Last reviewed:** 2026-10-18 · **As of:** v2.22.1" in page.read_text()
+        assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page.read_text()
 
     for page in (ROOT / "docs/automation/change-plans.md",):
         assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
@@ -452,18 +452,18 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
             assert "`retirements` decision" in step
 
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.2"
+        "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0"
         in (ROOT / "docs/reference/cli.md").read_text()
     )
 
     for page in (ROOT / "docs/automation/mcp.md",):
-        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
+        assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
         assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-13 · **As of:** v2.21.0"
+        "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0"
         in (ROOT / "docs/guides/pricing-and-safety.md").read_text()
     )
 
@@ -472,7 +472,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0"
+        "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0"
         in (ROOT / "README.md").read_text()
     )
     assert (
@@ -678,7 +678,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-04 · **As of:** v2.23.1" in guide
+    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
@@ -736,7 +736,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
-    assert "stale from the 31st day after the review date stamped above" in guide
+    assert "stale from the 31st day after the 2026-11-04 review date" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 
@@ -1556,4 +1556,4 @@ def test_release_guides_describe_available_2_23_features():
         assert "unpublished 2.23.0" not in page, relative
         assert "source build is unpublished" not in page, relative
         assert "candidate wheel" not in page, relative
-    assert "## New in 2.23.0" in (ROOT / "README.md").read_text()
+    assert "## New in 2.24.0" in (ROOT / "README.md").read_text()

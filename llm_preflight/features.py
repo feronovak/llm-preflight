@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
@@ -23,6 +24,7 @@ from .pricing import (
     pricing_coverage_report,
     resolve_pricing,
 )
+from .redaction import mask_base_url
 from .retirements import retirement_report, today_utc
 from .runner import profile_selector_text, select_test_profiles
 
@@ -628,7 +630,59 @@ def _comparison_evidence(
     return "compatible", [], None
 
 
-def replay_config(result: dict[str, Any]) -> dict[str, Any]:
+def _base_urls(value: Any) -> Iterator[str]:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "base_url" and isinstance(item, str):
+                yield item
+            else:
+                yield from _base_urls(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _base_urls(item)
+
+
+def load_source_config(path: Any) -> dict[str, Any] | None:
+    """The raw config a result recorded, or None when it cannot be read."""
+    try:
+        loaded = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def restored_base_url(
+    model: dict[str, Any], source: dict[str, Any] | None, action: str
+) -> str:
+    """The route a result masked, from the config that ran it, or a refusal.
+
+    Only one distinct route may mask to the recorded value; no network, no
+    discovery and no env file is involved.
+    """
+    recorded = model["base_url"]
+    if not isinstance(recorded, str) or "[REDACTED]" not in recorded:
+        return cast(str, recorded)
+    provider = model.get("provider", "openai_compatible")
+    candidates = {*_base_urls(source)}
+    if "base_url" in PROVIDER_DEFAULTS.get(provider, {}):
+        candidates.add(PROVIDER_DEFAULTS[provider]["base_url"])
+    matches = {item for item in candidates if mask_base_url(item) == recorded}
+    if len(matches) > 1:
+        raise ValueError(
+            f"result masks base_url for {provider}:{model.get('model')}; several "
+            f"routes in the source config mask to the same value"
+        )
+    if not matches:
+        raise ValueError(
+            f"result masks base_url for {provider}:{model.get('model')}; "
+            f"{action} needs the source config that ran it"
+        )
+    return matches.pop()
+
+
+def replay_config(
+    result: dict[str, Any], source: dict[str, Any] | None = None
+) -> dict[str, Any]:
     if "source_config" not in result:
         raise ValueError("result does not include source_config; cannot replay exactly")
     config = copy.deepcopy(result["source_config"])
@@ -659,6 +713,11 @@ def replay_config(result: dict[str, Any]) -> dict[str, Any]:
     config["models"] = [
         {
             **{key: model[key] for key in replay_model_keys if key in model},
+            **(
+                {"base_url": restored_base_url(model, source, "--replay")}
+                if "base_url" in model
+                else {}
+            ),
             **{key: pricing[key] for key in pricing_model_keys if key in pricing},
         }
         for model in result["models"]

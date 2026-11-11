@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import urllib.parse
 import urllib.request
@@ -11,6 +10,7 @@ from typing import Any
 
 from .client import GEMINI_4_MODELS, PROVIDER_DEFAULTS
 from .pricing import resolve_pricing
+from .redaction import credential_from_env
 from .security import open_public_url, require_http_url
 
 _MAX_CATALOG_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -90,7 +90,7 @@ def _get_json(
     url: str, key_env: str | None, headers: dict[str, str] | None = None
 ) -> dict[str, Any]:
     require_http_url(url)
-    key = os.environ.get(key_env) if key_env else None
+    key = credential_from_env(key_env)
     if key_env and not key:
         raise ValueError(f"environment variable {key_env!r} is not set")
     request_headers = dict(headers or {})
@@ -275,7 +275,7 @@ def _typesafe(source: dict[str, Any]) -> list[dict[str, Any]]:
 def _anthropic(source: dict[str, Any]) -> list[dict[str, Any]]:
     config = _base(source)
     headers = {
-        "x-api-key": os.environ.get(config.get("api_key_env", ""), ""),
+        "x-api-key": credential_from_env(config.get("api_key_env")) or "",
         "anthropic-version": config.get("api_version", "2023-06-01"),
         **config.get("headers", {}),
     }
@@ -305,7 +305,7 @@ def _anthropic(source: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _gemini(source: dict[str, Any]) -> list[dict[str, Any]]:
     config = _base(source)
-    key = os.environ.get(config.get("api_key_env", ""))
+    key = credential_from_env(config.get("api_key_env"))
     if not key:
         raise ValueError(
             f"environment variable {config.get('api_key_env')!r} is not set"

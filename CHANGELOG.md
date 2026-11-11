@@ -30,6 +30,10 @@ Changes below are marked `Breaking:` where they can change an exit code.
   is now an error message, not a traceback.
 - The `examples/vision` and `examples/project-integration` configs bound retries with `request.retry`
   `max_attempts: 1`, so their one-request cap holds on a live run.
+- Provider error text, saved results, reports and MCP output now mask the exact value of every environment variable
+  named by `api_key_env` (eight characters or more) once a request or catalog discovery reads it, and a bare
+  `Bearer` token of 16 or more characters. Keys without a known prefix (Mistral, MiniMax, Cohere, Z.ai,
+  `openai_compatible`) used to be echoed back unchanged when a provider error body repeated them.
 
 ## 2.24.2 - 2026-11-11
 

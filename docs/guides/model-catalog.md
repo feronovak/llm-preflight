@@ -1,6 +1,6 @@
 # Model catalogue: discover, test, and keep models
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Use the catalogue when you want a small, trusted list of models for your own
 work. It is deliberately a local workflow: provider catalogues are broad;

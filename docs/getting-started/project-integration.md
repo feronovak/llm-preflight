@@ -1,6 +1,6 @@
 # Set up a real project
 
-**Last reviewed:** 2026-10-09 · **As of:** v2.19.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Use one representative request from your application and a rule its consumer
 actually enforces. This example routes a known billing ticket and rejects the
@@ -29,7 +29,8 @@ in the source repository.
   "request": {
     "system_prompt": "Route the ticket. Return one lowercase label: billing, technical, or account.",
     "temperature": 0,
-    "max_output_tokens": 20
+    "max_output_tokens": 20,
+    "retry": {"max_attempts": 1}
   },
   "validation": {"exact": "billing"},
   "validation_fixtures": [

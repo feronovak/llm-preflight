@@ -97,12 +97,15 @@ The response's `result.structuredContent` includes these fields (an excerpt):
   "ok": true,
   "tests": ["config prompt"],
   "requests": 1,
-  "possible_requests": 2
+  "possible_requests": 2,
+  "budget_limits": {"max_requests": null, "max_estimated_cost_usd": null, "violations": []}
 }
 ```
 
 This built a plan without reading credentials or calling a provider. `ok`
-means the plan was produced, not that a model passed. To exercise the mock,
+means the plan was produced and breaks no limit in `budget_limits.violations`
+(a request or cost cap, or incomplete pricing under `require_current_pricing`);
+it does not mean a model passed. To exercise the mock,
 call `run_preflight` with the same config and inspect its structured decision:
 its local test passes, but `decision.state` remains `inconclusive` because no
 live provider was tested. The [CLI walkthrough](../guides/interactive-runs.md#cli-json-communication)
@@ -136,7 +139,7 @@ Decision: fail — 1 file audited; 2 model references: 1 retired, 0 retiring or 
 The second text block and `structuredContent` carry the full, uncapped JSON;
 there is no `all` argument because only CLI text output is capped. Report
 the `decision`: `fail` means a referenced model is retired, `inconclusive`
-means one is retiring, its snapshot row is stale, or no file was read, `pass`
+means one is retiring, its snapshot row is stale, it is an alias without a safe mapping to one snapshot row (`alias_unmapped`, with `alias_candidates`), or no file was read, `pass`
 means every referenced model the snapshot lists is active, and `none` means
 no reference is in the retirement snapshot, which is not a pass. It covers
 only literal model IDs; a model chosen at run time needs review.
@@ -358,10 +361,10 @@ first and report its `decision` and each retired or retiring model.
 2. Ask the agent to run `validate_config` after an LLM-related change.
 3. Ask it to run `dry_run_plan` and report models, request count, estimated
    cost, every non-eligible `smoke_eligibility` reason, and the `retirements`
-   decision: `fail` means a selected model is retired, `inconclusive` means one
-   is retiring or its snapshot row is stale. The tool's `ok` stays `true` for a
-   retired model; it only says the plan was built, so read
-   `retirements.decision` instead.
+   decision: `fail` means a selected model is retired, `inconclusive` means one is retiring, its snapshot row is stale, or it is an `alias_unmapped`. The tool's `ok` stays `true` for a
+   retired model; it only says the plan breaks no limit, so read
+   `retirements.decision` instead. `ok: false` means a limit is broken: report
+   `budget_limits.violations`.
 4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
 5. Use `run_preflight`, then retain the returned evidence or compare it with a

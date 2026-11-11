@@ -1159,22 +1159,22 @@ def _setup(monkeypatch, capsys, tmp_path, models, **extra):
     return path, target, receipt
 
 
+def _record_args(target, receipt, *flags):
+    return [
+        str(target),
+        "--dry-run",
+        "--approval-receipt",
+        str(receipt),
+        "--approval-note",
+        "reviewed",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+        *flags,
+    ]
+
+
 def _record(spend, monkeypatch, capsys, target, receipt, *flags):
-    code, out = _main(
-        monkeypatch,
-        capsys,
-        [
-            str(target),
-            "--dry-run",
-            "--approval-receipt",
-            str(receipt),
-            "--approval-note",
-            "reviewed",
-            "--approval-expires-at",
-            "2099-01-01T00:00:00+00:00",
-            *flags,
-        ],
-    )
+    code, out = _main(monkeypatch, capsys, _record_args(target, receipt, *flags))
     assert code == 0, out.err
     spend["env"] = 0
 
@@ -1333,9 +1333,12 @@ def test_budget_excess_stops_before_run(priced, spend, tmp_path, monkeypatch, ca
         [_m("oldp")],
         max_estimated_cost_usd=0.0000001,
     )
-    _record(spend, monkeypatch, capsys, target, receipt)
-    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    code, out = _main(monkeypatch, capsys, _record_args(target, receipt))
     assert code == 2 and "exceeds" in out.err
+    assert not receipt.exists()
+    spend["env"] = 0
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 1
     assert _none_spent(spend)
 
 
@@ -1583,12 +1586,14 @@ def test_wrong_typed_budget_setting_is_a_config_error(
     priced, spend, tmp_path, monkeypatch, capsys, key, value
 ):
     path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
-    _record(spend, monkeypatch, capsys, target, receipt)
     _edit(path, lambda d: d.update({key: value}))
-    _migrate(monkeypatch, capsys, path, "--output", str(target), "--replace")
-    _record(spend, monkeypatch, capsys, target, receipt, "--replace-approval-receipt")
+    code, out = _migrate(
+        monkeypatch, capsys, path, "--output", str(target), "--replace"
+    )
+    assert code == 2 and f"{key} must be a number" in out.err
+    assert "Traceback" not in out.err
     code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
-    assert code == 2 and "Traceback" not in out.err and _none_spent(spend)
+    assert code == 1 and "Traceback" not in out.err and _none_spent(spend)
 
 
 def test_keyboard_interrupt_during_smoke_exits_130(
@@ -1832,3 +1837,30 @@ def test_migrate_staleness_boundary_is_day_31(age_days, stale):
     today = date(2026, 12, 31)
     verdict = {"as_of": (today - timedelta(days=age_days)).isoformat()}
     assert migrate._is_stale(verdict, today) is stale
+
+
+def test_migrate_alias_of_retired_model_names_replacement(monkeypatch, tmp_path):
+    table = {
+        ("anthropic", "claude-old-20250101"): _row(
+            "retired", replacement="claude-new", date_="2026-10-01"
+        ),
+        ("anthropic", "claude-new"): _row("active"),
+    }
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    path = _write(tmp_path, [_m("claude-old", provider="anthropic")])
+    entry = _entry(migrate.build_report(path, TODAY), "claude-old")
+    assert entry["outcome"] == "candidate"
+    assert entry["replacement"] == "claude-new"
+    assert entry["status"] == "retired"
+
+
+def test_migrate_unmapped_alias_outcome(monkeypatch, tmp_path):
+    table = {("openai", "gpt-x-2025-01-01"): _row("deprecated", date_="2026-12-11")}
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    report = migrate.build_report(_write(tmp_path, [_m("gpt-x")]), TODAY)
+    entry = _entry(report, "gpt-x")
+    assert entry["outcome"] == "alias_unmapped"
+    assert entry["status"] == "alias_unmapped"
+    assert "gpt-x-2025-01-01" in entry["next_step"]
+    assert report["decision"] == "inconclusive"
+    assert report["candidate_config"] is None

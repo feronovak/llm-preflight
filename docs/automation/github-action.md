@@ -4,7 +4,7 @@ Use the `v2.24.2` Action with `package-version: "2.24.2"` for reproducible CI.
 The immutable release tag retains its earlier **2.24.1** default. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local
@@ -22,7 +22,13 @@ steps:
 The Action installs the exact `package-version` input. The current repository
 source defaults to `2.24.2`; `v2.24.2` retains its `2.24.1` default, `v2.24.1` its `2.24.0` default, `v2.24.0` its `2.23.1` default and `v2.23.1` its `2.23.0` default. The `v2.22.1` release tag retains the `2.22.0`
 default, so the example sets the input explicitly. The default execution path
-makes no provider generation request and needs no secret. The action writes a
+makes no provider generation request. For a non-mock config, the `--doctor`
+step exits 1 when a model's key variable is unset, so supply each key variable
+from a secret in the job's `env`; with `models` only, the checks need only the
+variable to be present and send no request with it. With `discovery`, all three
+checks send the key to that source's model-list endpoint (no generation
+request), so the discovery `base_url` decides where the key goes. A mock config
+needs no key. The action writes a
 compact job summary confirming those three no-spend checks completed.
 
 The repository's `Marketplace Action smoke` workflow explicitly pins a
@@ -30,11 +36,55 @@ published package to keep pull-request validation installable from PyPI.
 Update that pin after each newer package is published and the workflow
 succeeds against it.
 
+## Keep the pin current
+
+The bundled retirement rows go stale 30 days after their review date, and
+then `--ci` returns `inconclusive` (exit 3) until you move to a newer release.
+Official price rows follow the same 30-day rule from their own review dates.
+The Action runs the doctor and dry-run with `--json` and without `--ci`, so it
+prints no expiry notice and never exits 3 for a stale retirement row. A stale price row turns
+it red through the `--pricing-check` step (exit 1). Run
+`llm-preflight benchmark.json --doctor` locally or in your own CI to read
+`snapshot.valid_until` (the oldest selected row's review date plus 30 days)
+and the notice printed during its last 7 days.
+
+Dependabot moves the Action tag but not the `package-version` input. A tag's
+`action.yml` defaults to the package version of the release before it
+(`v2.24.2` defaults to `2.24.1`), so a tag-only pin installs the previous
+release and its data expires a release earlier. Keep `package-version` in
+your workflow, set to the tag's version, and bump both together:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+```
+
+```yaml
+steps:
+  - uses: feronovak/llm-preflight@v2.24.2
+    with:
+      config: benchmark.json
+      package-version: "2.24.2"
+```
+
+Dependabot's pull request changes the tag; edit `package-version` in that pull
+request to the same version.
+
 ## Paid smoke is opt-in
 
-Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and
-approved the spend. Supply credentials through GitHub Secrets or an approved
+The action's dry-run step fails when a configured limit is broken, as the
+CLI `--dry-run` exits 2 with the live run's error. Only set `run-paid: "true"`
+after a person has reviewed the dry-run bounds and approved the spend. Supply credentials through GitHub Secrets or an approved
 environment; do not commit an environment file or put a key in action inputs.
+
+The optional `env-file` input names an environment file for the paid smoke and
+is passed to `--env-file`. It has no effect on the no-spend checks; keep the
+credentials in GitHub Secrets rather than in a file in the repository.
 
 ```yaml
 steps:

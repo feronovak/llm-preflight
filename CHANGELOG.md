@@ -2,6 +2,54 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+Changes below are marked `Breaking:` where they can change an exit code.
+
+### Added
+
+- The retirement report now carries `snapshot.valid_until`, the last day the rows of the selected models are not stale, in the doctor and dry-run JSON (the scan JSON carries the bundled-wide date). Text output of the doctor, dry-run and scan adds a notice during the last 7 days; it never changes the decision or exit code. Saved dry-run plans change once because the plan now includes the field, so approval receipts for the old plan verify as `mismatch`.
+- The Action guide explains how to keep the pin current with Dependabot.
+
+### Changed
+
+- `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
+
+### Fixed
+
+- Breaking: `--audit-source`, `--dry-run --ci`, `--doctor`, `migrate` and the MCP `audit_source` and
+  `migrate_plan` tools now look model IDs up in lower case and resolve an Anthropic alias such as
+  `claude-opus-4-1`, `claude-sonnet-4-0` or `claude-3-7-sonnet-latest` to the verdict of its dated snapshot row (the
+  verdict carries `matched_id`). Such an alias of a retired model used to be `unknown` and exit 0 under `--ci`;
+  it now exits 1.
+- Breaking: an OpenAI alias with dated snapshot rows but no row of its own (`gpt-5`, `gpt-5-mini`, `gpt-5-nano`,
+  `gpt-5-pro`, `o3`, `o3-pro`, and the two search-preview IDs) is now `alias_unmapped` (decision `inconclusive`, with
+  `alias_candidates`) and exits 3 under `--ci`, where it exited 0. `retirement_report` summaries gain an
+  `alias_unmapped` count and `migrate` reports the `alias_unmapped` outcome.
+- The `--audit-source --ci` exit 0 line no longer says "no referenced model is retired, retiring or stale" when IDs
+  are unknown. It says no referenced model has a retirement finding in the snapshot, and counts the model IDs that
+  have no snapshot row and are not verified.
+- Breaking: `--dry-run` (also `catalog watch-new --test --dry-run`) now prints the plan and then fails with exit 2,
+  and the same message as the live run, when the config breaks a limit the live run refuses: `max_requests` below
+  the possible requests, `max_estimated_cost_usd` exceeded or with unknown pricing, or incomplete pricing under
+  `require_current_pricing`. It used to exit 0 and the live run then refused. The plan, text and JSON, carries
+  `budget_limits` and a `Limit breach:` line, and the MCP `dry_run_plan` tool returns `ok: false` with the plan.
+  Approval receipts written by 2.24.2 verify as `mismatch` because the hashed plan gains `budget_limits`;
+  record them again with `--dry-run --approval-receipt`. A `max_requests` or `max_estimated_cost_usd` that is not a
+  finite number is invalid input and is now refused with a `must be a number` error and exit 2, before any request,
+  in the dry run and the live run. A non-numeric value used to be a traceback, and `"inf"`, `"Infinity"` or `"NaN"` as
+  `max_estimated_cost_usd` ran on 2.24.2 with no effective cost cap.
+- Breaking: `verify` and `gate` resolve an Anthropic alias route (for example `anthropic:claude-opus-4-1`) to its
+  dated snapshot row. A CI record whose checked route is a retired alias used to verify with exit 0 and pass the gate
+  as `fresh_pass`; it is now `superseded`: `verify` exits 3 and `gate` exits 1.
+- The `examples/vision` and `examples/project-integration` configs bound retries with `request.retry`
+  `max_attempts: 1`, so their one-request cap holds on a live run.
+- Provider error text, saved results, reports and MCP output now mask the exact value of every environment variable
+  named by `api_key_env` (eight characters or more) once a request or catalog discovery reads it, and a bare
+  `Bearer` token of 16 or more characters. Keys without a known prefix (Mistral, MiniMax, Cohere, Z.ai,
+  `openai_compatible`) used to be echoed back unchanged when a provider error body repeated them.
+- The retirement guide now states the right review and stale dates, and lists what the source scan does not see. The Action guide says non-mock configs need their key variables set for the doctor step. The CLI reference documents `init --api-key-env`, `--write-env-example` and `--force`, `--replace-approval-receipt`, `catalog probe --ledger`, `pricing-refresh --provider`, and `--all-unapproved`, `--select-candidates` and `--write-config` for `catalog refresh` and `watch-new`. The decision reference notes that undated hand-typed prices only block under `require_current_pricing`.
+
 ## 2.24.2 - 2026-11-11
 
 ### Added

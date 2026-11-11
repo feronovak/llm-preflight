@@ -59,6 +59,23 @@ def test_git_change_plan_reports_changed_literal_models_without_network_access(
     assert "dynamic model selection" in plan["notes"][0]
 
 
+def test_git_change_plan_reports_backtick_model_id_in_typescript(tmp_path):
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    _git(tmp_path, "config", "user.name", "Test User")
+    app = tmp_path / "app.ts"
+    app.write_text("const model = `gpt-5.4-mini`;\n")
+    _git(tmp_path, "add", "app.ts")
+    _git(tmp_path, "commit", "-m", "initial")
+    app.write_text("const model = `gpt-5.5`;\n")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert [(t["kind"], t["path"], t["model"]) for t in plan["triggers"]] == [
+        ("model_id", "app.ts", "gpt-5.5")
+    ]
+
+
 def test_git_change_plan_includes_untracked_contract_surface_files(tmp_path):
     _git(tmp_path, "init")
     _git(tmp_path, "config", "user.email", "test@example.invalid")

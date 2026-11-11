@@ -3,7 +3,11 @@ import json
 import pytest
 
 from llm_preflight.providers import PROVIDER_DEFAULTS
-from llm_preflight.redaction import mask_base_url, redact_secrets
+from llm_preflight.redaction import (
+    credential_from_env,
+    mask_base_url,
+    redact_secrets,
+)
 
 
 def test_redact_secrets_masks_sensitive_keys_recursively():
@@ -134,3 +138,69 @@ def test_mask_base_url_redacts_what_it_cannot_parse(value):
 
 def test_mask_base_url_leaves_none_alone():
     assert mask_base_url(None) is None
+
+
+def test_registered_credential_redacted_in_error_text(monkeypatch):
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("MISTRAL_TEST_KEY", key)
+    text = f"401: Incorrect API key provided: {key}"
+    assert redact_secrets(text) == text
+
+    assert credential_from_env("MISTRAL_TEST_KEY") == key
+
+    assert redact_secrets(text) == "401: Incorrect API key provided: [REDACTED]"
+    assert key not in json.dumps(redact_secrets({"error": [text]}))
+
+
+def test_credential_from_env_handles_unset_and_empty_names(monkeypatch):
+    monkeypatch.delenv("UNSET_TEST_KEY", raising=False)
+    assert credential_from_env("UNSET_TEST_KEY") is None
+    assert credential_from_env("") is None
+    assert credential_from_env(None) is None
+
+
+@pytest.mark.parametrize(
+    ("value", "recorded"), [("1234567", False), ("12345678", True)]
+)
+def test_short_value_not_registered(monkeypatch, value, recorded):
+    monkeypatch.setenv("SHORT_TEST_KEY", value)
+    assert credential_from_env("SHORT_TEST_KEY") == value
+    text = f"the value {value} appears"
+    assert (redact_secrets(text) != text) is recorded
+
+
+def test_longest_registered_value_first(monkeypatch):
+    monkeypatch.setenv("SHORT_TEST_KEY", "abcdefgh")
+    monkeypatch.setenv("LONG_TEST_KEY", "abcdefgh12345678")
+    credential_from_env("SHORT_TEST_KEY")
+    credential_from_env("LONG_TEST_KEY")
+    assert redact_secrets("key abcdefgh12345678 and abcdefgh") == (
+        "key [REDACTED] and [REDACTED]"
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Bearer abcdefgh12345678", "Bearer [REDACTED]"),
+        ("sent bearer ABCDEFGH12345678ijkl now", "sent bearer [REDACTED] now"),
+        ("Bearer short", "Bearer short"),
+        ("xbearer abcdefgh12345678 here", "xbearer abcdefgh12345678 here"),
+    ],
+)
+def test_bare_bearer_token_redacted(text, expected):
+    assert redact_secrets(text) == expected
+
+
+@pytest.mark.parametrize("padding", [" ", "\n", "  \r\n"])
+def test_value_with_surrounding_whitespace_is_masked_trimmed_and_untrimmed(
+    monkeypatch, padding
+):
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("PADDED_TEST_KEY", key + padding)
+    assert credential_from_env("PADDED_TEST_KEY") == key + padding
+
+    assert redact_secrets(f"401: bad key {key}") == "401: bad key [REDACTED]"
+    raw = f"Invalid header value {(key + padding)!r}"
+    assert key not in redact_secrets(raw)
+    assert key not in redact_secrets(f"echo {key + padding}")

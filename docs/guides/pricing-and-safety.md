@@ -164,7 +164,11 @@ explicitly approved the bounded paid smoke.
 
 Secrets are read from environment variables or the selected env file. The CLI
 redacts common secret names, custom headers, dry-run output, saved results, and
-provider errors. `--dry-run --json`, the MCP `dry_run_plan` tool, run `--json`,
+provider errors. It also masks the exact value of every environment variable named
+by an `api_key_env` (at least eight characters) once a request or catalog discovery
+reads it, so a provider error that echoes a key without a known prefix is masked in
+saved results, reports and MCP output, and it masks a bare `Bearer` token of 16 or
+more characters. `--dry-run --json`, the MCP `dry_run_plan` tool, run `--json`,
 saved results, the MCP `run_preflight` result, `--catalog` output and an
 interactive plan export print a model's `base_url` as scheme and host[:port], with
 any path, query, userinfo or parameter shown as `/[REDACTED]`. A token in a host

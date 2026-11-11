@@ -1,6 +1,6 @@
 # LLM Preflight documentation
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Check a declared application output rule before changing an LLM integration.
 Choose a task below; each path explains the inputs, expected result and next step.

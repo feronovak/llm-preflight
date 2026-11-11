@@ -23,7 +23,7 @@ The activation command is for POSIX shells; in PowerShell use
 for activation in other shells.
 
 `init` creates one mock model and the prompt `Reply with ok.`, validated as
-exactly `ok`. It refuses to overwrite an existing file. `--no-env-file` skips
+exactly `ok`. It refuses to overwrite an existing file unless you pass `--force`. `--no-env-file` skips
 credential files; `--no-save` skips JSON/Markdown result artifacts.
 
 ## Read the result
@@ -125,7 +125,8 @@ When comparing an approved model with a candidate, the optional
 `--migration-check` pack runs three built-in cases: a capital-city answer,
 summary and rewrite. Preview that exact selection with
 `llm-preflight live.json --migration-check --dry-run`, resolving any request or
-cost-limit errors before execution. These generic cases do not establish your
+cost-limit errors before execution: a dry run exits 2 with the live run's error
+when a limit is broken. These generic cases do not establish your
 application's contract. Follow the [model-change guide](../guides/model-change.md)
 for the complete review sequence.
 

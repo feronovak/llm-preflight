@@ -11,7 +11,8 @@ change. Keep the benchmark contract specific to the application change.
 In a repository with no benchmark config, use `audit_source` first. It needs
 no config and makes no provider request. Report its `decision` before anything
 else: `fail` means a referenced model is retired, `inconclusive` means one is
-retiring, its snapshot row is stale, or no file was read, `pass` means every
+retiring, its snapshot row is stale, it is an alias without a safe mapping to
+one snapshot row (`alias_unmapped`), or no file was read, `pass` means every
 referenced model the snapshot lists is active, and `none` means no reference
 is in the retirement snapshot; it is not a pass. It covers only literal model
 IDs; a model chosen at run time needs review. `ok` does not reflect it. Then follow the
@@ -23,7 +24,10 @@ create it.
 2. Use `dry_run_plan`; report the request bound, estimated cost, pricing
    coverage, every non-eligible smoke reason, and the `retirements` decision:
    `fail` means a selected model is retired, `inconclusive` means one is
-   retiring or its snapshot row is stale. `ok` does not reflect it.
+   retiring, its snapshot row is stale, or it is an `alias_unmapped`. `ok` does
+   not reflect it. `ok: false` means the plan breaks a limit: report
+   `budget_limits.violations` (a request or cost cap, or incomplete pricing
+   under `require_current_pricing`); a live run refuses with the same message.
 3. Stop before live provider traffic. You must not infer approval from a
    configuration, a dry-run, a tool call, or a previous result.
 4. Run a live preflight only after an explicit user instruction and only with

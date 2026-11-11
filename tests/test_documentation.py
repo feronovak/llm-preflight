@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -283,12 +285,17 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
         "Release notes for every version are in the [changelog]"
         "(https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)." in readme
     )
-    assert "## Common jobs" in readme
-    assert "catalog prepare benchmarks/watch.json" in readme
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert "## Common jobs" in model_change
+    assert "docs/guides/model-change.md#common-jobs" in readme
+    assert "catalog prepare benchmarks/watch.json" in model_change
     assert "## Safety boundary" in readme
     assert "llm-preflight==2.24.2" in workflow
     assert "starter workflow pins the latest published package, 2.24.2" in ci
-    assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
+    assert (
+        "| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract "
+        "| stamped | 2026-11-11 | v2.24.2 |"
+    ) in docmap
 
 
 def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
@@ -299,7 +306,8 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "**Configure a coding agent.**" in readme
     assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
-    assert "## Common jobs" in readme
+    assert "## Common jobs" in (ROOT / "docs/guides/model-change.md").read_text()
+    assert "docs/guides/model-change.md#common-jobs" in readme
     assert "No preflight, no merge." in readme
     assert "A signed record" not in readme
     assert "The pre-merge check for LLM changes." not in readme
@@ -426,8 +434,9 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
     assert readme.index("python3 -m pip install llm-preflight") < readme.index(
         "llm-preflight init"
     )
-    assert "pricing advisory" in readme
-    assert "fail-closed coverage gate" in readme
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert "pricing advisory" in model_change
+    assert "fail-closed coverage gate" in model_change
     assert "llmci" not in readme
     assert "llm-preflight benchmark.json --pricing-check" in coding_agents
     assert "llm-preflight benchmark.json --pricing-check" in agent_validation
@@ -437,15 +446,15 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in (ROOT / "docs/reference/decision.md",):
-        assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
+        assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0"
+        "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
     for page in (ROOT / "docs/guides/model-catalog.md",):
-        assert "**Last reviewed:** 2026-10-09 · **As of:** v2.19.2" in page.read_text()
+        assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     for page in (ROOT / "docs/reference/results.md",):
         assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page.read_text()
@@ -454,7 +463,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in coding_agents
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in coding_agents
     for step in coding_agents.split("## ")[1:]:
         if "Run `--doctor`, `--pricing-check`, and `--dry-run`" in step:
             assert "`retirements` decision" in step
@@ -468,7 +477,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
-        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
+        assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0"
@@ -476,7 +485,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
+        "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
@@ -504,7 +513,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0" in action_guide
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in action_guide
     assert 'package-version: "2.24.2"' in action_guide
     assert "source defaults to `2.24.2`" in action_guide
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide
@@ -580,7 +589,7 @@ def test_positioning_stays_local_and_decisions_and_reference_stay_public():
     assert "docs/DECISIONS.md" in tracked
     assert "docs/reference/decision.md" in tracked
     assert "docs/product/when-to-use.md" in tracked
-    assert "**Last reviewed:** 2026-10-27 · **As of:** v2.23.0" in when_to_use
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in when_to_use
     assert "../reference/decision.md" in when_to_use
     assert "../reference/decision.md" in action
     assert "schema_version" in reference
@@ -715,8 +724,13 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "developers.openai.com/api/docs/deprecations" in guide
     assert "guides/retirements.md" in docs_index
     assert "llm-preflight --audit-source ." in readme
-    assert readme.index("llm-preflight init") < readme.index("## Common jobs")
-    assert "llm-preflight --audit-source ." in readme.split("## Common jobs", 1)[1]
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert readme.index("python3 -m pip install llm-preflight") < readme.index(
+        "llm-preflight --audit-source ."
+    )
+    assert (
+        "llm-preflight --audit-source ." in model_change.split("## Common jobs", 1)[1]
+    )
     assert "docs/guides/retirements.md" in readme
     assert (
         "retirement" in cli_reference.split("`--audit-source PATH`")[1].split("\n")[0]
@@ -1006,7 +1020,12 @@ def test_proof_of_preflight_guide_is_linked_from_every_entry_point():
     assert "gh attestation verify" in gate
     assert "Protect the producer and gate workflows" in gate
     assert "merge policy" in gate
-    assert "synthetic" in readme.split("## Try it in 60 seconds", 1)[0].lower()
+    assert (
+        "synthetic"
+        in readme.split("## Observed results on a support-routing contract", 1)[
+            0
+        ].lower()
+    )
     assert "(guides/proof-of-preflight.md)" in index
     assert "`attestation.py`" in feature_map and "`report --format svg`" in feature_map
     action_row = feature_map.split("GitHub Marketplace Action", 1)[1].split("\n")[0]
@@ -1174,9 +1193,40 @@ def test_readme_embeds_both_current_terminal_recordings():
     assert "../../docs/images/contract-break.svg" in gallery
 
 
+def test_readme_contract_check_demo_passes_then_fails_when_billing_becomes_sales(
+    tmp_path,
+):
+    readme = (ROOT / "README.md").read_text()
+    step = readme.split("### 1. Catch an invalid response", 1)[1].split("\n### ", 1)[0]
+    config = re.search(r"```json\n(.*?)\n```", step, re.DOTALL)
+    assert config is not None
+    assert "llm-preflight routing.json --contract-check --no-env-file" in step
+    expected = {"billing": 0, "technical": 0, "sales": 1}
+    for response, code in expected.items():
+        path = tmp_path / f"{response}.json"
+        path.write_text(
+            config.group(1).replace(
+                '"response": "billing", "expect": "pass"',
+                f'"response": "{response}", "expect": "pass"',
+            )
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "llm_preflight", str(path)]
+            + ["--contract-check", "--no-env-file"],
+            cwd=tmp_path,
+            env={"PATH": str(Path(sys.executable).parent), "PYTHONPATH": str(ROOT)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == code, result.stdout + result.stderr
+
+
 def test_readme_first_run_is_the_isolated_mock_contract_demo(tmp_path):
     readme = (ROOT / "README.md").read_text()
-    quickstart = readme.split("## Try it in 60 seconds", 1)[1].split("\n### ", 1)[0]
+    quickstart = readme.split("### 2. Now a mock benchmark run", 1)[1].split(
+        "\n### ", 1
+    )[0]
     block = re.search(r"```bash\n(.*?)\n```", quickstart, re.DOTALL)
     assert block is not None
     commands = [
@@ -1669,3 +1719,84 @@ def test_carbon_and_argon_share_token_counts_but_are_separate_measurements():
         assert carbon[field] != argon[field], field
     assert carbon["observed_model"] == carbon["model"]
     assert argon["observed_model"] == argon["model"]
+
+
+def test_retirements_guide_dates_match_the_snapshot():
+    from datetime import date, timedelta
+
+    from llm_preflight.retirements import DEFAULT_MAX_AGE_DAYS, PUBLIC_RETIREMENTS
+
+    page = (ROOT / "docs/guides/retirements.md").read_text()
+    reviewed = {row["as_of"] for row in PUBLIC_RETIREMENTS.values()}
+    stale = {
+        (date.fromisoformat(day) + timedelta(days=DEFAULT_MAX_AGE_DAYS + 1)).isoformat()
+        for day in reviewed
+    }
+    day_re = r"\s+\**(\d{4}-\d{2}-\d{2})"
+    for phrase, allowed in (
+        ("rechecked on", reviewed),
+        ("reviewed on", reviewed),
+        ("stale on", stale),
+        ("become stale on", stale),
+    ):
+        for day in re.findall(phrase + day_re, page):
+            assert day in allowed, (phrase, day)
+    paragraph = next(p for p in page.split("\n\n") if "rechecked on" in p)
+    assert set(re.findall(r"\d{4}-\d{2}-\d{2}", paragraph)) == reviewed | stale
+    assert re.search("rechecked on" + day_re, page)
+    assert re.search("stale on" + day_re, page)
+
+
+def _help_flags(argv, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv, "--help"])
+    from llm_preflight.cli import main
+
+    try:
+        main()
+    except SystemExit:
+        pass
+    # argparse wraps a long flag name inside a help sentence at its hyphen.
+    text = re.sub(r"-\n\s+", "-", capsys.readouterr().out)
+    return set(re.findall(r"(?<![\w-])--[a-z][a-z0-9-]*", text))
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [],
+        ["init"],
+        ["pricing-refresh"],
+        ["catalog", "init"],
+        ["catalog", "probe"],
+        ["catalog", "refresh"],
+        ["catalog", "prepare"],
+        ["catalog", "test"],
+        ["watch-new"],
+        ["approve-model"],
+        ["models", "approve"],
+        ["models", "remove"],
+        ["migrate"],
+        ["attest"],
+        ["verify"],
+        ["gate"],
+        ["report"],
+    ],
+)
+def test_cli_reference_documents_every_help_flag(argv, monkeypatch, capsys):
+    page = (ROOT / "docs/reference/cli.md").read_text()
+
+    for flag in sorted(_help_flags(argv, monkeypatch, capsys) - {"--help"}):
+        assert re.search(rf"(?<![\w-]){re.escape(flag)}(?![\w-])", page), (argv, flag)
+
+
+def test_action_doc_names_key_variables_for_doctor():
+    page = (ROOT / "docs/automation/github-action.md").read_text()
+
+    assert "needs no secret" not in page
+    assert "key variable" in page and "non-mock" in page
+
+
+def test_decision_doc_names_require_current_pricing():
+    page = (ROOT / "docs/reference/decision.md").read_text()
+
+    assert "require_current_pricing" in page

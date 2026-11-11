@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -375,6 +375,67 @@ def test_snapshot_summary_reports_coverage_and_dates():
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
 
 
+def test_snapshot_valid_until_is_oldest_row_plus_window(table):
+    summary = snapshot_summary()
+    oldest = date.fromisoformat(summary["oldest_as_of"])
+    assert (
+        summary["valid_until"]
+        == (oldest + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    )
+    # Last valid day: one day later the row is stale.
+    on_limit = date.fromisoformat(summary["valid_until"])
+    assert retirement_verdict("openai", "gpt-old-row", on_limit)["status"] != "stale"
+    day_after = on_limit + timedelta(days=1)
+    assert retirement_verdict("openai", "gpt-old-row", day_after)["status"] == "stale"
+
+
+def test_report_valid_until_comes_from_the_selected_rows_only(table):
+    selected = retirement_report([{"provider": "openai", "model": "gpt-new"}], TODAY)
+    row_date = date.fromisoformat(TABLE[("openai", "gpt-new")]["as_of"])
+    expected = (row_date + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    assert selected["snapshot"]["valid_until"] == expected
+    unknown = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
+    assert "valid_until" not in unknown["snapshot"]
+
+
+def test_report_valid_until_ignores_retired_rows(monkeypatch):
+    def row(status, as_of, **extra):
+        return {"status": status, "as_of": as_of, "source_url": URL, **extra}
+
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-gone"): row(
+                "deprecated", "2026-10-01", retirement_date="2026-10-02"
+            ),
+            ("openai", "gpt-new"): row("active", "2026-10-06"),
+        },
+    )
+    gone = {"provider": "openai", "model": "gpt-gone"}
+    new = {"provider": "openai", "model": "gpt-new"}
+    only_retired = retirement_report([gone], TODAY)
+    assert only_retired["models"][0]["status"] == "retired"
+    assert "valid_until" not in only_retired["snapshot"]
+    mixed = retirement_report([gone, new], TODAY)
+    assert mixed["snapshot"]["valid_until"] == "2026-11-05"
+
+
+def test_expiry_notice_says_1_day_not_1_days():
+    notice = retirements.expiry_notice({"valid_until": "2026-12-04"}, date(2026, 12, 3))
+    assert "(1 day left)" in notice
+
+
+def test_expiry_notice_appears_7_days_before_and_not_8():
+    snapshot = {"valid_until": "2026-12-04"}
+    assert "valid until 2026-12-04" in retirements.expiry_notice(
+        snapshot, date(2026, 11, 27)
+    )
+    assert retirements.expiry_notice(snapshot, date(2026, 11, 26)) is None
+    assert "0 days left" in retirements.expiry_notice(snapshot, date(2026, 12, 4))
+    assert retirements.expiry_notice(snapshot, date(2026, 12, 5)) is None
+
+
 def test_worst_decision_orders_fail_over_inconclusive_over_pass():
     assert worst_decision(["pass", "inconclusive", "fail"]) == "fail"
     assert worst_decision(["pass", "none", "inconclusive"]) == "inconclusive"
@@ -398,6 +459,7 @@ def test_retirement_report_summarises_a_model_list(table):
     assert report["summary"] == {
         "retired": 2,
         "retiring": 1,
+        "alias_unmapped": 0,
         "stale": 0,
         "active": 1,
         "unknown": 1,
@@ -481,3 +543,152 @@ def test_release_retirement_review_date_and_exact_freshness_boundary():
         ]
         == "fail"
     )
+
+
+def _alias_row(status, retirement_date=None, replacement=None, as_of="2026-10-01"):
+    row = {"status": status, "as_of": as_of, "source_url": URL}
+    if retirement_date:
+        row["retirement_date"] = retirement_date
+    if replacement:
+        row["replacement"] = replacement
+    return row
+
+
+ALIAS_TABLE = {
+    ("anthropic", "claude-opus-4-1-20250805"): _alias_row(
+        "retired", "2026-08-05", "claude-opus-new"
+    ),
+    ("anthropic", "claude-sonnet-4-20250514"): _alias_row(
+        "retired", "2026-06-15", "claude-sonnet-new"
+    ),
+    ("anthropic", "claude-3-7-sonnet-20250219"): _alias_row(
+        "retired", "2026-02-19", "claude-sonnet-new"
+    ),
+    ("anthropic", "claude-split-20250101"): _alias_row("retired", "2026-01-01"),
+    ("anthropic", "claude-split-20250201"): _alias_row("active"),
+    ("anthropic", "claude-datesplit-20250101"): _alias_row("retired", "2026-01-01"),
+    ("anthropic", "claude-datesplit-20250201"): _alias_row("retired", "2026-02-01"),
+    ("anthropic", "claude-replsplit-20250101"): _alias_row(
+        "retired", "2026-01-01", "a"
+    ),
+    ("anthropic", "claude-replsplit-20250201"): _alias_row(
+        "retired", "2026-01-01", "b"
+    ),
+    ("anthropic", "claude-aged-20250101"): _alias_row("active"),
+    ("anthropic", "claude-aged-20250201"): _alias_row("active", as_of="2026-08-01"),
+    ("anthropic", "claude-twin-20250101"): _alias_row("retired", "2026-01-01"),
+    ("anthropic", "claude-twin-20250201"): _alias_row("retired", "2026-01-01"),
+    ("openai", "gpt-4o"): _alias_row("deprecated", "2027-01-14", "gpt-new"),
+    ("openai", "gpt-4o-2024-08-06"): _alias_row("deprecated", "2027-02-01", "gpt-new"),
+    ("openai", "gpt-4"): _alias_row("deprecated", "2026-10-01", "gpt-new"),
+    ("openai", "gpt-5-2025-08-07"): _alias_row("deprecated", "2026-12-11"),
+    ("openai", "gpt-5-mini-2025-08-07"): _alias_row("deprecated", "2026-12-11"),
+    ("openai", "o3-2025-04-16"): _alias_row("deprecated", "2026-12-11"),
+    ("openai", "o3-mini-2025-01-31"): _alias_row("deprecated", "2026-10-23"),
+}
+ALIAS_TODAY = date(2026, 10, 9)
+
+
+@pytest.fixture
+def alias_table(monkeypatch):
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", ALIAS_TABLE)
+
+
+@pytest.mark.parametrize(
+    ("model", "matched", "replacement"),
+    [
+        ("claude-opus-4-1", "claude-opus-4-1-20250805", "claude-opus-new"),
+        ("claude-sonnet-4-0", "claude-sonnet-4-20250514", "claude-sonnet-new"),
+        ("claude-3-7-sonnet-latest", "claude-3-7-sonnet-20250219", "claude-sonnet-new"),
+        ("Claude-Opus-4-1", "claude-opus-4-1-20250805", "claude-opus-new"),
+        ("claude-twin", "claude-twin-20250101", None),
+    ],
+)
+def test_anthropic_alias_resolves_to_dated_row_verdict(
+    alias_table, model, matched, replacement
+):
+    verdict = retirement_verdict("anthropic", model, ALIAS_TODAY)
+    assert verdict["status"] == "retired"
+    assert verdict["decision"] == "fail"
+    assert verdict["matched_id"] == matched
+    assert verdict.get("replacement") == replacement
+
+
+def test_alias_with_agreeing_rows_reviewed_on_different_days_is_stale(alias_table):
+    verdict = retirement_verdict("anthropic", "claude-aged", ALIAS_TODAY)
+    assert verdict["matched_id"] == "claude-aged-20250201"
+    assert verdict["status"] == "stale"
+    assert verdict["decision"] == "inconclusive"
+
+
+def test_alias_next_command_names_the_alias_the_user_wrote(alias_table):
+    verdict = retirement_verdict("anthropic", "claude-opus-4-1", ALIAS_TODAY)
+    assert (
+        "anthropic:claude-opus-4-1,anthropic:claude-opus-new"
+        in (verdict["next_command"])
+    )
+
+
+def test_model_id_case_variant_resolves_to_row(alias_table):
+    verdict = retirement_verdict("openai", "GPT-4", ALIAS_TODAY)
+    assert verdict["status"] == "retired"
+    assert "matched_id" not in verdict
+
+
+def test_explicit_alias_row_wins_over_stem(alias_table):
+    verdict = retirement_verdict("openai", "gpt-4o", ALIAS_TODAY)
+    assert verdict["status"] == "retiring"
+    assert verdict["retirement_date"] == "2027-01-14"
+    assert "matched_id" not in verdict
+
+
+@pytest.mark.parametrize(
+    "stem", ["claude-split", "claude-datesplit", "claude-replsplit"]
+)
+def test_anthropic_alias_with_disagreeing_rows_is_alias_unmapped(alias_table, stem):
+    verdict = retirement_verdict("anthropic", stem, ALIAS_TODAY)
+    assert verdict["status"] == "alias_unmapped"
+    assert verdict["decision"] == "inconclusive"
+    assert verdict["alias_candidates"] == [
+        f"{stem}-20250101",
+        f"{stem}-20250201",
+    ]
+    assert "retirement_date" not in verdict
+
+
+@pytest.mark.parametrize(
+    ("model", "candidates"),
+    [
+        ("gpt-5", ["gpt-5-2025-08-07"]),
+        ("o3", ["o3-2025-04-16"]),
+        ("O3", ["o3-2025-04-16"]),
+    ],
+)
+def test_openai_alias_without_own_row_is_alias_unmapped(alias_table, model, candidates):
+    verdict = retirement_verdict("openai", model, ALIAS_TODAY)
+    assert verdict["status"] == "alias_unmapped"
+    assert verdict["decision"] == "inconclusive"
+    assert verdict["alias_candidates"] == candidates
+
+
+@pytest.mark.parametrize(
+    ("provider", "model"),
+    [
+        ("openai", "gpt-nothing"),
+        ("openai", "o3-pro"),
+        ("anthropic", "claude-nothing-latest"),
+        ("anthropic", "claude-opus"),
+        ("gemini", "gpt-5"),
+        (None, "claude-opus-4-1"),
+    ],
+)
+def test_unrelated_id_stays_unknown(alias_table, provider, model):
+    verdict = retirement_verdict(provider, model, ALIAS_TODAY)
+    assert verdict["status"] == "unknown"
+    assert verdict["decision"] == "none"
+
+
+def test_report_summary_counts_alias_unmapped(alias_table):
+    report = retirement_report([{"provider": "openai", "model": "gpt-5"}], ALIAS_TODAY)
+    assert report["summary"]["alias_unmapped"] == 1
+    assert report["decision"] == "inconclusive"

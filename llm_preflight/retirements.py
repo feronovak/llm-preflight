@@ -7,8 +7,9 @@ verdict; it is reported as unknown.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 ANTHROPIC_DEPRECATIONS_URL = (
@@ -22,6 +23,12 @@ GEMINI_MODEL_REDIRECTS = {
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
+_DATED_SUFFIX = {
+    "anthropic": re.compile(r"-\d{8}$"),
+    "openai": re.compile(r"-\d{4}-\d{2}-\d{2}$"),
+}
+_ANTHROPIC_ALIAS_TAIL = re.compile(r"-(?:latest|0)$")
+EXPIRY_NOTICE_DAYS = 7
 _REVIEWED = "2026-11-04"
 
 
@@ -280,12 +287,54 @@ PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {
 def snapshot_summary() -> dict[str, Any]:
     """Describe the bundled snapshot so reports can state its coverage."""
     as_of_dates = sorted(row["as_of"] for row in PUBLIC_RETIREMENTS.values())
+    valid_until = date.fromisoformat(as_of_dates[0]) + timedelta(
+        days=DEFAULT_MAX_AGE_DAYS
+    )
     return {
         "providers": list(RETIREMENT_PROVIDERS),
         "rows": len(PUBLIC_RETIREMENTS),
         "oldest_as_of": as_of_dates[0],
         "newest_as_of": as_of_dates[-1],
+        "valid_until": valid_until.isoformat(),
     }
+
+
+def selected_snapshot(
+    entries: list[dict[str, Any]], max_age_days: int = DEFAULT_MAX_AGE_DAYS
+) -> dict[str, Any]:
+    """The snapshot summary with `valid_until` taken from the selected rows.
+
+    The bundled-wide date can differ from the rows a config uses. A retired
+    row's verdict does not change when it goes stale, so it does not count;
+    with no other selected row nothing goes stale, so the key is absent.
+    """
+    summary = snapshot_summary()
+    reviewed = [
+        entry["as_of"]
+        for entry in entries
+        if entry.get("as_of") and entry.get("status") != "retired"
+    ]
+    if not reviewed:
+        summary.pop("valid_until")
+        return summary
+    oldest = date.fromisoformat(min(reviewed))
+    summary["valid_until"] = (oldest + timedelta(days=max_age_days)).isoformat()
+    return summary
+
+
+def expiry_notice(snapshot: dict[str, Any], today: date) -> str | None:
+    """Text-only warning that the bundled rows go stale soon; never a verdict."""
+    valid_until = snapshot.get("valid_until")
+    if not valid_until:
+        return None
+    days_left = (date.fromisoformat(valid_until) - today).days
+    if not 0 <= days_left <= EXPIRY_NOTICE_DAYS:
+        return None
+    return (
+        f"The bundled retirement rows for these models are valid until "
+        f"{valid_until} ({days_left} {'day' if days_left == 1 else 'days'} left). After that, --ci returns "
+        "inconclusive for them until you update llm-preflight."
+    )
 
 
 def _catalog_id(model: str) -> str:
@@ -327,6 +376,60 @@ def today_utc() -> date:
     return datetime.now(timezone.utc).date()
 
 
+_DATED_INDEX: tuple[Any, dict[tuple[str, str], list[str]]] | None = None
+
+
+def _dated_index() -> dict[tuple[str, str], list[str]]:
+    """Dated rows by (provider, stem), built once per snapshot table."""
+    global _DATED_INDEX
+    if _DATED_INDEX is None or _DATED_INDEX[0] is not PUBLIC_RETIREMENTS:
+        index: dict[tuple[str, str], list[str]] = {}
+        for provider, row_id in PUBLIC_RETIREMENTS:
+            suffix = _DATED_SUFFIX.get(provider)
+            match = suffix and suffix.search(row_id)
+            if match:
+                stem = row_id[: match.start()]
+                index.setdefault((provider, stem), []).append(row_id)
+        _DATED_INDEX = (PUBLIC_RETIREMENTS, index)
+    return _DATED_INDEX[1]
+
+
+def _alias_candidates(provider: str, model_id: str) -> list[str]:
+    """Dated snapshot rows that an alias without a row of its own may stand for."""
+    if provider not in _DATED_SUFFIX:
+        return []
+    stems = {model_id}
+    if provider == "anthropic":
+        stems.add(_ANTHROPIC_ALIAS_TAIL.sub("", model_id))
+    index = _dated_index()
+    return sorted({row for stem in stems for row in index.get((provider, stem), [])})
+
+
+def _same_finding(rows: list[dict[str, Any]]) -> bool:
+    return (
+        len(
+            {
+                (r["status"], r.get("retirement_date"), r.get("replacement"))
+                for r in rows
+            }
+        )
+        == 1
+    )
+
+
+def _unmapped_verdict(candidates: list[str]) -> dict[str, Any]:
+    return {
+        "status": "alias_unmapped",
+        "decision": "inconclusive",
+        "reason": "alias without a safe mapping to one snapshot row",
+        "next_step": (
+            "name the dated snapshot ID your provider routes this alias to; "
+            f"snapshot rows that may apply: {', '.join(candidates)}"
+        ),
+        "alias_candidates": candidates,
+    }
+
+
 def retirement_verdict(
     provider: str | None,
     model: str,
@@ -334,8 +437,19 @@ def retirement_verdict(
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
 ) -> dict[str, Any]:
     """Classify one model against the bundled snapshot for the given day."""
-    catalog_model = _catalog_id(model)
+    catalog_model = _catalog_id(model).lower()
     row = PUBLIC_RETIREMENTS.get((provider, catalog_model)) if provider else None
+    matched_id = None
+    if provider and row is None:
+        candidates = _alias_candidates(provider, catalog_model)
+        rows = [PUBLIC_RETIREMENTS[(provider, c)] for c in candidates]
+        if rows and provider == "anthropic" and _same_finding(rows):
+            matched_id = min(
+                candidates, key=lambda c: PUBLIC_RETIREMENTS[(provider, c)]["as_of"]
+            )
+            row = PUBLIC_RETIREMENTS[(provider, matched_id)]
+        elif candidates:
+            return _unmapped_verdict(candidates)
     if provider is None or row is None:
         covered = ", ".join(RETIREMENT_PROVIDERS)
         return {
@@ -352,6 +466,8 @@ def retirement_verdict(
         for key in ("retirement_date", "replacement", "as_of", "source_url")
         if key in row
     }
+    if matched_id:
+        verdict["matched_id"] = matched_id
     source_url = row["source_url"]
     as_of = row["as_of"]
     age_days = (today - date.fromisoformat(as_of)).days
@@ -441,12 +557,19 @@ def retirement_report(
         entries.append({"provider": provider, "model": model["model"], **verdict})
     summary = {
         status: sum(entry["status"] == status for entry in entries)
-        for status in ("retired", "retiring", "stale", "active", "unknown")
+        for status in (
+            "retired",
+            "retiring",
+            "stale",
+            "active",
+            "alias_unmapped",
+            "unknown",
+        )
     }
     return {
         "decision": worst_decision(entry["decision"] for entry in entries),
         "summary": summary,
         "models": entries,
         "next_commands": unique_next_commands(entries),
-        "snapshot": snapshot_summary(),
+        "snapshot": selected_snapshot(entries, max_age_days),
     }

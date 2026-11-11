@@ -20,12 +20,12 @@ from .retirements import (
     worst_decision,
 )
 
-_RETIREMENT_FINDINGS = {"retired", "retiring", "stale"}
+_RETIREMENT_FINDINGS = {"retired", "retiring", "stale", "alias_unmapped"}
 _CONFIDENCE = "limited_static_pricing_and_retirement"
 _NOTES = [
     "Only literal model IDs are reported; dynamic model selection requires review.",
     "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog verdict.",
-    "Retirement verdicts come from the bundled snapshot of the official Anthropic, OpenAI and selected Gemini deprecation and model pages for text-generation models; unknown means no row and is not a verdict.",
+    "Retirement verdicts come from the bundled snapshot of the official Anthropic, OpenAI and selected Gemini deprecation and model pages for text-generation models; unknown means no row and is not a verdict. An alias takes a dated row's verdict only for Anthropic and only when every dated row it could mean agrees; any other alias of a dated row is reported as alias_unmapped.",
 ]
 
 _SOURCE_SUFFIXES = {
@@ -45,6 +45,8 @@ _GIT_REASON_LIMIT = 120
 _QUOTED = re.compile(
     r"(?P<quote>['\"])(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)(?P=quote)"
 )
+_BACKTICKED = re.compile(r"`(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)`")
+_BACKTICK_SUFFIXES = {".js", ".mjs", ".cjs", ".ts", ".tsx"}
 _MODEL_PREFIX = re.compile(
     r"^(?:openrouter/(?:[A-Za-z0-9_-]+/)?)?(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe|z-ai|zai|moonshot|minimax|mistral|cohere)/)?(?:kimi-[A-Za-z0-9]|minimax-m[0-9]|mistral-large-[0-9]|command-a-plus-[0-9]|gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|glm-[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
     re.IGNORECASE,
@@ -272,6 +274,10 @@ def _references_for_lines(
     references = []
     for line_number, line in enumerate(lines, 1):
         candidates = [match.group("value") for match in _QUOTED.finditer(line)]
+        if suffix.casefold() in _BACKTICK_SUFFIXES:
+            candidates.extend(
+                match.group("value") for match in _BACKTICKED.finditer(line)
+            )
         if suffix.casefold() in {".yaml", ".yml"}:
             yaml_content = line.split("#", 1)[0]
             candidates.extend(

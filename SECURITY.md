@@ -20,6 +20,10 @@ mitigation. Do not include active API keys.
   safe request options, not probe response text or credentials; it is created
   with owner-only permissions where the platform supports them.
 - Result artifacts redact every custom request-header value.
+- Provider error text, saved results, reports and MCP output mask the exact value
+  of each `api_key_env` variable read for a request or catalog discovery (eight
+  characters or more), and a bare `Bearer` token of 16 or more characters, so a
+  key without a known prefix is not echoed back.
 - Result files can contain prompts, provider errors, model metadata, and
   optionally full responses. Treat `results/` as potentially sensitive.
 - Treat benchmark JSON as trusted input. It controls outbound HTTP(S)

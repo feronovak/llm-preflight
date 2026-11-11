@@ -387,6 +387,27 @@ def test_svg_card_states_counts_and_limits_without_a_bare_percentage():
     assert "Why:" in failed and "To pass:" not in failed and "Why:" not in passed
 
 
+def test_card_retirement_names_the_candidates_of_an_unmapped_alias(monkeypatch):
+    from llm_preflight import reporting, retirements
+
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-5-2025-08-07"): {
+                "status": "deprecated",
+                "retirement_date": "2026-12-11",
+                "as_of": "2026-11-09",
+                "source_url": "https://example.test",
+            }
+        },
+    )
+    text = reporting._card_retirement("openai", "gpt-5", CARD_TODAY)
+    assert "alias without a safe mapping" in text
+    assert "gpt-5-2025-08-07" in text
+    assert "not in the bundled snapshot" not in text
+
+
 def test_svg_card_shows_the_observed_model_and_retirement_status():
     passed = render_card_svg(card_result("pass"), today=CARD_TODAY)
     failed = render_card_svg(card_result("fail"), today=CARD_TODAY)

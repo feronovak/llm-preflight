@@ -5,7 +5,8 @@
     "input_images": [
       {"path": "order-4821.png", "mime_type": "image/png"}
     ],
-    "max_output_tokens": 100
+    "max_output_tokens": 100,
+    "retry": {"max_attempts": 1}
   },
   "validation": {
     "contains": "ORDER-4821",

@@ -67,9 +67,11 @@ and commit). Anywhere else, including a later job or a laptop, the record
 says `local` and `attest` prints why.
 
 `verify` reports integrity (the record's shape, its fingerprints, its
-internal consistency, and whether the config and result files it names still
-match their digests) and freshness (its age and the retirement status of its
-routes) separately. It exits 0 when the record is intact and fresh, 1 when its
+internal consistency, and whether the result file it names still matches its
+digest) and freshness (its age and the retirement status of its routes)
+separately. Only the result file counts toward integrity: a config file that
+changed since the check is reported ("changed since the check") but does not
+break integrity. It exits 0 when the record is intact and fresh, 1 when its
 integrity is broken, and 3 when it is intact but stale or superseded. It does
 not check signatures; `gh attestation verify` does.
 
@@ -257,7 +259,10 @@ shortens or lengthens the window for one gate or verify call.
 
 A route that retires supersedes the record on its retirement date, whatever
 its age. The verifier judges this with its own bundled retirement snapshot, not
-the one the record was written with, and prints that snapshot's date.
+the one the record was written with, and prints that snapshot's date. A route
+written as an Anthropic alias, such as `anthropic:claude-opus-4-1`, is judged by
+the dated snapshot row it stands for, so a CI record for a retired alias is
+`superseded` for `verify` (exit 3) and `gate` (exit 1) where it used to pass.
 
 A monthly refresh on the 1st leaves a gap after 31-day months; a run on the
 1st and 15th keeps a record within 30 days. Each scheduled run is paid work,

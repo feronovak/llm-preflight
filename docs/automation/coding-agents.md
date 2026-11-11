@@ -1,6 +1,6 @@
 # LLM and coding-agent guide
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Use this tool to collect evidence for a model change. It validates explicit
 output contracts, measures requests from the current host, and estimates cost.

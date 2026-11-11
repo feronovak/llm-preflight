@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 import time
 import urllib.error
@@ -14,6 +13,7 @@ from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_r
 from .images import input_image_parts
 from .pricing import valid_token_count
 from .providers import PROVIDER_DEFAULTS
+from .redaction import credential_from_env
 from .security import open_public_url, require_http_url
 
 TokenUsage = dict[str, Any]
@@ -399,7 +399,7 @@ class ProviderClient(ABC):
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
         started = time.perf_counter()
         key_env = self.model.get("api_key_env")
-        api_key = os.environ.get(key_env) if key_env else None
+        api_key = credential_from_env(key_env)
         if key_env and not api_key:
             return self._failure(
                 started,
@@ -840,7 +840,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
     def run(self, prompt: str, request_options: dict[str, Any]) -> dict[str, Any]:
         started = time.perf_counter()
         key_env = self.model.get("api_key_env")
-        api_key = os.environ.get(key_env) if key_env else None
+        api_key = credential_from_env(key_env)
         if key_env and not api_key:
             return self._failure(
                 started, f"environment variable {key_env!r} is not set"

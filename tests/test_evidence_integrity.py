@@ -323,14 +323,12 @@ def test_invalid_contract_or_strict_price_never_starts_generation(
         if stage == "plan":
             arguments.append("--dry-run")
         monkeypatch.setattr(sys, "argv", arguments)
-        if inspect_plan:
+        with pytest.raises(SystemExit) as exc:
             cli.main()
+        assert exc.value.code == 2
+        if inspect_plan:
             result = json.loads(capsys.readouterr().out)
             assert result["pricing_coverage"]["enforcement_ok"] is False
-        else:
-            with pytest.raises(SystemExit) as exc:
-                cli.main()
-            assert exc.value.code == 2
     else:
         response = mcp._response(
             {
@@ -349,12 +347,9 @@ def test_invalid_contract_or_strict_price_never_starts_generation(
         )
         assert response["result"]["isError"] is not inspect_plan
         if inspect_plan:
-            assert (
-                response["result"]["structuredContent"]["pricing_coverage"][
-                    "enforcement_ok"
-                ]
-                is False
-            )
+            content = response["result"]["structuredContent"]
+            assert content["pricing_coverage"]["enforcement_ok"] is False
+            assert content["ok"] is False
     assert calls == []
 
 

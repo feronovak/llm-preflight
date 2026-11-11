@@ -1,6 +1,6 @@
 # Getting started
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Run a local mock check, interpret its result, then choose a path for your own
 application. This walkthrough requires Python 3.10+ and a terminal. It uses no
@@ -125,7 +125,8 @@ When comparing an approved model with a candidate, the optional
 `--migration-check` pack runs three built-in cases: a capital-city answer,
 summary and rewrite. Preview that exact selection with
 `llm-preflight live.json --migration-check --dry-run`, resolving any request or
-cost-limit errors before execution. These generic cases do not establish your
+cost-limit errors before execution: a dry run exits 2 with the live run's error
+when a limit is broken. These generic cases do not establish your
 application's contract. Follow the [model-change guide](../guides/model-change.md)
 for the complete review sequence.
 

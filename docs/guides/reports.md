@@ -1,6 +1,6 @@
 # Reviewable reports
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 With the installed CLI, render an existing result without repeating the
 benchmark or contacting a provider. Replace `results/run.json` with the actual
@@ -74,10 +74,12 @@ inconclusive card adds "Why:" with each blocking warning and "To pass:" with
 the step that clears it; a failed card adds the failure reason. A record adds
 its valid-until date and the repository whose CI run wrote it, or "none" for a
 local record. Every card ends with the line "Does not certify:
-accuracy · safety · production behaviour", the first 12 characters of the
+accuracy · safety · production behaviour" and the first 12 characters of the
 result's evidence fingerprint, labelled `result evidence` because a record's
-`llm-preflight/evidence` digest also seals the selection and the verdict,
-and the `llm-preflight verify` command for the record.
+`llm-preflight/evidence` digest also seals the selection and the verdict
+("result evidence: no provenance fingerprint" when the result has none). With
+`--record` it adds the `llm-preflight verify` command for the record; without
+it the card says "Not attested: no preflight record was given".
 
 The card is generated from saved evidence and is not evidence itself; keep the
 record, not the picture. `--record` refuses a record that fails verification

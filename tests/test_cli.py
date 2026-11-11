@@ -259,8 +259,9 @@ def test_dry_run_writes_and_verifies_a_non_authorizing_approval_receipt(
     receipt = tmp_path / "approval.json"
     config.write_text(
         '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
-        '"models":[{"provider":"mock","model":"local","response":"ok"}],'
-        '"max_requests":2,"max_estimated_cost_usd":0.01}'
+        '"models":[{"provider":"mock","model":"local","response":"ok",'
+        '"input_cost_per_million":1,"output_cost_per_million":1}],'
+        '"max_requests":12,"max_estimated_cost_usd":0.01}'
     )
     monkeypatch.setattr(
         sys,
@@ -3662,6 +3663,19 @@ def _audit_text(monkeypatch, capsys, tmp_path, *flags):
     return capsys.readouterr().out.splitlines()
 
 
+def test_scan_text_shows_the_expiry_notice_without_changing_the_exit(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 25))
+    (tmp_path / "app.py").write_text('a = "gpt-new"\n')
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+    assert any("valid until 2026-10-31" in line for line in lines)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 20))
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+    assert not any("valid until" in line for line in lines)
+
+
 def test_audit_source_leads_with_the_verdict_and_groups_findings_by_model(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
@@ -3732,7 +3746,7 @@ def test_audit_source_exit_is_zero_without_ci(
             'a = "gpt-new"\n',
             "Exit 0 — --ci also exits 0 on this decision.",
             0,
-            "Exit 0 (--ci): no referenced model is retired, retiring or stale.",
+            "Exit 0 (--ci): no referenced model has a retirement finding in the snapshot.",
         ),
     ],
 )
@@ -4356,6 +4370,58 @@ def test_dry_run_without_ci_exits_zero_on_a_retired_model(
     cli.main()
 
 
+def test_expiry_notice_does_not_change_decision_or_exit(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    # The selected row was reviewed 2026-10-01, so its window ends 2026-10-31.
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 25))
+    config = _dry_run_config(tmp_path, "gpt-new")
+    argv = ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    monkeypatch.setattr(sys, "argv", [*argv, "--ci"])
+    cli.main()
+    assert "valid until 2026-10-31" in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", [*argv, "--json"])
+    cli.main()
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["retirements"]["snapshot"]["valid_until"] == "2026-10-31"
+    assert plan["retirements"]["decision"] == "pass"
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 20))
+    monkeypatch.setattr(sys, "argv", argv)
+    cli.main()
+    assert "valid until" not in capsys.readouterr().out
+
+
+def test_expiry_notice_is_skipped_when_no_selected_model_has_a_row(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    # The table's oldest row ends 2026-01-31; that bundled-wide date must not show.
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
+    (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    assert not any(
+        "valid until" in x for x in _audit_text(monkeypatch, capsys, tmp_path)
+    )
+    config = _dry_run_config(tmp_path, "gpt-5.4-mini")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    assert "valid until" not in capsys.readouterr().out
+
+
+def test_doctor_text_shows_the_expiry_notice(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 25))
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _dry_run_config(tmp_path, "gpt-new")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]
+    )
+    cli.main()
+    assert "valid until 2026-10-31" in capsys.readouterr().out
+
+
 def test_dry_run_prints_no_retirement_block_when_all_unknown(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
@@ -4400,8 +4466,8 @@ def test_dry_run_plan_keys_unchanged():
     assert set(plan) == {
         "benchmark", "models", "tests", "test_breakdown", "requests",
         "possible_requests", "retry_max_attempts", "estimated_cost_usd",
-        "maximum_estimated_cost_usd", "pricing_warnings", "pricing_coverage",
-        "smoke_eligibility", "retirements", "configuration_warnings", "presets",
+        "maximum_estimated_cost_usd", "budget_limits", "pricing_warnings",
+        "pricing_coverage", "smoke_eligibility", "retirements", "configuration_warnings", "presets",
         "request", "save_responses", "stop_on",
     }  # fmt: skip
 
@@ -4839,3 +4905,397 @@ def test_prompt_selected_with_numeric_presets_is_a_config_error(
     assert exc.value.code == 2
     assert "prompt 'a'" in err
     assert "Traceback" not in err
+
+
+def _capped_config(tmp_path, **extra):
+    config = tmp_path / "capped.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 3,
+                "warmups": 0,
+                "max_requests": 1,
+                "models": [{"provider": "mock", "model": "m", "response": "ok"}],
+                **extra,
+            }
+        )
+    )
+    return config
+
+
+def _cap_cli(monkeypatch, capsys, *argv):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    captured = capsys.readouterr()
+    return exc_info.value.code, captured.out, captured.err
+
+
+def test_dry_run_request_cap_breach_exits_like_live_run(monkeypatch, tmp_path, capsys):
+    config = _capped_config(tmp_path)
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(monkeypatch, capsys, str(config), "--dry-run", "--no-env-file")
+    assert live[0] == dry[0] == 2
+    assert "possible requests 6 exceed max_requests 1" in live[2]
+    assert dry[2] == live[2]
+    assert "Requests: 3 nominal; up to 6 with 2 attempts" in dry[1]
+
+
+def test_dry_run_json_and_text_show_budget_limits(monkeypatch, tmp_path, capsys):
+    within = _capped_config(
+        tmp_path,
+        max_requests=6,
+        max_estimated_cost_usd=0.5,
+        models=[
+            {
+                "provider": "mock",
+                "model": "m",
+                "response": "ok",
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 1,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(within), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    text = capsys.readouterr().out
+    assert "Limits: max_requests 6; max_estimated_cost_usd $0.500000" in text
+    assert "Limit breach" not in text
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(within), "--dry-run", "--json", "--no-env-file"],
+    )
+    cli.main()
+    assert json.loads(capsys.readouterr().out)["budget_limits"] == {
+        "max_requests": 6,
+        "max_estimated_cost_usd": 0.5,
+        "violations": [],
+    }
+    code, out, _err = _cap_cli(
+        monkeypatch,
+        capsys,
+        str(_capped_config(tmp_path)),
+        "--dry-run",
+        "--json",
+        "--no-env-file",
+    )
+    assert code == 2
+    assert json.loads(out)["budget_limits"]["violations"] == [
+        "possible requests 6 exceed max_requests 1"
+    ]
+
+
+def test_dry_run_require_current_pricing_unpriced_exits_like_live_run(
+    monkeypatch, tmp_path, capsys
+):
+    config = _capped_config(
+        tmp_path,
+        max_requests=6,
+        require_current_pricing=True,
+        models=[{"provider": "openai_compatible", "model": "unpriced"}],
+    )
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(monkeypatch, capsys, str(config), "--dry-run", "--no-env-file")
+    assert live[0] == dry[0] == 2
+    assert "pricing coverage is incomplete" in live[2]
+    assert dry[2] == live[2]
+    assert "Limit breach: pricing coverage is incomplete" in dry[1]
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        "examples/vision/gemini-image-to-text.json",
+        "examples/vision/qwen-vl-model-studio.json",
+        "examples/project-integration/support-routing.json",
+    ],
+)
+def test_shipped_request_cap_examples_dry_run_exit_0(monkeypatch, capsys, example):
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", example, "--dry-run", "--json", "--no-env-file"]
+    )
+    cli.main()
+    limits = json.loads(capsys.readouterr().out)["budget_limits"]
+    assert limits["max_requests"] == 1
+    assert limits["violations"] == []
+
+
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+@pytest.mark.parametrize("value", ["nan", "inf", pytest.param(10**400, id="huge-int")])
+def test_dry_run_rejects_a_non_finite_cap_like_the_live_run(
+    monkeypatch, tmp_path, capsys, key, value
+):
+    config = _capped_config(tmp_path, **{key: value})
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(
+        monkeypatch, capsys, str(config), "--dry-run", "--json", "--no-env-file"
+    )
+    assert live[0] == dry[0] == 2
+    assert f"{key} must be a number" in dry[2]
+    assert dry[2] == live[2]
+    assert dry[1] == ""
+
+
+def test_dry_run_text_flags_the_breach(monkeypatch, tmp_path, capsys):
+    _code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(_capped_config(tmp_path)), "--dry-run", "--no-env-file"
+    )
+    assert "Limits: max_requests 1" in out
+    assert "Limit breach: possible requests 6 exceed max_requests 1" in out
+
+
+def test_dry_run_breach_writes_no_approval_receipt(monkeypatch, tmp_path, capsys):
+    receipt = tmp_path / "receipt.json"
+    code, _out, err = _cap_cli(
+        monkeypatch,
+        capsys,
+        str(_capped_config(tmp_path)),
+        "--dry-run",
+        "--no-env-file",
+        "--approval-receipt",
+        str(receipt),
+        "--approval-note",
+        "checked",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+    )
+    assert code == 2
+    assert "exceed max_requests 1" in err
+    assert not receipt.exists()
+
+
+def test_dry_run_within_limits_still_writes_the_receipt(monkeypatch, tmp_path, capsys):
+    receipt = tmp_path / "receipt.json"
+    config = _capped_config(tmp_path, max_requests=6)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(config),
+            "--dry-run",
+            "--no-env-file",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "checked",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+        ],
+    )
+    cli.main()
+    assert receipt.exists()
+
+
+def test_catalog_watch_dry_run_breach_exits_nonzero(monkeypatch, tmp_path, capsys):
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        '{"prompt":"hello","repetitions":3,"max_requests":1,"models":[{"model":"old"}]}'
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models": []}')
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [{"provider": "mock", "model": "new", "response": "ok"}],
+    )
+    code, out, err = _cap_cli(
+        monkeypatch,
+        capsys,
+        "watch-new",
+        str(watch),
+        "--against",
+        str(approved),
+        "--snapshot",
+        str(tmp_path / "snapshot.json"),
+        "--test",
+        "--dry-run",
+    )
+    assert code == 2
+    assert "RUN PLAN" in out, (out, err)
+    assert "possible requests" in err
+    assert "exceed max_requests 1" in err
+
+
+_ALIAS_TABLE = {
+    ("anthropic", "claude-opus-4-1-20250805"): {
+        "status": "retired",
+        "retirement_date": "2026-08-05",
+        "replacement": "claude-opus-new",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-5-2025-08-07"): {
+        "status": "deprecated",
+        "retirement_date": "2026-12-11",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-new"): {
+        "status": "active",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+}
+
+
+@pytest.fixture
+def alias_table(monkeypatch):
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", _ALIAS_TABLE)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
+
+
+def _audit_ci(monkeypatch, capsys, tmp_path, source):
+    (tmp_path / "app.py").write_text(source)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    code = 0
+    try:
+        cli.main()
+    except SystemExit as exc:
+        code = exc.code
+    return code, capsys.readouterr().out.splitlines()
+
+
+def test_audit_source_ci_alias_of_retired_model_exits_1(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'MODEL = "claude-opus-4-1"\n'
+    )
+    assert code == 1
+    assert lines[1] == "Exit 1 (--ci): a referenced model is retired."
+    assert any(
+        line.startswith(
+            "  claude-opus-4-1 (1 reference) — retired 2026-08-05, replacement "
+            "claude-opus-new (alias of claude-opus-4-1-20250805)"
+        )
+        for line in lines
+    )
+
+
+def test_audit_source_ci_unknown_ids_exit_line_says_no_snapshot_finding(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'a = "gpt-new"\nb = "gpt-mystery"\n'
+    )
+    assert code == 0
+    assert lines[1] == (
+        "Exit 0 (--ci): no referenced model has a retirement finding in the "
+        "snapshot; 1 model ID has no snapshot row and is not verified."
+    )
+
+
+def test_audit_source_ci_unmapped_alias_exits_3(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(monkeypatch, capsys, tmp_path, 'a = "gpt-5"\n')
+    assert code == 3
+    assert lines[0].endswith(
+        "0 retired, 0 retiring or stale, 0 unknown, 1 alias unmapped."
+    )
+    assert lines[1] == "Exit 3 (--ci): 1 alias could not be mapped to a snapshot row."
+    assert "Alias not mapped:" in lines
+    assert any("alias_unmapped (candidates: gpt-5-2025-08-07)" in x for x in lines)
+    assert not any("Pricing unknown, no retirement finding" in x for x in lines)
+
+
+def test_dry_run_ci_text_names_the_unmapped_alias(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    config = _dry_run_config(tmp_path, "gpt-5")
+    code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(config), "--dry-run", "--ci", "--no-env-file"
+    )
+    assert code == 3
+    assert (
+        "Retirements: 0 retired; 0 retiring or stale; 0 unknown; 1 alias unmapped."
+        in out
+    )
+    assert "- openai/gpt-5: alias_unmapped" in out
+    assert "gpt-5-2025-08-07" in out
+
+
+def test_doctor_ci_text_names_the_unmapped_alias(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-5")
+    code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(config), "--doctor", "--ci", "--no-env-file"
+    )
+    assert code == 3
+    assert "Doctor: ok" in out
+    assert "- warning: gpt-5: alias without a safe mapping" in out
+    assert "gpt-5-2025-08-07" in out
+
+
+def test_audit_source_ci_only_unmapped_alias_exit_line_has_no_retiring_clause(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(monkeypatch, capsys, tmp_path, 'a = "gpt-5"\n')
+    assert code == 3
+    assert lines[1] == ("Exit 3 (--ci): 1 alias could not be mapped to a snapshot row.")
+
+
+@pytest.mark.parametrize(
+    ("provider", "model", "code"),
+    [("anthropic", "claude-opus-4-1", 1), ("openai", "gpt-5", 3)],
+)
+def test_dry_run_ci_alias_exits_on_the_snapshot_verdict(
+    monkeypatch, tmp_path, alias_table, provider, model, code
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 1,
+                "warmups": 0,
+                "models": [{"provider": provider, "model": model}],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--ci", "--no-env-file"],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == code
+
+
+def test_audit_source_ci_retiring_model_and_unmapped_alias_name_both(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    table = {
+        **_ALIAS_TABLE,
+        ("openai", "gpt-soon"): {
+            "status": "deprecated",
+            "retirement_date": "2027-04-01",
+            "as_of": "2026-10-01",
+            "source_url": _RETIREMENT_URL,
+        },
+    }
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", table)
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'a = "gpt-5"\nb = "gpt-soon"\n'
+    )
+    assert code == 3
+    assert lines[1] == (
+        "Exit 3 (--ci): a referenced model is retiring or its snapshot row is "
+        "stale; 1 alias could not be mapped to a snapshot row."
+    )

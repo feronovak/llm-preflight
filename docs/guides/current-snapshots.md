@@ -51,6 +51,12 @@ endpoint leaves the price unknown, including persisted official snapshots;
 supply an explicitly reviewed override for that deployment. OpenRouter keeps
 its own route prices. Kimi Highspeed is priced separately from standard Kimi.
 
+The bundled retirement rows have a visible end date. The doctor and dry-run
+report `snapshot.valid_until` for the selected models' rows (absent when none
+has a non-retired row); the scan JSON reports `retirement_snapshot.valid_until`
+for the whole snapshot. Price rows follow the same 30-day rule;
+see [model retirements](retirements.md#exit-codes).
+
 ## Bundled official snapshots
 
 Rates are USD per million tokens. `as_of` is the actual review date. Long-context

@@ -20,12 +20,12 @@ from .retirements import (
     worst_decision,
 )
 
-_RETIREMENT_FINDINGS = {"retired", "retiring", "stale"}
+_RETIREMENT_FINDINGS = {"retired", "retiring", "stale", "alias_unmapped"}
 _CONFIDENCE = "limited_static_pricing_and_retirement"
 _NOTES = [
     "Only literal model IDs are reported; dynamic model selection requires review.",
     "Pricing unknown means the bundled static pricing table has no matching entry; it is advisory, not a catalog verdict.",
-    "Retirement verdicts come from the bundled snapshot of the official Anthropic, OpenAI and selected Gemini deprecation and model pages for text-generation models; unknown means no row and is not a verdict.",
+    "Retirement verdicts come from the bundled snapshot of the official Anthropic, OpenAI and selected Gemini deprecation and model pages for text-generation models; unknown means no row and is not a verdict. An alias takes a dated row's verdict only for Anthropic and only when every dated row it could mean agrees; any other alias of a dated row is reported as alias_unmapped.",
 ]
 
 _SOURCE_SUFFIXES = {

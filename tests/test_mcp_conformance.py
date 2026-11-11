@@ -238,6 +238,24 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
             }
         )
     )
+    (tmp_path / "quoted.json").write_text(
+        json.dumps(
+            {
+                "prompt": "Reply with ok.",
+                "max_requests": "50",
+                "max_estimated_cost_usd": "0.5",
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "local",
+                        "response": "ok",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 1,
+                    }
+                ],
+            }
+        )
+    )
     (tmp_path / "presets.json").write_text(
         json.dumps(
             {
@@ -293,6 +311,7 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
             ({"config": "mock.json"}, False),
             ({"config": "retired.json"}, False),
             ({"config": "presets.json"}, False),
+            ({"config": "quoted.json"}, False),
             ({"config": "discovery.json"}, True),
         ],
         "run_preflight": [
@@ -355,3 +374,34 @@ def test_every_tool_result_validates_against_its_output_schema(tmp_path):
     assert audits["retired.json"]["file_selection_reason"] is None
     assert audits["unknown"]["decision"] == "none"
     assert audits["empty"]["decision"] == "inconclusive"
+
+
+def test_dry_run_plan_reports_coerced_caps_for_quoted_config_values(tmp_path):
+    (tmp_path / "quoted.json").write_text(
+        json.dumps(
+            {
+                "prompt": "Reply with ok.",
+                "max_requests": "50",
+                "max_estimated_cost_usd": "0.5",
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "local",
+                        "response": "ok",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 1,
+                    }
+                ],
+            }
+        )
+    )
+    limits = _call(tmp_path, "dry_run_plan", {"config": "quoted.json"})[
+        "structuredContent"
+    ]["budget_limits"]
+    assert limits == {
+        "max_requests": 50,
+        "max_estimated_cost_usd": 0.5,
+        "violations": [],
+    }
+    assert type(limits["max_requests"]) is int
+    assert type(limits["max_estimated_cost_usd"]) is float

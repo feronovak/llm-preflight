@@ -6,7 +6,7 @@ from datetime import date
 
 import pytest
 
-from llm_preflight import cli, mcp
+from llm_preflight import cli, mcp, retirements
 
 
 def mock_config(**overrides):
@@ -95,6 +95,42 @@ def test_preview_uses_the_shared_plan_and_shows_retirement_evidence(monkeypatch)
     assert "retired" in text
     assert "Smoke eligibility:" in text
     assert "Pricing coverage:" in text
+
+
+def test_preview_shows_limit_breach():
+    result, output = select(
+        mock_config(request={"retry": {"max_attempts": 2}}, max_requests=1),
+        ["all", "", "1", "1", "r", ""],
+    )
+
+    assert result is None
+    text = "\n".join(output)
+    assert "Limits: max_requests 1" in text, text
+    assert "Limit breach: possible requests " in text, text
+    assert " exceed max_requests 1" in text
+
+
+def test_run_plan_prints_the_expiry_notice(monkeypatch):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 30))
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("anthropic", "claude-3-haiku-20240307"): {
+                "status": "active",
+                "as_of": "2026-11-04",
+                "source_url": "https://example.test/deprecations",
+            }
+        },
+    )
+    result, output = select(
+        mock_config(
+            models=[{"provider": "anthropic", "model": "claude-3-haiku-20240307"}]
+        ),
+        ["all", "", "1", "1", "n"],
+    )
+    assert result is None
+    assert "valid until 2026-12-04 (4 days left)" in "\n".join(output)
 
 
 def test_failed_fixtures_stop_before_execution_confirmation():
@@ -729,6 +765,59 @@ def test_main_preview_action_cannot_reach_the_benchmark(monkeypatch, tmp_path, c
     )
     cli.main()
     assert json.loads(capsys.readouterr().out)["tests"] == ["config prompt"]
+
+
+def test_main_preview_with_a_limit_breach_shows_it_and_exits_zero(
+    monkeypatch, tmp_path, capsys
+):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(mock_config(request={"retry": {"max_attempts": 2}}, max_requests=1))
+    )
+    answers = iter(["all", "", "1", "4", "p"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(path), "--interactive", "--json", "--no-env-file"],
+    )
+    cli.main()
+    limits = json.loads(capsys.readouterr().out)["budget_limits"]
+    assert limits["violations"] == ["possible requests 2 exceed max_requests 1"]
+
+
+def test_interactive_preview_records_a_receipt_even_on_a_limit_breach(
+    monkeypatch, tmp_path, capsys
+):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(mock_config(request={"retry": {"max_attempts": 2}}, max_requests=1))
+    )
+    receipt = tmp_path / "receipt.json"
+    answers = iter(["all", "", "1", "4", "p"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(path),
+            "--interactive",
+            "--dry-run",
+            "--json",
+            "--no-env-file",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "reviewed",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+        ],
+    )
+    cli.main()
+    assert receipt.exists()
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["plan"]["budget_limits"]["violations"]
 
 
 def test_main_mock_json_contains_one_result_with_progress_on_stderr(

@@ -170,9 +170,8 @@ choose another file with `--env-file PATH` or skip it with `--no-env-file`.
 - **Automate an established contract.** Use
   [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md)
   or the [GitHub Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
-- **Configure a coding agent.** Start with
-  `llm-preflight-mcp --workspace "$PWD"` in a trusted repository and follow the
-  [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+- **Configure a coding agent.** Follow
+  [MCP for coding agents](#mcp-for-coding-agents) below.
 
 <a id="what-live-evidence-looks-like"></a>
 
@@ -205,9 +204,8 @@ make no provider calls and cannot supply attested CI evidence.
 
 Works as a CLI, GitHub Action, and local MCP server. The
 [Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md)
-defaults to no generation requests; a live MCP run requires explicit paid-run
-confirmation. Keep the client's tool approval enabled: its confirmation field
-is not proof that a person authorized spending.
+defaults to no generation requests. Rules for coding agents are in
+[MCP for coding agents](#mcp-for-coding-agents).
 
 **No preflight, no merge.** With a required check configured, the offline gate
 requires a fresh passing CI record matching the current contract, routes,
@@ -217,11 +215,12 @@ records also need `gh attestation verify` before the gate. Follow
 to configure it. A local fixture pass or installed package does not enforce a
 merge policy.
 
-It doesn't certify production behaviour. It proves the check was done.
-
 ## MCP for coding agents
 
-Configure the installed stdio command in your MCP client:
+Install the package (`python3 -m pip install llm-preflight`), then configure the
+stdio command `llm-preflight-mcp` in your MCP client. If you installed into a
+virtual environment, set `command` to the absolute path of that environment's
+`llm-preflight-mcp`, or install it with a pipx-style tool so it is on `PATH`.
 
 ```json
 {
@@ -234,21 +233,38 @@ Configure the installed stdio command in your MCP client:
 }
 ```
 
-The eight tools audit literal model IDs, validate a config, preview a plan, run
-a preflight, compare saved baselines, verify a record, gate CI evidence and plan
-a retired-model migration.
+| Tool | What it does | Can spend money |
+|---|---|---|
+| `audit_source` | Find literal model IDs in workspace files and report retirement and pricing verdicts | no |
+| `validate_config` | Validate a benchmark config locally | no |
+| `dry_run_plan` | Return a redacted run and cost plan | no |
+| `run_preflight` | Run a preflight; a live run needs `confirm_paid_run` | **yes** |
+| `diff_baseline` | Compare two saved result files | no |
+| `verify` | Report a proof-of-preflight record's integrity and freshness | no |
+| `gate` | Decide offline whether a fresh passing CI record covers the contract | no |
+| `migrate_plan` | Report the provider-named replacement for each retired model | no |
+
 For an existing contract, begin with `validate_config` and `dry_run_plan`.
-Agents must read the structured decision and report missing evidence.
-See the [MCP guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md)
-for request/result examples and workspace boundaries.
 
-<a id="using-a-coding-agent"></a>
+**Agent rules**
 
-The `agent-smoke` suite with `--smoke` makes six requests per model before
-configured retries. Use the
+- **Paid runs need a person.** A live `run_preflight` requires explicit
+  confirmation, and `confirm_paid_run` is not proof that a person authorized
+  spending: keep the client's tool approval enabled. Never infer permission for
+  paid work from a gate result.
+- **Read the structured decision** (`pass`, `fail`, `inconclusive`) and its
+  blocking warnings, and report missing evidence. Do not summarize it away.
+- **Never weaken a validator** to get a pass.
+
+The CLI gives the same decision as JSON with `--json`, for example
+`llm-preflight benchmark.json --json --no-save`. Exit codes: `0` pass, `1` fail
+or blocked, `2` invalid input or setup failure, `3` inconclusive. The
+`agent-smoke` suite with `--smoke` makes six requests per model before
+configured retries. See the
+[MCP guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md)
+for request/result examples and workspace boundaries, and the
 [coding-agent workflow](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
-for CLI commands. An agent must not weaken a validator to get a pass or infer
-permission for paid work from a gate result.
+for CLI commands.
 
 <a id="useful-commands-once-you-know-your-path"></a>
 

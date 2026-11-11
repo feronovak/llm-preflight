@@ -81,6 +81,7 @@ product card fixtures.
 | Measured-results image | 1280 px wide; current 20-row image is 1576 px high | 32 px text margins; 16 px panel margins; 16 px corners; header starts at y=148; data at y=196; 60 px per row; 180 px footer |
 | Terminal GIF and MP4 | 1248 × 996 px | 90 columns × 28 rows; native viewport beneath window chrome; captions outside the viewport; 16 px outer frame margins |
 | Product report card | 600 px wide; content determines height | 20 px margin, 2 px black outline, native wrapping and verdict band |
+| Social preview image | 1280 × 640 px PNG, rendered from the SVG source | 80 px left margin; headline 64 px bold, three lines; footer rule at y=530. GitHub's recommended size, so it is not exported at 2× |
 | Historical demo GIF | 1100 × 720 px | Frozen legacy assets; new recordings use the current terminal profile |
 | Vision input fixture | 1254 × 1254 px | Input data, not promotional artwork; preserve exact bytes |
 
@@ -191,6 +192,7 @@ new illustrations.
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
 | `docs/images/measured-models-2026-11-11.svg` | Current measured results, 1280×1576; 20 rows | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/social-preview.svg` | Social preview source, 1280×640 | Hand-authored SVG with the documentation palette; render the PNG with a Liberation Sans renderer, e.g. `rsvg-convert -w 1280 -h 640 docs/images/social-preview.svg -o docs/images/social-preview.png`; upload in repository settings |
 | `docs/images/measured-models-2026-10-29.svg` | Previous measured results, 1280×1516; 19 rows | Retained October 29 aggregates; unchanged for older links |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |
 | `docs/images/contract-check-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 23 seconds | Actual local contract-check pass/reject/fix session; follow terminal rules above |

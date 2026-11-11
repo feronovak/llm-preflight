@@ -9,7 +9,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
-from .client import PROVIDER_DEFAULTS
+from .client import GEMINI_4_MODELS, PROVIDER_DEFAULTS
 from .pricing import resolve_pricing
 from .security import open_public_url, require_http_url
 
@@ -328,11 +328,11 @@ def _gemini(source: dict[str, Any]) -> list[dict[str, Any]]:
                 "capabilities": {
                     "reasoning": item.get("thinking"),
                     "methods": methods,
-                    "temperature": model_id != "gemini-4-argon"
+                    "temperature": model_id not in GEMINI_4_MODELS
                     and item.get("temperature") is not None,
                     "max_temperature": (
                         item.get("maxTemperature")
-                        if model_id != "gemini-4-argon"
+                        if model_id not in GEMINI_4_MODELS
                         else None
                     ),
                     "text_generation": "candidate",

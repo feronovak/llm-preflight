@@ -43,6 +43,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-11-04"),
     ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-11-04"),
     ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-11-04"),
+    ("gemini", "gemini-4-carbon"): (2.0, 10.0, "2026-11-11"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-04"),
     ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-04"),
     ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-04"),
@@ -147,6 +148,7 @@ PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
 # Known future standard rates do not refresh the source's review date.
 PUBLIC_PRICING_CHANGES = {
     ("gemini", "gemini-4-argon"): (date(2026, 12, 1), 4.0, 20.0, 0.2),
+    ("gemini", "gemini-4-carbon"): (date(2026, 12, 1), 4.0, 20.0, 0.2),
     ("gemini", "gemini-3.6-flash"): (date(2027, 1, 1), 1.5, 7.5, 0.15),
     ("gemini", "gemini-3.8-flash"): (date(2027, 1, 1), 1.5, 7.5, 0.15),
 }
@@ -368,6 +370,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         "cached_input_cost_per_million": 0.075,
     },
     ("gemini", "gemini-4-argon"): {
+        "cached_input_cost_per_million": 0.1,
+    },
+    ("gemini", "gemini-4-carbon"): {
         "cached_input_cost_per_million": 0.1,
     },
     ("deepseek", "deepseek-flash"): {

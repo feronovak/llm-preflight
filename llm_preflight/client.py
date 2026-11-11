@@ -21,6 +21,7 @@ MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
 MAX_OBSERVED_MODEL_CHARS = 256
+GEMINI_4_MODELS = frozenset({"gemini-4-argon", "gemini-4-carbon"})
 _QWEN_COMBINED_OUTPUT_MODELS = {
     "qwen3.8-max",
     "qwen3.8-max-0902",
@@ -1144,7 +1145,7 @@ class GeminiClient(ProviderClient):
                 "generationConfig.maxOutputTokens; it must match the planned budget"
             )
         generation.update(provider_generation)
-        if self.model["model"] == "gemini-4-argon":
+        if self.model["model"] in GEMINI_4_MODELS:
             for parameter in ("temperature", "topP", "topK"):
                 generation.pop(parameter, None)
             if limit > 65_536:

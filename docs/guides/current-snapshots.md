@@ -85,6 +85,7 @@ unknown until you supply your own rates.
 | `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-04 |
 | `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-04 |
 | `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-04 |
+| `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-11 |
 | `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-04 |
 | `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-04 |
 | `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-04 |
@@ -167,7 +168,7 @@ transport reject token-limit fields in provider options. An explicit legacy
 installed 2.21.2 by setting the combined-limit parameter and pricing override
 explicitly. These fixes do not change OpenRouter requests or prior results.
 
-### Gemini 4 Argon and Flash pricing transitions
+### Gemini 4 and Flash pricing transitions
 
 Google's [October changelog](https://ai.google.dev/gemini-api/docs/changelog)
 announces GA of `gemini-4-argon` on October 13. The
@@ -177,8 +178,8 @@ standard synchronous USD rates per million tokens, rechecked October 16 UTC:
 
 | Model | Period | Input | Cached input | Output, including thinking |
 |---|---|---:|---:|---:|
-| `gemini-4-argon` | Through 2026-11-30 | 2.00 | 0.10 | 10.00 |
-| `gemini-4-argon` | From 2026-12-01 | 4.00 | 0.20 | 20.00 |
+| `gemini-4-argon`, `gemini-4-carbon` | Through 2026-11-30 | 2.00 | 0.10 | 10.00 |
+| `gemini-4-argon`, `gemini-4-carbon` | From 2026-12-01 | 4.00 | 0.20 | 20.00 |
 | `gemini-3.6-flash`, `gemini-3.8-flash` | Through 2026-12-31 | 0.75 | 0.075 | 3.75 |
 | `gemini-3.6-flash`, `gemini-3.8-flash` | From 2027-01-01 | 1.50 | 0.15 | 7.50 |
 
@@ -198,6 +199,9 @@ The native GenerateContent adapter supports synchronous requests capped at
 65,536 thinking-plus-output tokens. It omits ignored sampling parameters,
 accepts `thinkingConfig.thinkingLevel` values `LOW`, `MEDIUM`, `HIGH`, and
 rejects explicit `cachedContent` because only implicit caching is supported.
+Carbon takes the same request shape and the same checks, per Google's
+[Gemini 4 Carbon notes](https://aistudio.google.com/docs/whats-new-gemini-4-carbon);
+its prices above were read from the official pricing page on 2026-11-11.
 Provider options cannot override the output cap used in the plan. Background
 long decode and server-managed conversation state are outside this adapter.
 

@@ -622,8 +622,9 @@ def test_typesafe_catalog_marks_jev_as_a_decision_model(monkeypatch):
     assert model["output_cost_per_million"] == 0.0
 
 
+@pytest.mark.parametrize("model_id", ["gemini-4-argon", "gemini-4-carbon"])
 def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
-    monkeypatch, snapshot_review_day
+    monkeypatch, snapshot_review_day, model_id
 ):
     monkeypatch.setenv("GEMINI_API_KEY", "test")
     monkeypatch.setattr(
@@ -631,7 +632,7 @@ def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
         lambda *args, **kwargs: {
             "models": [
                 {
-                    "name": "models/gemini-4-argon",
+                    "name": f"models/{model_id}",
                     "supportedGenerationMethods": ["generateContent"],
                     "inputTokenLimit": 1048576,
                     "outputTokenLimit": 65536,
@@ -643,7 +644,7 @@ def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
         },
     )
     model = discover_models({"provider": "gemini", "limit": 1})[0]
-    assert model["model"] == "gemini-4-argon"
+    assert model["model"] == model_id
     assert model["context_length"] == 1048576
     assert model["max_output_tokens"] == 65536
     assert model["capabilities"]["temperature"] is False
@@ -656,7 +657,12 @@ def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
 
 @pytest.mark.parametrize(
     "provider,model_id",
-    [("xai", "grok-4.7"), ("gemini", "gemini-4-argon"), ("gemini", "gemini-3.8-flash")],
+    [
+        ("xai", "grok-4.7"),
+        ("gemini", "gemini-4-argon"),
+        ("gemini", "gemini-4-carbon"),
+        ("gemini", "gemini-3.8-flash"),
+    ],
 )
 def test_auto_watch_includes_current_direct_flagships(provider, model_id):
     import re

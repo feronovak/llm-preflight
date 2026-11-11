@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- `gemini-4-carbon` now has an official snapshot price (input 2.00, output 10.00, cached input 0.10 USD per million tokens, switching to 4.00, 20.00 and 0.20 on 2026-12-01), so its cost is no longer unknown. It gets the same request checks as `gemini-4-argon`: explicit `cachedContent`, a synchronous output cap above 65,536 and an invalid `thinkingLevel` fail before any request, and ignored sampling fields are omitted. Saved plans for this model change once because it is now priced. `benchmark.auto.example.json` watches it.
+
 ## 2.24.1 - 2026-11-10
 
 One change below is marked `Breaking:` (an empty response now fails every output

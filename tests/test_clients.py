@@ -1729,7 +1729,10 @@ def test_transient_socket_errors_are_retried_by_exception_type(monkeypatch):
     assert sample["retry_reasons"] == ["network"]
 
 
-@pytest.mark.parametrize("model", ["gemini-3.8-flash", "gemini-4-argon"])
+GEMINI_4_MODELS = ["gemini-4-argon", "gemini-4-carbon"]
+
+
+@pytest.mark.parametrize("model", ["gemini-3.8-flash", *GEMINI_4_MODELS])
 def test_gemini_provider_options_cannot_bypass_the_planned_output_budget(model):
     client = create_client({"provider": "gemini", "model": model}, 10)
     with pytest.raises(ValueError, match="request.max_output_tokens"):
@@ -1756,12 +1759,13 @@ def test_gemini_provider_options_cannot_bypass_the_planned_output_budget(model):
     )
 
 
+@pytest.mark.parametrize("model", GEMINI_4_MODELS)
 @pytest.mark.parametrize("limit", [256, 32768, 65536])
-def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(limit):
+def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(model, limit):
     client = create_client(
         {
             "provider": "gemini",
-            "model": "gemini-4-argon",
+            "model": model,
             "capabilities": {"temperature": True},
         },
         10,
@@ -1790,6 +1794,7 @@ def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(limit):
     assert client.body("hello", {})["generationConfig"] == {"maxOutputTokens": 256}
 
 
+@pytest.mark.parametrize("model", GEMINI_4_MODELS)
 @pytest.mark.parametrize(
     "provider_options,limit,message",
     [
@@ -1803,14 +1808,14 @@ def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(limit):
     ],
 )
 def test_gemini_4_unsupported_options_fail_before_transport(
-    monkeypatch, provider_options, limit, message
+    monkeypatch, model, provider_options, limit, message
 ):
     def unexpected_transport(*args, **kwargs):
         pytest.fail("unsupported request must fail before network transport")
 
     monkeypatch.setenv("GEMINI_API_KEY", "test")
     monkeypatch.setattr("urllib.request.urlopen", unexpected_transport)
-    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+    sample = create_client({"provider": "gemini", "model": model}, 10).run(
         "hello",
         {
             "max_output_tokens": limit,
@@ -1822,9 +1827,10 @@ def test_gemini_4_unsupported_options_fail_before_transport(
     assert message in sample["error"]
 
 
+@pytest.mark.parametrize("model_id", GEMINI_4_MODELS)
 @pytest.mark.parametrize("level", ["LOW", "MEDIUM", "HIGH"])
 def test_gemini_4_generate_content_protocol_and_cost(
-    monkeypatch, snapshot_review_day, level
+    monkeypatch, snapshot_review_day, model_id, level
 ):
     from llm_preflight.pricing import apply_public_pricing, estimate_sample_cost
 
@@ -1865,7 +1871,7 @@ def test_gemini_4_generate_content_protocol_and_cost(
 
     monkeypatch.setenv("GEMINI_API_KEY", "test")
     monkeypatch.setattr("urllib.request.urlopen", transport)
-    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4-argon"})
+    model = apply_public_pricing({"provider": "gemini", "model": model_id})
     sample = create_client(model, 10).run(
         "Reply with ready.",
         {
@@ -1888,7 +1894,7 @@ def test_gemini_4_generate_content_protocol_and_cost(
     assert estimate_sample_cost(sample, model) == pytest.approx(0.00148)
     assert captured == [
         (
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse",
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:streamGenerateContent?alt=sse",
             {
                 "contents": [
                     {"role": "user", "parts": [{"text": "Reply with ready."}]}
@@ -1945,7 +1951,8 @@ def test_gemini_4_http_error_remains_a_provider_failure(monkeypatch):
     assert "HTTP 400" in sample["error"]
 
 
-def test_gemini_4_thinking_only_truncation_cannot_pass_the_contract(monkeypatch):
+@pytest.mark.parametrize("model", GEMINI_4_MODELS)
+def test_gemini_4_thinking_only_truncation_cannot_pass_the_contract(monkeypatch, model):
     from llm_preflight.profiles import evaluate_response
 
     class Response:
@@ -1973,7 +1980,7 @@ def test_gemini_4_thinking_only_truncation_cannot_pass_the_contract(monkeypatch)
 
     monkeypatch.setenv("GEMINI_API_KEY", "test")
     monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: Response())
-    sample = create_client({"provider": "gemini", "model": "gemini-4-argon"}, 10).run(
+    sample = create_client({"provider": "gemini", "model": model}, 10).run(
         "Reply with ready", {}
     )
     assert sample["response"] == ""

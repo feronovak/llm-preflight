@@ -1313,7 +1313,12 @@ def test_measured_image_accepts_new_native_and_routed_evidence(tmp_path):
         and row[4] == "—"
         for row in cells
     )
-    assert "observed 2026-10-20" in "".join(image.itertext())
+    text = "".join(image.itertext())
+    assert (
+        f"2 models · {row['requests']} requests each" in text
+        and "observed 2026" not in text
+    )
+    assert "Last update: 20.10.2026" in text
     assert image.find("svg:title", ns).text == "Native & routed <checks>"
 
 
@@ -1498,10 +1503,18 @@ def test_default_measured_image_adds_the_later_run_without_redating_earlier_rows
     )
     rows = observed_rows()
     assert len(rows) == 20
-    assert [row[0] for row in rows] == [
-        row["display_name"] for row in base["rows"] + added["rows"]
+    ordered = base["rows"] + added["rows"]
+    above = next(i for i, r in enumerate(ordered) if r["model"] == "claude-fable-5-1")
+    ordered.insert(above, ordered.pop())
+    assert [row[0] for row in rows] == [row["display_name"] for row in ordered]
+    assert [row[0] for row in rows][above : above + 2] == [
+        "Claude Fable 5.2",
+        "Claude Fable 5.1",
     ]
-    assert [row[4] for row in rows] == ["2026-10-29"] * 19 + ["2026-11-11"]
+    assert [row[4] for row in rows] == [r["observed_on"] for r in ordered]
+    assert [row[4] for row in rows] == [
+        "2026-11-11" if r in added["rows"] else "2026-10-29" for r in ordered
+    ]
 
 
 def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
@@ -1588,4 +1601,6 @@ def test_release_guides_describe_available_2_23_features():
         assert "unpublished 2.23.0" not in page, relative
         assert "source build is unpublished" not in page, relative
         assert "candidate wheel" not in page, relative
-    assert "## New in 2.24.1" in (ROOT / "README.md").read_text()
+    readme = (ROOT / "README.md").read_text()
+    assert "\n## New\n" in readme and "## New in" not in readme
+    assert "https://github.com/feronovak/llm-preflight/releases" in readme

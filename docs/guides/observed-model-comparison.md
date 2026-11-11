@@ -38,6 +38,7 @@ provider fallback, alternative routes or additional paid probes were made.
 | OpenAI | `gpt-6.1-sol` | 8/8 | 8/8 | 1.476s | $0.002116 |
 | OpenAI | `gpt-6.1-terra` | 8/8 | 8/8 | 1.192s | $0.001218 |
 | OpenAI | `gpt-6-luna` | 8/8 | 8/8 | 1.205s | $0.000174 |
+| Anthropic (added 2026-11-11) | `claude-fable-5-2` | 8/8 | 8/8 | 1.923s | $0.013160 |
 | Anthropic | `claude-fable-5-1` | 8/8 | 8/8 | 0.923s | $0.014500 |
 | Anthropic | `claude-opus-5-5` | 8/8 | 8/8 | 1.497s | $0.005740 |
 | Anthropic | `claude-sonnet-5-5` | 8/8 | 8/8 | 1.421s | $0.002870 |
@@ -53,7 +54,6 @@ provider fallback, alternative routes or additional paid probes were made.
 | Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
 | Z.ai | `glm-5.3-flashx` | 7/8 | 8/8 | 1.091s | $0.000391 |
 | Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | $0.001668 known; total unknown |
-| Anthropic (added 2026-11-11) | `claude-fable-5-2` | 8/8 | 8/8 | 1.923s | $0.013160 |
 
 The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,

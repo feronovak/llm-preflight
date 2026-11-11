@@ -19,6 +19,8 @@ DEFAULT_DATA = (
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
+# A model added in a later aggregate is shown directly above its predecessor.
+ROW_ABOVE = {"claude-fable-5-2": "claude-fable-5-1"}
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
     "gpt-6.1-sol": "GPT-6.1 Sol",
@@ -44,7 +46,20 @@ def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
     if isinstance(data_paths, Path):
         data_paths = (data_paths,)
     first, *rest = (json.loads(path.read_text()) for path in data_paths)
-    return {**first, "rows": [*first["rows"], *(r for d in rest for r in d["rows"])]}
+    rows = [*first["rows"], *(r for d in rest for r in d["rows"])]
+    return {**first, "rows": place_above(rows)}
+
+
+def place_above(rows: list[dict]) -> list[dict]:
+    """Move each model in ROW_ABOVE directly above its predecessor when both exist."""
+    for model, anchor in ROW_ABOVE.items():
+        moved = [row for row in rows if row["model"] == model]
+        if not moved or not any(row["model"] == anchor for row in rows):
+            continue
+        rows = [row for row in rows if row["model"] != model]
+        at = next(i for i, row in enumerate(rows) if row["model"] == anchor)
+        rows[at:at] = moved
+    return rows
 
 
 def observed_rows(
@@ -94,17 +109,24 @@ def render(data_path: Path | tuple[Path, ...] | None = None) -> str:
     )
     request_count = data["rows"][0]["requests"]
     dates = sorted(row[4] for row in rows)
-    date_range = dates[0] if dates[0] == dates[-1] else f"{dates[0]}–{dates[-1]}"
+    year, month, day = dates[-1].split("-")
+    last_update = f"Last update: {day}.{month}.{year}"
     width = layout["width"]
     height = (
         layout["table_top"] + len(rows) * layout["row_height"] + layout["footer_height"]
     )
 
     def text(
-        x: int, y: int, value: str, size: int, color: str = "text", bold: bool = False
+        x: int,
+        y: int,
+        value: str,
+        size: int,
+        color: str = "text",
+        bold: bool = False,
+        anchor: str = "start",
     ) -> str:
         return (
-            f'<text x="{x}" y="{y}" font-size="{size}" '
+            f'<text x="{x}" y="{y}" font-size="{size}" text-anchor="{anchor}" '
             f'fill="{colors[color]}" font-weight="{700 if bold else 400}">{escape(value)}</text>'
         )
 
@@ -126,9 +148,17 @@ def render(data_path: Path | tuple[Path, ...] | None = None) -> str:
         f'<rect width="{width}" height="{height}" rx="16" fill="{colors["background"]}"/>',
         text(32, 52, title, layout["title_size"], bold=True),
         text(
+            width - 32,
+            52,
+            last_update,
+            layout["subtitle_size"],
+            "muted",
+            anchor="end",
+        ),
+        text(
             32,
             86,
-            f"{len(rows)} models · {request_count} requests each · observed {date_range}",
+            f"{len(rows)} models · {request_count} requests each",
             layout["subtitle_size"],
             "muted",
         ),

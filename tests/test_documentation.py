@@ -720,7 +720,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "guides/retirements.md" in docs_index
     assert "llm-preflight --audit-source ." in readme
     model_change = (ROOT / "docs/guides/model-change.md").read_text()
-    assert readme.index("llm-preflight init") < readme.index(
+    assert readme.index("python3 -m pip install llm-preflight") < readme.index(
         "llm-preflight --audit-source ."
     )
     assert (
@@ -1192,9 +1192,7 @@ def test_readme_contract_check_demo_passes_then_fails_when_billing_becomes_sales
     tmp_path,
 ):
     readme = (ROOT / "README.md").read_text()
-    step = readme.split("### 1. Watch an invalid response get caught", 1)[1].split(
-        "\n### ", 1
-    )[0]
+    step = readme.split("### 1. Catch an invalid response", 1)[1].split("\n### ", 1)[0]
     config = re.search(r"```json\n(.*?)\n```", step, re.DOTALL)
     assert config is not None
     assert "llm-preflight routing.json --contract-check --no-env-file" in step

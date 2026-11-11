@@ -17,24 +17,24 @@
     "info": "#58a6ff"
   },
   "measured_models": {
-    "width": 1280,
-    "table_top": 196,
-    "row_height": 60,
-    "footer_height": 180,
+    "width": 1040,
+    "header_height": 40,
+    "table_top": 180,
+    "row_height": 44,
+    "group_height": 40,
+    "footer_height": 24,
     "columns": [
       32,
-      302,
-      480,
-      650,
-      800,
-      1030
+      372,
+      592,
+      752,
+      860
     ],
-    "title_size": 31,
-    "subtitle_size": 20,
+    "title_size": 30,
+    "subtitle_size": 19,
     "header_size": 19,
-    "model_size": 21,
-    "cell_size": 19,
-    "footnote_size": 18
+    "model_size": 19,
+    "cell_size": 19
   },
   "terminal": {
     "width": 1248,
@@ -58,5 +58,17 @@
       "warning_badge": "#d29922",
       "badge_ink": "#081018"
     }
+  },
+  "colors_light": {
+    "background": "#ffffff",
+    "surface": "#f6f8fa",
+    "header": "#eaeef2",
+    "border": "#d0d7de",
+    "text": "#1f2328",
+    "muted": "#59636e",
+    "pass_text": "#1a7f37",
+    "fail_text": "#cf222e",
+    "warning_text": "#9a6700",
+    "info": "#0969da"
   }
 }

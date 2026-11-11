@@ -255,7 +255,8 @@ permission for paid work from a gate result.
   IDs marked retired or retiring in the bundled snapshot. No config or key is
   needed. Add `--ci` to make the retirement decision affect the exit code;
   without it, findings normally exit `0`. In Git, the scan reads tracked,
-  unignored files. See [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
+  unignored files. The reports state `snapshot.valid_until`, the date after
+  which bundled rows are stale and `--ci` exits 3. See [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
 - **Replace a retired model:** `llm-preflight migrate benchmark.json --output migrate.json` writes a candidate of
   the provider-named replacements and prints its plan. After you record an approval receipt,
   `migrate ... --run --verify-approval-receipt R` runs one bounded smoke. See

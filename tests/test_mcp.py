@@ -405,6 +405,32 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     ]
 
 
+def test_mcp_retirement_report_carries_valid_until(tmp_path, monkeypatch):
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [{"provider": "openai", "model": "gpt-5.4-mini"}],
+            }
+        )
+    )
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+    snapshot = plan["result"]["structuredContent"]["retirements"]["snapshot"]
+    assert snapshot["valid_until"] == retirements.snapshot_summary()["valid_until"]
+
+
 def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected(
     tmp_path, monkeypatch
 ):

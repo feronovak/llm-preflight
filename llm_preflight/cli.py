@@ -83,7 +83,12 @@ from .redaction import (
     without_credentials,
 )
 from .reporting import render_card_svg, render_job_summary, render_report_html
-from .retirements import retirement_report, today_utc, unique_next_commands
+from .retirements import (
+    expiry_notice,
+    retirement_report,
+    today_utc,
+    unique_next_commands,
+)
 from .runner import (
     benchmark_run_lock,
     canonical_test_selector,
@@ -571,7 +576,14 @@ def _format_doctor(report: dict[str, Any]) -> str:
                 ],
             )
         )
+        _append_expiry_notice(lines, report["retirement"])
     return "\n".join(lines) + "\n"
+
+
+def _append_expiry_notice(lines: list[str], retirements: dict[str, Any]) -> None:
+    notice = expiry_notice(retirements.get("snapshot", {}), today_utc())
+    if notice:
+        lines.append(notice)
 
 
 def _format_contract_check(report: dict[str, Any]) -> str:
@@ -864,6 +876,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 retirements, [{"model": e["model"], "retirement": e} for e in flagged]
             )
         )
+    _append_expiry_notice(lines, retirements)
     return "\n".join(lines) + "\n"
 
 
@@ -1149,7 +1162,7 @@ def _pricing_refresh_main(argv: list[str]) -> None:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--provider", choices=("openrouter",))
-    parser.add_argument("--max-age-days", type=int, default=30)
+    parser.add_argument("--max-age-days", type=int, default=DEFAULT_MAX_AGE_DAYS)
     args = parser.parse_args(argv)
     if args.max_age_days < 0:
         parser.error("--max-age-days must be zero or greater")

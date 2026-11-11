@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -373,6 +373,30 @@ def test_snapshot_summary_reports_coverage_and_dates():
     assert summary["rows"] == len(PUBLIC_RETIREMENTS)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
+
+
+def test_snapshot_valid_until_is_oldest_row_plus_window(table):
+    summary = snapshot_summary()
+    oldest = date.fromisoformat(summary["oldest_as_of"])
+    assert (
+        summary["valid_until"]
+        == (oldest + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    )
+    # Last valid day: one day later the row is stale.
+    on_limit = date.fromisoformat(summary["valid_until"])
+    assert retirement_verdict("openai", "gpt-old-row", on_limit)["status"] != "stale"
+    day_after = on_limit + timedelta(days=1)
+    assert retirement_verdict("openai", "gpt-old-row", day_after)["status"] == "stale"
+
+
+def test_expiry_notice_appears_7_days_before_and_not_8():
+    snapshot = {"valid_until": "2026-12-04"}
+    assert "valid until 2026-12-04" in retirements.expiry_notice(
+        snapshot, date(2026, 11, 27)
+    )
+    assert retirements.expiry_notice(snapshot, date(2026, 11, 26)) is None
+    assert "0 days left" in retirements.expiry_notice(snapshot, date(2026, 12, 4))
+    assert retirements.expiry_notice(snapshot, date(2026, 12, 5)) is None
 
 
 def test_worst_decision_orders_fail_over_inconclusive_over_pass():

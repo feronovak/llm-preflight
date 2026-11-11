@@ -4356,6 +4356,39 @@ def test_dry_run_without_ci_exits_zero_on_a_retired_model(
     cli.main()
 
 
+def test_expiry_notice_does_not_change_decision_or_exit(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    # The table's oldest row is 2026-01-01, so the window ends 2026-01-31.
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
+    config = _dry_run_config(tmp_path, "gpt-new")
+    argv = ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
+    monkeypatch.setattr(sys, "argv", [*argv, "--ci"])
+    cli.main()
+    assert "valid until 2026-01-31" in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", [*argv, "--json"])
+    cli.main()
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["retirements"]["snapshot"]["valid_until"] == "2026-01-31"
+    assert plan["retirements"]["decision"] == "pass"
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 20))
+    monkeypatch.setattr(sys, "argv", argv)
+    cli.main()
+    assert "valid until" not in capsys.readouterr().out
+
+
+def test_doctor_text_shows_the_expiry_notice(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
+    config = _dry_run_config(tmp_path, "gpt-new")
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]
+    )
+    cli.main()
+    assert "valid until 2026-01-31" in capsys.readouterr().out
+
+
 def test_dry_run_prints_no_retirement_block_when_all_unknown(
     monkeypatch, tmp_path, capsys, retirement_table
 ):

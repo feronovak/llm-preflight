@@ -30,6 +30,38 @@ published package to keep pull-request validation installable from PyPI.
 Update that pin after each newer package is published and the workflow
 succeeds against it.
 
+## Keep the pin current
+
+The bundled retirement and price rows go stale 30 days after their review
+date, and then `--ci` returns `inconclusive` (exit 3) until you move to a
+newer release. Doctor, dry-run and scan output state the date as
+`snapshot.valid_until` and print a notice during the last 7 days. A
+release tag's `action.yml` installs that release's package by default, so pin
+the tag only and let Dependabot move it:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+```
+
+```yaml
+steps:
+  - uses: feronovak/llm-preflight@v2.24.2
+    with:
+      config: benchmark.json
+```
+
+Dependabot bumps the tag but never the `package-version` input, so an explicit
+`package-version` makes every bump two edits. Set it only to override the
+tag's package version. The `package-version` examples on this page
+predate that default: a tag installs its own package version from the release
+after `v2.24.2`.
+
 ## Paid smoke is opt-in
 
 Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and

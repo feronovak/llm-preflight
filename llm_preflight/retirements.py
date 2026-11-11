@@ -8,7 +8,7 @@ verdict; it is reported as unknown.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 ANTHROPIC_DEPRECATIONS_URL = (
@@ -22,6 +22,7 @@ GEMINI_MODEL_REDIRECTS = {
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
+EXPIRY_NOTICE_DAYS = 7
 _REVIEWED = "2026-11-04"
 
 
@@ -280,12 +281,31 @@ PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {
 def snapshot_summary() -> dict[str, Any]:
     """Describe the bundled snapshot so reports can state its coverage."""
     as_of_dates = sorted(row["as_of"] for row in PUBLIC_RETIREMENTS.values())
+    valid_until = date.fromisoformat(as_of_dates[0]) + timedelta(
+        days=DEFAULT_MAX_AGE_DAYS
+    )
     return {
         "providers": list(RETIREMENT_PROVIDERS),
         "rows": len(PUBLIC_RETIREMENTS),
         "oldest_as_of": as_of_dates[0],
         "newest_as_of": as_of_dates[-1],
+        "valid_until": valid_until.isoformat(),
     }
+
+
+def expiry_notice(snapshot: dict[str, Any], today: date) -> str | None:
+    """Text-only warning that the bundled rows go stale soon; never a verdict."""
+    valid_until = snapshot.get("valid_until")
+    if not valid_until:
+        return None
+    days_left = (date.fromisoformat(valid_until) - today).days
+    if not 0 <= days_left <= EXPIRY_NOTICE_DAYS:
+        return None
+    return (
+        f"Bundled retirement data is valid until {valid_until} "
+        f"({days_left} days left). After that, retirement checks return "
+        "inconclusive until you update llm-preflight."
+    )
 
 
 def _catalog_id(model: str) -> str:

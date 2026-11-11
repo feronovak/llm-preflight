@@ -387,6 +387,7 @@ def _tools() -> list[dict[str, Any]]:
                     "rows": {"type": "integer", "minimum": 0},
                     "oldest_as_of": {"type": "string"},
                     "newest_as_of": {"type": "string"},
+                    "valid_until": {"type": "string"},
                 },
                 "required": ["providers", "rows", "oldest_as_of", "newest_as_of"],
                 "additionalProperties": True,

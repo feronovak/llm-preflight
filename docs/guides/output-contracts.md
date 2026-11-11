@@ -73,7 +73,7 @@ Use the strictest rule that expresses your requirement:
 
 | Requirement | Validation |
 |---|---|
-| A fixed label or exactly one allowed answer | `exact` or `regex`, for example `"^billing$"` |
+| A fixed label or exactly one allowed answer | `exact` trims the response and ignores case; for strict matching, use a `regex` such as `"^billing$"` |
 | A required phrase, identifier, or citation | `contains` |
 | A stable structured payload | `json_schema` |
 | Any JSON object or array | `json_object` or `json_array` |

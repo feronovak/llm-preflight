@@ -1,6 +1,6 @@
 # Configuration
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 ## Models and providers
 
@@ -268,5 +268,5 @@ With `provider: openai` and `adapter: openai_responses`, the supported
 fields to Responses. Other fields are refused before planning; set the prompt,
 system prompt and output allowance through the normal configuration fields.
 The adapter uses `store: false`. GPT-6 pricing still requires standard service
-and30-minute cache retention. GPT-6 Responses require completed response status;
+and 30-minute cache retention. GPT-6 Responses require completed response status;
 partial text from an incomplete or failed response cannot count as a success.

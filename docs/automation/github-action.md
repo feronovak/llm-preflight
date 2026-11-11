@@ -4,7 +4,7 @@ Use the `v2.24.2` Action with `package-version: "2.24.2"` for reproducible CI.
 The immutable release tag retains its earlier **2.24.1** default. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local
@@ -22,7 +22,13 @@ steps:
 The Action installs the exact `package-version` input. The current repository
 source defaults to `2.24.2`; `v2.24.2` retains its `2.24.1` default, `v2.24.1` its `2.24.0` default, `v2.24.0` its `2.23.1` default and `v2.23.1` its `2.23.0` default. The `v2.22.1` release tag retains the `2.22.0`
 default, so the example sets the input explicitly. The default execution path
-makes no provider generation request and needs no secret. The action writes a
+makes no provider generation request. For a non-mock config, the `--doctor`
+step exits 1 when a model's key variable is unset, so supply each key variable
+from a secret in the job's `env`; with `models` only, the checks need only the
+variable to be present and send no request with it. With `discovery`, all three
+checks send the key to that source's model-list endpoint (no generation
+request), so the discovery `base_url` decides where the key goes. A mock config
+needs no key. The action writes a
 compact job summary confirming those three no-spend checks completed.
 
 The repository's `Marketplace Action smoke` workflow explicitly pins a
@@ -68,6 +74,10 @@ after `v2.24.2`.
 Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and
 approved the spend. Supply credentials through GitHub Secrets or an approved
 environment; do not commit an environment file or put a key in action inputs.
+
+The optional `env-file` input names an environment file for the paid smoke and
+is passed to `--env-file`. It has no effect on the no-spend checks; keep the
+credentials in GitHub Secrets rather than in a file in the repository.
 
 ```yaml
 steps:

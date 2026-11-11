@@ -164,7 +164,7 @@ from the ID.
 
 ## Release retirement review
 
-The 2.24.1 snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini.
+The 2.24.2 snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini.
 The 117 older rows were reviewed on 2026-11-04; the two newer
 Anthropic rows, `claude-fable-5-2` and `claude-mythos-5-2`, were reviewed on
 2026-11-09 and become stale on 2026-12-10. Non-retired rows become stale on

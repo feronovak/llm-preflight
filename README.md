@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-11-10 · **As of:** v2.24.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -33,7 +33,8 @@ it makes no provider requests and does not execute your application's parser.*
 ## New
 
 - `gemini-4-carbon`: official snapshot price and request checks.
-- Claude Fable 5.2 added to the measured comparison of 20 models.
+- Five more measured models in the comparison guide: `gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash` and `claude-mythos-5-2`; the guide now covers 25 models.
+- Claude Fable 5.2 added to the measured comparison.
 - Claude Fable 5.2 and Claude Mythos 5.2: pricing and retirement rows.
 
 Everything else is on the [releases page](https://github.com/feronovak/llm-preflight/releases).

@@ -4381,6 +4381,7 @@ def test_doctor_text_shows_the_expiry_notice(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
     monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     config = _dry_run_config(tmp_path, "gpt-new")
     monkeypatch.setattr(
         sys, "argv", ["llm-preflight", str(config), "--doctor", "--no-env-file"]

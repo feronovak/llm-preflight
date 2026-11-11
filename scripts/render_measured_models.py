@@ -13,8 +13,11 @@ from html import escape
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CURRENT_MEASUREMENT = "2026-10-29"
-DEFAULT_DATA = ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json"
+CURRENT_MEASUREMENT = "2026-11-11"
+DEFAULT_DATA = (
+    ROOT / "docs/data/model-comparison-2026-10-29.json",
+    ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json",
+)
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
@@ -34,8 +37,20 @@ MODEL_NAMES = {
 }
 
 
-def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
-    data = json.loads((data_path or DEFAULT_DATA).read_text())
+def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
+    """Read one aggregate, or concatenate the rows of several in the given order."""
+    if data_paths is None:
+        data_paths = DEFAULT_DATA
+    if isinstance(data_paths, Path):
+        data_paths = (data_paths,)
+    first, *rest = (json.loads(path.read_text()) for path in data_paths)
+    return {**first, "rows": [*first["rows"], *(r for d in rest for r in d["rows"])]}
+
+
+def observed_rows(
+    data_path: Path | tuple[Path, ...] | None = None,
+) -> list[tuple[str, ...]]:
+    data = load_data(data_path)
     current = data["rows"]
     request_counts = {row["requests"] for row in current}
     if len(request_counts) != 1 or next(iter(request_counts)) <= 0:
@@ -66,12 +81,12 @@ def observed_rows(data_path: Path | None = None) -> list[tuple[str, ...]]:
     return rows
 
 
-def render(data_path: Path | None = None) -> str:
+def render(data_path: Path | tuple[Path, ...] | None = None) -> str:
     style = json.loads((ROOT / "docs/images/style.json").read_text())
     colors = style["colors"]
     layout = style["measured_models"]
     rows = observed_rows(data_path)
-    data = json.loads((data_path or DEFAULT_DATA).read_text())
+    data = load_data(data_path)
     title = (
         data.get("display_title", "Observed model results")
         if data_path
@@ -263,12 +278,13 @@ def main() -> int:
     parser.add_argument(
         "--data",
         type=Path,
-        help="New aggregate JSON; uses only its rows, without historical additions",
+        action="append",
+        help="New aggregate JSON; repeat to concatenate several, without historical additions",
     )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
-        content = render(args.data).encode()
+        content = render(tuple(args.data) if args.data else None).encode()
     except (ValueError, KeyError, OSError) as error:
         parser.error(str(error))
     if args.check:

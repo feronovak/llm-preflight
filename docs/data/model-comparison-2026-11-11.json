@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-11",
+  "reviewed_on": "2026-11-11",
+  "tool_version": "2.24.1",
+  "source_commit": "c4c6e064551566eb99f03178fe181e882107719c",
+  "source_dirty": false,
+  "execution_manifest_sha256": "8ae055a7a343370fd0d200fb1117054299153a8f1cfa8ec0b7de059a045f2383",
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.35,
+  "planned_maximum_token_estimate_usd": 0.332176,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Anthropic route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.01316,
+    "known_cost_subtotal_usd": 0.01316,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5-2",
+      "display_name": "Claude Fable 5.2",
+      "route": "Anthropic",
+      "observed_on": "2026-11-11",
+      "observed_model": "claude-fable-5-2",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.923093002747919,
+      "latency_p50_seconds": 1.950203087500995,
+      "latency_p95_seconds": 2.554074065518216,
+      "mean_ttft_seconds": 1.4010959717488731,
+      "input_tokens": 780,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 173,
+      "estimated_cost_usd": 0.01316,
+      "known_cost_subtotal_usd": 0.01316,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.35,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-fable-5-2",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-fable-5-2"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.35,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "110932cfb0b925b1d35e2c9d152119893a49f87f51283767755885e420118753",
+      "result_sha256": "60a084e6165e3192ac4cff8a41edafb5f19b9fe6425c97102a74b43eface7407",
+      "pricing_fingerprint": "203ad46aa0dd3b70707354eff34adf019b7c384b81fc2001bc061fa5724ab662",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

@@ -715,3 +715,28 @@ def test_source_audit_counts_a_file_it_may_not_read_and_audits_the_rest(
     assert mixed["files_scanned"] == 1
     assert mixed["files_unreadable"] == 1
     assert [item["model"] for item in mixed["references"]] == ["gpt-going"]
+
+
+@pytest.mark.parametrize("name", ["app.js", "app.ts", "app.tsx", "app.mjs", "app.cjs"])
+def test_backtick_model_literal_is_reported_in_js_and_ts(tmp_path, name):
+    (tmp_path / name).write_text("const m = `gpt-5.4-mini`;\n")
+
+    report = audit_source(tmp_path)
+
+    assert [(item["line"], item["model"]) for item in report["references"]] == [
+        (1, "gpt-5.4-mini")
+    ]
+
+
+def test_backtick_template_with_interpolation_is_not_reported(tmp_path):
+    (tmp_path / "app.ts").write_text(
+        "const m = `gpt-${size}`;\nconst n = `gpt-5 mini`;\n"
+    )
+
+    assert audit_source(tmp_path)["references"] == []
+
+
+def test_backtick_in_python_is_not_reported(tmp_path):
+    (tmp_path / "app.py").write_text('"""Use ``gpt-4o`` or `gpt-4o`."""\n')
+
+    assert audit_source(tmp_path)["references"] == []

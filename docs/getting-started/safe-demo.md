@@ -23,7 +23,7 @@ The activation command is for POSIX shells; in PowerShell use
 for activation in other shells.
 
 `init` creates one mock model and the prompt `Reply with ok.`, validated as
-exactly `ok`. It refuses to overwrite an existing file. `--no-env-file` skips
+exactly `ok`. It refuses to overwrite an existing file unless you pass `--force`. `--no-env-file` skips
 credential files; `--no-save` skips JSON/Markdown result artifacts.
 
 ## Read the result

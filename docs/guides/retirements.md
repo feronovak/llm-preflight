@@ -58,6 +58,24 @@ symlink out of the path. The `Files:` line and the JSON `file_selection` field
 (`git`, `filesystem` or `file`) report the mode used; in `filesystem` mode the
 line and `file_selection_reason` say why Git was not used.
 
+## What the scan does not see
+
+The scan reads quoted strings, backtick strings in JavaScript and TypeScript
+files, and unquoted `model:` or `model_id:` values in YAML. It reports a model
+ID only when the whole literal is the ID. It does not see:
+
+- IDs with a prefix other than the ones it knows, such as `azure/gpt-5`,
+  `models/gemini-2.5-pro`, Bedrock `anthropic.claude-…` and Vertex
+  `claude-…@date` forms;
+- template strings with `${…}` interpolation, and IDs built by concatenation or
+  chosen at run time;
+- unquoted assignments outside YAML, such as `MODEL=gpt-5` in a `.env` file or
+  a TOML value without quotes;
+- files whose suffix is not in the list below (`.env`, `.go`, `.md` and so on).
+
+A model ID in one of these forms gets no retirement verdict from the scan, and
+an exit 0 is not evidence that none is in use.
+
 Git runs without letting the audited repository run a command: its hooks,
 file-system monitor, filter drivers and object fetching are disabled,
 including in submodules. Global and system Git configuration still apply.
@@ -65,10 +83,10 @@ including in submodules. Global and system Git configuration still apply.
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
-The bundled retirement rows were rechecked on **2026-10-19**. Their statuses,
-retirement dates and replacements are unchanged. Non-retired rows become stale
-on **2026-11-19** (day 31), and `--ci` then returns `3`; retired models still
-return `1`. Pricing snapshots have their own review dates and expiry.
+The bundled retirement rows were rechecked on **2026-11-04**; the two newest
+rows (`claude-fable-5-2` and `claude-mythos-5-2`) on **2026-11-09**. Non-retired
+rows become stale on **2026-12-05** (day 31), the two newest on **2026-12-10**,
+and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## Verdicts
 

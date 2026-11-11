@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -1669,3 +1671,82 @@ def test_carbon_and_argon_share_token_counts_but_are_separate_measurements():
         assert carbon[field] != argon[field], field
     assert carbon["observed_model"] == carbon["model"]
     assert argon["observed_model"] == argon["model"]
+
+
+def test_retirements_guide_dates_match_the_snapshot():
+    from datetime import date, timedelta
+
+    from llm_preflight.retirements import DEFAULT_MAX_AGE_DAYS, PUBLIC_RETIREMENTS
+
+    page = (ROOT / "docs/guides/retirements.md").read_text()
+    reviewed = {row["as_of"] for row in PUBLIC_RETIREMENTS.values()}
+    stale = {
+        (date.fromisoformat(day) + timedelta(days=DEFAULT_MAX_AGE_DAYS + 1)).isoformat()
+        for day in reviewed
+    }
+    day_re = r"\s+\**(\d{4}-\d{2}-\d{2})"
+    for phrase, allowed in (
+        ("rechecked on", reviewed),
+        ("reviewed on", reviewed),
+        ("stale on", stale),
+        ("become stale on", stale),
+    ):
+        for day in re.findall(phrase + day_re, page):
+            assert day in allowed, (phrase, day)
+    assert re.search("rechecked on" + day_re, page)
+    assert re.search("stale on" + day_re, page)
+
+
+def _help_flags(argv, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv, "--help"])
+    from llm_preflight.cli import main
+
+    try:
+        main()
+    except SystemExit:
+        pass
+    # argparse wraps a long flag name inside a help sentence at its hyphen.
+    text = re.sub(r"-\n\s+", "-", capsys.readouterr().out)
+    return set(re.findall(r"(?<![\w-])--[a-z][a-z0-9-]*", text))
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [],
+        ["init"],
+        ["pricing-refresh"],
+        ["catalog", "init"],
+        ["catalog", "probe"],
+        ["catalog", "refresh"],
+        ["catalog", "prepare"],
+        ["catalog", "test"],
+        ["watch-new"],
+        ["approve-model"],
+        ["models", "approve"],
+        ["models", "remove"],
+        ["migrate"],
+        ["attest"],
+        ["verify"],
+        ["gate"],
+        ["report"],
+    ],
+)
+def test_cli_reference_documents_every_help_flag(argv, monkeypatch, capsys):
+    page = (ROOT / "docs/reference/cli.md").read_text()
+
+    for flag in sorted(_help_flags(argv, monkeypatch, capsys) - {"--help"}):
+        assert re.search(rf"(?<![\w-]){re.escape(flag)}(?![\w-])", page), (argv, flag)
+
+
+def test_action_doc_names_key_variables_for_doctor():
+    page = (ROOT / "docs/automation/github-action.md").read_text()
+
+    assert "needs no secret" not in page
+    assert "key variable" in page and "non-mock" in page
+
+
+def test_decision_doc_names_require_current_pricing():
+    page = (ROOT / "docs/reference/decision.md").read_text()
+
+    assert "require_current_pricing" in page

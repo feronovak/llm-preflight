@@ -22,7 +22,10 @@ steps:
 The Action installs the exact `package-version` input. The current repository
 source defaults to `2.24.2`; `v2.24.2` retains its `2.24.1` default, `v2.24.1` its `2.24.0` default, `v2.24.0` its `2.23.1` default and `v2.23.1` its `2.23.0` default. The `v2.22.1` release tag retains the `2.22.0`
 default, so the example sets the input explicitly. The default execution path
-makes no provider generation request and needs no secret. The action writes a
+makes no provider generation request. For a non-mock config, the `--doctor`
+step exits 1 when a model's key variable is unset, so supply each key variable
+from a secret in the job's `env`; it checks only that the variable is present
+and makes no request with it. A mock config needs no key. The action writes a
 compact job summary confirming those three no-spend checks completed.
 
 The repository's `Marketplace Action smoke` workflow explicitly pins a

@@ -70,7 +70,7 @@
     },
     {
       "provider": "gemini",
-      "include": "^(gemini-4-argon|gemini-3\\.8-flash|gemini-3\\.1-pro-preview)$",
+      "include": "^(gemini-4-argon|gemini-4-carbon|gemini-3\\.8-flash|gemini-3\\.1-pro-preview)$",
       "exclude": "(embedding|image|audio|tts)",
       "limit": 20
     },

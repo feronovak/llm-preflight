@@ -153,16 +153,22 @@ def pricing_day(monkeypatch, day):
 
 
 @pytest.mark.parametrize(
+    "model_id,as_of",
+    [("gemini-4-argon", "2026-11-04"), ("gemini-4-carbon", "2026-11-11")],
+)
+@pytest.mark.parametrize(
     "day,rates",
     [
-        (date(2026, 10, 13), (2, 10, 0.1)),
+        (date(2026, 11, 11), (2, 10, 0.1)),
         (date(2026, 11, 30), (2, 10, 0.1)),
         (date(2026, 12, 1), (4, 20, 0.2)),
     ],
 )
-def test_gemini_4_pricing_switches_on_the_published_date(monkeypatch, day, rates):
+def test_gemini_4_pricing_switches_on_the_published_date(
+    monkeypatch, model_id, as_of, day, rates
+):
     pricing_day(monkeypatch, day)
-    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4-argon"})
+    model = apply_public_pricing({"provider": "gemini", "model": model_id})
     assert (
         tuple(
             model[k]
@@ -174,7 +180,7 @@ def test_gemini_4_pricing_switches_on_the_published_date(monkeypatch, day, rates
         )
         == rates
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert model["pricing_metadata"]["as_of"] == as_of
     assert (
         model["pricing_metadata"]["source_url"]
         == "https://aistudio.google.com/docs/pricing"
@@ -379,9 +385,17 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
     new_ids = {"claude-fable-5-2", "claude-mythos-5-2"}
-    dates = {"2026-11-04", "2026-11-09"}
-    assert {rates[2] for rates in PUBLIC_PRICING.values()} == dates
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == dates
+    retirement_dates = {"2026-11-04", "2026-11-09"}
+    assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
+        *retirement_dates,
+        "2026-11-11",
+    }
+    assert {
+        model
+        for (_, model), rates in PUBLIC_PRICING.items()
+        if rates[2] == "2026-11-11"
+    } == {"gemini-4-carbon"}
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == retirement_dates
     assert {
         model
         for (_, model), rates in PUBLIC_PRICING.items()

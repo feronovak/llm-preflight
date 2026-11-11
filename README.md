@@ -81,6 +81,9 @@ one does not, and `2` for an invalid config.
 
 The mock benchmark has a different config and a different decision:
 
+The config file is named `benchmark.json` because it also drives benchmark runs;
+the same file holds a contract's validators and fixtures.
+
 ```bash
 llm-preflight init
 llm-preflight benchmark.json --no-save --no-env-file
@@ -305,20 +308,6 @@ configured retries. See the
 for request/result examples and workspace boundaries, and the
 [coding-agent workflow](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
 for CLI commands.
-
-## Glossary
-
-- **Contract:** the output rule your application depends on, such as exact
-  text, a JSON schema or a set of allowed labels.
-- **Fixture:** a saved sample response, marked `pass` or `fail`, that checks
-  the validator locally without a provider request.
-- **Route:** the provider, endpoint and model ID a request is sent to.
-- **Decision:** the result state of a run: `pass`, `fail` or `inconclusive`.
-- **Evidence:** the saved result and proof-of-preflight record behind a
-  decision, kept for the change review.
-
-The config file is named `benchmark.json` because it also drives benchmark
-runs; the same file holds a contract's validators and fixtures.
 
 ## Safety boundary
 

@@ -89,7 +89,7 @@ image, increasing its height while preserving source order and context.
 Do not shrink text or discard failures to fit.
 The column origins are x=`32, 302, 480, 650, 800, 1030`: model, contract passed,
 API errors, mean latency, estimated token cost for this run, connection route.
-Show the observation date once above the table. Contract results use successful
+Show the date once, right-aligned in the header, as `Last update: DD.MM.YYYY` (the newest `observed_on` across the rows). Contract results use successful
 API responses as their denominator; display API errors separately and explicitly
 mark incomplete evaluations. A partial cost shows its known subtotal and an
 unknown total. Add failure explanations below the affected cells.
@@ -116,8 +116,8 @@ their count. `known_cost_subtotal_usd` with positive `cost_coverage.known_reques
 permits a clearly labelled partial cost when the total remains null. Optional top-level `display_title` names the workload.
 
 Use the same positive request count for each row in one figure so its cost
-column has a truthful denominator. The subtitle shows the date or date range; each row keeps its actual
-route. Preserve separate rows when the same model has native and routed
+column has a truthful denominator. The subtitle shows the model and request counts only; each row keeps its actual
+route and its `observed_on` in the data. Preserve separate rows when the same model has native and routed
 observations. Keep missing latency/cost null in the JSON and unavailable in
 the image. Never infer a native Z.ai, DeepSeek or Qwen observation from an
 OpenRouter call. Keep model errors and wrong-label responses in the dataset.

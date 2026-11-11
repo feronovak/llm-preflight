@@ -30,31 +30,13 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
-## New in 2.24.1
+## New
 
-This patch release fixes written and saved configs that kept `prompt_file` and
-failed to load, reports malformed `profiles` and `presets` values as config
-errors, and fails an empty or whitespace-only response under every output
-validation. Existing attestation records report `contract_changed` and
-baselines compare as `incompatible` until you re-run once. A config that passed
-only on an empty reply (`exact: ""`, `regex: "^$"`, `max_chars: 0`) now fails.
-See the [changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md).
+- `gemini-4-carbon`: official snapshot price and request checks.
+- Claude Fable 5.2 added to the measured comparison of 20 models.
+- Claude Fable 5.2 and Claude Mythos 5.2: pricing and retirement rows.
 
-## New in 2.24.0
-
-This release adds pricing and retirement rows for Claude Fable 5.2 and Claude
-Mythos 5.2, and the `migrate` command and read-only `migrate_plan` MCP tool,
-which report the provider-named replacement for a retired or retiring model.
-It also prices `inference_geo: us` on Anthropic rows, refuses `speed` other than
-`standard` on them, fails a provider response that returns a tool call, and
-masks `base_url` values in result output. See the
-[changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)
-for the three changes that can stop an existing config or script.
-The 2.23.0 native provider checks (Kimi, MiniMax, Mistral, Cohere, GLM Flash and
-restricted Mythos) remain: see
-[native provider checks](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/native-providers.md).
-New coverage has deterministic protocol fixtures; live observations below cover
-the listed 19 routes. Other added providers retain fixture-only coverage.
+Everything else is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Try it in 60 seconds
 

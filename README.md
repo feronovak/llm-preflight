@@ -104,6 +104,8 @@ the local run. The session also reads the same decision through CLI JSON:
 or start with the [text walkthrough](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/safe-demo.md)
 and [interactive CLI JSON example](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/interactive-runs.md#default-template-walkthrough).
 
+### Read the decision
+
 For benchmark runs, read the decision before acting:
 
 - **`pass`, exit `0`:** the configured checks passed with the required evidence.

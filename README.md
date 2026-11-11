@@ -184,28 +184,6 @@ and Markdown under `results/` unless you use `--no-save`. The CLI reads the
 config-adjacent `.env.production` without replacing existing shell values;
 choose another file with `--env-file PATH` or skip it with `--no-env-file`.
 
-## Choose your path
-
-- **Set up a real project.** Adapt one application rule with the
-  [project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md).
-- **Validate a change.** Compare approved and candidate configurations with the
-  [model-change guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md).
-- **Automate an established contract.** Use
-  [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md)
-  or the [GitHub Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
-- **Configure a coding agent.** Start with
-  `llm-preflight-mcp --workspace "$PWD"` in a trusted repository and follow
-  [MCP for coding agents](#mcp-for-coding-agents) and the
-  [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
-- **Run everyday jobs.** Audit model IDs with `llm-preflight --audit-source .`
-  ([model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md)),
-  replace a retired model, inspect pricing, review Git changes, discover a
-  candidate with the
-  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md),
-  and change a model safely:
-  [common jobs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#common-jobs)
-  and [change a model safely](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#change-a-model-safely).
-
 ### Render a review report
 
 A review artifact retains the decision, contract validity, latency, usage,
@@ -230,6 +208,28 @@ contract validity and one contract-only failure. The
 [report gallery](https://github.com/feronovak/llm-preflight/tree/main/examples/reports)
 also demonstrates a gate blocked with `no_record` (exit `1`). These fixtures
 make no provider calls and cannot supply attested CI evidence.
+
+## Choose your path
+
+- **Set up a real project.** Adapt one application rule with the
+  [project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md).
+- **Validate a change.** Compare approved and candidate configurations with the
+  [model-change guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md).
+- **Automate an established contract.** Use
+  [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md)
+  or the [GitHub Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
+- **Configure a coding agent.** Start with
+  `llm-preflight-mcp --workspace "$PWD"` in a trusted repository and follow
+  [MCP for coding agents](#mcp-for-coding-agents) and the
+  [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+- **Run everyday jobs.** Audit model IDs with `llm-preflight --audit-source .`
+  ([model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md)),
+  replace a retired model, inspect pricing, review Git changes, discover a
+  candidate with the
+  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md),
+  and change a model safely:
+  [common jobs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#common-jobs)
+  and [change a model safely](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#change-a-model-safely).
 
 ## CLI, CI, and MCP
 

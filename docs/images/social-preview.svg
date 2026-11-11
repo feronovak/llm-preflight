@@ -12,7 +12,6 @@
   </g>
   <rect x="80" y="530" width="1120" height="1" fill="#30363d"/>
   <g font-family="Liberation Mono, DejaVu Sans Mono, monospace" font-size="24">
-    <text x="80" y="580" fill="#7ee787">pass</text>
-    <text x="170" y="580" fill="#aeb9c7">CLI · GitHub Action · MCP server · no runtime dependencies</text>
+    <text x="80" y="580" fill="#aeb9c7">Also flags retired model IDs · CLI · GitHub Action · MCP server</text>
   </g>
 </svg>

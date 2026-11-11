@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
+
+### Fixed
+
+- The retirement guide now states the right review and stale dates, and lists what the source scan does not see. The Action guide says non-mock configs need their key variables set for the doctor step. The CLI reference documents `init --api-key-env`, `--write-env-example` and `--force`, `--replace-approval-receipt`, `catalog probe --ledger`, `pricing-refresh --provider`, and `--all-unapproved`, `--select-candidates` and `--write-config` for `catalog refresh` and `watch-new`. The decision reference notes that undated hand-typed prices only block under `require_current_pricing`.
+
 ## 2.24.2 - 2026-11-11
 
 ### Added

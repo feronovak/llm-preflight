@@ -56,6 +56,9 @@ approval. It may be attached to `fail` as well as `inconclusive`, and covers:
 - a mock-only run, which is useful for local validation but cannot provide
   live-provider evidence.
 
+An undated or custom hand-typed price is not on this list and does not block
+unless `require_current_pricing` is true.
+
 Final-attempt latency does not account for retry attempts. When their usage
 was not retained, retries make cost evidence incomplete and prevent a billable
 run from passing. Known final-response cost remains in the subtotal. A request

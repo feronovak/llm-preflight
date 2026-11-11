@@ -1,6 +1,6 @@
 # Agent decision contract
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Every completed benchmark result includes an additive `decision` object. It is
 the machine-readable boundary for agents: consume it from the JSON artifact or

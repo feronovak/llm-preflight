@@ -353,10 +353,10 @@ def test_public_docs_make_the_catalog_lifecycle_primary():
         assert command in tutorial
     assert "compatibility aliases" in cli_reference
     assert "compatibility aliases" in tutorial
-    assert "catalog prepare" in Path("README.md").read_text()
+    assert "docs/guides/model-change.md#common-jobs" in Path("README.md").read_text()
     assert "catalog prepare" in Path("docs/guides/model-change.md").read_text()
     assert "--approve-to" in Path("docs/guides/interactive-runs.md").read_text()
-    assert "--migration-check" in Path("README.md").read_text()
+    assert "--migration-check" in Path("docs/guides/model-change.md").read_text()
     assert "--migration-check" in Path("docs/getting-started/safe-demo.md").read_text()
     assert "--migration-check" in Path("docs/reference/cli.md").read_text()
     assert Path("docs/operations/troubleshooting.md").exists()
@@ -369,11 +369,13 @@ def test_public_docs_give_beginner_and_scripted_users_clear_starting_paths():
     assert "## Choose your path" in readme
     for destination in (
         "docs/getting-started/safe-demo.md",
-        "docs/guides/output-contracts.md",
         "docs/guides/model-catalog.md",
         "docs/automation/ci.md",
     ):
         assert destination in readme
+    model_change = Path("docs/guides/model-change.md").read_text()
+    assert "docs/guides/output-contracts.md" in model_change
+    assert "## Change a model safely" in model_change
     assert "## Choose your next path" in getting_started
     assert "custom contract test" in getting_started
     assert "CI and JSON output" in getting_started
@@ -479,7 +481,8 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
     assert "examples/github-actions/preflight.yml" in ci
     assert "## CLI, CI, and MCP" in readme
     assert "## Safety boundary" in readme
-    assert "## Common jobs" in readme
+    assert "## Common jobs" in Path("docs/guides/model-change.md").read_text()
+    assert "docs/guides/model-change.md#common-jobs" in readme
     assert (
         "Release notes for every version are in the [changelog]"
         "(https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)." in readme

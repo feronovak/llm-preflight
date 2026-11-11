@@ -1,8 +1,8 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-11-11 · **As of:** v2.24.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
-**Latest measurement:** 2026-11-11, five added native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`, `claude-mythos-5-2`), beside `claude-fable-5-2` (2026-11-11) and the 19 native model IDs measured on 2026-10-29: **25 models** in all; eight cases each.
+**Latest measurement:** 2026-11-11, five added native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`, `claude-mythos-5-2`), beside `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **26 models** in all (the README image summarizes 25, without the Mythos row); eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -29,7 +29,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 20 of 25 with all added rows). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 21 of 26 with all added rows). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -46,6 +46,7 @@ provider fallback, alternative routes or additional paid probes were made.
 | Gemini | `gemini-4-argon` | 8/8 | 8/8 | 5.186s | $0.002728 |
 | Gemini | `gemini-3.8-flash` | 8/8 | 8/8 | 2.621s | $0.002723 |
 | Gemini | `gemini-3.6-flash` | 8/8 | 8/8 | 1.359s | $0.004005 |
+| Gemini (added 2026-11-11) | `gemini-3.1-flash-lite` | 8/8 | 8/8 | 1.050s | $0.001793 |
 | xAI | `grok-4.7` | 8/8 | 8/8 | 1.567s | $0.007536 |
 | DeepSeek | `deepseek-v4-pro` | 8/8 | 8/8 | 1.766s | $0.004220 |
 | DeepSeek | `deepseek-flash` | 8/8 | 8/8 | 1.297s | $0.000809 |
@@ -59,7 +60,7 @@ The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,
 case and private-result hashes. The known token-cost subtotal is **$0.06902127**
 across **147** calls with usage (**$0.08218127** across **155** calls with Claude Fable 5.2,
-**$0.09205434** across **187** calls with all added rows). **Total cost remains unknown** because the five
+**$0.09205434** across **187** calls with the five-model rows, **$0.09384684** across **195** calls with all added rows). **Total cost remains unknown** because the five
 API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
 the table and image label that subtotal as partial, while its full eight-call cost remains unknown. API errors
 are not assumed free. The approved maximum token-based estimate was **$1.64**,
@@ -184,6 +185,21 @@ a same-run comparison.
 To reconstruct one of these rows, use the same snippet as below with
 `docs/data/model-comparison-2026-11-11-five-models.json`, that model, and a 2.24.1
 source checkout.
+
+## 2026-11-11 Gemini 3.1 Flash-Lite
+
+On **2026-11-11** a separate owner-approved run measured `gemini-3.1-flash-lite`
+(already in the price table, measured only in the September study) on the same
+eight cases and settings as the 2026-10-29 rows: native Gemini route, `LOW`
+thinking, 1,024-token output allowance, one attempt, no warmups, no retries,
+source build 2.24.2. All 8 calls returned API responses and passed validation.
+The planned maximum estimate was **$0.012429** against an approved **$0.015**
+ceiling; the measured cost was **$0.001793**. The
+[machine-readable aggregate](../data/model-comparison-2026-11-11-flash-lite.json)
+retains the row, settings, config and result hashes. It was measured on a
+different day and build than the 2026-10-29 rows, so it is not a same-run
+comparison. The September study's 0.977s figure used two repetitions and a
+512-token output allowance and is not comparable.
 
 ## 2026-10-14 bounded comparison
 

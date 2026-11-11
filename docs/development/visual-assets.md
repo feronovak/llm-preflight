@@ -109,7 +109,7 @@ figure at its intended display width before publication.
 
 Generate the figure from retained aggregates; never edit its numerical SVG
 labels by hand. The default summary joins the October 29 and
-November 11 JSON files (the five-model aggregate and the Fable 5.2 aggregate), in that order, and keeps its 24 summarized models in one image, grouped by result (a hidden-model list in the script leaves out rows that stay in the guide). It writes a dark and a light variant; the README shows them through `<picture>`. Repeat
+November 11 JSON files (the five-model, Fable 5.2 and Flash-Lite aggregates), in that order, and keeps its 25 summarized models in one image, grouped by result (a hidden-model list in the script leaves out rows that stay in the guide). It writes a dark and a light variant; the README shows them through `<picture>`. Repeat
 `--data` to join other aggregates in the order given; a `--data` run uses only the
 files it names and never silently inherits historical rows.
 
@@ -194,7 +194,7 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-11-11.svg` | Current measured results, dark, 1040×1380; 24 rows in three result groups | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/measured-models-2026-11-11.svg` | Current measured results, dark, 1040×1380; 25 rows in three result groups | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
 | `docs/images/measured-models-2026-11-11-light.svg` | Light variant of the current measured results, same size and rows | Same renderer, `colors_light` tokens in `style.json` |
 | `docs/images/social-preview.svg` | Social preview source, 1280×640 | Hand-authored SVG with the documentation palette; render the PNG with a Liberation Sans renderer, e.g. `rsvg-convert -w 1280 -h 640 docs/images/social-preview.svg -o docs/images/social-preview.png`; upload in repository settings |
 | `docs/images/measured-models-2026-10-29.svg` | Previous measured results, 1280×1516; 19 rows | Retained October 29 aggregates; unchanged for older links |

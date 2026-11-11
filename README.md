@@ -138,35 +138,35 @@ For benchmark runs, read the decision before acting:
 
 ## New
 
-Claude Fable 5.2 and four more models in the comparison guide. Everything else
+Claude Fable 5.2, Gemini 3.1 Flash-Lite and four more models in the comparison guide. Everything else
 is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-We ran **24 native model routes** through eight synthetic support-routing and
-strict JSON cases each. **184 of 192 checks passed**: three outputs failed their
-contract and five Kimi calls returned HTTP 429. **20 models passed all eight
+We ran **25 native model routes** through eight synthetic support-routing and
+strict JSON cases each. **192 of 200 checks passed**: three outputs failed their
+contract and five Kimi calls returned HTTP 429. **21 models passed all eight
 checks.** These are observations for this workload as of 2026-11-11, not a
 ranking of general intelligence or production approval.
 
 <a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
 <picture>
 <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
-<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="24 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="25 models attempted on 8 checks: 21 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
 </picture>
 </a>
 
 Each request used a 1,024-token output allowance and one attempt, with no
 retries. Passed counts valid outputs out of API responses; API errors are
 separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
-averages API responses only. The known token-cost subtotal is **$0.09205434**
-across 187 calls with usage; the total is unknown because the five error
+averages API responses only. The known token-cost subtotal is **$0.09384684**
+across 195 calls with usage; the total is unknown because the five error
 responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 before comparing rows. It has the method and the failure analysis.
 
 <details>
-<summary>The same 24 rows as a table</summary>
+<summary>The same 25 rows as a table</summary>
 
 | Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured |
 |---|---|---|---|---|---|---|---|
@@ -183,6 +183,7 @@ before comparing rows. It has the method and the failure analysis.
 | Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 |
 | Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 |
 | Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 |
+| Gemini 3.1 Flash-Lite | Gemini | Passed 8/8 | 8/8 | 0 | 1.050s | $0.001793 | 2026-11-11 |
 | Grok 4.7 | xAI | Passed 8/8 | 8/8 | 0 | 1.567s | $0.007536 | 2026-10-29 |
 | DeepSeek V4 Pro | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.766s | $0.004220 | 2026-10-29 |
 | DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 |

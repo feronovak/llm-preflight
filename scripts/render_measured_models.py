@@ -18,6 +18,7 @@ DEFAULT_DATA = (
     ROOT / "docs/data/model-comparison-2026-10-29.json",
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-five-models.json",
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json",
+    ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-flash-lite.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (

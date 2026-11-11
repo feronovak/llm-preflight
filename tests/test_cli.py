@@ -5028,6 +5028,24 @@ def test_shipped_request_cap_examples_dry_run_exit_0(monkeypatch, capsys, exampl
     assert limits["violations"] == []
 
 
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+@pytest.mark.parametrize("value", ["nan", "inf"])
+def test_dry_run_rejects_a_non_finite_cap_like_the_live_run(
+    monkeypatch, tmp_path, capsys, key, value
+):
+    config = _capped_config(tmp_path, **{key: value})
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(
+        monkeypatch, capsys, str(config), "--dry-run", "--json", "--no-env-file"
+    )
+    assert live[0] == dry[0] == 2
+    assert f"{key} must be a number" in dry[2]
+    assert dry[2] == live[2]
+    assert dry[1] == ""
+
+
 def test_dry_run_text_flags_the_breach(monkeypatch, tmp_path, capsys):
     _code, out, _err = _cap_cli(
         monkeypatch, capsys, str(_capped_config(tmp_path)), "--dry-run", "--no-env-file"

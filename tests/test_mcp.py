@@ -406,6 +406,45 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     ]
 
 
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+@pytest.mark.parametrize("value", ["nan", "inf"])
+def test_dry_run_plan_rejects_a_non_finite_cap(tmp_path, key, value):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                key: value,
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "m",
+                        "response": "ok",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 1,
+                    }
+                ],
+            }
+        )
+    )
+
+    result = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )["result"]
+
+    assert result["isError"] is True
+    assert f"{key} must be a number" in json.dumps(result)
+    assert "NaN" not in json.dumps(result.get("structuredContent", {}))
+
+
 def test_dry_run_plan_schema_describes_budget_limits(tmp_path):
     tools = mcp._response({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, tmp_path)
     schema = next(

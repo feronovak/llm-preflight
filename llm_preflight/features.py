@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 from collections.abc import Iterator
 from datetime import date
@@ -281,9 +282,12 @@ _COVERAGE_REFUSAL = (
 
 def _cap(key: str, value: Any, kind: type[int | float]) -> Any:
     try:
-        return kind(value)
-    except (TypeError, ValueError):
+        number = kind(value)
+    except (TypeError, ValueError, OverflowError):
         raise ValueError(f"{key} must be a number, not {value!r}") from None
+    if not math.isfinite(number):
+        raise ValueError(f"{key} must be a number, not {value!r}")
+    return number
 
 
 def budget_limits(

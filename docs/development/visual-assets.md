@@ -20,7 +20,7 @@ generation. Sizes below are source pixels before browser scaling.
 
 | Profile | Font | Sizes |
 |---|---|---|
-| Documentation figures and measured models | Liberation Sans; fall back to Arial, Helvetica, sans-serif | Title 31; subtitle 20; column headers 19 bold; model names 21; values 19; footnotes 18 |
+| Documentation figures and measured models | Liberation Sans; fall back to Arial, Helvetica, sans-serif | Title 30; subtitle 19; column and group headers 19 bold; model names 19 bold; values 19; the measured-models canvas is 1040 wide, so body text renders at about 15 px in GitHub's 830 px column |
 | Terminal contents | Liberation Mono, with DejaVu Sans Mono fallback for new captures | 22; line-height 1.2; preserve the CLI's native ANSI colors |
 | Terminal captions | Liberation Sans | Outcome title 24 bold; explanation 22; badge 19 bold; window title and small labels 17 |
 | Product report cards | Helvetica, Arial, sans-serif; values use ui-monospace, Menlo, Consolas, DejaVu Sans Mono, monospace | Product label 16 bold; verdict 28 bold; field labels 13 bold; values 14 mono; evidence footer 12 mono |
@@ -54,6 +54,10 @@ Use status colors for the stated outcome, not as a model-family brand color.
 Unknown values display `—` with a nearby explanation; they never become zero.
 Primary text and status labels must retain readable contrast on their surface.
 Color alone must not distinguish pass, failure or missing evidence.
+
+The light variant of the measured-models figure uses the `colors_light` tokens in
+`style.json`: white canvas, `#f6f8fa` rows, `#eaeef2` header, `#1f2328` text,
+`#59636e` muted, pass `#1a7f37`, failure `#cf222e` and warning `#9a6700`.
 
 Terminal framing uses a `#080c12` outer canvas, `#252b34` title bar and
 `#434a54` outline. Caption badges use pass `#3fb950`, failure `#f85149`,
@@ -105,7 +109,7 @@ figure at its intended display width before publication.
 
 Generate the figure from retained aggregates; never edit its numerical SVG
 labels by hand. The default summary joins the October 29 and
-November 11 JSON files, in that order, and keeps all 20 models in one image. Repeat
+November 11 JSON files (the five-model aggregate and the Fable 5.2 aggregate), in that order, and keeps its 24 summarized models in one image, grouped by result (a hidden-model list in the script leaves out rows that stay in the guide). It writes a dark and a light variant; the README shows them through `<picture>`. Repeat
 `--data` to join other aggregates in the order given; a `--data` run uses only the
 files it names and never silently inherits historical rows.
 
@@ -117,8 +121,7 @@ their count. `known_cost_subtotal_usd` with positive `cost_coverage.known_reques
 permits a clearly labelled partial cost when the total remains null. Optional top-level `display_title` names the workload.
 
 Use the same positive request count for each row in one figure so its cost
-column has a truthful denominator. The subtitle shows the model and request counts only; each row keeps its actual
-route and its `observed_on` in the data. Preserve separate rows when the same model has native and routed
+column has a truthful denominator. The subtitle shows the model count, request count and the date range of `observed_on`; each row shows its route beside the model name. Preserve separate rows when the same model has native and routed
 observations. Keep missing latency/cost null in the JSON and unavailable in
 the image. Never infer a native Z.ai, DeepSeek or Qwen observation from an
 OpenRouter call. Keep model errors and wrong-label responses in the dataset.
@@ -191,7 +194,8 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-11-11.svg` | Current measured results, 1280×1576; 20 rows | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/measured-models-2026-11-11.svg` | Current measured results, dark, 1040×1380; 24 rows in three result groups | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/measured-models-2026-11-11-light.svg` | Light variant of the current measured results, same size and rows | Same renderer, `colors_light` tokens in `style.json` |
 | `docs/images/social-preview.svg` | Social preview source, 1280×640 | Hand-authored SVG with the documentation palette; render the PNG with a Liberation Sans renderer, e.g. `rsvg-convert -w 1280 -h 640 docs/images/social-preview.svg -o docs/images/social-preview.png`; upload in repository settings |
 | `docs/images/measured-models-2026-10-29.svg` | Previous measured results, 1280×1516; 19 rows | Retained October 29 aggregates; unchanged for older links |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |

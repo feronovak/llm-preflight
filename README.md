@@ -143,19 +143,59 @@ is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-We ran a selection of **20 native model routes** through eight synthetic
-support-routing and strict JSON cases each. **152 of 160 checks passed**: three
-outputs failed their contract and five Kimi calls returned HTTP 429. **16
-models passed all eight checks.** These are observations for this workload as
-of 2026-11-11, not a ranking of general intelligence or production approval.
+We ran **24 native model routes** through eight synthetic support-routing and
+strict JSON cases each. **184 of 192 checks passed**: three outputs failed their
+contract and five Kimi calls returned HTTP 429. **20 models passed all eight
+checks.** These are observations for this workload as of 2026-11-11, not a
+ranking of general intelligence or production approval.
 
-[![All 20 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+<a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
+<picture>
+<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="24 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
+</picture>
+</a>
 
 Each request used a 1,024-token output allowance and one attempt, with no
-retries. The known token-cost subtotal is **$0.08218127**; the total is unknown
-because the five error responses supplied no usage. The
+retries. Passed counts valid outputs out of API responses; API errors are
+separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
+averages API responses only. The known token-cost subtotal is **$0.09205434**
+across 187 calls with usage; the total is unknown because the five error
+responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
-has every row, the method and the failure analysis.
+before comparing rows. It has the method and the failure analysis.
+
+<details>
+<summary>The same 24 rows as a table</summary>
+
+| Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured |
+|---|---|---|---|---|---|---|---|
+| GPT-6 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 2.089s | $0.010580 | 2026-10-29 |
+| GPT-6.1 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.476s | $0.002116 | 2026-10-29 |
+| GPT-6.1 Terra | OpenAI | Passed 8/8 | 8/8 | 0 | 1.192s | $0.001218 | 2026-10-29 |
+| GPT-6 Luna | OpenAI | Passed 8/8 | 8/8 | 0 | 1.205s | $0.000174 | 2026-10-29 |
+| Claude Fable 5.2 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.923s | $0.013160 | 2026-11-11 |
+| Claude Fable 5.1 | Anthropic | Passed 8/8 | 8/8 | 0 | 0.923s | $0.014500 | 2026-10-29 |
+| Claude Opus 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.497s | $0.005740 | 2026-10-29 |
+| Claude Sonnet 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.421s | $0.002870 | 2026-10-29 |
+| Claude Haiku 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.758s | $0.000150 | 2026-10-29 |
+| Gemini 4 Argon | Gemini | Passed 8/8 | 8/8 | 0 | 5.186s | $0.002728 | 2026-10-29 |
+| Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 |
+| Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 |
+| Grok 4.7 | xAI | Passed 8/8 | 8/8 | 0 | 1.567s | $0.007536 | 2026-10-29 |
+| DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 |
+| DeepSeek V4 Pro | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.766s | $0.004220 | 2026-10-29 |
+| Qwen 3.8 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 3.834s | $0.006034 | 2026-10-29 |
+| Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 |
+| MiniMax M3 | MiniMax | Passed 8/8 | 8/8 | 0 | 2.119s | $0.000680 | 2026-11-11 |
+| Mistral Large 4 | Mistral | Passed 8/8 | 8/8 | 0 | 7.043s | $0.005918 | 2026-11-11 |
+| Qwen 3.8 Flash | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.689s | $0.000547 | 2026-11-11 |
+| GLM 5.3 | Z.ai | Contract failures | 7/8 · 1 wrong queue | 0 | 1.461s | $0.001398 | 2026-10-29 |
+| GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.832s | $0.000162 | 2026-10-29 |
+| GLM 5.3 FlashX | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.091s | $0.000391 | 2026-10-29 |
+| Kimi K3.1 Pro | Moonshot/Kimi | Incomplete | 3/3 | 5 rate limits | 2.217s | $0.001668 known | 2026-10-29 |
+
+</details>
 
 Your model is not here? Check it against your own contract:
 [use the result in your own project](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md#use-the-result-in-your-own-project)

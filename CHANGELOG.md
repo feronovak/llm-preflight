@@ -13,6 +13,7 @@ Changes below are marked `Breaking:` where they can change an exit code.
 
 ### Changed
 
+- The README's measured-models image now shows all 24 summarized models in three result groups, with a light variant, shorter columns and larger text, and the README gives the same rows as a collapsed table. `scripts/render_measured_models.py` writes both variants.
 - `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
 
 ### Fixed

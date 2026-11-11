@@ -37,7 +37,11 @@ python3 -m pip install llm-preflight
 The activation command is for POSIX shells; PowerShell uses
 `.\.venv\Scripts\Activate.ps1`.
 
-### 1. Watch an invalid response get caught
+Already have LLM code? `llm-preflight --audit-source .` reports literal model
+IDs marked retired or retiring in the bundled snapshot. No config or key is
+needed.
+
+### 1. Catch an invalid response
 
 Save this as `routing.json`. The app accepts `billing`, `technical` or
 `account`. The config has two response fixtures: `model-reply` must pass and

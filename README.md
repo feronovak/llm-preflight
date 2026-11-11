@@ -329,9 +329,9 @@ usually do not:
 
 | You already have | It is good for | LLM Preflight adds |
 |---|---|---|
-| A pytest assertion on a model reply | Unit-level checks in your test suite | Spend-capped dry runs that preview the provider request and estimated cost before any live call |
-| An evaluation framework | Semantic scoring and statistical comparisons | Retirement and pricing snapshots for the model IDs you use, checked locally |
-| An observability tool | Production tracing and incident investigation | A merge gate tied to a fresh CI record of the contract check |
+| A pytest assertion on a model reply | Unit-level checks in your test suite | A merge gate tied to a fresh CI record of the contract check |
+| An evaluation framework | Semantic scoring and statistical comparisons | Spend-capped dry runs that preview the provider request and estimated cost before any live call |
+| An observability tool | Production tracing and incident investigation | Retirement and pricing snapshots for the model IDs you use, checked locally |
 
 See [when to use it](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md).
 

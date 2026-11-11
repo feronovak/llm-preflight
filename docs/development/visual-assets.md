@@ -78,7 +78,7 @@ product card fixtures.
 
 | Asset class | Source size | Layout |
 |---|---|---|
-| Measured-results image | 1280 px wide; current 19-row image is 1516 px high | 32 px text margins; 16 px panel margins; 16 px corners; header starts at y=148; data at y=196; 60 px per row; 180 px footer |
+| Measured-results image | 1280 px wide; current 20-row image is 1576 px high | 32 px text margins; 16 px panel margins; 16 px corners; header starts at y=148; data at y=196; 60 px per row; 180 px footer |
 | Terminal GIF and MP4 | 1248 × 996 px | 90 columns × 28 rows; native viewport beneath window chrome; captions outside the viewport; 16 px outer frame margins |
 | Product report card | 600 px wide; content determines height | 20 px margin, 2 px black outline, native wrapping and verdict band |
 | Historical demo GIF | 1100 × 720 px | Frozen legacy assets; new recordings use the current terminal profile |
@@ -189,7 +189,8 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-10-29.svg` | Current measured results, 1280×1516; 19 rows | `scripts/render_measured_models.py`; October 29 aggregates |
+| `docs/images/measured-models-2026-11-11.svg` | Current measured results, 1280×1576; 20 rows | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/measured-models-2026-10-29.svg` | Previous measured results, 1280×1516; 19 rows | Retained October 29 aggregates; unchanged for older links |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |
 | `docs/images/contract-check-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 23 seconds | Actual local contract-check pass/reject/fix session; follow terminal rules above |
 | `docs/images/default-template-evidence-session.gif` and `.mp4` | Current terminal, 1248 × 996; about 30 seconds | Actual init/default interactive mock and CLI JSON session; refreshed for 2.22.2 evidence-aware summary |

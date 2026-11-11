@@ -1,14 +1,14 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.1
 
-**Latest measurement:** 2026-10-29, 19 native model IDs, eight cases each.
+**Latest measurement:** 2026-11-11, one added native model ID (`claude-fable-5-2`), beside the 19 native model IDs measured on 2026-10-29; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
 production traffic, a universal ranking or production approval.
 
-## 2026-10-29 bounded comparison
+## 2026-10-29 bounded comparison, plus Claude Fable 5.2 on 2026-11-11
 
 The owner-approved run used the unpublished **2.23.0 source build**, the same
 eight support-routing and strict JSON cases once per model, no warmups, and
@@ -16,9 +16,20 @@ one attempt per request. All models used a **1,024-token output allowance** and
 low reasoning effort where supported. Requests within each model were sequential;
 up to four provider blocks could overlap on the same host. All routes were native.
 
-All **152** planned calls were attempted: **147** returned API responses,
+The last table row was added later. On **2026-11-11** a separate owner-approved
+run measured only `claude-fable-5-2` on the same eight cases, with the same
+settings (1,024-token output allowance, low output effort, one attempt, no
+warmups, native Anthropic route) using source build 2.24.1. All 8 calls returned
+API responses and passed validation; no retry was made. Its planned maximum
+estimate was **$0.332176** against an approved **$0.35** ceiling; the measured
+cost was **$0.013160**. The 2026-10-29 rows keep their data and date. The two runs
+were on different days and builds, so the added row is not a same-run comparison.
+Its [machine-readable aggregate](../data/model-comparison-2026-11-11.json) retains
+the row, settings, config and result hashes.
+
+The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks.** No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with the added row). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -42,11 +53,13 @@ provider fallback, alternative routes or additional paid probes were made.
 | Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
 | Z.ai | `glm-5.3-flashx` | 7/8 | 8/8 | 1.091s | $0.000391 |
 | Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | $0.001668 known; total unknown |
+| Anthropic (added 2026-11-11) | `claude-fable-5-2` | 8/8 | 8/8 | 1.923s | $0.013160 |
 
 The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,
 case and private-result hashes. The known token-cost subtotal is **$0.06902127**
-across **147** calls with usage. **Total cost remains unknown** because the five
+across **147** calls with usage (**$0.08218127** across **155** calls with the
+added row). **Total cost remains unknown** because the five
 API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
 the table and image label that subtotal as partial, while its full eight-call cost remains unknown. API errors
 are not assumed free. The approved maximum token-based estimate was **$1.64**,
@@ -119,6 +132,9 @@ llm-preflight comparison.json --doctor
 llm-preflight comparison.json --pricing-check
 llm-preflight comparison.json --dry-run
 ```
+
+To reconstruct the added `claude-fable-5-2` row, use a 2.24.1 source checkout and
+the same snippet with `docs/data/model-comparison-2026-11-11.json` and that model.
 
 The snippet refuses to overwrite an existing config. Inspect current route,
 price freshness, reasoning/output allowance and request limits before approving

@@ -102,19 +102,20 @@ A passing run is evidence for the configured workload, not production approval.
 
 ## Observed results on a support-routing contract
 
-The latest measurement, **2026-10-29**, tested **19 native model routes** on eight
-synthetic support-routing and strict JSON cases each. **144 of 152 checks passed**:
-three outputs failed their contract and five Kimi calls returned HTTP 429.
-**15 models passed all eight checks.** These are workload observations, not a
+The latest measurements, **2026-10-29** (19 models) and **2026-11-11** (Claude
+Fable 5.2), tested **20 native model routes** on eight synthetic support-routing
+and strict JSON cases each. **152 of 160 checks passed**: three outputs failed
+their contract and five Kimi calls returned HTTP 429. **16 models passed all
+eight checks.** These are workload observations, not a
 ranking of general intelligence or production approval.
 
-[![All 19 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-10-29.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+[![All 20 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 
 Latency includes successful API responses, including contract failures, and
-excludes API errors. The known token-cost subtotal is **$0.06902127**; total cost
+excludes API errors. The known token-cost subtotal is **$0.08218127**; total cost
 is unknown because five error responses supplied no usage. Each request used a
 1,024-token output allowance and one attempt. No retries were made.
-[Read all 19 rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
+[Read all 20 rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
 Previous dated measurements remain available as history.
 
 <a id="purpose"></a>

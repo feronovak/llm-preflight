@@ -58,7 +58,15 @@ def test_docs_home_and_mcp_guide_are_first_class_entry_points():
 def test_documented_model_list_matches_comparison_evidence():
     import xml.etree.ElementTree as ET
 
-    data = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    data = {
+        "rows": [
+            row
+            for day in ("2026-10-29", "2026-11-11")
+            for row in json.loads(
+                (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
+            )["rows"]
+        ]
+    }
     readme = (ROOT / "README.md").read_text()
     ns = {"svg": "http://www.w3.org/2000/svg"}
     expected = {
@@ -74,18 +82,18 @@ def test_documented_model_list_matches_comparison_evidence():
         for row in data["rows"]
     }
     seen = []
-    name = "measured-models-2026-10-29.svg"
+    name = "measured-models-2026-11-11.svg"
     assert name in readme
     image = ET.parse(ROOT / "docs/images" / name).getroot()
     rows = image.findall("svg:g[@data-model]", ns)
-    assert len(rows) == 19
+    assert len(rows) == 20
     for row in rows:
         values = ["".join(cell.itertext()) for cell in row.findall("svg:text", ns)]
         assert tuple(values[1:]) == expected[values[0]]
         seen.append(values[0])
     assert "not a ranking" in image.find("svg:desc", ns).text
     assert not image.findall(".//svg:script", ns)
-    assert len(seen) == len(set(seen)) == len(expected) == 19
+    assert len(seen) == len(set(seen)) == len(expected) == 20
     assert set(seen) == set(expected)
     assert {row["provider"] for row in data["rows"]} == {
         "openai",
@@ -1219,7 +1227,7 @@ def test_measured_model_image_is_reproducible(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert (
         output.read_bytes()
-        == (ROOT / "docs/images/measured-models-2026-10-29.svg").read_bytes()
+        == (ROOT / "docs/images/measured-models-2026-11-11.svg").read_bytes()
     )
     output.write_text("outdated image")
     result = subprocess.run(
@@ -1481,16 +1489,40 @@ def test_latest_comparison_keeps_the_approved_low_cost_contract_and_private_raw_
         assert marker not in json.dumps(data)
 
 
-def test_default_measured_image_uses_only_the_latest_run():
+def test_default_measured_image_adds_the_later_run_without_redating_earlier_rows():
     from scripts.render_measured_models import observed_rows
 
-    current = json.loads(
-        (ROOT / "docs/data/model-comparison-2026-10-29.json").read_text()
+    base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    added = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-11-11.json").read_text()
     )
     rows = observed_rows()
-    assert len(rows) == 19
-    assert {row[0] for row in rows} == {row["display_name"] for row in current["rows"]}
-    assert {row[4] for row in rows} == {"2026-10-29"}
+    assert len(rows) == 20
+    assert [row[0] for row in rows] == [
+        row["display_name"] for row in base["rows"] + added["rows"]
+    ]
+    assert [row[4] for row in rows] == ["2026-10-29"] * 19 + ["2026-11-11"]
+
+
+def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-11-11.json").read_text())
+    base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    assert data["approved_maximum_requests"] == 8
+    assert (
+        data["planned_maximum_token_estimate_usd"]
+        <= data["approved_maximum_token_estimate_usd"]
+        <= 0.35
+    )
+    assert data["method"]["case_set_sha256"] == base["method"]["case_set_sha256"]
+    (row,) = data["rows"]
+    assert row["model"] == "claude-fable-5-2" and row["observed_on"] == "2026-11-11"
+    assert row["requests"] == 8 and row["retry_count"] == 0
+    assert row["valid"] + row["contract_failures"] == row["api_successful"]
+    assert row["request"] == base["rows"][4]["request"]
+    assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+    assert data["totals"]["known_cost_subtotal_usd"] == row["known_cost_subtotal_usd"]
+    for marker in ("/home/", "scratch", '"response":', '"api_key":'):
+        assert marker not in json.dumps(data)
 
 
 def test_public_documentation_checks_work_without_private_planning_files(monkeypatch):
@@ -1520,7 +1552,7 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     svg = ET.fromstring(module.render())
     ns = {"svg": "http://www.w3.org/2000/svg"}
     texts = list(svg.itertext())
-    assert "Eight application checks across 19 models" in texts
+    assert "Eight application checks across 20 models" in texts
     assert (
         "Small synthetic sample; passing does not establish overall model quality."
         in texts

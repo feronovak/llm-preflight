@@ -14,7 +14,7 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. Explicit owner 
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 19 native routes
-on 2026-10-29, with eight cases each: 144 of 152 validated outputs, three contract
+on 2026-10-29 and Claude Fable 5.2 on 2026-11-11, with eight cases each: 152 of 160 validated outputs, three contract
 failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.

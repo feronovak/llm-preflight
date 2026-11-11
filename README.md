@@ -180,19 +180,19 @@ before comparing rows. It has the method and the failure analysis.
 | Claude Sonnet 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.421s | $0.002870 | 2026-10-29 |
 | Claude Haiku 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.758s | $0.000150 | 2026-10-29 |
 | Gemini 4 Argon | Gemini | Passed 8/8 | 8/8 | 0 | 5.186s | $0.002728 | 2026-10-29 |
+| Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 |
 | Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 |
 | Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 |
 | Grok 4.7 | xAI | Passed 8/8 | 8/8 | 0 | 1.567s | $0.007536 | 2026-10-29 |
-| DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 |
 | DeepSeek V4 Pro | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.766s | $0.004220 | 2026-10-29 |
+| DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 |
 | Qwen 3.8 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 3.834s | $0.006034 | 2026-10-29 |
-| Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 |
+| Qwen 3.8 Flash | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.689s | $0.000547 | 2026-11-11 |
 | MiniMax M3 | MiniMax | Passed 8/8 | 8/8 | 0 | 2.119s | $0.000680 | 2026-11-11 |
 | Mistral Large 4 | Mistral | Passed 8/8 | 8/8 | 0 | 7.043s | $0.005918 | 2026-11-11 |
-| Qwen 3.8 Flash | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.689s | $0.000547 | 2026-11-11 |
 | GLM 5.3 | Z.ai | Contract failures | 7/8 · 1 wrong queue | 0 | 1.461s | $0.001398 | 2026-10-29 |
-| GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.832s | $0.000162 | 2026-10-29 |
 | GLM 5.3 FlashX | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.091s | $0.000391 | 2026-10-29 |
+| GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.832s | $0.000162 | 2026-10-29 |
 | Kimi K3.1 Pro | Moonshot/Kimi | Incomplete | 3/3 | 5 rate limits | 2.217s | $0.001668 known | 2026-10-29 |
 
 </details>

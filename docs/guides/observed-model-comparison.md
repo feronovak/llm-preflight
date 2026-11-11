@@ -47,12 +47,12 @@ provider fallback, alternative routes or additional paid probes were made.
 | Gemini | `gemini-3.8-flash` | 8/8 | 8/8 | 2.621s | $0.002723 |
 | Gemini | `gemini-3.6-flash` | 8/8 | 8/8 | 1.359s | $0.004005 |
 | xAI | `grok-4.7` | 8/8 | 8/8 | 1.567s | $0.007536 |
-| DeepSeek | `deepseek-flash` | 8/8 | 8/8 | 1.297s | $0.000809 |
 | DeepSeek | `deepseek-v4-pro` | 8/8 | 8/8 | 1.766s | $0.004220 |
+| DeepSeek | `deepseek-flash` | 8/8 | 8/8 | 1.297s | $0.000809 |
 | Alibaba Singapore | `qwen3.8-max` | 8/8 | 8/8 | 3.834s | $0.006034 |
 | Z.ai | `glm-5.3` | 7/8 | 8/8 | 1.461s | $0.001398 |
-| Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
 | Z.ai | `glm-5.3-flashx` | 7/8 | 8/8 | 1.091s | $0.000391 |
+| Z.ai | `glm-5.3-flash` | 7/8 | 8/8 | 1.832s | $0.000162 |
 | Moonshot/Kimi | `kimi-k3.1-pro` | 3/8 | 3/8 | 2.217s | $0.001668 known; total unknown |
 
 The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)

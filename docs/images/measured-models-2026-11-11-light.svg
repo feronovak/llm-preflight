@@ -89,34 +89,34 @@
 <text x="860" y="645" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.002728</text>
 </g>
 <rect x="16" y="660" width="1008" height="44" fill="#f6f8fa"/>
-<g data-model="Gemini 3.8 Flash">
-<text x="32" y="689" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 3.8 Flash</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
+<g data-model="Gemini 4 Carbon">
+<text x="32" y="689" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 4 Carbon</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
 <text x="372" y="689" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="689" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="689" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.621s</text>
-<text x="860" y="689" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.002723</text>
+<text x="752" y="689" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">4.687s</text>
+<text x="860" y="689" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.002728</text>
 </g>
-<g data-model="Gemini 3.6 Flash">
-<text x="32" y="733" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 3.6 Flash</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
+<g data-model="Gemini 3.8 Flash">
+<text x="32" y="733" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 3.8 Flash</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
 <text x="372" y="733" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="733" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="733" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.359s</text>
-<text x="860" y="733" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.004005</text>
+<text x="752" y="733" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.621s</text>
+<text x="860" y="733" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.002723</text>
 </g>
 <rect x="16" y="748" width="1008" height="44" fill="#f6f8fa"/>
-<g data-model="Grok 4.7">
-<text x="32" y="777" font-size="19" fill="#1f2328"><tspan font-weight="700">Grok 4.7</tspan><tspan fill="#59636e"> · xAI</tspan></text>
+<g data-model="Gemini 3.6 Flash">
+<text x="32" y="777" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 3.6 Flash</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
 <text x="372" y="777" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="777" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="777" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.567s</text>
-<text x="860" y="777" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.007536</text>
+<text x="752" y="777" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.359s</text>
+<text x="860" y="777" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.004005</text>
 </g>
-<g data-model="DeepSeek Flash">
-<text x="32" y="821" font-size="19" fill="#1f2328"><tspan font-weight="700">DeepSeek Flash</tspan><tspan fill="#59636e"> · DeepSeek</tspan></text>
+<g data-model="Grok 4.7">
+<text x="32" y="821" font-size="19" fill="#1f2328"><tspan font-weight="700">Grok 4.7</tspan><tspan fill="#59636e"> · xAI</tspan></text>
 <text x="372" y="821" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="821" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="821" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.297s</text>
-<text x="860" y="821" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000809</text>
+<text x="752" y="821" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.567s</text>
+<text x="860" y="821" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.007536</text>
 </g>
 <rect x="16" y="836" width="1008" height="44" fill="#f6f8fa"/>
 <g data-model="DeepSeek V4 Pro">
@@ -126,42 +126,42 @@
 <text x="752" y="865" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.766s</text>
 <text x="860" y="865" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.004220</text>
 </g>
-<g data-model="Qwen 3.8 Max">
-<text x="32" y="909" font-size="19" fill="#1f2328"><tspan font-weight="700">Qwen 3.8 Max</tspan><tspan fill="#59636e"> · Alibaba Singapore</tspan></text>
+<g data-model="DeepSeek Flash">
+<text x="32" y="909" font-size="19" fill="#1f2328"><tspan font-weight="700">DeepSeek Flash</tspan><tspan fill="#59636e"> · DeepSeek</tspan></text>
 <text x="372" y="909" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="909" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="909" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">3.834s</text>
-<text x="860" y="909" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.006034</text>
+<text x="752" y="909" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.297s</text>
+<text x="860" y="909" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000809</text>
 </g>
 <rect x="16" y="924" width="1008" height="44" fill="#f6f8fa"/>
-<g data-model="Gemini 4 Carbon">
-<text x="32" y="953" font-size="19" fill="#1f2328"><tspan font-weight="700">Gemini 4 Carbon</tspan><tspan fill="#59636e"> · Gemini</tspan></text>
+<g data-model="Qwen 3.8 Max">
+<text x="32" y="953" font-size="19" fill="#1f2328"><tspan font-weight="700">Qwen 3.8 Max</tspan><tspan fill="#59636e"> · Alibaba Singapore</tspan></text>
 <text x="372" y="953" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="953" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="953" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">4.687s</text>
-<text x="860" y="953" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.002728</text>
-</g>
-<g data-model="MiniMax M3">
-<text x="32" y="997" font-size="19" fill="#1f2328"><tspan font-weight="700">MiniMax M3</tspan><tspan fill="#59636e"> · MiniMax</tspan></text>
-<text x="372" y="997" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
-<text x="592" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.119s</text>
-<text x="860" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000680</text>
-</g>
-<rect x="16" y="1012" width="1008" height="44" fill="#f6f8fa"/>
-<g data-model="Mistral Large 4">
-<text x="32" y="1041" font-size="19" fill="#1f2328"><tspan font-weight="700">Mistral Large 4</tspan><tspan fill="#59636e"> · Mistral</tspan></text>
-<text x="372" y="1041" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
-<text x="592" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">7.043s</text>
-<text x="860" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.005918</text>
+<text x="752" y="953" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">3.834s</text>
+<text x="860" y="953" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.006034</text>
 </g>
 <g data-model="Qwen 3.8 Flash">
-<text x="32" y="1085" font-size="19" fill="#1f2328"><tspan font-weight="700">Qwen 3.8 Flash</tspan><tspan fill="#59636e"> · Alibaba Singapore</tspan></text>
+<text x="32" y="997" font-size="19" fill="#1f2328"><tspan font-weight="700">Qwen 3.8 Flash</tspan><tspan fill="#59636e"> · Alibaba Singapore</tspan></text>
+<text x="372" y="997" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
+<text x="592" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
+<text x="752" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.689s</text>
+<text x="860" y="997" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000547</text>
+</g>
+<rect x="16" y="1012" width="1008" height="44" fill="#f6f8fa"/>
+<g data-model="MiniMax M3">
+<text x="32" y="1041" font-size="19" fill="#1f2328"><tspan font-weight="700">MiniMax M3</tspan><tspan fill="#59636e"> · MiniMax</tspan></text>
+<text x="372" y="1041" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
+<text x="592" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
+<text x="752" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.119s</text>
+<text x="860" y="1041" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000680</text>
+</g>
+<g data-model="Mistral Large 4">
+<text x="32" y="1085" font-size="19" fill="#1f2328"><tspan font-weight="700">Mistral Large 4</tspan><tspan fill="#59636e"> · Mistral</tspan></text>
 <text x="372" y="1085" font-size="19" text-anchor="start" fill="#1a7f37" font-weight="400">8/8</text>
 <text x="592" y="1085" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="1085" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">2.689s</text>
-<text x="860" y="1085" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000547</text>
+<text x="752" y="1085" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">7.043s</text>
+<text x="860" y="1085" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.005918</text>
 </g>
 <g class="group" data-group="partial"><text x="32" y="1127" font-size="19" text-anchor="start" fill="#9a6700" font-weight="700">Contract failures · 3 models</text></g>
 <rect x="16" y="1140" width="1008" height="44" fill="#f6f8fa"/>
@@ -172,20 +172,20 @@
 <text x="752" y="1169" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.461s</text>
 <text x="860" y="1169" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.001398</text>
 </g>
-<g data-model="GLM 5.3 Flash">
-<text x="32" y="1213" font-size="19" fill="#1f2328"><tspan font-weight="700">GLM 5.3 Flash</tspan><tspan fill="#59636e"> · Z.ai</tspan></text>
+<g data-model="GLM 5.3 FlashX">
+<text x="32" y="1213" font-size="19" fill="#1f2328"><tspan font-weight="700">GLM 5.3 FlashX</tspan><tspan fill="#59636e"> · Z.ai</tspan></text>
 <text x="372" y="1213" font-size="19" text-anchor="start" fill="#9a6700" font-weight="400">7/8 · 1 fenced JSON</text>
 <text x="592" y="1213" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="1213" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.832s</text>
-<text x="860" y="1213" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000162</text>
+<text x="752" y="1213" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.091s</text>
+<text x="860" y="1213" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000391</text>
 </g>
 <rect x="16" y="1228" width="1008" height="44" fill="#f6f8fa"/>
-<g data-model="GLM 5.3 FlashX">
-<text x="32" y="1257" font-size="19" fill="#1f2328"><tspan font-weight="700">GLM 5.3 FlashX</tspan><tspan fill="#59636e"> · Z.ai</tspan></text>
+<g data-model="GLM 5.3 Flash">
+<text x="32" y="1257" font-size="19" fill="#1f2328"><tspan font-weight="700">GLM 5.3 Flash</tspan><tspan fill="#59636e"> · Z.ai</tspan></text>
 <text x="372" y="1257" font-size="19" text-anchor="start" fill="#9a6700" font-weight="400">7/8 · 1 fenced JSON</text>
 <text x="592" y="1257" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">0</text>
-<text x="752" y="1257" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.091s</text>
-<text x="860" y="1257" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000391</text>
+<text x="752" y="1257" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">1.832s</text>
+<text x="860" y="1257" font-size="19" text-anchor="start" fill="#1f2328" font-weight="400">$0.000162</text>
 </g>
 <g class="group" data-group="incomplete"><text x="32" y="1299" font-size="19" text-anchor="start" fill="#9a6700" font-weight="700">Incomplete: API errors · 1 model</text></g>
 <rect x="16" y="1312" width="1008" height="44" fill="#f6f8fa"/>

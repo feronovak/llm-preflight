@@ -1686,6 +1686,19 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
     assert len([row for row in rows if row["date"] == "2026-11-11"]) == len(later) - 1
 
 
+def test_measured_rows_never_split_a_provider_inside_a_result_group():
+    from scripts.render_measured_models import table_rows
+
+    rows = table_rows(load_measured_data())
+    for group in {row["group"] for row in rows}:
+        routes = [row["route"] for row in rows if row["group"] == group]
+        seen = [route for i, route in enumerate(routes) if routes[i - 1 : i] != [route]]
+        assert len(seen) == len(set(seen)), (group, routes)
+    names = [row["name"] for row in rows]
+    assert names.index("Gemini 4 Carbon") == names.index("Gemini 4 Argon") + 1
+    assert names.index("Qwen 3.8 Flash") == names.index("Qwen 3.8 Max") + 1
+
+
 def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
     data = json.loads((ROOT / "docs/data/model-comparison-2026-11-11.json").read_text())
     base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())

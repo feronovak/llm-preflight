@@ -66,7 +66,9 @@ llm-preflight routing.json --contract-check --no-env-file
 Both fixtures behave as expected and the command exits `0`. Now change the
 `model-reply` response from `billing` to `sales` and run it again: the check
 fails and exits `1`. Restore `billing` and it passes again. The 23-second
-session below shows exactly this:
+session below runs the same validator (`allowed_values` `billing`, `technical`,
+`account`) and the same two fixtures through the same pass, fail, pass flow, with
+its own prompt and file name:
 
 ![Real terminal session: billing passes, sales fails the same validator, and restoring billing passes again](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/contract-check-session.gif)
 

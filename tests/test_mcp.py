@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -441,6 +441,36 @@ def test_dry_run_plan_breach_sets_ok_false(tmp_path, cap, ok):
     assert content["budget_limits"]["violations"] == (
         [] if ok else ["possible requests 6 exceed max_requests 1"]
     )
+
+
+def test_mcp_retirement_report_carries_valid_until(tmp_path, monkeypatch):
+    provider, model = next(iter(retirements.PUBLIC_RETIREMENTS))
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [{"provider": provider, "model": model}],
+            }
+        )
+    )
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+    snapshot = plan["result"]["structuredContent"]["retirements"]["snapshot"]
+    reviewed = date.fromisoformat(
+        retirements.PUBLIC_RETIREMENTS[(provider, model)]["as_of"]
+    )
+    assert snapshot["valid_until"] == (reviewed + timedelta(days=30)).isoformat()
 
 
 def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected(

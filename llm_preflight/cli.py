@@ -84,7 +84,13 @@ from .redaction import (
     without_credentials,
 )
 from .reporting import render_card_svg, render_job_summary, render_report_html
-from .retirements import retirement_report, today_utc, unique_next_commands
+from .retirements import (
+    expiry_notice,
+    retirement_report,
+    selected_snapshot,
+    today_utc,
+    unique_next_commands,
+)
 from .runner import (
     benchmark_run_lock,
     canonical_test_selector,
@@ -607,6 +613,9 @@ def _format_audit_source(
             f"{_counted(len(unpriced), 'reference')} to "
             f"{_counted(len(unpriced_groups), 'model ID')} — use --all to list them."
         )
+    _append_expiry_notice(
+        lines, selected_snapshot([item["retirement"] for item in references])
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -635,7 +644,14 @@ def _format_doctor(report: dict[str, Any]) -> str:
                 ],
             )
         )
+        _append_expiry_notice(lines, report["retirement"].get("snapshot", {}))
     return "\n".join(lines) + "\n"
+
+
+def _append_expiry_notice(lines: list[str], snapshot: dict[str, Any]) -> None:
+    notice = expiry_notice(snapshot, today_utc())
+    if notice:
+        lines.append(notice)
 
 
 def _format_contract_check(report: dict[str, Any]) -> str:
@@ -955,6 +971,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 retirements, [{"model": e["model"], "retirement": e} for e in flagged]
             )
         )
+    _append_expiry_notice(lines, retirements.get("snapshot", {}))
     return "\n".join(lines) + "\n"
 
 

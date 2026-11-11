@@ -113,7 +113,8 @@ figures do not establish a like-for-like improvement or a general model ranking.
 A 1,024-token cap can limit reasoning; no allowance was raised during this run.
 
 To reconstruct one native row without generation, use a 2.23.0 source checkout
-and install `llm-preflight==2.23.0`:
+and install `llm-preflight==2.23.0`. This pin is historical: it is the version
+that produced this recorded run, not the current release.
 
 ```bash
 python3 - <<'PYCODE'

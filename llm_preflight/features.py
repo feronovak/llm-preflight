@@ -323,8 +323,8 @@ def budget_limits(
                 f"estimated cost ${cost:.6f} exceeds max_estimated_cost_usd ${cost_cap:.6f}"
             )
     return {
-        "max_requests": max_requests,
-        "max_estimated_cost_usd": max_cost,
+        "max_requests": request_cap,
+        "max_estimated_cost_usd": cost_cap,
         "violations": violations,
     }
 

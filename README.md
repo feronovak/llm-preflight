@@ -40,13 +40,16 @@ The activation command is for POSIX shells; PowerShell uses
 Already have LLM code? `llm-preflight --audit-source .` reports literal model
 IDs marked retired or retiring in the bundled snapshot. No config or key is
 needed. Real output from a one-file fixture repo whose `app.py` names
-`claude-3-opus-20240229` (first lines shown):
+`claude-3-opus-20240229` (complete output):
 
 ```text
 Decision: fail — 1 file audited; 1 model reference: 1 retired, 0 retiring or stale, 0 unknown.
+Exit 0 — add --ci to exit 1 on this decision.
+Files: tracked by git, plus untracked files .gitignore does not exclude.
 Retired:
   claude-3-opus-20240229 (1 reference) — retired 2026-01-05, replacement claude-opus-4-8
     app.py:3
+    Next: llm-preflight --quick "<your prompt>" --models anthropic:claude-3-opus-20240229,anthropic:claude-opus-4-8 --dry-run
 ```
 
 Bundled rows go stale 30 days after review; doctor and dry-run JSON show the

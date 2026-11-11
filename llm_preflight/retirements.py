@@ -298,11 +298,16 @@ def selected_snapshot(
 ) -> dict[str, Any]:
     """The snapshot summary with `valid_until` taken from the selected rows.
 
-    The bundled-wide date can differ from the rows a config uses; with no
-    selected row there is nothing that goes stale, so the key is absent.
+    The bundled-wide date can differ from the rows a config uses. A retired
+    row's verdict does not change when it goes stale, so it does not count;
+    with no other selected row nothing goes stale, so the key is absent.
     """
     summary = snapshot_summary()
-    reviewed = [entry["as_of"] for entry in entries if entry.get("as_of")]
+    reviewed = [
+        entry["as_of"]
+        for entry in entries
+        if entry.get("as_of") and entry.get("status") != "retired"
+    ]
     if not reviewed:
         summary.pop("valid_until")
         return summary
@@ -321,7 +326,7 @@ def expiry_notice(snapshot: dict[str, Any], today: date) -> str | None:
         return None
     return (
         f"The bundled retirement rows for these models are valid until "
-        f"{valid_until} ({days_left} days left). After that, --ci returns "
+        f"{valid_until} ({days_left} {'day' if days_left == 1 else 'days'} left). After that, --ci returns "
         "inconclusive for them until you update llm-preflight."
     )
 

@@ -398,6 +398,34 @@ def test_report_valid_until_comes_from_the_selected_rows_only(table):
     assert "valid_until" not in unknown["snapshot"]
 
 
+def test_report_valid_until_ignores_retired_rows(monkeypatch):
+    def row(status, as_of, **extra):
+        return {"status": status, "as_of": as_of, "source_url": URL, **extra}
+
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-gone"): row(
+                "deprecated", "2026-10-01", retirement_date="2026-10-02"
+            ),
+            ("openai", "gpt-new"): row("active", "2026-10-06"),
+        },
+    )
+    gone = {"provider": "openai", "model": "gpt-gone"}
+    new = {"provider": "openai", "model": "gpt-new"}
+    only_retired = retirement_report([gone], TODAY)
+    assert only_retired["models"][0]["status"] == "retired"
+    assert "valid_until" not in only_retired["snapshot"]
+    mixed = retirement_report([gone, new], TODAY)
+    assert mixed["snapshot"]["valid_until"] == "2026-11-05"
+
+
+def test_expiry_notice_says_1_day_not_1_days():
+    notice = retirements.expiry_notice({"valid_until": "2026-12-04"}, date(2026, 12, 3))
+    assert "(1 day left)" in notice
+
+
 def test_expiry_notice_appears_7_days_before_and_not_8():
     snapshot = {"valid_until": "2026-12-04"}
     assert "valid until 2026-12-04" in retirements.expiry_notice(

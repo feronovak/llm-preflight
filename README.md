@@ -39,8 +39,9 @@ The activation command is for POSIX shells; PowerShell uses
 
 Already have LLM code? `llm-preflight --audit-source .` reports literal model
 IDs marked retired or retiring in the bundled snapshot. No config or key is
-needed. Bundled rows go stale 30 days after review; reports show the date as
-`snapshot.valid_until`.
+needed. Bundled rows go stale 30 days after review; doctor and dry-run JSON show the
+end of the selected models' window as `snapshot.valid_until` (scan JSON:
+`retirement_snapshot.valid_until`).
 
 ### 1. Catch an invalid response
 

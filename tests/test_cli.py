@@ -4372,7 +4372,7 @@ def test_dry_run_without_ci_exits_zero_on_a_retired_model(
 def test_expiry_notice_does_not_change_decision_or_exit(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
-    # The table's oldest row is 2026-01-01, so the window ends 2026-10-31.
+    # The selected row was reviewed 2026-10-01, so its window ends 2026-10-31.
     monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 25))
     config = _dry_run_config(tmp_path, "gpt-new")
     argv = ["llm-preflight", str(config), "--dry-run", "--no-env-file"]
@@ -4393,7 +4393,8 @@ def test_expiry_notice_does_not_change_decision_or_exit(
 def test_expiry_notice_is_skipped_when_no_selected_model_has_a_row(
     monkeypatch, tmp_path, capsys, retirement_table
 ):
-    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 25))
+    # The table's oldest row ends 2026-01-31; that bundled-wide date must not show.
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
     (tmp_path / "app.py").write_text('a = "gpt-5.4-mini"\n')
     monkeypatch.setattr(shutil, "which", lambda name: None)
     assert not any(

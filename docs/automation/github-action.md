@@ -41,8 +41,8 @@ succeeds against it.
 The bundled retirement rows go stale 30 days after their review date, and
 then `--ci` returns `inconclusive` (exit 3) until you move to a newer release.
 Official price rows follow the same 30-day rule from their own review dates.
-The Action runs the doctor and dry-run without `--ci`, so it prints no expiry
-notice and never exits 3 for a stale retirement row. A stale price row turns
+The Action runs the doctor and dry-run with `--json` and without `--ci`, so it
+prints no expiry notice and never exits 3 for a stale retirement row. A stale price row turns
 it red through the `--pricing-check` step (exit 1). Run
 `llm-preflight benchmark.json --doctor` locally or in your own CI to read
 `snapshot.valid_until` (the oldest selected row's review date plus 30 days)

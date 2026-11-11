@@ -457,7 +457,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
 
     coding_agents = (ROOT / "docs/automation/coding-agents.md").read_text()
-    assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in coding_agents
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in coding_agents
     for step in coding_agents.split("## ")[1:]:
         if "Run `--doctor`, `--pricing-check`, and `--dry-run`" in step:
             assert "`retirements` decision" in step
@@ -479,7 +479,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     )
 
     assert (
-        "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1"
+        "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2"
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
@@ -583,7 +583,7 @@ def test_positioning_stays_local_and_decisions_and_reference_stay_public():
     assert "docs/DECISIONS.md" in tracked
     assert "docs/reference/decision.md" in tracked
     assert "docs/product/when-to-use.md" in tracked
-    assert "**Last reviewed:** 2026-10-27 · **As of:** v2.23.0" in when_to_use
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in when_to_use
     assert "../reference/decision.md" in when_to_use
     assert "../reference/decision.md" in action
     assert "schema_version" in reference

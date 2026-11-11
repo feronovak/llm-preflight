@@ -23,13 +23,13 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |
 | [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-11-11 | v2.24.2 |
-| [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-10-19 | v2.22.1 |
+| [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/development/documentation.md`](development/documentation.md) | Writing documentation | unstamped | — | — |
 | [`docs/development/visual-assets.md`](development/visual-assets.md) | Visual asset specification | stamped | 2026-10-19 | v2.22.2 |
-| [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
+| [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-11-10 | v2.24.0 |
@@ -44,9 +44,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-11-11 | v2.24.2 |
-| [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-19 | v2.22.1 |
+| [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |
-| [`docs/product/when-to-use.md`](product/when-to-use.md) | When to use LLM Preflight | stamped | 2026-10-27 | v2.23.0 |
+| [`docs/product/when-to-use.md`](product/when-to-use.md) | When to use LLM Preflight | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/reference/cli.md`](reference/cli.md) | CLI reference | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-11-11 | v2.24.2 |

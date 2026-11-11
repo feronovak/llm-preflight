@@ -33,7 +33,7 @@ it makes no provider requests and does not execute your application's parser.*
 ## New
 
 - `gemini-4-carbon`: official snapshot price and request checks.
-- Five more measured models in the comparison guide: `gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash` and `claude-mythos-5-2`; the guide now covers 25 models.
+- Four more measured models in the comparison guide: `gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4` and `qwen3.8-flash`. `claude-mythos-5-2` was attempted, but all 8 requests returned HTTP 404 (not available to the test account). The guide has results for 24 models.
 - Claude Fable 5.2 added to the measured comparison.
 - Claude Fable 5.2 and Claude Mythos 5.2: pricing and retirement rows.
 
@@ -85,11 +85,11 @@ A passing run is evidence for the configured workload, not production approval.
 
 ## Observed results on a support-routing contract
 
-The latest measurements, **2026-10-29** (19 models) and **2026-11-11** (Claude
-Fable 5.2), tested **20 native model routes** on eight synthetic support-routing
-and strict JSON cases each. **152 of 160 checks passed**: three outputs failed
-their contract and five Kimi calls returned HTTP 429. **16 models passed all
-eight checks.** These are workload observations, not a
+The image shows **20 native model routes**: 19 measured on **2026-10-29** and
+Claude Fable 5.2, measured on **2026-11-11**. Each ran eight synthetic
+support-routing and strict JSON cases. **152 of 160 checks passed**: three
+outputs failed their contract and five Kimi calls returned HTTP 429. **16
+models passed all eight checks.** These are workload observations, not a
 ranking of general intelligence or production approval.
 
 [![All 20 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
@@ -98,7 +98,10 @@ Latency includes successful API responses, including contract failures, and
 excludes API errors. The known token-cost subtotal is **$0.08218127**; total cost
 is unknown because five error responses supplied no usage. Each request used a
 1,024-token output allowance and one attempt. No retries were made.
-The guide lists **25 measured models**, five more than this image:
+The guide has results for **24 models**, four more than this image (`gemini-4-carbon`,
+`MiniMax-M3`, `mistral-large-4` and `qwen3.8-flash`, also run on 2026-11-11).
+It also records `claude-mythos-5-2`, attempted on 2026-11-11: all 8 requests
+returned HTTP 404 (not available to the test account), so it has no results:
 [read all rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
 Previous dated measurements remain available as history.
 

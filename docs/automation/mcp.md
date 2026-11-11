@@ -136,7 +136,7 @@ Decision: fail — 1 file audited; 2 model references: 1 retired, 0 retiring or 
 The second text block and `structuredContent` carry the full, uncapped JSON;
 there is no `all` argument because only CLI text output is capped. Report
 the `decision`: `fail` means a referenced model is retired, `inconclusive`
-means one is retiring, its snapshot row is stale, or no file was read, `pass`
+means one is retiring, its snapshot row is stale, it is an alias without a safe mapping to one snapshot row (`alias_unmapped`, with `alias_candidates`), or no file was read, `pass`
 means every referenced model the snapshot lists is active, and `none` means
 no reference is in the retirement snapshot, which is not a pass. It covers
 only literal model IDs; a model chosen at run time needs review.

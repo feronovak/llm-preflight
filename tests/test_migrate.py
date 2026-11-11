@@ -1832,3 +1832,30 @@ def test_migrate_staleness_boundary_is_day_31(age_days, stale):
     today = date(2026, 12, 31)
     verdict = {"as_of": (today - timedelta(days=age_days)).isoformat()}
     assert migrate._is_stale(verdict, today) is stale
+
+
+def test_migrate_alias_of_retired_model_names_replacement(monkeypatch, tmp_path):
+    table = {
+        ("anthropic", "claude-old-20250101"): _row(
+            "retired", replacement="claude-new", date_="2026-10-01"
+        ),
+        ("anthropic", "claude-new"): _row("active"),
+    }
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    path = _write(tmp_path, [_m("claude-old", provider="anthropic")])
+    entry = _entry(migrate.build_report(path, TODAY), "claude-old")
+    assert entry["outcome"] == "candidate"
+    assert entry["replacement"] == "claude-new"
+    assert entry["status"] == "retired"
+
+
+def test_migrate_unmapped_alias_outcome(monkeypatch, tmp_path):
+    table = {("openai", "gpt-x-2025-01-01"): _row("deprecated", date_="2026-12-11")}
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    report = migrate.build_report(_write(tmp_path, [_m("gpt-x")]), TODAY)
+    entry = _entry(report, "gpt-x")
+    assert entry["outcome"] == "alias_unmapped"
+    assert entry["status"] == "alias_unmapped"
+    assert "gpt-x-2025-01-01" in entry["next_step"]
+    assert report["decision"] == "inconclusive"
+    assert report["candidate_config"] is None

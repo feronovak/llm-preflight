@@ -1011,6 +1011,39 @@ def test_audit_source_reports_a_retired_model_in_a_workspace_without_a_config(
     assert json.loads(result["content"][1]["text"]) == content
 
 
+def test_audit_source_tool_resolves_alias(tmp_path, monkeypatch):
+    table = {
+        ("anthropic", "claude-opus-4-1-20250805"): {
+            "status": "retired",
+            "retirement_date": "2026-06-01",
+            "as_of": "2026-10-01",
+            "source_url": AUDIT_URL,
+        },
+        ("openai", "gpt-5-2025-08-07"): {
+            "status": "deprecated",
+            "retirement_date": "2026-12-11",
+            "as_of": "2026-10-01",
+            "source_url": AUDIT_URL,
+        },
+    }
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "app.py").write_text('a = "claude-opus-4-1"\nb = "gpt-5"\n')
+
+    result = _audit(tmp_path, {})["result"]
+
+    assert result["isError"] is False
+    by_model = {
+        item["model"]: item["retirement"]
+        for item in result["structuredContent"]["references"]
+    }
+    assert by_model["claude-opus-4-1"]["status"] == "retired"
+    assert by_model["claude-opus-4-1"]["matched_id"] == "claude-opus-4-1-20250805"
+    assert by_model["gpt-5"]["status"] == "alias_unmapped"
+    assert by_model["gpt-5"]["alias_candidates"] == ["gpt-5-2025-08-07"]
+    assert result["structuredContent"]["decision"] == "fail"
+
+
 def test_audit_source_matches_the_cli_json_and_first_text_line(
     tmp_path, audit_snapshot, monkeypatch, capsys
 ):

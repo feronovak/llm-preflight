@@ -353,7 +353,12 @@ def _retirement_phrase(verdict: dict[str, Any]) -> str:
             if replacement
             else "no single replacement recorded"
         )
-        return f"{status} {when}, {tail}"
+        alias = (
+            f" (alias of {verdict['matched_id']})" if "matched_id" in verdict else ""
+        )
+        return f"{status} {when}, {tail}{alias}"
+    if status == "alias_unmapped":
+        return f"alias_unmapped (candidates: {', '.join(verdict['alias_candidates'])})"
     if status == "stale":
         return f"snapshot stale ({verdict['reason']})"
     return status
@@ -401,21 +406,47 @@ _AUDIT_NOTHING_READ = {
 }
 _AUDIT_NOTHING_UTF8 = "no selected source file could be read as UTF-8 text"
 _AUDIT_CI_EXIT = {
-    0: "no referenced model is retired, retiring or stale.",
-    1: "a referenced model is retired.",
-    3: "a referenced model is retiring or its snapshot row is stale.",
+    0: "no referenced model has a retirement finding in the snapshot",
+    1: "a referenced model is retired",
+    3: "a referenced model is retiring or its snapshot row is stale",
 }
 _AUDIT_CI_NOTHING_READ = "no file was audited, so nothing is verified."
 
 
-def _counted(count: int, noun: str) -> str:
-    return f"{count} {noun}{'' if count == 1 else 's'}"
+def _counted(count: int, noun: str, plural: str | None = None) -> str:
+    return f"{count} {noun if count == 1 else plural or noun + 's'}"
 
 
-def _audit_exit_line(decision: str, ci: bool, audited: bool = True) -> str:
+def _audit_ci_reason(code: int, unknown_ids: int, unmapped_ids: int) -> str:
+    notes = []
+    if code == 3 and unmapped_ids:
+        notes.append(
+            f"{_counted(unmapped_ids, 'alias', 'aliases')} could not be mapped "
+            "to a snapshot row"
+        )
+    if code == 0 and unknown_ids:
+        notes.append(
+            f"{_counted(unknown_ids, 'model ID')} "
+            f"{'has' if unknown_ids == 1 else 'have'} no snapshot row and "
+            f"{'is' if unknown_ids == 1 else 'are'} not verified"
+        )
+    return "; ".join([_AUDIT_CI_EXIT[code], *notes]) + "."
+
+
+def _audit_exit_line(
+    decision: str,
+    ci: bool,
+    audited: bool = True,
+    unknown_ids: int = 0,
+    unmapped_ids: int = 0,
+) -> str:
     code = _RETIREMENT_EXIT.get(decision, 0)
     if ci:
-        reason = _AUDIT_CI_EXIT[code] if audited else _AUDIT_CI_NOTHING_READ
+        reason = (
+            _audit_ci_reason(code, unknown_ids, unmapped_ids)
+            if audited
+            else _AUDIT_CI_NOTHING_READ
+        )
         return f"Exit {code} (--ci): {reason}"
     if code:
         return f"Exit 0 — add --ci to exit {code} on this decision."
@@ -482,6 +513,17 @@ def _format_audit_source(
     retired = statuses.count("retired")
     retiring = statuses.count("retiring") + statuses.count("stale")
     unknown = statuses.count("unknown")
+    unmapped = statuses.count("alias_unmapped")
+    unknown_ids = len(
+        {i["model"] for i in references if i["retirement"]["status"] == "unknown"}
+    )
+    unmapped_ids = len(
+        {
+            i["model"]
+            for i in references
+            if i["retirement"]["status"] == "alias_unmapped"
+        }
+    )
     decision = (
         "none (no reference is in the retirement snapshot)"
         if audit["decision"] == "none"
@@ -491,9 +533,10 @@ def _format_audit_source(
         (
             f"Decision: {decision} — {_counted(audit['files_scanned'], 'file')} "
             f"audited; {_counted(len(references), 'model reference')}: "
-            f"{retired} retired, {retiring} retiring or stale, {unknown} unknown."
+            f"{retired} retired, {retiring} retiring or stale, {unknown} unknown"
+            f"{f', {unmapped} alias unmapped' if unmapped else ''}."
         ),
-        _audit_exit_line(audit["decision"], ci),
+        _audit_exit_line(audit["decision"], ci, True, unknown_ids, unmapped_ids),
         *files_lines,
     ]
     retired_groups = _audit_groups(
@@ -519,6 +562,17 @@ def _format_audit_source(
             lines.append(heading)
         for group in shown:
             lines.extend(_audit_group_lines(group, show_all, with_next=True))
+    unmapped_groups = _audit_groups(
+        [
+            item
+            for item in references
+            if item["retirement"]["status"] == "alias_unmapped"
+        ]
+    )
+    if unmapped_groups:
+        lines.append("Alias not mapped:")
+        for group in unmapped_groups:
+            lines.extend(_audit_group_lines(group, show_all, with_next=True))
     hidden_retired = len(retired_groups) - len(retired_shown)
     hidden_retiring = len(retiring_groups) - len(retiring_shown)
     if hidden_retired or hidden_retiring:
@@ -530,7 +584,8 @@ def _format_audit_source(
     unpriced = [
         item
         for item in audit["findings"]
-        if item["retirement"]["status"] not in {"retired", "retiring", "stale"}
+        if item["retirement"]["status"]
+        not in {"retired", "retiring", "stale", "alias_unmapped"}
     ]
     unpriced_groups = _audit_groups(unpriced)
     if unpriced and show_all:

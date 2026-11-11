@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+Changes below are marked `Breaking:` where they can change an exit code.
+
+### Fixed
+
+- Breaking: `--audit-source`, `--dry-run --ci`, `--doctor`, `migrate` and the MCP `audit_source` and
+  `migrate_plan` tools now look model IDs up in lower case and resolve an Anthropic alias such as
+  `claude-opus-4-1`, `claude-sonnet-4-0` or `claude-3-7-sonnet-latest` to the verdict of its dated snapshot row (the
+  verdict carries `matched_id`). Such an alias of a retired model used to be `unknown` and exit 0 under `--ci`;
+  it now exits 1.
+- Breaking: an OpenAI alias with dated snapshot rows but no row of its own (`gpt-5`, `gpt-5-mini`, `gpt-5-nano`,
+  `gpt-5-pro`, `o3`, `o3-pro`, and the two search-preview IDs) is now `alias_unmapped` (decision `inconclusive`, with
+  `alias_candidates`) and exits 3 under `--ci`, where it exited 0. `retirement_report` summaries gain an
+  `alias_unmapped` count and `migrate` reports the `alias_unmapped` outcome.
+- The `--audit-source --ci` exit 0 line no longer says "no referenced model is retired, retiring or stale" when IDs
+  are unknown. It says no referenced model has a retirement finding in the snapshot, and counts the model IDs that
+  have no snapshot row and are not verified.
+
 ## 2.24.2 - 2026-11-11
 
 ### Added

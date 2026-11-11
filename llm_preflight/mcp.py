@@ -326,7 +326,16 @@ def _tools() -> list[dict[str, Any]]:
     retirement_schema = {
         "type": "object",
         "properties": {
-            "status": {"enum": ["active", "retiring", "retired", "stale", "unknown"]},
+            "status": {
+                "enum": [
+                    "active",
+                    "retiring",
+                    "retired",
+                    "stale",
+                    "alias_unmapped",
+                    "unknown",
+                ]
+            },
             "decision": {"enum": ["pass", "inconclusive", "fail", "none"]},
             "reason": {"type": "string"},
             "next_step": {"type": "string"},
@@ -336,6 +345,8 @@ def _tools() -> list[dict[str, Any]]:
                 "enum": ["active", "retiring", "retired", "unknown"]
             },
             "next_command": {"type": "string"},
+            "matched_id": {"type": "string"},
+            "alias_candidates": strings_schema,
             "as_of": {"type": "string"},
             "source_url": {"type": "string"},
         },

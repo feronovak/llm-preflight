@@ -7,6 +7,7 @@ verdict; it is reported as unknown.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from datetime import date, datetime, timezone
 from typing import Any
@@ -22,6 +23,11 @@ GEMINI_MODEL_REDIRECTS = {
     "gemini-3.7-flash": "gemini-3.8-flash",
 }
 DEFAULT_MAX_AGE_DAYS = 30
+_DATED_SUFFIX = {
+    "anthropic": re.compile(r"-\d{8}"),
+    "openai": re.compile(r"-\d{4}-\d{2}-\d{2}"),
+}
+_ANTHROPIC_ALIAS_TAIL = re.compile(r"-(?:latest|0)$")
 _REVIEWED = "2026-11-04"
 
 
@@ -327,6 +333,50 @@ def today_utc() -> date:
     return datetime.now(timezone.utc).date()
 
 
+def _alias_candidates(provider: str, model_id: str) -> list[str]:
+    """Dated snapshot rows that an alias without a row of its own may stand for."""
+    suffix = _DATED_SUFFIX.get(provider)
+    if suffix is None:
+        return []
+    stems = {model_id}
+    if provider == "anthropic":
+        stems.add(_ANTHROPIC_ALIAS_TAIL.sub("", model_id))
+    return sorted(
+        row_id
+        for row_provider, row_id in PUBLIC_RETIREMENTS
+        if row_provider == provider
+        and any(
+            row_id.startswith(stem) and suffix.fullmatch(row_id[len(stem) :])
+            for stem in stems
+        )
+    )
+
+
+def _same_finding(rows: list[dict[str, Any]]) -> bool:
+    return (
+        len(
+            {
+                (r["status"], r.get("retirement_date"), r.get("replacement"))
+                for r in rows
+            }
+        )
+        == 1
+    )
+
+
+def _unmapped_verdict(candidates: list[str]) -> dict[str, Any]:
+    return {
+        "status": "alias_unmapped",
+        "decision": "inconclusive",
+        "reason": "alias without a safe mapping to one snapshot row",
+        "next_step": (
+            "name the dated snapshot ID your provider routes this alias to; "
+            f"snapshot rows that may apply: {', '.join(candidates)}"
+        ),
+        "alias_candidates": candidates,
+    }
+
+
 def retirement_verdict(
     provider: str | None,
     model: str,
@@ -334,8 +384,19 @@ def retirement_verdict(
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
 ) -> dict[str, Any]:
     """Classify one model against the bundled snapshot for the given day."""
-    catalog_model = _catalog_id(model)
+    catalog_model = _catalog_id(model).lower()
     row = PUBLIC_RETIREMENTS.get((provider, catalog_model)) if provider else None
+    matched_id = None
+    if provider and row is None:
+        candidates = _alias_candidates(provider, catalog_model)
+        rows = [PUBLIC_RETIREMENTS[(provider, c)] for c in candidates]
+        if rows and provider == "anthropic" and _same_finding(rows):
+            matched_id = min(
+                candidates, key=lambda c: PUBLIC_RETIREMENTS[(provider, c)]["as_of"]
+            )
+            row = PUBLIC_RETIREMENTS[(provider, matched_id)]
+        elif candidates:
+            return _unmapped_verdict(candidates)
     if provider is None or row is None:
         covered = ", ".join(RETIREMENT_PROVIDERS)
         return {
@@ -352,6 +413,8 @@ def retirement_verdict(
         for key in ("retirement_date", "replacement", "as_of", "source_url")
         if key in row
     }
+    if matched_id:
+        verdict["matched_id"] = matched_id
     source_url = row["source_url"]
     as_of = row["as_of"]
     age_days = (today - date.fromisoformat(as_of)).days
@@ -441,7 +504,14 @@ def retirement_report(
         entries.append({"provider": provider, "model": model["model"], **verdict})
     summary = {
         status: sum(entry["status"] == status for entry in entries)
-        for status in ("retired", "retiring", "stale", "active", "unknown")
+        for status in (
+            "retired",
+            "retiring",
+            "stale",
+            "active",
+            "alias_unmapped",
+            "unknown",
+        )
     }
     return {
         "decision": worst_decision(entry["decision"] for entry in entries),

@@ -3732,7 +3732,7 @@ def test_audit_source_exit_is_zero_without_ci(
             'a = "gpt-new"\n',
             "Exit 0 — --ci also exits 0 on this decision.",
             0,
-            "Exit 0 (--ci): no referenced model is retired, retiring or stale.",
+            "Exit 0 (--ci): no referenced model has a retirement finding in the snapshot.",
         ),
     ],
 )
@@ -4839,3 +4839,119 @@ def test_prompt_selected_with_numeric_presets_is_a_config_error(
     assert exc.value.code == 2
     assert "prompt 'a'" in err
     assert "Traceback" not in err
+
+
+_ALIAS_TABLE = {
+    ("anthropic", "claude-opus-4-1-20250805"): {
+        "status": "retired",
+        "retirement_date": "2026-08-05",
+        "replacement": "claude-opus-new",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-5-2025-08-07"): {
+        "status": "deprecated",
+        "retirement_date": "2026-12-11",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+    ("openai", "gpt-new"): {
+        "status": "active",
+        "as_of": "2026-10-01",
+        "source_url": _RETIREMENT_URL,
+    },
+}
+
+
+@pytest.fixture
+def alias_table(monkeypatch):
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", _ALIAS_TABLE)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
+
+
+def _audit_ci(monkeypatch, capsys, tmp_path, source):
+    (tmp_path / "app.py").write_text(source)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--audit-source", str(tmp_path), "--ci"]
+    )
+    code = 0
+    try:
+        cli.main()
+    except SystemExit as exc:
+        code = exc.code
+    return code, capsys.readouterr().out.splitlines()
+
+
+def test_audit_source_ci_alias_of_retired_model_exits_1(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'MODEL = "claude-opus-4-1"\n'
+    )
+    assert code == 1
+    assert lines[1] == "Exit 1 (--ci): a referenced model is retired."
+    assert any(
+        line.startswith(
+            "  claude-opus-4-1 (1 reference) — retired 2026-08-05, replacement "
+            "claude-opus-new (alias of claude-opus-4-1-20250805)"
+        )
+        for line in lines
+    )
+
+
+def test_audit_source_ci_unknown_ids_exit_line_says_no_snapshot_finding(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'a = "gpt-new"\nb = "gpt-mystery"\n'
+    )
+    assert code == 0
+    assert lines[1] == (
+        "Exit 0 (--ci): no referenced model has a retirement finding in the "
+        "snapshot; 1 model ID has no snapshot row and is not verified."
+    )
+
+
+def test_audit_source_ci_unmapped_alias_exits_3(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(monkeypatch, capsys, tmp_path, 'a = "gpt-5"\n')
+    assert code == 3
+    assert lines[0].endswith(
+        "0 retired, 0 retiring or stale, 0 unknown, 1 alias unmapped."
+    )
+    assert lines[1] == (
+        "Exit 3 (--ci): a referenced model is retiring or its snapshot row is "
+        "stale; 1 alias could not be mapped to a snapshot row."
+    )
+    assert "Alias not mapped:" in lines
+    assert any("alias_unmapped (candidates: gpt-5-2025-08-07)" in x for x in lines)
+    assert not any("Pricing unknown, no retirement finding" in x for x in lines)
+
+
+@pytest.mark.parametrize(
+    ("provider", "model", "code"),
+    [("anthropic", "claude-opus-4-1", 1), ("openai", "gpt-5", 3)],
+)
+def test_dry_run_ci_alias_exits_on_the_snapshot_verdict(
+    monkeypatch, tmp_path, alias_table, provider, model, code
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 1,
+                "warmups": 0,
+                "models": [{"provider": provider, "model": model}],
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--dry-run", "--ci", "--no-env-file"],
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == code

@@ -1,6 +1,6 @@
 # Check current native models
 
-**Last reviewed:** 2026-11-04 · **As of:** v2.23.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Version 2.23.0 adds native Kimi, MiniMax, Mistral and
 Cohere text routes, GPT-6.1 Terra pricing, GLM Flash siblings and restricted

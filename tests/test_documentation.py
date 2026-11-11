@@ -1693,6 +1693,8 @@ def test_retirements_guide_dates_match_the_snapshot():
     ):
         for day in re.findall(phrase + day_re, page):
             assert day in allowed, (phrase, day)
+    paragraph = next(p for p in page.split("\n\n") if "rechecked on" in p)
+    assert set(re.findall(r"\d{4}-\d{2}-\d{2}", paragraph)) == reviewed | stale
     assert re.search("rechecked on" + day_re, page)
     assert re.search("stale on" + day_re, page)
 

@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. Template strings with `${…}` are still not matched.
+- `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
 
 ### Fixed
 

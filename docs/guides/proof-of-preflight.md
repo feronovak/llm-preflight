@@ -257,7 +257,10 @@ shortens or lengthens the window for one gate or verify call.
 
 A route that retires supersedes the record on its retirement date, whatever
 its age. The verifier judges this with its own bundled retirement snapshot, not
-the one the record was written with, and prints that snapshot's date.
+the one the record was written with, and prints that snapshot's date. A route
+written as an Anthropic alias, such as `anthropic:claude-opus-4-1`, is judged by
+the dated snapshot row it stands for, so a CI record for a retired alias is
+`superseded` for `verify` (exit 3) and `gate` (exit 1) where it used to pass.
 
 A monthly refresh on the 1st leaves a gap after 31-day months; a run on the
 1st and 15th keeps a record within 30 days. Each scheduled run is paid work,

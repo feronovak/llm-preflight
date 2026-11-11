@@ -37,6 +37,9 @@ Changes below are marked `Breaking:` where they can change an exit code.
   Approval receipts written by 2.24.2 verify as `mismatch` because the hashed plan gains `budget_limits`;
   record them again with `--dry-run --approval-receipt`. A non-numeric `max_requests` or `max_estimated_cost_usd`
   is now an error message, not a traceback.
+- Breaking: `verify` and `gate` resolve an Anthropic alias route (for example `anthropic:claude-opus-4-1`) to its
+  dated snapshot row. A CI record whose checked route is a retired alias used to verify with exit 0 and pass the gate
+  as `fresh_pass`; it is now `superseded`: `verify` exits 3 and `gate` exits 1.
 - The `examples/vision` and `examples/project-integration` configs bound retries with `request.retry`
   `max_attempts: 1`, so their one-request cap holds on a live run.
 - Provider error text, saved results, reports and MCP output now mask the exact value of every environment variable

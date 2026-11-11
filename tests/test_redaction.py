@@ -190,3 +190,17 @@ def test_longest_registered_value_first(monkeypatch):
 )
 def test_bare_bearer_token_redacted(text, expected):
     assert redact_secrets(text) == expected
+
+
+@pytest.mark.parametrize("padding", [" ", "\n", "  \r\n"])
+def test_value_with_surrounding_whitespace_is_masked_trimmed_and_untrimmed(
+    monkeypatch, padding
+):
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("PADDED_TEST_KEY", key + padding)
+    assert credential_from_env("PADDED_TEST_KEY") == key + padding
+
+    assert redact_secrets(f"401: bad key {key}") == "401: bad key [REDACTED]"
+    raw = f"Invalid header value {(key + padding)!r}"
+    assert key not in redact_secrets(raw)
+    assert key not in redact_secrets(f"echo {key + padding}")

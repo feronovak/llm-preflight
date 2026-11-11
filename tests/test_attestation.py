@@ -102,6 +102,7 @@ def _result(
     observed=OBSERVED,
     selection=None,
     ci=None,
+    route=("openai", "gpt-4.1-mini"),
 ):
     """A billable single-model result whose decision comes from decision.py.
 
@@ -112,9 +113,9 @@ def _result(
     config = load_config(config_path)
     routes = resolve_pricing(resolve_models(config))["models"]
     model = {
-        "name": "gpt-4.1-mini",
-        "provider": "openai",
-        "model": "gpt-4.1-mini",
+        "name": route[1],
+        "provider": route[0],
+        "model": route[1],
         "samples": [{"valid_output": True}, {"valid_output": True}],
         "summary": {
             "requests": 2,
@@ -133,7 +134,7 @@ def _result(
         "benchmark": "demo",
         "models": [model],
         "pricing_ledger": [
-            {"provider": "openai", "model": "gpt-4.1-mini", "as_of": "2026-10-16"}
+            {"provider": route[0], "model": route[1], "as_of": "2026-10-16"}
         ],
         "pricing_coverage": {"summary": {"billable": 1}, "models": []},
         "cost_confidence": "complete",
@@ -489,6 +490,8 @@ def _attest(
     timestamp=CHECKED,
     name="run.json",
     selection=None,
+    route=("openai", "gpt-4.1-mini"),
+    observed=OBSERVED,
 ):
     """Attest one result in tmp_path, the working directory, and return the record path.
 
@@ -506,6 +509,8 @@ def _attest(
         name=name,
         selection=selection,
         ci=RUN_IDENTITY if ci else None,
+        route=route,
+        observed=observed,
     )
     with monkeypatch.context() as scoped:
         if ci:
@@ -686,6 +691,47 @@ def test_verify_marks_a_record_superseded_once_its_route_retires(
     assert _run(monkeypatch, capsys, "verify", record)[0] == 3
     monkeypatch.setattr(cli, "today_utc", lambda: date(2027, 1, 13))
     assert _run(monkeypatch, capsys, "verify", record)[0] == 0
+
+
+def _alias_route_record(monkeypatch, capsys, tmp_path):
+    """A CI record whose checked route is the alias `anthropic:claude-opus-4-1`."""
+    _config(
+        tmp_path,
+        {**CONFIG, "models": [{"provider": "anthropic", "model": "claude-opus-4-1"}]},
+    )
+    return _attest(
+        monkeypatch,
+        capsys,
+        tmp_path,
+        route=("anthropic", "claude-opus-4-1"),
+        observed=UNRECORDED,
+        timestamp="2026-11-09T08:00:00Z",
+    )
+
+
+def test_verify_marks_a_record_superseded_when_its_route_is_a_retired_alias(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 10))
+    record = _alias_route_record(monkeypatch, capsys, tmp_path)
+
+    code, out, _ = _run(monkeypatch, capsys, "verify", record)
+
+    assert code == 3
+    assert "Freshness: superseded" in out
+    assert "- anthropic:claude-opus-4-1 retired on 2026-08-05" in out
+
+
+def test_gate_blocks_a_record_whose_route_is_a_retired_alias(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 10))
+    _alias_route_record(monkeypatch, capsys, tmp_path)
+
+    code, report = _gate(monkeypatch, capsys, "--records", "results")
+
+    assert (code, report["reason_code"]) == (1, "superseded")
+    assert "anthropic:claude-opus-4-1 (retired on 2026-08-05)" in report["why"]
 
 
 def test_verify_rejects_unreadable_records_and_invalid_max_age(

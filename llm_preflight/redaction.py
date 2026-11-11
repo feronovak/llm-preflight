@@ -43,8 +43,13 @@ def credential_from_env(name: str | None) -> str | None:
     keys are longer.
     """
     value = os.environ.get(name) if name else None
-    if value and len(value) >= _MIN_CREDENTIAL_LENGTH:
-        _REGISTERED_CREDENTIALS.add(value)
+    if value:
+        # A server or client may trim the value before echoing it.
+        _REGISTERED_CREDENTIALS.update(
+            candidate
+            for candidate in (value, value.strip())
+            if len(candidate) >= _MIN_CREDENTIAL_LENGTH
+        )
     return value
 
 

@@ -786,6 +786,40 @@ def test_main_preview_with_a_limit_breach_shows_it_and_exits_zero(
     assert limits["violations"] == ["possible requests 2 exceed max_requests 1"]
 
 
+def test_interactive_preview_records_a_receipt_even_on_a_limit_breach(
+    monkeypatch, tmp_path, capsys
+):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(mock_config(request={"retry": {"max_attempts": 2}}, max_requests=1))
+    )
+    receipt = tmp_path / "receipt.json"
+    answers = iter(["all", "", "1", "4", "p"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(path),
+            "--interactive",
+            "--dry-run",
+            "--json",
+            "--no-env-file",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "reviewed",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+        ],
+    )
+    cli.main()
+    assert receipt.exists()
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["plan"]["budget_limits"]["violations"]
+
+
 def test_main_mock_json_contains_one_result_with_progress_on_stderr(
     monkeypatch, tmp_path, capsys
 ):

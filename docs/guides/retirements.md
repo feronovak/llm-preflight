@@ -126,8 +126,8 @@ Decision: inconclusive — nothing was audited: the path holds no source file ou
 
 Without `--ci` the scan and the dry-run exit 0 whatever they find, and the
 doctor fails only on a `retired` model, as it does for any failed check. With
-`--ci`, a `retired` model exits 1 and a `retiring` or `stale` model exits 3
-in all three commands, and a scan that read no file exits 3.
+`--ci`, a `retired` model exits 1 and a `retiring`, `stale` or `alias_unmapped`
+model exits 3 in all three commands, and a scan that read no file exits 3.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go

@@ -58,7 +58,8 @@ In a repository with no benchmark config, call `audit_source` first. It
 reports the literal model IDs in workspace source files with retirement and
 pricing verdicts, without a config, credentials, or provider requests. Report
 its `decision`: `fail` means a referenced model is retired, `inconclusive`
-means one is retiring, its snapshot row is stale, or no file was read, `pass`
+means one is retiring, its snapshot row is stale, it is an alias without a
+safe mapping to one snapshot row (`alias_unmapped`), or no file was read, `pass`
 means every referenced model the snapshot lists is active, and `none` means
 no reference is in the retirement snapshot. It covers only literal model IDs;
 a model chosen at run time needs review.
@@ -76,7 +77,10 @@ before a live run.
    intentionally unavailable for image inputs), pricing
    coverage, every non-eligible smoke reason, and the `retirements` decision:
    `fail` means a selected model is retired, `inconclusive` means one is
-   retiring or its snapshot row is stale. `ok` does not reflect it.
+   retiring, its snapshot row is stale, or it is an `alias_unmapped`. `ok` does
+   not reflect it. `ok: false` means the plan breaks a limit: report
+   `budget_limits.violations` (a request or cost cap, or incomplete pricing
+   under `require_current_pricing`); a live run refuses with the same message.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
@@ -478,7 +482,15 @@ def _tools() -> list[dict[str, Any]]:
             "retry_max_attempts": {"type": "integer", "minimum": 1},
             "estimated_cost_usd": optional_number_schema,
             "maximum_estimated_cost_usd": optional_number_schema,
-            "budget_limits": {"type": "object"},
+            "budget_limits": {
+                "type": "object",
+                "properties": {
+                    "max_requests": {"type": ["integer", "number", "null"]},
+                    "max_estimated_cost_usd": optional_number_schema,
+                    "violations": strings_schema,
+                },
+                "required": ["max_requests", "max_estimated_cost_usd", "violations"],
+            },
             "pricing_ledger": {"type": "array", "items": {"type": "object"}},
             "pricing_fingerprint": {"type": "string"},
             "pricing_warnings": {"type": "array", "items": {"type": "object"}},

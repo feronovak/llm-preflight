@@ -545,8 +545,8 @@ def test_release_retirement_review_date_and_exact_freshness_boundary():
     )
 
 
-def _alias_row(status, retirement_date=None, replacement=None):
-    row = {"status": status, "as_of": "2026-10-01", "source_url": URL}
+def _alias_row(status, retirement_date=None, replacement=None, as_of="2026-10-01"):
+    row = {"status": status, "as_of": as_of, "source_url": URL}
     if retirement_date:
         row["retirement_date"] = retirement_date
     if replacement:
@@ -574,6 +574,8 @@ ALIAS_TABLE = {
     ("anthropic", "claude-replsplit-20250201"): _alias_row(
         "retired", "2026-01-01", "b"
     ),
+    ("anthropic", "claude-aged-20250101"): _alias_row("active"),
+    ("anthropic", "claude-aged-20250201"): _alias_row("active", as_of="2026-08-01"),
     ("anthropic", "claude-twin-20250101"): _alias_row("retired", "2026-01-01"),
     ("anthropic", "claude-twin-20250201"): _alias_row("retired", "2026-01-01"),
     ("openai", "gpt-4o"): _alias_row("deprecated", "2027-01-14", "gpt-new"),
@@ -610,6 +612,13 @@ def test_anthropic_alias_resolves_to_dated_row_verdict(
     assert verdict["decision"] == "fail"
     assert verdict["matched_id"] == matched
     assert verdict.get("replacement") == replacement
+
+
+def test_alias_with_agreeing_rows_reviewed_on_different_days_is_stale(alias_table):
+    verdict = retirement_verdict("anthropic", "claude-aged", ALIAS_TODAY)
+    assert verdict["matched_id"] == "claude-aged-20250201"
+    assert verdict["status"] == "stale"
+    assert verdict["decision"] == "inconclusive"
 
 
 def test_alias_next_command_names_the_alias_the_user_wrote(alias_table):

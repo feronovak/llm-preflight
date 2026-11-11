@@ -361,10 +361,10 @@ first and report its `decision` and each retired or retiring model.
 2. Ask the agent to run `validate_config` after an LLM-related change.
 3. Ask it to run `dry_run_plan` and report models, request count, estimated
    cost, every non-eligible `smoke_eligibility` reason, and the `retirements`
-   decision: `fail` means a selected model is retired, `inconclusive` means one
-   is retiring or its snapshot row is stale. The tool's `ok` stays `true` for a
-   retired model; it only says the plan was built, so read
-   `retirements.decision` instead.
+   decision: `fail` means a selected model is retired, `inconclusive` means one is retiring, its snapshot row is stale, or it is an `alias_unmapped`. The tool's `ok` stays `true` for a
+   retired model; it only says the plan breaks no limit, so read
+   `retirements.decision` instead. `ok: false` means a limit is broken: report
+   `budget_limits.violations`.
 4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
 5. Use `run_preflight`, then retain the returned evidence or compare it with a

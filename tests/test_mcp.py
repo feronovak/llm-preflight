@@ -406,6 +406,26 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     ]
 
 
+def test_dry_run_plan_schema_describes_budget_limits(tmp_path):
+    tools = mcp._response({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, tmp_path)
+    schema = next(
+        tool["outputSchema"]
+        for tool in tools["result"]["tools"]
+        if tool["name"] == "dry_run_plan"
+    )["oneOf"][1]["properties"]["budget_limits"]
+    assert set(schema["properties"]) == {
+        "max_requests",
+        "max_estimated_cost_usd",
+        "violations",
+    }
+    assert schema["required"] == [
+        "max_requests",
+        "max_estimated_cost_usd",
+        "violations",
+    ]
+    assert schema["properties"]["violations"]["items"] == {"type": "string"}
+
+
 @pytest.mark.parametrize(("cap", "ok"), [(1, False), (6, True)])
 def test_dry_run_plan_breach_sets_ok_false(tmp_path, cap, ok):
     (tmp_path / "benchmark.json").write_text(
@@ -907,8 +927,10 @@ def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect
         assert "`retirements` decision" in step
         assert "`fail` means a selected model is retired" in step
         assert (
-            "`inconclusive` means one is retiring or its snapshot row is stale" in step
+            "`inconclusive` means one is retiring, its snapshot row is stale, "
+            "or it is an `alias_unmapped`" in step
         )
+        assert "`ok: false` means" in step and "`budget_limits.violations`" in step
     for text in (mcp.SAFE_WORKFLOW, skill):
         assert "`ok` does not reflect it." in " ".join(text.split())
     assert "`ok` stays `true` for a retired model" in " ".join(guide.split())

@@ -283,10 +283,10 @@ _COVERAGE_REFUSAL = (
 def _cap(key: str, value: Any, kind: type[int | float]) -> Any:
     try:
         number = kind(value)
+        if not math.isfinite(number):
+            raise ValueError(key)
     except (TypeError, ValueError, OverflowError):
         raise ValueError(f"{key} must be a number, not {value!r}") from None
-    if not math.isfinite(number):
-        raise ValueError(f"{key} must be a number, not {value!r}")
     return number
 
 

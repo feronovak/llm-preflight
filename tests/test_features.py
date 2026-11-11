@@ -475,7 +475,17 @@ def test_budget_limits_rejects_a_cap_that_is_not_a_number(key):
 
 
 @pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
-@pytest.mark.parametrize("value", ["nan", "inf", "-inf", float("nan"), float("inf")])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "nan",
+        "inf",
+        "-inf",
+        float("nan"),
+        float("inf"),
+        pytest.param(10**400, id="huge-int"),
+    ],
+)
 def test_budget_limits_rejects_a_non_finite_cap(key, value):
     config = _limits_config(**{key: value})
     with pytest.raises(ValueError, match=f"{key} must be a number"):

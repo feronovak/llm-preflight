@@ -35,8 +35,10 @@ Changes below are marked `Breaking:` where they can change an exit code.
   `require_current_pricing`. It used to exit 0 and the live run then refused. The plan, text and JSON, carries
   `budget_limits` and a `Limit breach:` line, and the MCP `dry_run_plan` tool returns `ok: false` with the plan.
   Approval receipts written by 2.24.2 verify as `mismatch` because the hashed plan gains `budget_limits`;
-  record them again with `--dry-run --approval-receipt`. A non-numeric `max_requests` or `max_estimated_cost_usd`
-  is now an error message, not a traceback.
+  record them again with `--dry-run --approval-receipt`. A `max_requests` or `max_estimated_cost_usd` that is not a
+  finite number is invalid input and is now refused with a `must be a number` error and exit 2, before any request,
+  in the dry run and the live run. A non-numeric value used to be a traceback, and `"inf"`, `"Infinity"` or `"NaN"` as
+  `max_estimated_cost_usd` ran on 2.24.2 with no effective cost cap.
 - Breaking: `verify` and `gate` resolve an Anthropic alias route (for example `anthropic:claude-opus-4-1`) to its
   dated snapshot row. A CI record whose checked route is a retired alias used to verify with exit 0 and pass the gate
   as `fresh_pass`; it is now `superseded`: `verify` exits 3 and `gate` exits 1.

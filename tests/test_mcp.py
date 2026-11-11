@@ -407,7 +407,7 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
 
 
 @pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
-@pytest.mark.parametrize("value", ["nan", "inf"])
+@pytest.mark.parametrize("value", ["nan", "inf", pytest.param(10**400, id="huge-int")])
 def test_dry_run_plan_rejects_a_non_finite_cap(tmp_path, key, value):
     (tmp_path / "benchmark.json").write_text(
         json.dumps(

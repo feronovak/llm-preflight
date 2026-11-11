@@ -21,7 +21,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/PROJECT_MAP.md`](PROJECT_MAP.md) | Code map | stamped | 2026-09-09 | v2.14.0 |
 | [`docs/README.md`](README.md) | LLM Preflight documentation | unstamped | — | — |
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |
-| [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-10-19 | v2.22.1 |
+| [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-10-29 | v2.23.0 |
 | [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-10-19 | v2.22.1 |
 | [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-10-29 | v2.23.0 |
@@ -30,7 +30,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/development/documentation.md`](development/documentation.md) | Writing documentation | unstamped | — | — |
 | [`docs/development/visual-assets.md`](development/visual-assets.md) | Visual asset specification | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-10-09 | v2.19.2 |
-| [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-10-19 | v2.22.2 |
+| [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-10-09 | v2.19.2 |
@@ -40,8 +40,8 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/observed-model-comparison.md`](guides/observed-model-comparison.md) | Observed model comparison: support-routing example | stamped | 2026-11-11 | v2.24.1 |
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-11-10 | v2.24.0 |
-| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-10-18 | v2.22.1 |
-| [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-10-19 | v2.22.2 |
+| [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-11-11 | v2.24.2 |
+| [`docs/guides/reports.md`](guides/reports.md) | Reviewable reports | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/retirements.md`](guides/retirements.md) | Model retirements: the bundled snapshot and its verdict | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/vision-inputs.md`](guides/vision-inputs.md) | Image-to-text contract inputs | stamped | 2026-09-08 | v2.13.0 |
 | [`docs/index.md`](index.md) | LLM Preflight documentation | stamped | 2026-10-19 | v2.22.1 |

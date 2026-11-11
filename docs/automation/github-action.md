@@ -4,7 +4,7 @@ Use the `v2.24.2` Action with `package-version: "2.24.2"` for reproducible CI.
 The immutable release tag retains its earlier **2.24.1** default. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 `feronovak/llm-preflight` runs three no-spend checks by default: configuration
 doctor, pricing coverage, and a bounded smoke dry-run. It is a local

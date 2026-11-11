@@ -1604,3 +1604,40 @@ def test_release_guides_describe_available_2_23_features():
     readme = (ROOT / "README.md").read_text()
     assert "\n## New\n" in readme and "## New in" not in readme
     assert "https://github.com/feronovak/llm-preflight/releases" in readme
+
+
+def test_guide_lists_the_five_added_models_with_their_recorded_results():
+    data = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-11-11-five-models.json").read_text()
+    )
+    base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    guide = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+    assert [row["model"] for row in data["rows"]] == [
+        "gemini-4-carbon",
+        "MiniMax-M3",
+        "mistral-large-4",
+        "qwen3.8-flash",
+        "claude-mythos-5-2",
+    ]
+    assert data["approved_maximum_requests"] == 40
+    assert (
+        data["planned_maximum_token_estimate_usd"]
+        <= data["approved_maximum_token_estimate_usd"]
+        <= 1.0
+    )
+    assert data["method"]["case_set_sha256"] == base["method"]["case_set_sha256"]
+    for row in data["rows"]:
+        assert f"`{row['model']}`" in guide
+        assert row["requests"] == 8 and row["retry_count"] == 0
+        assert row["valid"] + row["contract_failures"] == row["api_successful"]
+        assert row["api_successful"] + row["api_failures"] == 8
+        assert row["request"]["max_output_tokens"] == 1024
+        assert row["request"]["retry"]["max_attempts"] == 1
+        assert row["observed_on"] == "2026-11-11"
+        assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+    for field in ("requests", "api_successful", "api_failures", "valid"):
+        assert data["totals"][field] == sum(row[field] for row in data["rows"])
+    assert "25 models" in guide
+    serialized = json.dumps(data)
+    for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
+        assert marker not in serialized

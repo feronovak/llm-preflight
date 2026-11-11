@@ -45,6 +45,8 @@ _GIT_REASON_LIMIT = 120
 _QUOTED = re.compile(
     r"(?P<quote>['\"])(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)(?P=quote)"
 )
+_BACKTICKED = re.compile(r"`(?P<value>[A-Za-z0-9][A-Za-z0-9._:/-]*)`")
+_BACKTICK_SUFFIXES = {".js", ".mjs", ".cjs", ".ts", ".tsx"}
 _MODEL_PREFIX = re.compile(
     r"^(?:openrouter/(?:[A-Za-z0-9_-]+/)?)?(?:(?:anthropic|openai|google|xai|x-ai|deepseek|qwen|alibaba|typesafe|z-ai|zai|moonshot|minimax|mistral|cohere)/)?(?:kimi-[A-Za-z0-9]|minimax-m[0-9]|mistral-large-[0-9]|command-a-plus-[0-9]|gpt-[A-Za-z0-9]|claude-[A-Za-z0-9]|gemini-[A-Za-z0-9]|grok-[A-Za-z0-9]|deepseek-[A-Za-z0-9]|qwen[A-Za-z0-9]|glm-[A-Za-z0-9]|jev-[A-Za-z0-9]|o[1-9](?:-|$))",
     re.IGNORECASE,
@@ -272,6 +274,10 @@ def _references_for_lines(
     references = []
     for line_number, line in enumerate(lines, 1):
         candidates = [match.group("value") for match in _QUOTED.finditer(line)]
+        if suffix.casefold() in _BACKTICK_SUFFIXES:
+            candidates.extend(
+                match.group("value") for match in _BACKTICKED.finditer(line)
+            )
         if suffix.casefold() in {".yaml", ".yml"}:
             yaml_content = line.split("#", 1)[0]
             candidates.extend(

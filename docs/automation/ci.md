@@ -1,6 +1,6 @@
 # CI and JSON output
 
-**Last reviewed:** 2026-10-29 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 ## JSON output and exit status
 

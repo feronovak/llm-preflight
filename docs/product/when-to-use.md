@@ -1,6 +1,6 @@
 # When to use LLM Preflight
 
-**Last reviewed:** 2026-10-27 · **As of:** v2.23.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 LLM Preflight is for a local integration change: a model ID, provider route,
 prompt, request option, tool definition, schema, parser, or validation rule.

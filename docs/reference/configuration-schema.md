@@ -1,6 +1,6 @@
 # Configuration reference
 
-**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Configurations are JSON. A config requires `models` or `discovery`, and either
 one top-level `prompt` or one or more named `prompts`.
@@ -83,7 +83,8 @@ models also accept `response`, `latency_seconds`, and `ttft_seconds` for
 deterministic local fixtures.
 
 Supported provider names are `openai`, `anthropic`, `gemini`, `xai`,
-`openrouter`, `deepseek`, `qwen`, `zai`, `typesafe`, `openai_compatible`, and `mock`.
+`openrouter`, `deepseek`, `qwen`, `zai`, `moonshot`, `minimax`, `mistral`, `cohere`,
+`typesafe`, `openai_compatible`, and `mock`.
 Native `zai` text runs are supported; its catalogue is not implemented.
 TypeSafe Jev models are catalogue-visible typed-decision routes and are not
 eligible for the generic text smoke adapter. A discovery object requires

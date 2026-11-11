@@ -1,6 +1,6 @@
 # Agent decision contract
 
-**Last reviewed:** 2026-08-30 · **As of:** v2.7.5
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Every completed benchmark result includes an additive `decision` object. It is
 the machine-readable boundary for agents: consume it from the JSON artifact or
@@ -55,6 +55,9 @@ approval. It may be attached to `fail` as well as `inconclusive`, and covers:
   completeness in legacy schema-v1 artifacts without `cost_coverage`; or
 - a mock-only run, which is useful for local validation but cannot provide
   live-provider evidence.
+
+An undated or custom hand-typed price is not on this list and does not block
+unless `require_current_pricing` is true.
 
 Final-attempt latency does not account for retry attempts. When their usage
 was not retained, retries make cost evidence incomplete and prevent a billable

@@ -1,6 +1,6 @@
 # Image-to-text contract inputs
 
-**Last reviewed:** 2026-09-08 · **As of:** v2.13.0
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Use an image-to-text preflight when an application already relies on an image to
 produce text: OCR, classification labels, extraction, routing, or a structured
@@ -48,6 +48,9 @@ OpenRouter and an explicitly configured OpenAI-compatible endpoint use
 multipart `image_url` content. Gemini uses inline image data. This lets a Qwen
 image-capable model hosted through Model Studio be configured as an
 `openai_compatible` model with its workspace endpoint and `DASHSCOPE_API_KEY`.
+The Anthropic and OpenAI Responses adapters, Z.ai `glm-5.3`, and the native
+Moonshot, MiniMax, Mistral and Cohere routes reject `input_images`; native
+DeepSeek, Qwen and the other Z.ai models send multipart `image_url` content.
 
 Keep the contract mechanical. For example, check an OCR response against a
 JSON Schema, or require a routing label from an allowed set. Use a stable,

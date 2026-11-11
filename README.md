@@ -19,10 +19,45 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 
 [Try it](#try-it-in-60-seconds) · [Observed models](#observed-results-on-a-support-routing-contract) · [Use your own contract](#first-live-run) · [CI and agents](#cli-ci-and-mcp)
 
-**Watch an invalid response get caught and fixed (23 seconds).**
+## Try it in 60 seconds
 
-`billing` passes → change the response to `sales` → check fails → restore
-`billing` → check passes. The allowed labels stay unchanged.
+In a new directory, install the tool. No API key or provider request is needed:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install llm-preflight
+```
+
+The activation command is for POSIX shells; PowerShell uses
+`.\.venv\Scripts\Activate.ps1`.
+
+### 1. Watch an invalid response get caught
+
+Save this as `routing.json`. It defines a support-routing rule (the response
+must be exactly `billing`) and two response fixtures, one that must pass and
+one that must fail:
+
+```json
+{
+  "prompt": "I was charged twice. Reply with only the support queue label.",
+  "models": [{"name": "local-mock", "provider": "mock", "model": "local", "response": "billing"}],
+  "validation": {"exact": "billing"},
+  "validation_fixtures": [
+    {"name": "right queue", "response": "billing", "expect": "pass"},
+    {"name": "wrong queue", "response": "technical", "expect": "fail"}
+  ]
+}
+```
+
+```bash
+llm-preflight routing.json --contract-check --no-env-file
+```
+
+Both fixtures behave as expected and the command exits `0`. Now change the
+`right queue` response from `billing` to `sales` and run it again: the check
+fails and exits `1`. Restore `billing` and it passes again. The 23-second
+session below shows exactly this:
 
 ![Real terminal session: billing passes, sales fails the same validator, and restoring billing passes again](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/contract-check-session.gif)
 
@@ -30,30 +65,17 @@ Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 it makes no provider requests and does not execute your application's parser.*
 [Watch the MP4](https://github.com/feronovak/llm-preflight/blob/main/docs/images/contract-check-session.mp4).
 
-## New
+`--contract-check` exits `0` when every fixture behaves as expected, `1` when
+one does not, and `2` for an invalid config.
 
-- `gemini-4-carbon`: official snapshot price and request checks.
-- Four more measured models in the comparison guide: `gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4` and `qwen3.8-flash`. `claude-mythos-5-2` was attempted, but all 8 requests returned HTTP 404 (not available to the test account). The guide has results for 24 models.
-- Claude Fable 5.2 added to the measured comparison.
-- Claude Fable 5.2 and Claude Mythos 5.2: pricing and retirement rows.
+### 2. Now a mock benchmark run
 
-Everything else is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
-
-## Try it in 60 seconds
-
-In a new directory, install the tool and run the local mock—no API key or
-provider request:
+The mock benchmark has a different config and a different decision:
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python3 -m pip install llm-preflight
 llm-preflight init
 llm-preflight benchmark.json --no-save --no-env-file
 ```
-
-The activation command above is for POSIX shells; PowerShell uses
-`.\.venv\Scripts\Activate.ps1`.
 
 `init` refuses to overwrite an existing config. Look for `local-mock` with
 `PASS` in the quality gate: the mock replied `ok` and passed the exact-output
@@ -80,6 +102,11 @@ For benchmark runs, read the decision before acting:
 - **`inconclusive`, exit `3`:** evidence is insufficient; read the blocking warnings.
 
 A passing run is evidence for the configured workload, not production approval.
+
+## New
+
+Recent additions, including newly measured models, are on the
+[releases page](https://github.com/feronovak/llm-preflight/releases).
 
 <a id="tested-models"></a>
 

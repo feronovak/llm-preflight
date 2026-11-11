@@ -418,8 +418,13 @@ def _counted(count: int, noun: str, plural: str | None = None) -> str:
     return f"{count} {noun if count == 1 else plural or noun + 's'}"
 
 
-def _audit_ci_reason(code: int, unknown_ids: int, unmapped_ids: int) -> str:
+def _audit_ci_reason(
+    code: int, unknown_ids: int, unmapped_ids: int, retiring_refs: int
+) -> str:
     notes = []
+    base = _AUDIT_CI_EXIT[code]
+    if code == 3 and unmapped_ids and not retiring_refs:
+        base = ""
     if code == 3 and unmapped_ids:
         notes.append(
             f"{_counted(unmapped_ids, 'alias', 'aliases')} could not be mapped "
@@ -431,7 +436,7 @@ def _audit_ci_reason(code: int, unknown_ids: int, unmapped_ids: int) -> str:
             f"{'has' if unknown_ids == 1 else 'have'} no snapshot row and "
             f"{'is' if unknown_ids == 1 else 'are'} not verified"
         )
-    return "; ".join([_AUDIT_CI_EXIT[code], *notes]) + "."
+    return "; ".join([part for part in [base, *notes] if part]) + "."
 
 
 def _audit_exit_line(
@@ -440,11 +445,12 @@ def _audit_exit_line(
     audited: bool = True,
     unknown_ids: int = 0,
     unmapped_ids: int = 0,
+    retiring_refs: int = 0,
 ) -> str:
     code = _RETIREMENT_EXIT.get(decision, 0)
     if ci:
         reason = (
-            _audit_ci_reason(code, unknown_ids, unmapped_ids)
+            _audit_ci_reason(code, unknown_ids, unmapped_ids, retiring_refs)
             if audited
             else _AUDIT_CI_NOTHING_READ
         )
@@ -537,7 +543,9 @@ def _format_audit_source(
             f"{retired} retired, {retiring} retiring or stale, {unknown} unknown"
             f"{f', {unmapped} alias unmapped' if unmapped else ''}."
         ),
-        _audit_exit_line(audit["decision"], ci, True, unknown_ids, unmapped_ids),
+        _audit_exit_line(
+            audit["decision"], ci, True, unknown_ids, unmapped_ids, retiring
+        ),
         *files_lines,
     ]
     retired_groups = _audit_groups(
@@ -926,14 +934,16 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
     flagged = [
         entry
         for entry in retirements.get("models", [])
-        if entry["status"] in {"retired", "retiring", "stale"}
+        if entry["status"] in {"retired", "retiring", "stale", "alias_unmapped"}
     ]
     if flagged:
+        unmapped = summary_counts.get("alias_unmapped", 0)
         lines.append(
             "Retirements: "
             f"{summary_counts.get('retired', 0)} retired; "
             f"{summary_counts.get('retiring', 0) + summary_counts.get('stale', 0)} "
-            f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
+            f"retiring or stale; {summary_counts.get('unknown', 0)} unknown"
+            f"{f'; {unmapped} alias unmapped' if unmapped else ''}."
         )
         for entry in flagged:
             lines.append(

@@ -5123,13 +5123,48 @@ def test_audit_source_ci_unmapped_alias_exits_3(
     assert lines[0].endswith(
         "0 retired, 0 retiring or stale, 0 unknown, 1 alias unmapped."
     )
-    assert lines[1] == (
-        "Exit 3 (--ci): a referenced model is retiring or its snapshot row is "
-        "stale; 1 alias could not be mapped to a snapshot row."
-    )
+    assert lines[1] == "Exit 3 (--ci): 1 alias could not be mapped to a snapshot row."
     assert "Alias not mapped:" in lines
     assert any("alias_unmapped (candidates: gpt-5-2025-08-07)" in x for x in lines)
     assert not any("Pricing unknown, no retirement finding" in x for x in lines)
+
+
+def test_dry_run_ci_text_names_the_unmapped_alias(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    config = _dry_run_config(tmp_path, "gpt-5")
+    code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(config), "--dry-run", "--ci", "--no-env-file"
+    )
+    assert code == 3
+    assert (
+        "Retirements: 0 retired; 0 retiring or stale; 0 unknown; 1 alias unmapped."
+        in out
+    )
+    assert "- openai/gpt-5: alias_unmapped" in out
+    assert "gpt-5-2025-08-07" in out
+
+
+def test_doctor_ci_text_names_the_unmapped_alias(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    config = _doctor_config(tmp_path, "gpt-5")
+    code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(config), "--doctor", "--ci", "--no-env-file"
+    )
+    assert code == 3
+    assert "Doctor: ok" in out
+    assert "- warning: gpt-5: alias without a safe mapping" in out
+    assert "gpt-5-2025-08-07" in out
+
+
+def test_audit_source_ci_only_unmapped_alias_exit_line_has_no_retiring_clause(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    code, lines = _audit_ci(monkeypatch, capsys, tmp_path, 'a = "gpt-5"\n')
+    assert code == 3
+    assert lines[1] == ("Exit 3 (--ci): 1 alias could not be mapped to a snapshot row.")
 
 
 @pytest.mark.parametrize(
@@ -5158,3 +5193,26 @@ def test_dry_run_ci_alias_exits_on_the_snapshot_verdict(
     with pytest.raises(SystemExit) as exc_info:
         cli.main()
     assert exc_info.value.code == code
+
+
+def test_audit_source_ci_retiring_model_and_unmapped_alias_name_both(
+    monkeypatch, tmp_path, capsys, alias_table
+):
+    table = {
+        **_ALIAS_TABLE,
+        ("openai", "gpt-soon"): {
+            "status": "deprecated",
+            "retirement_date": "2027-04-01",
+            "as_of": "2026-10-01",
+            "source_url": _RETIREMENT_URL,
+        },
+    }
+    monkeypatch.setattr(_retirements, "PUBLIC_RETIREMENTS", table)
+    code, lines = _audit_ci(
+        monkeypatch, capsys, tmp_path, 'a = "gpt-5"\nb = "gpt-soon"\n'
+    )
+    assert code == 3
+    assert lines[1] == (
+        "Exit 3 (--ci): a referenced model is retiring or its snapshot row is "
+        "stale; 1 alias could not be mapped to a snapshot row."
+    )

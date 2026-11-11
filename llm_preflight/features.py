@@ -435,7 +435,7 @@ def doctor_report(
                     "message": f"{entry['reason']}; {entry['next_step']}",
                 }
             )
-        elif entry["status"] in {"retiring", "stale"}:
+        elif entry["status"] in {"retiring", "stale", "alias_unmapped"}:
             checks.append(
                 {
                     "ok": True,

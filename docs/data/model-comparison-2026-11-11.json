@@ -114,7 +114,7 @@
         "require_current_pricing": true,
         "save_responses": "failures"
       },
-      "config_sha256": "6e4b0b29f55d29aabe1395b019697de0e8ae4de0e2f891181e15ee26055f2848",
+      "config_sha256": "110932cfb0b925b1d35e2c9d152119893a49f87f51283767755885e420118753",
       "result_sha256": "60a084e6165e3192ac4cff8a41edafb5f19b9fe6425c97102a74b43eface7407",
       "pricing_fingerprint": "203ad46aa0dd3b70707354eff34adf019b7c384b81fc2001bc061fa5724ab662",
       "validator_version": "output-schema-4"

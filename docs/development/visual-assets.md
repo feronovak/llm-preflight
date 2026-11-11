@@ -103,9 +103,10 @@ figure at its intended display width before publication.
 ## Measured models and future Chinese model runs
 
 Generate the figure from retained aggregates; never edit its numerical SVG
-labels by hand. The current summary uses only the October 29 JSON and keeps
-all 19 models in one image. Neither default nor `--data` input silently inherits
-historical rows.
+labels by hand. The default summary joins the October 29 and
+November 11 JSON files, in that order, and keeps all 20 models in one image. Repeat
+`--data` to join other aggregates in the order given; a `--data` run uses only the
+files it names and never silently inherits historical rows.
 
 Each source row supplies `model`, `route`, `observed_on`, `requests`,
 `api_successful`, `valid`, `mean_latency_seconds` and `estimated_cost_usd`.

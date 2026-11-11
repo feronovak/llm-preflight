@@ -1023,7 +1023,7 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     for workflow in (gate, record):
         for reference in re.findall(r"uses: (\S+)", workflow):
             assert re.fullmatch(
-                r"feronovak/llm-preflight@v2\.24\.1|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                r"feronovak/llm-preflight@v2\.24\.2|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate

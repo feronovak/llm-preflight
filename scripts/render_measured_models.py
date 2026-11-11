@@ -18,13 +18,40 @@ DEFAULT_DATA = (
     ROOT / "docs/data/model-comparison-2026-10-29.json",
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-five-models.json",
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json",
+    ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-flash-lite.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (
     ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}-light.svg"
 )
-# A model added in a later aggregate is shown directly above its predecessor.
-ROW_ABOVE = {"claude-fable-5-2": "claude-fable-5-1"}
+# Display order inside each result group: provider, then model, newest/largest first.
+MODEL_ORDER = (
+    "gpt-6-astra",
+    "gpt-6.1-sol",
+    "gpt-6.1-terra",
+    "gpt-6-luna",
+    "claude-fable-5-2",
+    "claude-fable-5-1",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5",
+    "gemini-4-argon",
+    "gemini-4-carbon",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3.1-flash-lite",
+    "grok-4.7",
+    "deepseek-v4-pro",
+    "deepseek-flash",
+    "qwen3.8-max",
+    "qwen3.8-flash",
+    "MiniMax-M3",
+    "mistral-large-4",
+    "glm-5.3",
+    "glm-5.3-flashx",
+    "glm-5.3-flash",
+    "kimi-k3.1-pro",
+)
 # Models the default summary leaves out; their rows stay in the data and the guide.
 DEFAULT_HIDDEN = {"claude-mythos-5-2"}
 MODEL_NAMES = {
@@ -46,7 +73,7 @@ MODEL_NAMES = {
 
 
 def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
-    """Read one aggregate, or concatenate the rows of several in the given order."""
+    """Read one aggregate, or merge the rows of several in display order."""
     hidden = DEFAULT_HIDDEN if data_paths is None else set()
     if data_paths is None:
         data_paths = DEFAULT_DATA
@@ -55,19 +82,13 @@ def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
     first, *rest = (json.loads(path.read_text()) for path in data_paths)
     rows = [*first["rows"], *(r for d in rest for r in d["rows"])]
     rows = [row for row in rows if row["model"] not in hidden]
-    return {**first, "rows": place_above(rows)}
+    return {**first, "rows": in_display_order(rows)}
 
 
-def place_above(rows: list[dict]) -> list[dict]:
-    """Move each model in ROW_ABOVE directly above its predecessor when both exist."""
-    for model, anchor in ROW_ABOVE.items():
-        moved = [row for row in rows if row["model"] == model]
-        if not moved or not any(row["model"] == anchor for row in rows):
-            continue
-        rows = [row for row in rows if row["model"] != model]
-        at = next(i for i, row in enumerate(rows) if row["model"] == anchor)
-        rows[at:at] = moved
-    return rows
+def in_display_order(rows: list[dict]) -> list[dict]:
+    """Sort rows by MODEL_ORDER; models it does not list keep their order, last."""
+    rank = {model: i for i, model in enumerate(MODEL_ORDER)}
+    return sorted(rows, key=lambda row: rank.get(row["model"], len(rank)))
 
 
 def http_label(evidence: dict) -> str:

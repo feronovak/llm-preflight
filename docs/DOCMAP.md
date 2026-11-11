@@ -37,7 +37,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |
 | [`docs/guides/native-chinese-models.md`](guides/native-chinese-models.md) | Direct GLM, DeepSeek and Qwen checks | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/native-providers.md`](guides/native-providers.md) | Check current native models | stamped | 2026-11-11 | v2.24.2 |
-| [`docs/guides/observed-model-comparison.md`](guides/observed-model-comparison.md) | Observed model comparison: support-routing example | stamped | 2026-11-11 | v2.24.1 |
+| [`docs/guides/observed-model-comparison.md`](guides/observed-model-comparison.md) | Observed model comparison: support-routing example | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/output-contracts.md`](guides/output-contracts.md) | Custom contract tests | unstamped | — | — |
 | [`docs/guides/pricing-and-safety.md`](guides/pricing-and-safety.md) | Tests, pricing, and safety | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/proof-of-preflight.md`](guides/proof-of-preflight.md) | Proof of preflight: the record and the merge gate | stamped | 2026-11-11 | v2.24.2 |

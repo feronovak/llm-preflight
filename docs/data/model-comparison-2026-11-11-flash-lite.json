@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-11",
+  "reviewed_on": "2026-11-11",
+  "display_title": "Observed results on a support-routing contract",
+  "tool_version": "2.24.2",
+  "source_commit": "819333c387f39baab9b241ce4df41ddd01bd62e5",
+  "source_dirty": false,
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.015,
+  "planned_maximum_token_estimate_usd": 0.012429,
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Gemini route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.0017925,
+    "known_cost_subtotal_usd": 0.0017925,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "display_name": "Gemini 3.1 Flash-Lite",
+      "route": "Gemini",
+      "observed_on": "2026-11-11",
+      "observed_model": "gemini-3.1-flash-lite",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.0496520921260526,
+      "latency_p50_seconds": 0.9881811259983806,
+      "latency_p95_seconds": 1.2722020595654613,
+      "mean_ttft_seconds": 1.024223993128544,
+      "input_tokens": 480,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1115,
+      "estimated_cost_usd": 0.0017925,
+      "known_cost_subtotal_usd": 0.0017925,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.015,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-3.1-flash-lite",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.015,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "ff5c644b65642cbda4b258da17ebadf29ca1350828857d62b351822e46e499e1",
+      "result_sha256": "3f7cc7355c121d5ab5ca0ebb407695dc4ecf3cca21899351ae5539f6a3371f04",
+      "pricing_fingerprint": "a13dd2bc1480a4fc51259efda37a8a53ee4f890cd8d093c6ee276a2837245197",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

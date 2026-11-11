@@ -14,6 +14,8 @@ Define the JSON shape, routing labels, or exact output your feature needs.
 Check responses against those rules, preview provider requests and estimated
 cost, and keep evidence for the change review.
 
+It doesn't certify production behavior. It proves the check was done.
+
 Built for engineers maintaining an LLM feature. Runs locally as a CLI, GitHub
 Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
 
@@ -101,8 +103,6 @@ For benchmark runs, read the decision before acting:
 - **`fail`, exit `1`:** a configured check failed; inspect the cause.
 - **`inconclusive`, exit `3`:** evidence is insufficient; read the blocking warnings.
 
-A passing run is evidence for the configured workload, not production approval.
-
 ## New
 
 Recent additions, including newly measured models, are on the
@@ -117,7 +117,7 @@ Claude Fable 5.2, measured on **2026-11-11**. Each ran eight synthetic
 support-routing and strict JSON cases. **152 of 160 checks passed**: three
 outputs failed their contract and five Kimi calls returned HTTP 429. **16
 models passed all eight checks.** These are workload observations, not a
-ranking of general intelligence or production approval.
+ranking of general intelligence.
 
 [![All 20 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 
@@ -350,11 +350,16 @@ responsible for the integration.
 ## How it compares
 
 Use this project for a bounded contract check and reviewable evidence before
-an integration change. Evaluation frameworks also support assertions and CI;
-keep one when it already meets your needs. Broader evaluation suites serve
-semantic scoring and statistical comparisons; observability tools serve
-production tracing and incident investigation. See
-[when to use it](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md).
+an integration change. Keep the tools you already have; this adds what they
+usually do not:
+
+| You already have | It is good for | LLM Preflight adds |
+|---|---|---|
+| A pytest assertion on a model reply | Unit-level checks in your test suite | Spend-capped dry runs that preview the provider request and estimated cost before any live call |
+| An evaluation framework | Semantic scoring and statistical comparisons | Retirement and pricing snapshots for the model IDs you use, checked locally |
+| An observability tool | Production tracing and incident investigation | A merge gate tied to a fresh CI record of the contract check |
+
+See [when to use it](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md).
 
 ## Get help or try it in your project
 

@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -406,12 +406,13 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
 
 
 def test_mcp_retirement_report_carries_valid_until(tmp_path, monkeypatch):
+    provider, model = next(iter(retirements.PUBLIC_RETIREMENTS))
     monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
     (tmp_path / "benchmark.json").write_text(
         json.dumps(
             {
                 "prompt": "hi",
-                "models": [{"provider": "openai", "model": "gpt-5.4-mini"}],
+                "models": [{"provider": provider, "model": model}],
             }
         )
     )
@@ -428,7 +429,10 @@ def test_mcp_retirement_report_carries_valid_until(tmp_path, monkeypatch):
         tmp_path,
     )
     snapshot = plan["result"]["structuredContent"]["retirements"]["snapshot"]
-    assert snapshot["valid_until"] == retirements.snapshot_summary()["valid_until"]
+    reviewed = date.fromisoformat(
+        retirements.PUBLIC_RETIREMENTS[(provider, model)]["as_of"]
+    )
+    assert snapshot["valid_until"] == (reviewed + timedelta(days=30)).isoformat()
 
 
 def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected(

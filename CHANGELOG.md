@@ -6,8 +6,8 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- The retirement report now carries `snapshot.valid_until`, the last day the bundled rows are not stale, in the doctor, dry-run and scan JSON. Text output of the doctor, dry-run and scan adds a notice during the last 7 days; it never changes the decision or exit code. Saved dry-run plans change once because the plan now includes the field, so approval receipts for the old plan verify as `mismatch`.
-- The Action guide explains how to pin the tag only and keep it current with Dependabot.
+- The retirement report now carries `snapshot.valid_until`, the last day the rows of the selected models are not stale, in the doctor and dry-run JSON (the scan JSON carries the bundled-wide date). Text output of the doctor, dry-run and scan adds a notice during the last 7 days; it never changes the decision or exit code. Saved dry-run plans change once because the plan now includes the field, so approval receipts for the old plan verify as `mismatch`.
+- The Action guide explains how to keep the pin current with Dependabot.
 
 ### Changed
 

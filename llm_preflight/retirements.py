@@ -293,6 +293,24 @@ def snapshot_summary() -> dict[str, Any]:
     }
 
 
+def selected_snapshot(
+    entries: list[dict[str, Any]], max_age_days: int = DEFAULT_MAX_AGE_DAYS
+) -> dict[str, Any]:
+    """The snapshot summary with `valid_until` taken from the selected rows.
+
+    The bundled-wide date can differ from the rows a config uses; with no
+    selected row there is nothing that goes stale, so the key is absent.
+    """
+    summary = snapshot_summary()
+    reviewed = [entry["as_of"] for entry in entries if entry.get("as_of")]
+    if not reviewed:
+        summary.pop("valid_until")
+        return summary
+    oldest = date.fromisoformat(min(reviewed))
+    summary["valid_until"] = (oldest + timedelta(days=max_age_days)).isoformat()
+    return summary
+
+
 def expiry_notice(snapshot: dict[str, Any], today: date) -> str | None:
     """Text-only warning that the bundled rows go stale soon; never a verdict."""
     valid_until = snapshot.get("valid_until")
@@ -302,9 +320,9 @@ def expiry_notice(snapshot: dict[str, Any], today: date) -> str | None:
     if not 0 <= days_left <= EXPIRY_NOTICE_DAYS:
         return None
     return (
-        f"Bundled retirement data is valid until {valid_until} "
-        f"({days_left} days left). After that, retirement checks return "
-        "inconclusive until you update llm-preflight."
+        f"The bundled retirement rows for these models are valid until "
+        f"{valid_until} ({days_left} days left). After that, --ci returns "
+        "inconclusive for them until you update llm-preflight."
     )
 
 
@@ -468,5 +486,5 @@ def retirement_report(
         "summary": summary,
         "models": entries,
         "next_commands": unique_next_commands(entries),
-        "snapshot": snapshot_summary(),
+        "snapshot": selected_snapshot(entries, max_age_days),
     }

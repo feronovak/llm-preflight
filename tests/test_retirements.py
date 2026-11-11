@@ -389,6 +389,15 @@ def test_snapshot_valid_until_is_oldest_row_plus_window(table):
     assert retirement_verdict("openai", "gpt-old-row", day_after)["status"] == "stale"
 
 
+def test_report_valid_until_comes_from_the_selected_rows_only(table):
+    selected = retirement_report([{"provider": "openai", "model": "gpt-new"}], TODAY)
+    row_date = date.fromisoformat(TABLE[("openai", "gpt-new")]["as_of"])
+    expected = (row_date + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    assert selected["snapshot"]["valid_until"] == expected
+    unknown = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
+    assert "valid_until" not in unknown["snapshot"]
+
+
 def test_expiry_notice_appears_7_days_before_and_not_8():
     snapshot = {"valid_until": "2026-12-04"}
     assert "valid until 2026-12-04" in retirements.expiry_notice(

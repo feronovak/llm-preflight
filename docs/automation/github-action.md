@@ -41,10 +41,18 @@ succeeds against it.
 The bundled retirement rows go stale 30 days after their review date, and
 then `--ci` returns `inconclusive` (exit 3) until you move to a newer release.
 Official price rows follow the same 30-day rule from their own review dates.
-Doctor, dry-run and scan output state the retirement date as
-`snapshot.valid_until` and print a notice during the last 7 days. A
-release tag's `action.yml` installs that release's package by default, so pin
-the tag only and let Dependabot move it:
+The Action runs the doctor and dry-run without `--ci`, so it prints no expiry
+notice and never exits 3 for a stale retirement row. A stale price row turns
+it red through the `--pricing-check` step (exit 1). Run
+`llm-preflight benchmark.json --doctor` locally or in your own CI to read
+`snapshot.valid_until` (the oldest selected row's review date plus 30 days)
+and the notice printed during its last 7 days.
+
+Dependabot moves the Action tag but not the `package-version` input. A tag's
+`action.yml` defaults to the package version of the release before it
+(`v2.24.2` defaults to `2.24.1`), so a tag-only pin installs the previous
+release and its data expires a release earlier. Keep `package-version` in
+your workflow, set to the tag's version, and bump both together:
 
 ```yaml
 # .github/dependabot.yml
@@ -61,13 +69,11 @@ steps:
   - uses: feronovak/llm-preflight@v2.24.2
     with:
       config: benchmark.json
+      package-version: "2.24.2"
 ```
 
-Dependabot bumps the tag but never the `package-version` input, so an explicit
-`package-version` makes every bump two edits. Set it only to override the
-tag's package version. The `package-version` examples on this page
-predate that default: a tag installs its own package version from the release
-after `v2.24.2`.
+Dependabot's pull request changes the tag; edit `package-version` in that pull
+request to the same version.
 
 ## Paid smoke is opt-in
 

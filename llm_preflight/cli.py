@@ -86,6 +86,7 @@ from .reporting import render_card_svg, render_job_summary, render_report_html
 from .retirements import (
     expiry_notice,
     retirement_report,
+    selected_snapshot,
     today_utc,
     unique_next_commands,
 )
@@ -548,7 +549,9 @@ def _format_audit_source(
             f"{_counted(len(unpriced), 'reference')} to "
             f"{_counted(len(unpriced_groups), 'model ID')} — use --all to list them."
         )
-    _append_expiry_notice(lines, audit["retirement_snapshot"])
+    _append_expiry_notice(
+        lines, selected_snapshot([item["retirement"] for item in references])
+    )
     return "\n".join(lines) + "\n"
 
 

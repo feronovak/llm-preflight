@@ -134,9 +134,10 @@ configured native models; no metadata discovery endpoint is integrated.
 | GitHub Action | Runs the installed package. Set `package-version: "2.24.1"` to use these providers. |
 | Agent plugin | Existing guidance requires reporting the contract, price/plan decision, warnings and unknown evidence before any live work. |
 
-DeepSeek's `deepseek-flash` currently resolves to V4.1-Flash-1017. Its legacy
-`deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` IDs redirect to that model
-at Flash prices. The image/text fixture verifies transport and retained observed
+DeepSeek's `deepseek-flash` currently resolves to V4.1-Flash-1017. The legacy
+`deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` IDs are still accepted,
+but their original models are retired: requests to them are served by
+V4.1-Flash-1017 and billed at the Flash price. The image/text fixture verifies transport and retained observed
 identity; it does not renew an older observation of the alias. Pre-run image
 cost remains unavailable. TypeSafe Jev 1.14 is updated for catalog pricing only
 and remains incompatible with a text smoke.

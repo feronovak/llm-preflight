@@ -36,18 +36,18 @@ The activation command is for POSIX shells; PowerShell uses
 
 ### 1. Watch an invalid response get caught
 
-Save this as `routing.json`. It defines a support-routing rule (the response
-must be exactly `billing`) and two response fixtures, one that must pass and
-one that must fail:
+Save this as `routing.json`. The app accepts `billing`, `technical` or
+`account`. The config has two response fixtures: `model-reply` must pass and
+`negative-control` (`INVALID`) must fail:
 
 ```json
 {
   "prompt": "I was charged twice. Reply with only the support queue label.",
   "models": [{"name": "local-mock", "provider": "mock", "model": "local", "response": "billing"}],
-  "validation": {"exact": "billing"},
+  "validation": {"allowed_values": ["billing", "technical", "account"]},
   "validation_fixtures": [
-    {"name": "right queue", "response": "billing", "expect": "pass"},
-    {"name": "wrong queue", "response": "technical", "expect": "fail"}
+    {"name": "model-reply", "response": "billing", "expect": "pass"},
+    {"name": "negative-control", "response": "INVALID", "expect": "fail"}
   ]
 }
 ```
@@ -57,7 +57,7 @@ llm-preflight routing.json --contract-check --no-env-file
 ```
 
 Both fixtures behave as expected and the command exits `0`. Now change the
-`right queue` response from `billing` to `sales` and run it again: the check
+`model-reply` response from `billing` to `sales` and run it again: the check
 fails and exits `1`. Restore `billing` and it passes again. The 23-second
 session below shows exactly this:
 

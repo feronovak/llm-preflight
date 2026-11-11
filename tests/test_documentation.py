@@ -1198,7 +1198,7 @@ def test_readme_contract_check_demo_passes_then_fails_when_billing_becomes_sales
     config = re.search(r"```json\n(.*?)\n```", step, re.DOTALL)
     assert config is not None
     assert "llm-preflight routing.json --contract-check --no-env-file" in step
-    expected = {"billing": 0, "sales": 1}
+    expected = {"billing": 0, "technical": 0, "sales": 1}
     for response, code in expected.items():
         path = tmp_path / f"{response}.json"
         path.write_text(

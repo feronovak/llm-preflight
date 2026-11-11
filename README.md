@@ -12,9 +12,12 @@
 
 Define the JSON shape, routing labels, or exact output your feature needs.
 Check responses against those rules, preview provider requests and estimated
-cost, and keep evidence for the change review.
+cost, and keep the decision, latency and cost as evidence for the change review.
+It also tells you which literal model IDs in your code are retired or retiring
+(Anthropic, OpenAI and selected Gemini models).
 
-It doesn't certify production behaviour. It proves the check was done.
+A passing run is evidence for your account, prompts and validators. It is not
+production approval.
 
 Built for engineers maintaining an LLM feature. Runs locally as a CLI, GitHub
 Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
@@ -244,7 +247,7 @@ prompts and run selection. Protect the producer and gate workflows; signed
 records also need `gh attestation verify` before the gate. Follow
 [proof of preflight](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/proof-of-preflight.md)
 to configure it. A local fixture pass or installed package does not enforce a
-merge policy.
+merge policy. It doesn't certify production behaviour. It proves the check was done.
 
 ### MCP for coding agents
 

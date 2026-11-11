@@ -18,7 +18,8 @@ Bug fixes must begin with a regression test that reproduces the bug. Provider
 integrations must use deterministic mocked protocol fixtures; live API calls are
 optional integration verification and must never be required by the unit suite.
 
-Commands:
+Commands (run them inside the dev venv; setup is in `CONTRIBUTING.md`:
+`python3 -m venv .venv && . .venv/bin/activate && python3 -m pip install -e ".[dev]"`):
 
 ```bash
 make test-one TEST=tests/test_catalog.py::test_openrouter_normalization_and_limit

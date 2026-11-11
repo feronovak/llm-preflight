@@ -36,6 +36,10 @@ Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and
 approved the spend. Supply credentials through GitHub Secrets or an approved
 environment; do not commit an environment file or put a key in action inputs.
 
+The optional `env-file` input names an environment file for the paid smoke and
+is passed to `--env-file`. It has no effect on the no-spend checks; keep the
+credentials in GitHub Secrets rather than in a file in the repository.
+
 ```yaml
 steps:
   - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1

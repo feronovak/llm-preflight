@@ -288,7 +288,10 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Safety boundary" in readme
     assert "llm-preflight==2.24.2" in workflow
     assert "starter workflow pins the latest published package, 2.24.2" in ci
-    assert "| stamped | 2026-11-11 | v2.24.2 |" in docmap
+    assert (
+        "| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract "
+        "| stamped | 2026-11-11 | v2.24.2 |"
+    ) in docmap
 
 
 def test_readme_leads_with_a_safe_first_run_and_workflow_choices():

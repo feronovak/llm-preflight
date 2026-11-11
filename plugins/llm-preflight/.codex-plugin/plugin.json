@@ -1,6 +1,6 @@
 {
   "name": "llm-preflight",
-  "version": "2.24.2",
+  "version": "2.25.0",
   "description": "Safe local LLM integration preflight guidance.",
   "author": {
     "name": "feronovak"

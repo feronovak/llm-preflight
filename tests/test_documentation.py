@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.25.0" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -624,7 +624,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2"
+        "**Last reviewed:** 2026-11-11 · **As of:** v2.25.0"
         in (ROOT / "README.md").read_text()
     )
     assert (

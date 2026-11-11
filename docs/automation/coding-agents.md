@@ -17,7 +17,12 @@ It does not judge semantic quality or authorize a production rollout.
    They make no generation requests. For a candidate cohort, report every
    non-eligible `smoke_eligibility` reason before proposing paid work.
    Report the dry-run `retirements` decision too: `fail` means a retired
-   model, `inconclusive` a retiring model or a stale snapshot row.
+   model, `inconclusive` a retiring model, a stale snapshot row or an
+   `alias_unmapped`. Report the last day the selected rows are valid:
+   `retirement.snapshot.valid_until` in the `--doctor` JSON and
+   `retirements.snapshot.valid_until` in the `--dry-run` JSON (absent when no
+   selected model has a non-retired row); a dry run that breaks a limit exits
+   2; report `budget_limits.violations`.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or add an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID. Use explicit

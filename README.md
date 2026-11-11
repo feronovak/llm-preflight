@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.feronovak/llm-preflight -->
 
-**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.25.0
 
 [![PyPI](https://img.shields.io/pypi/v/llm-preflight)](https://pypi.org/project/llm-preflight/)
 [![Tests](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml/badge.svg)](https://github.com/feronovak/llm-preflight/actions/workflows/tests.yml)
@@ -138,7 +138,10 @@ For benchmark runs, read the decision before acting:
 
 ## New
 
-Claude Fable 5.2, Gemini 3.1 Flash-Lite and four more models in the comparison guide. Everything else
+Claude Fable 5.2, Gemini 3.1 Flash-Lite and four more models in the
+[comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
+The guide covers 26 routes; the 26th, Claude Mythos 5.2, returned HTTP 404 on
+all eight calls. Everything else
 is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
@@ -382,8 +385,8 @@ responsible for the integration.
 ## How it compares
 
 Use this project for a bounded contract check and reviewable evidence before
-an integration change. Keep the tools you already have; this adds what they
-usually do not:
+an integration change. Keep the tools you already have; the table shows what
+this adds:
 
 | You already have | It is good for | LLM Preflight adds |
 |---|---|---|

@@ -2083,3 +2083,77 @@ def test_mcp_malformed_config_shape_is_an_error_naming_the_field(tmp_path, tool)
     text = json.dumps(result)
     assert "'profiles' must be a string or a list of strings" in text
     assert "has no attribute" not in text
+
+
+VALID_UNTIL_STEP = (
+    "Report `retirements.snapshot.valid_until` with it: after that day the "
+    "selected models' snapshot rows are stale and the decision turns "
+    "`inconclusive`; it is absent when no selected model has a non-retired row."
+)
+VALID_UNTIL_AUDIT = (
+    "`retirement_snapshot.valid_until`, the last day before the oldest "
+    "bundled row turns stale"
+)
+
+
+def test_agent_guidance_reports_snapshot_valid_until(tmp_path):
+    root = Path(__file__).parent.parent
+    skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    guide = (root / "docs/automation/mcp.md").read_text()
+    instructions = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )["result"]["instructions"]
+
+    for text in (mcp.SAFE_WORKFLOW, skill, guide):
+        flat = " ".join(text.split())
+        assert VALID_UNTIL_STEP in flat
+        assert VALID_UNTIL_AUDIT in flat
+    flat = " ".join(instructions.split())
+    assert "`retirements.snapshot.valid_until`" in flat
+    assert "`retirement_snapshot.valid_until`" in flat
+    for page in ("coding-agents.md", "agent-validation.md"):
+        flat = " ".join((root / "docs/automation" / page).read_text().split())
+        assert "`retirement.snapshot.valid_until`" in flat
+        assert "`retirements.snapshot.valid_until`" in flat
+
+
+def test_cli_agent_guides_name_alias_unmapped_and_limit_breach():
+    root = Path(__file__).parent.parent
+    for page in ("coding-agents.md", "agent-validation.md"):
+        flat = " ".join((root / "docs/automation" / page).read_text().split())
+        assert "`alias_unmapped`" in flat
+        assert (
+            "a dry run that breaks a limit exits 2; report "
+            "`budget_limits.violations`" in flat
+        )
+
+
+def test_valid_until_is_defined_as_the_last_valid_day_everywhere(tmp_path):
+    root = Path(__file__).parent.parent
+    instructions = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )["result"]["instructions"]
+    texts = {
+        "safe-workflow": mcp.SAFE_WORKFLOW,
+        "initialize": instructions,
+        "skill": (
+            root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md"
+        ).read_text(),
+        "mcp.md": (root / "docs/automation/mcp.md").read_text(),
+        "coding-agents.md": (root / "docs/automation/coding-agents.md").read_text(),
+        "agent-validation.md": (
+            root / "docs/automation/agent-validation.md"
+        ).read_text(),
+    }
+    for name, text in texts.items():
+        flat = " ".join(text.split())
+        assert "the day the selected rows turn stale" not in flat, name
+        assert "valid_until" in flat, name
+    for name in ("initialize", "coding-agents.md", "agent-validation.md"):
+        flat = " ".join(texts[name].split())
+        assert "the last day the selected rows are valid" in flat, name
+    flat = " ".join(texts["initialize"].split())
+    assert (
+        "`inconclusive` for a retiring model or a stale snapshot row, or an "
+        "`alias_unmapped`" in flat
+    )

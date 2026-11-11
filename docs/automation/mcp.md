@@ -123,7 +123,9 @@ source files with a pricing status and a retirement verdict, plus the
 other path argument, it must resolve (after symlinks) inside the workspace.
 It needs no config, loads no credentials, and makes no provider request; in a
 Git work tree it lists files through the same hardened Git call as the CLI,
-which disables repository-configured hooks, filters, and transports.
+which disables repository-configured hooks, filters, and transports. Report
+`retirement_snapshot.valid_until`, the last day before the oldest bundled row
+turns stale.
 
 ```json
 {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
@@ -364,7 +366,10 @@ first and report its `decision` and each retired or retiring model.
    decision: `fail` means a selected model is retired, `inconclusive` means one is retiring, its snapshot row is stale, or it is an `alias_unmapped`. The tool's `ok` stays `true` for a
    retired model; it only says the plan breaks no limit, so read
    `retirements.decision` instead. `ok: false` means a limit is broken: report
-   `budget_limits.violations`.
+   `budget_limits.violations`. Report `retirements.snapshot.valid_until` with
+   it: after that day the selected models' snapshot rows are stale and the
+   decision turns `inconclusive`; it is absent when no selected model has a
+   non-retired row.
 4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
 5. Use `run_preflight`, then retain the returned evidence or compare it with a

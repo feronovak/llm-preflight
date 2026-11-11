@@ -128,3 +128,11 @@ authorization remains separate from a numeric rating.
 **Why:** `--run` is the authorizing act, so each run is a separate explicit choice, as with a direct paid run or `run_preflight` with `confirm_paid_run`. A limit would need state outside the receipt format, and the receipt's expiry already bounds the window.
 
 **Consequence:** Until the receipt expires, each `--run` on the same candidate may spend up to `maximum_estimated_cost_usd` again. For a single run, choose a short expiry or delete the receipt afterwards. The receipt format and `authorizes_paid_run: false` are unchanged.
+
+## 2.25.0 is a minor version
+
+**Decision:** Release 2.25.0 is a minor version although its changelog has `Breaking:` entries. The maintainer decided this on 2026-11-11.
+
+**Scope:** This entry covers 2.25.0 only. The versioning rule in `AGENTS.md` is unchanged.
+
+**Consequence:** Each 2.25.0 change that can change an exit code is marked `Breaking:` in `CHANGELOG.md`.

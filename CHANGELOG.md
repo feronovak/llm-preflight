@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.
 
@@ -10,11 +10,12 @@ Changes below are marked `Breaking:` where they can change an exit code.
 
 - The retirement report now carries `snapshot.valid_until`, the last day the rows of the selected models are not stale, in the doctor and dry-run JSON (the scan JSON carries the bundled-wide date). Text output of the doctor, dry-run and scan adds a notice during the last 7 days; it never changes the decision or exit code. Saved dry-run plans change once because the plan now includes the field, so approval receipts for the old plan verify as `mismatch`.
 - The Action guide explains how to keep the pin current with Dependabot.
+- The MCP `safe-workflow` resource, the `initialize` instructions, the plugin skill and the agent guides now tell an agent to report `retirement_snapshot.valid_until` from `audit_source` and `retirements.snapshot.valid_until` from `dry_run_plan`, and the CLI agent guides name `alias_unmapped` and the dry-run limit breach. The text is additive; no schema, tool, key or exit code changes.
 
 ### Changed
 
 - The README's measured-models image now shows all 25 summarized models in three result groups, ordered by provider inside each group and including Gemini 3.1 Flash-Lite, with a light variant, shorter columns and larger text, and the README gives the same rows as a collapsed table. `scripts/render_measured_models.py` writes both variants.
-- `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
+- Breaking: `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.
 
 ### Fixed
 

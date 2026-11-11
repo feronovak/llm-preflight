@@ -1,6 +1,6 @@
 # Proof of preflight: the record and the merge gate
 
-**Last reviewed:** 2026-10-18 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Proof of preflight lets a required check block a pull request that changes an
 LLM contract until a fresh, passing check of that contract ran in this
@@ -67,9 +67,11 @@ and commit). Anywhere else, including a later job or a laptop, the record
 says `local` and `attest` prints why.
 
 `verify` reports integrity (the record's shape, its fingerprints, its
-internal consistency, and whether the config and result files it names still
-match their digests) and freshness (its age and the retirement status of its
-routes) separately. It exits 0 when the record is intact and fresh, 1 when its
+internal consistency, and whether the result file it names still matches its
+digest) and freshness (its age and the retirement status of its routes)
+separately. Only the result file counts toward integrity: a config file that
+changed since the check is reported ("changed since the check") but does not
+break integrity. It exits 0 when the record is intact and fresh, 1 when its
 integrity is broken, and 3 when it is intact but stale or superseded. It does
 not check signatures; `gh attestation verify` does.
 

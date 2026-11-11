@@ -1,6 +1,6 @@
 # Direct GLM, DeepSeek and Qwen checks
 
-**Last reviewed:** 2026-10-15 · **As of:** v2.21.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 These direct routes bypass OpenRouter. Their deterministic protocol fixtures
 pass. The [dated comparison](observed-model-comparison.md) distinguishes native

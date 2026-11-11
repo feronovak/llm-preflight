@@ -683,6 +683,7 @@ def test_discovery_error_echoing_key_is_redacted(monkeypatch):
     def echo_key(request, timeout):
         raise ValueError(f"rejected credential {key}")
 
+    monkeypatch.setattr("llm_preflight.catalog.require_http_url", lambda url: None)
     monkeypatch.setattr("llm_preflight.catalog.open_public_url", echo_key)
     with pytest.raises(ValueError) as error:
         discover_models(

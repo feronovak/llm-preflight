@@ -692,3 +692,29 @@ def test_report_summary_counts_alias_unmapped(alias_table):
     report = retirement_report([{"provider": "openai", "model": "gpt-5"}], ALIAS_TODAY)
     assert report["summary"]["alias_unmapped"] == 1
     assert report["decision"] == "inconclusive"
+
+
+def test_snapshot_valid_until_uses_oldest_of_rows_reviewed_on_different_days(
+    monkeypatch,
+):
+    def row(as_of):
+        return {"status": "active", "as_of": as_of, "source_url": URL}
+
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-older"): row("2026-10-01"),
+            ("openai", "gpt-newer"): row("2026-10-06"),
+        },
+    )
+    report = retirement_report(
+        [
+            {"provider": "openai", "model": "gpt-newer"},
+            {"provider": "openai", "model": "gpt-older"},
+        ],
+        TODAY,
+    )
+    oldest = date.fromisoformat("2026-10-01")
+    expected = (oldest + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    assert report["snapshot"]["valid_until"] == expected

@@ -1511,7 +1511,10 @@ def test_default_measured_image_adds_the_later_run_without_redating_earlier_rows
         "Claude Fable 5.2",
         "Claude Fable 5.1",
     ]
-    assert sorted({row[4] for row in rows}) == ["2026-10-29", "2026-11-11"]
+    assert [row[4] for row in rows] == [r["observed_on"] for r in ordered]
+    assert [row[4] for row in rows] == [
+        "2026-11-11" if r in added["rows"] else "2026-10-29" for r in ordered
+    ]
 
 
 def test_added_comparison_row_keeps_the_approved_bounds_and_settings():

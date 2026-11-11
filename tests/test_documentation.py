@@ -288,7 +288,7 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "## Safety boundary" in readme
     assert "llm-preflight==2.24.2" in workflow
     assert "starter workflow pins the latest published package, 2.24.2" in ci
-    assert "| stamped | 2026-08-30 | v2.7.5 |" in docmap
+    assert "| stamped | 2026-11-11 | v2.24.2 |" in docmap
 
 
 def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
@@ -437,10 +437,10 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
 
 def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
     for page in (ROOT / "docs/reference/decision.md",):
-        assert "**Last reviewed:** 2026-08-30 · **As of:** v2.7.5" in page.read_text()
+        assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     assert (
-        "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0"
+        "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2"
         in (ROOT / "docs/automation/ci.md").read_text()
     )
 
@@ -468,7 +468,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in page.read_text()
 
     for page in (ROOT / "docs/reference/configuration.md",):
-        assert "**Last reviewed:** 2026-10-19 · **As of:** v2.22.1" in page.read_text()
+        assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in page.read_text()
 
     assert (
         "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0"
@@ -504,7 +504,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
 def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
-    assert "**Last reviewed:** 2026-10-29 · **As of:** v2.23.0" in action_guide
+    assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in action_guide
     assert 'package-version: "2.24.2"' in action_guide
     assert "source defaults to `2.24.2`" in action_guide
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide

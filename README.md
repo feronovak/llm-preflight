@@ -119,25 +119,23 @@ is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-The image shows **20 native model routes**: 19 measured on **2026-10-29** and
-Claude Fable 5.2, measured on **2026-11-11**. Each ran eight synthetic
-support-routing and strict JSON cases. **152 of 160 checks passed**: three
+We ran a selection of **20 native model routes** through eight synthetic
+support-routing and strict JSON cases each. **152 of 160 checks passed**: three
 outputs failed their contract and five Kimi calls returned HTTP 429. **16
-models passed all eight checks.** These are workload observations, not a
-ranking of general intelligence.
+models passed all eight checks.** These are observations for this workload as
+of 2026-11-11, not a ranking of general intelligence or production approval.
 
 [![All 20 measured models: valid responses versus API errors, mean latency, estimated token cost for this run and native route; small-sample limits and partial costs are explicit](https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg)](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 
-Latency includes successful API responses, including contract failures, and
-excludes API errors. The known token-cost subtotal is **$0.08218127**; total cost
-is unknown because five error responses supplied no usage. Each request used a
-1,024-token output allowance and one attempt. No retries were made.
-The guide has results for **24 models**, four more than this image (`gemini-4-carbon`,
-`MiniMax-M3`, `mistral-large-4` and `qwen3.8-flash`, also run on 2026-11-11).
-It also records `claude-mythos-5-2`, attempted on 2026-11-11: all 8 requests
-returned HTTP 404 (not available to the test account), so it has no results:
-[read all rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
-Previous dated measurements remain available as history.
+Each request used a 1,024-token output allowance and one attempt, with no
+retries. The known token-cost subtotal is **$0.08218127**; the total is unknown
+because the five error responses supplied no usage. The
+[comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
+has every row, the method and the failure analysis.
+
+Your model is not here? Check it against your own contract:
+[use the result in your own project](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md#use-the-result-in-your-own-project)
+or start with the [first live run](#first-live-run).
 
 ## First live run
 

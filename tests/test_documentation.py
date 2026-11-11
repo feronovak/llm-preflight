@@ -1641,3 +1641,31 @@ def test_guide_lists_the_five_added_models_with_their_recorded_results():
     serialized = json.dumps(data)
     for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
         assert marker not in serialized
+
+
+def test_carbon_and_argon_share_token_counts_but_are_separate_measurements():
+    # Same eight prompts, same tokenizer family and short labels as output:
+    # identical usage is expected, while the runs themselves must stay distinct.
+    carbon = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-11-11-five-models.json").read_text()
+    )["rows"][0]
+    argon = next(
+        row
+        for row in json.loads(
+            (ROOT / "docs/data/model-comparison-2026-10-29.json").read_text()
+        )["rows"]
+        if row["model"] == "gemini-4-argon"
+    )
+    assert (carbon["model"], argon["model"]) == ("gemini-4-carbon", "gemini-4-argon")
+    for field in ("input_tokens", "output_tokens", "estimated_cost_usd"):
+        assert carbon[field] == argon[field]
+    for field in (
+        "observed_on",
+        "mean_latency_seconds",
+        "latency_p95_seconds",
+        "config_sha256",
+        "result_sha256",
+    ):
+        assert carbon[field] != argon[field], field
+    assert carbon["observed_model"] == carbon["model"]
+    assert argon["observed_model"] == argon["model"]

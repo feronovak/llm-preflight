@@ -171,6 +171,12 @@ a same-run comparison.
 - **Mistral Large 4:** all eight checks passed. Output tokens were far above the
   other rows (2,614 for 8 calls), which is why its mean latency is the highest
   here; this run does not test whether a lower setting would change that.
+- **Gemini 4 Carbon:** its token counts (759 input, 121 output) and cost match
+  `gemini-4-argon` from 2026-10-29. This is expected: the eight prompts and the
+  short outputs are the same, and both models report usage with the same
+  tokenizer. The API returned `gemini-4-carbon` as the model for all eight
+  calls, and the latencies, config hash and result hash differ from Argon's, so
+  it is a separate measurement.
 - **The other three models:** all eight API calls and validators passed for this
   synthetic workload. This is scoped evidence, not production approval.
 

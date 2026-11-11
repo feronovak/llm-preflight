@@ -18,7 +18,7 @@ It does not judge semantic quality or authorize a production rollout.
    non-eligible `smoke_eligibility` reason before proposing paid work.
    Report the dry-run `retirements` decision too: `fail` means a retired
    model, `inconclusive` a retiring model, a stale snapshot row or an
-   `alias_unmapped`. Report the day the selected rows turn stale:
+   `alias_unmapped`. Report the last day the selected rows are valid:
    `retirement.snapshot.valid_until` in the `--doctor` JSON and
    `retirements.snapshot.valid_until` in the `--dry-run` JSON (absent when no
    selected model has a non-retired row); a dry run that breaks a limit exits

@@ -39,8 +39,8 @@ llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
 Report the dry-run `retirements` decision with the plan: `fail` means a
 selected model is retired, `inconclusive` means one is retiring or its
 snapshot row is stale. An alias without a safe mapping to one snapshot row is
-`alias_unmapped`, also `inconclusive`. Report the day the selected rows turn
-stale: `retirement.snapshot.valid_until` in the `--doctor` JSON and
+`alias_unmapped`, also `inconclusive`. Report the last day the selected rows
+are valid: `retirement.snapshot.valid_until` in the `--doctor` JSON and
 `retirements.snapshot.valid_until` in the `--dry-run` JSON (absent when no
 selected model has a non-retired row); a dry run that breaks a limit exits 2;
 report `budget_limits.violations`. Neither is approval, and the agent must not

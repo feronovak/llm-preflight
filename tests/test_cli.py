@@ -3662,6 +3662,19 @@ def _audit_text(monkeypatch, capsys, tmp_path, *flags):
     return capsys.readouterr().out.splitlines()
 
 
+def test_scan_text_shows_the_expiry_notice_without_changing_the_exit(
+    monkeypatch, tmp_path, capsys, retirement_table
+):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 25))
+    (tmp_path / "app.py").write_text('a = "gpt-new"\n')
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+    assert any("valid until 2026-01-31" in line for line in lines)
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 1, 20))
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+    assert not any("valid until" in line for line in lines)
+
+
 def test_audit_source_leads_with_the_verdict_and_groups_findings_by_model(
     monkeypatch, tmp_path, capsys, retirement_table
 ):

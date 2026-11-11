@@ -32,9 +32,10 @@ succeeds against it.
 
 ## Keep the pin current
 
-The bundled retirement and price rows go stale 30 days after their review
-date, and then `--ci` returns `inconclusive` (exit 3) until you move to a
-newer release. Doctor, dry-run and scan output state the date as
+The bundled retirement rows go stale 30 days after their review date, and
+then `--ci` returns `inconclusive` (exit 3) until you move to a newer release.
+Official price rows follow the same 30-day rule from their own review dates.
+Doctor, dry-run and scan output state the retirement date as
 `snapshot.valid_until` and print a notice during the last 7 days. A
 release tag's `action.yml` installs that release's package by default, so pin
 the tag only and let Dependabot move it:

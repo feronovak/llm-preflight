@@ -548,6 +548,7 @@ def _format_audit_source(
             f"{_counted(len(unpriced), 'reference')} to "
             f"{_counted(len(unpriced_groups), 'model ID')} — use --all to list them."
         )
+    _append_expiry_notice(lines, audit["retirement_snapshot"])
     return "\n".join(lines) + "\n"
 
 
@@ -576,12 +577,12 @@ def _format_doctor(report: dict[str, Any]) -> str:
                 ],
             )
         )
-        _append_expiry_notice(lines, report["retirement"])
+        _append_expiry_notice(lines, report["retirement"].get("snapshot", {}))
     return "\n".join(lines) + "\n"
 
 
-def _append_expiry_notice(lines: list[str], retirements: dict[str, Any]) -> None:
-    notice = expiry_notice(retirements.get("snapshot", {}), today_utc())
+def _append_expiry_notice(lines: list[str], snapshot: dict[str, Any]) -> None:
+    notice = expiry_notice(snapshot, today_utc())
     if notice:
         lines.append(notice)
 
@@ -876,7 +877,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
                 retirements, [{"model": e["model"], "retirement": e} for e in flagged]
             )
         )
-    _append_expiry_notice(lines, retirements)
+    _append_expiry_notice(lines, retirements.get("snapshot", {}))
     return "\n".join(lines) + "\n"
 
 
@@ -1162,7 +1163,7 @@ def _pricing_refresh_main(argv: list[str]) -> None:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--provider", choices=("openrouter",))
-    parser.add_argument("--max-age-days", type=int, default=DEFAULT_MAX_AGE_DAYS)
+    parser.add_argument("--max-age-days", type=int, default=30)
     args = parser.parse_args(argv)
     if args.max_age_days < 0:
         parser.error("--max-age-days must be zero or greater")

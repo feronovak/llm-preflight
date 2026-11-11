@@ -1,6 +1,6 @@
 # Getting started
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Run a local mock check, interpret its result, then choose a path for your own
 application. This walkthrough requires Python 3.10+ and a terminal. It uses no

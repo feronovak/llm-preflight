@@ -1,6 +1,6 @@
 # Git-aware change plans
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.1
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 Use a change plan after an agent or engineer edits an LLM integration and before
 the ordinary no-spend checks:

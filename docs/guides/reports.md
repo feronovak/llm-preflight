@@ -1,6 +1,6 @@
 # Reviewable reports
 
-**Last reviewed:** 2026-10-19 · **As of:** v2.22.2
+**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
 With the installed CLI, render an existing result without repeating the
 benchmark or contacting a provider. Replace `results/run.json` with the actual

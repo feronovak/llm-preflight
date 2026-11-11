@@ -114,8 +114,8 @@ For benchmark runs, read the decision before acting:
 
 ## New
 
-Recent additions, including newly measured models, are on the
-[releases page](https://github.com/feronovak/llm-preflight/releases).
+Claude Fable 5.2 and four more models in the comparison guide. Everything else
+is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 

@@ -97,7 +97,8 @@ Latency includes successful API responses, including contract failures, and
 excludes API errors. The known token-cost subtotal is **$0.08218127**; total cost
 is unknown because five error responses supplied no usage. Each request used a
 1,024-token output allowance and one attempt. No retries were made.
-[Read all 20 rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
+The guide lists **25 measured models**, five more than this image:
+[read all rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
 Previous dated measurements remain available as history.
 
 <a id="purpose"></a>

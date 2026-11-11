@@ -1,0 +1,475 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-11",
+  "reviewed_on": "2026-11-11",
+  "tool_version": "2.24.1",
+  "source_commit": "edf887c68169628c954c455199915fa88b061e78",
+  "source_dirty": false,
+  "approved_maximum_requests": 40,
+  "approved_maximum_token_estimate_usd": 1.0,
+  "planned_maximum_token_estimate_usd": 0.44675,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row. Mistral Large 4 has no low-effort setting in this tool and runs with provider defaults.",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "All 5 rows use native provider routes. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model, models run one after another; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 40,
+    "api_successful": 32,
+    "api_failures": 8,
+    "valid": 32,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": null,
+    "known_cost_subtotal_usd": 0.00987307,
+    "known_cost_requests": 32,
+    "missing_usage_requests": 8
+  },
+  "rows": [
+    {
+      "provider": "gemini",
+      "model": "gemini-4-carbon",
+      "display_name": "Gemini 4 Carbon",
+      "route": "Gemini",
+      "observed_on": "2026-11-11",
+      "observed_model": "gemini-4-carbon",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 4.686650303130591,
+      "latency_p50_seconds": 4.554037264009821,
+      "latency_p95_seconds": 6.135986499456339,
+      "mean_ttft_seconds": 4.508483199500915,
+      "input_tokens": 759,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 121,
+      "estimated_cost_usd": 0.002728,
+      "known_cost_subtotal_usd": 0.002728,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083044,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-4-carbon",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-4-carbon"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083044,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "00924e44237b977e0c6b6689b86055b68f2027d170483cb5d2014b0c66d433aa",
+      "result_sha256": "9d8e0baf1e775cb975be7e1d511ed9079f9da6f046de21083a2b4e2424655e8f",
+      "pricing_fingerprint": "cd722c9bbd4499aad7c09305686d3127708aab6743dc48ac3ad70c2ff533ba78",
+      "validator_version": "output-schema-4"
+    },
+    {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "display_name": "MiniMax M3",
+      "route": "MiniMax",
+      "observed_on": "2026-11-11",
+      "observed_model": "MiniMax-M3",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.1188171908725053,
+      "latency_p50_seconds": 1.6242097154899966,
+      "latency_p95_seconds": 4.686985584200009,
+      "mean_ttft_seconds": 1.9916682988732646,
+      "input_tokens": 1978,
+      "cached_input_tokens": 1079,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 288,
+      "estimated_cost_usd": 0.00068004,
+      "known_cost_subtotal_usd": 0.00068004,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.01,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "minimax": {
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-minimax-MiniMax-M3",
+        "models": [
+          {
+            "provider": "minimax",
+            "model": "MiniMax-M3"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "minimax": {
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.01,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "80f717724a53550b97c62ff356a55e8aa36d46cf9bbfe465fd182452b39c33b9",
+      "result_sha256": "cb7504edab4e189db1fc06aaaf08c626e14e0aea00ef0148a0c29cc068105816",
+      "pricing_fingerprint": "95149f7519a00be78821f224f35859b0d93b5975f06fa04f3e66114b857edd15",
+      "validator_version": "output-schema-4"
+    },
+    {
+      "provider": "mistral",
+      "model": "mistral-large-4",
+      "display_name": "Mistral Large 4",
+      "route": "Mistral",
+      "observed_on": "2026-11-11",
+      "observed_model": "mistral-large-4",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 7.043080504001409,
+      "latency_p50_seconds": 3.9367052744928515,
+      "latency_p95_seconds": 20.20988034589681,
+      "mean_ttft_seconds": 6.9721512762516795,
+      "input_tokens": 612,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2614,
+      "estimated_cost_usd": 0.005917800000000001,
+      "known_cost_subtotal_usd": 0.005917800000000001,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.017597,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        }
+      },
+      "configuration": {
+        "name": "latest-models-mistral-mistral-large-4",
+        "models": [
+          {
+            "provider": "mistral",
+            "model": "mistral-large-4"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.017597,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "3dabc8b2f41bb5f4d185d56557972b8387f955a4105c00c4e8cbad81d54576f7",
+      "result_sha256": "38420917b84d468998fcf6d1c26fc003aac03099651a39c158207d05213eee86",
+      "pricing_fingerprint": "7f863e64e374efd7fd5287cb2ff2a81509b25e907818f625c9d82a6ca625cc0a",
+      "validator_version": "output-schema-4"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-flash",
+      "display_name": "Qwen 3.8 Flash",
+      "route": "Alibaba Singapore",
+      "observed_on": "2026-11-11",
+      "observed_model": "qwen3.8-flash",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.6887835106244893,
+      "latency_p50_seconds": 2.6757973925123224,
+      "latency_p95_seconds": 3.7109248085907893,
+      "mean_ttft_seconds": 2.5788409197521105,
+      "input_tokens": 800,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 909,
+      "estimated_cost_usd": 0.00054723,
+      "known_cost_subtotal_usd": 0.00054723,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.003935,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "qwen": {
+            "enable_thinking": true,
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-qwen-qwen3.8-flash",
+        "models": [
+          {
+            "provider": "qwen",
+            "model": "qwen3.8-flash"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "qwen": {
+              "enable_thinking": true,
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.003935,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "51b3f9ef20bb94fa4c69e5cf909f100588986f4153f8c59ec53e92936cf389a5",
+      "result_sha256": "81652218f71de2295a2eff98e544ea130166d02e7f74e2e0b1d465ef527afd6a",
+      "pricing_fingerprint": "8a61d2b31cbb46ff17ebaffaa5dd5b017aa4e41aa4b3715920d74a5f7049b52d",
+      "validator_version": "output-schema-4"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-mythos-5-2",
+      "display_name": "Claude Mythos 5.2",
+      "route": "Anthropic",
+      "observed_on": "2026-11-11",
+      "observed_model": null,
+      "requests": 8,
+      "api_successful": 0,
+      "api_failures": 8,
+      "valid": 0,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": null,
+      "latency_p50_seconds": null,
+      "latency_p95_seconds": null,
+      "mean_ttft_seconds": null,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 0,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": 0,
+      "cost_coverage": {
+        "known_requests": 0,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 8,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.332176,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "billing-route",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "technical-route",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "account-route",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "ticket-extraction",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "duplicate-charge-injection",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "active-technical-outage",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "account-email-change",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        },
+        {
+          "case": "invoice-request",
+          "kind": "api_error",
+          "category": "not_found",
+          "http_status": 404
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "anthropic": {
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-anthropic-claude-mythos-5-2",
+        "models": [
+          {
+            "provider": "anthropic",
+            "model": "claude-mythos-5-2"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "anthropic": {
+              "output_config": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.332176,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "d030601493233f941818718cd335073aff429ba6a2cc408a69fb112c73804912",
+      "result_sha256": "d0501ac96ac1a11f085b2c518f50d1fd2f335fe42be75e2365d701655878130b",
+      "pricing_fingerprint": "2d2cc4fa9b6e37439d6988e8d8a4afde83b711a00df4092e99ebecbb174c972f",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

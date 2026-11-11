@@ -2,7 +2,7 @@
 
 **Last reviewed:** 2026-11-11 · **As of:** v2.24.1
 
-**Latest measurement:** 2026-11-11, one added native model ID (`claude-fable-5-2`), beside the 19 native model IDs measured on 2026-10-29; eight cases each.
+**Latest measurement:** 2026-11-11, five added native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`, `claude-mythos-5-2`), beside `claude-fable-5-2` (2026-11-11) and the 19 native model IDs measured on 2026-10-29: **25 models** in all; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -139,6 +139,44 @@ the same snippet with `docs/data/model-comparison-2026-11-11.json` and that mode
 The snippet refuses to overwrite an existing config. Inspect current route,
 price freshness, reasoning/output allowance and request limits before approving
 a paid rerun. Local fixture checks do not execute application parser code.
+
+## 2026-11-11 five added models
+
+On **2026-11-11** a separate owner-approved run measured five more native model
+IDs on the same eight cases and settings as the 2026-10-29 rows (1,024-token
+output allowance, low reasoning effort where supported, one attempt, no
+warmups, no retries), using source build 2.24.1, one model after another.
+Mistral Large 4 has no low-effort setting in this tool and ran with provider
+defaults. All **40** planned calls were attempted: **32** returned API responses
+and passed validation, and **8** returned API errors. The planned maximum token
+estimate was **$0.44675** against an approved **$1.00** ceiling; the known
+token-cost subtotal is **$0.00987307** across **32** calls with usage.
+
+| Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
+|---|---|---:|---:|---:|---:|
+| Gemini | `gemini-4-carbon` | 8/8 | 8/8 | 4.687s | $0.002728 |
+| MiniMax | `MiniMax-M3` | 8/8 | 8/8 | 2.119s | $0.000680 |
+| Mistral | `mistral-large-4` | 8/8 | 8/8 | 7.043s | $0.005918 |
+| Alibaba Singapore | `qwen3.8-flash` | 8/8 | 8/8 | 2.689s | $0.000547 |
+| Anthropic | `claude-mythos-5-2` | 0/8 | 0/8 | — | unknown (no usage returned) |
+
+The [machine-readable aggregate](../data/model-comparison-2026-11-11-five-models.json)
+retains all five rows, settings, config and result hashes. These rows were
+measured on a different day and build than the 2026-10-29 rows, so they are not
+a same-run comparison.
+
+- **Claude Mythos 5.2:** all eight calls returned HTTP 404 (`not_found_error`,
+  model not found for this account), so the row has no quality, latency or cost
+  result. The failure is recorded and was not retried.
+- **Mistral Large 4:** all eight checks passed. Output tokens were far above the
+  other rows (2,614 for 8 calls), which is why its mean latency is the highest
+  here; this run does not test whether a lower setting would change that.
+- **The other three models:** all eight API calls and validators passed for this
+  synthetic workload. This is scoped evidence, not production approval.
+
+To reconstruct one of these rows, use the same snippet as below with
+`docs/data/model-comparison-2026-11-11-five-models.json`, that model, and a 2.24.1
+source checkout.
 
 ## 2026-10-14 bounded comparison
 

@@ -37,7 +37,7 @@ Choose a task below; each path explains the inputs, expected result and next ste
 
 Read the [support-routing comparison](guides/observed-model-comparison.md) for
 the **2026-10-29 measurement of 19 native models plus Claude Fable 5.2
-and Gemini 3.1 Flash-Lite on 2026-11-11**: 160 requests, 152 validated outputs, three contract failures and five rate-limit errors. The
+and Gemini 3.1 Flash-Lite on 2026-11-11**: 168 requests, 160 validated outputs, three contract failures and five rate-limit errors. The
 [README result image](../README.md#observed-results-on-a-support-routing-contract)
 shows the 25 models of its summary. The guide, with 26 models,
 includes the full table, settings, unknown-cost

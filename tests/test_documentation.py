@@ -142,6 +142,17 @@ def test_documented_model_list_matches_comparison_evidence():
             f"{'Passed 8/8' if row['valid'] == 8 else 'Contract failures' if row['api_successful'] == 8 else 'Incomplete'}"
             f" | {passed} | {errors} | {latency} | {cost} | {row['observed_on']} |"
         ) in readme
+    from scripts.render_measured_models import MODEL_ORDER, table_rows
+
+    details = section.split("<details>", 1)[1].split("</details>", 1)[0]
+    listed = [
+        ln.split("|")[1].strip() for ln in details.splitlines() if ln.startswith("| ")
+    ]
+    assert listed[1:] == [row["name"] for row in table_rows(load_measured_data())]
+    guide = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+    main = guide.split("| Provider route |", 1)[1].split("\n\n", 1)[0]
+    ids = [ln.split("`")[1] for ln in main.splitlines() if "`" in ln]
+    assert ids == [m for m in MODEL_ORDER if m in ids]
     assert {row["provider"] for row in rows} == {
         "openai",
         "anthropic",

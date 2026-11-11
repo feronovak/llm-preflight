@@ -24,8 +24,8 @@ GEMINI_MODEL_REDIRECTS = {
 }
 DEFAULT_MAX_AGE_DAYS = 30
 _DATED_SUFFIX = {
-    "anthropic": re.compile(r"-\d{8}"),
-    "openai": re.compile(r"-\d{4}-\d{2}-\d{2}"),
+    "anthropic": re.compile(r"-\d{8}$"),
+    "openai": re.compile(r"-\d{4}-\d{2}-\d{2}$"),
 }
 _ANTHROPIC_ALIAS_TAIL = re.compile(r"-(?:latest|0)$")
 _REVIEWED = "2026-11-04"
@@ -333,23 +333,33 @@ def today_utc() -> date:
     return datetime.now(timezone.utc).date()
 
 
+_DATED_INDEX: tuple[Any, dict[tuple[str, str], list[str]]] | None = None
+
+
+def _dated_index() -> dict[tuple[str, str], list[str]]:
+    """Dated rows by (provider, stem), built once per snapshot table."""
+    global _DATED_INDEX
+    if _DATED_INDEX is None or _DATED_INDEX[0] is not PUBLIC_RETIREMENTS:
+        index: dict[tuple[str, str], list[str]] = {}
+        for provider, row_id in PUBLIC_RETIREMENTS:
+            suffix = _DATED_SUFFIX.get(provider)
+            match = suffix and suffix.search(row_id)
+            if match:
+                stem = row_id[: match.start()]
+                index.setdefault((provider, stem), []).append(row_id)
+        _DATED_INDEX = (PUBLIC_RETIREMENTS, index)
+    return _DATED_INDEX[1]
+
+
 def _alias_candidates(provider: str, model_id: str) -> list[str]:
     """Dated snapshot rows that an alias without a row of its own may stand for."""
-    suffix = _DATED_SUFFIX.get(provider)
-    if suffix is None:
+    if provider not in _DATED_SUFFIX:
         return []
     stems = {model_id}
     if provider == "anthropic":
         stems.add(_ANTHROPIC_ALIAS_TAIL.sub("", model_id))
-    return sorted(
-        row_id
-        for row_provider, row_id in PUBLIC_RETIREMENTS
-        if row_provider == provider
-        and any(
-            row_id.startswith(stem) and suffix.fullmatch(row_id[len(stem) :])
-            for stem in stems
-        )
-    )
+    index = _dated_index()
+    return sorted({row for stem in stems for row in index.get((provider, stem), [])})
 
 
 def _same_finding(rows: list[dict[str, Any]]) -> bool:

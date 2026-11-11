@@ -1159,22 +1159,22 @@ def _setup(monkeypatch, capsys, tmp_path, models, **extra):
     return path, target, receipt
 
 
+def _record_args(target, receipt, *flags):
+    return [
+        str(target),
+        "--dry-run",
+        "--approval-receipt",
+        str(receipt),
+        "--approval-note",
+        "reviewed",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+        *flags,
+    ]
+
+
 def _record(spend, monkeypatch, capsys, target, receipt, *flags):
-    code, out = _main(
-        monkeypatch,
-        capsys,
-        [
-            str(target),
-            "--dry-run",
-            "--approval-receipt",
-            str(receipt),
-            "--approval-note",
-            "reviewed",
-            "--approval-expires-at",
-            "2099-01-01T00:00:00+00:00",
-            *flags,
-        ],
-    )
+    code, out = _main(monkeypatch, capsys, _record_args(target, receipt, *flags))
     assert code == 0, out.err
     spend["env"] = 0
 
@@ -1333,9 +1333,12 @@ def test_budget_excess_stops_before_run(priced, spend, tmp_path, monkeypatch, ca
         [_m("oldp")],
         max_estimated_cost_usd=0.0000001,
     )
-    _record(spend, monkeypatch, capsys, target, receipt)
-    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    code, out = _main(monkeypatch, capsys, _record_args(target, receipt))
     assert code == 2 and "exceeds" in out.err
+    assert not receipt.exists()
+    spend["env"] = 0
+    code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
+    assert code == 1
     assert _none_spent(spend)
 
 
@@ -1583,12 +1586,14 @@ def test_wrong_typed_budget_setting_is_a_config_error(
     priced, spend, tmp_path, monkeypatch, capsys, key, value
 ):
     path, target, receipt = _setup(monkeypatch, capsys, tmp_path, [_m("oldp")])
-    _record(spend, monkeypatch, capsys, target, receipt)
     _edit(path, lambda d: d.update({key: value}))
-    _migrate(monkeypatch, capsys, path, "--output", str(target), "--replace")
-    _record(spend, monkeypatch, capsys, target, receipt, "--replace-approval-receipt")
+    code, out = _migrate(
+        monkeypatch, capsys, path, "--output", str(target), "--replace"
+    )
+    assert code == 2 and f"{key} must be a number" in out.err
+    assert "Traceback" not in out.err
     code, out = _smoke(monkeypatch, capsys, tmp_path, path, target, receipt)
-    assert code == 2 and "Traceback" not in out.err and _none_spent(spend)
+    assert code == 1 and "Traceback" not in out.err and _none_spent(spend)
 
 
 def test_keyboard_interrupt_during_smoke_exits_130(

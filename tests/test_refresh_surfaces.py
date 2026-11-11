@@ -56,12 +56,25 @@ def test_cli_mcp_native_plan_price_and_retirement_evidence_agree(
         "argv",
         ["llm-preflight", str(path), "--dry-run", "--json", "--no-env-file"],
     )
-    cli.main()
-    cli_plan = json.loads(capsys.readouterr().out)
+    refused = name == "cohere-command-a-plus"
+    if refused:
+        with pytest.raises(SystemExit) as exit_info:
+            cli.main()
+        assert exit_info.value.code == 2
+    else:
+        cli.main()
+    captured = capsys.readouterr()
+    cli_plan = json.loads(captured.out)
     response = rpc_plan(tmp_path)
     assert response is not None
     assert response["result"]["isError"] is False
     mcp_plan = response["result"]["structuredContent"]
+    assert mcp_plan["ok"] is (not refused)
+    assert mcp_plan["budget_limits"] == cli_plan["budget_limits"]
+    if refused:
+        first = cli_plan["budget_limits"]["violations"][0]
+        assert first.startswith("pricing coverage is incomplete")
+        assert first in captured.err
     assert mcp_plan["models"] == cli_plan["models"]
     for field in (
         "requests",

@@ -259,8 +259,9 @@ def test_dry_run_writes_and_verifies_a_non_authorizing_approval_receipt(
     receipt = tmp_path / "approval.json"
     config.write_text(
         '{"prompt":"Reply with ok","validation":{"exact":"ok"},'
-        '"models":[{"provider":"mock","model":"local","response":"ok"}],'
-        '"max_requests":2,"max_estimated_cost_usd":0.01}'
+        '"models":[{"provider":"mock","model":"local","response":"ok",'
+        '"input_cost_per_million":1,"output_cost_per_million":1}],'
+        '"max_requests":12,"max_estimated_cost_usd":0.01}'
     )
     monkeypatch.setattr(
         sys,
@@ -4400,8 +4401,8 @@ def test_dry_run_plan_keys_unchanged():
     assert set(plan) == {
         "benchmark", "models", "tests", "test_breakdown", "requests",
         "possible_requests", "retry_max_attempts", "estimated_cost_usd",
-        "maximum_estimated_cost_usd", "pricing_warnings", "pricing_coverage",
-        "smoke_eligibility", "retirements", "configuration_warnings", "presets",
+        "maximum_estimated_cost_usd", "budget_limits", "pricing_warnings",
+        "pricing_coverage", "smoke_eligibility", "retirements", "configuration_warnings", "presets",
         "request", "save_responses", "stop_on",
     }  # fmt: skip
 
@@ -4839,6 +4840,208 @@ def test_prompt_selected_with_numeric_presets_is_a_config_error(
     assert exc.value.code == 2
     assert "prompt 'a'" in err
     assert "Traceback" not in err
+
+
+def _capped_config(tmp_path, **extra):
+    config = tmp_path / "capped.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 3,
+                "warmups": 0,
+                "max_requests": 1,
+                "models": [{"provider": "mock", "model": "m", "response": "ok"}],
+                **extra,
+            }
+        )
+    )
+    return config
+
+
+def _cap_cli(monkeypatch, capsys, *argv):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    captured = capsys.readouterr()
+    return exc_info.value.code, captured.out, captured.err
+
+
+def test_dry_run_request_cap_breach_exits_like_live_run(monkeypatch, tmp_path, capsys):
+    config = _capped_config(tmp_path)
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(monkeypatch, capsys, str(config), "--dry-run", "--no-env-file")
+    assert live[0] == dry[0] == 2
+    assert "possible requests 6 exceed max_requests 1" in live[2]
+    assert dry[2] == live[2]
+    assert "Requests: 3 nominal; up to 6 with 2 attempts" in dry[1]
+
+
+def test_dry_run_json_and_text_show_budget_limits(monkeypatch, tmp_path, capsys):
+    within = _capped_config(
+        tmp_path,
+        max_requests=6,
+        max_estimated_cost_usd=0.5,
+        models=[
+            {
+                "provider": "mock",
+                "model": "m",
+                "response": "ok",
+                "input_cost_per_million": 1,
+                "output_cost_per_million": 1,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(within), "--dry-run", "--no-env-file"]
+    )
+    cli.main()
+    text = capsys.readouterr().out
+    assert "Limits: max_requests 6; max_estimated_cost_usd $0.500000" in text
+    assert "Limit breach" not in text
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(within), "--dry-run", "--json", "--no-env-file"],
+    )
+    cli.main()
+    assert json.loads(capsys.readouterr().out)["budget_limits"] == {
+        "max_requests": 6,
+        "max_estimated_cost_usd": 0.5,
+        "violations": [],
+    }
+    code, out, _err = _cap_cli(
+        monkeypatch,
+        capsys,
+        str(_capped_config(tmp_path)),
+        "--dry-run",
+        "--json",
+        "--no-env-file",
+    )
+    assert code == 2
+    assert json.loads(out)["budget_limits"]["violations"] == [
+        "possible requests 6 exceed max_requests 1"
+    ]
+
+
+def test_dry_run_require_current_pricing_unpriced_exits_like_live_run(
+    monkeypatch, tmp_path, capsys
+):
+    config = _capped_config(
+        tmp_path,
+        max_requests=6,
+        require_current_pricing=True,
+        models=[{"provider": "openai_compatible", "model": "unpriced"}],
+    )
+    live = _cap_cli(
+        monkeypatch, capsys, str(config), "--no-env-file", "--output-dir", str(tmp_path)
+    )
+    dry = _cap_cli(monkeypatch, capsys, str(config), "--dry-run", "--no-env-file")
+    assert live[0] == dry[0] == 2
+    assert "pricing coverage is incomplete" in live[2]
+    assert dry[2] == live[2]
+    assert "Limit breach: pricing coverage is incomplete" in dry[1]
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        "examples/vision/gemini-image-to-text.json",
+        "examples/vision/qwen-vl-model-studio.json",
+        "examples/project-integration/support-routing.json",
+    ],
+)
+def test_shipped_request_cap_examples_dry_run_exit_0(monkeypatch, capsys, example):
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", example, "--dry-run", "--json", "--no-env-file"]
+    )
+    cli.main()
+    limits = json.loads(capsys.readouterr().out)["budget_limits"]
+    assert limits["max_requests"] == 1
+    assert limits["violations"] == []
+
+
+def test_dry_run_text_flags_the_breach(monkeypatch, tmp_path, capsys):
+    _code, out, _err = _cap_cli(
+        monkeypatch, capsys, str(_capped_config(tmp_path)), "--dry-run", "--no-env-file"
+    )
+    assert "Limits: max_requests 1" in out
+    assert "Limit breach: possible requests 6 exceed max_requests 1" in out
+
+
+def test_dry_run_breach_writes_no_approval_receipt(monkeypatch, tmp_path, capsys):
+    receipt = tmp_path / "receipt.json"
+    code, _out, err = _cap_cli(
+        monkeypatch,
+        capsys,
+        str(_capped_config(tmp_path)),
+        "--dry-run",
+        "--no-env-file",
+        "--approval-receipt",
+        str(receipt),
+        "--approval-note",
+        "checked",
+        "--approval-expires-at",
+        "2099-01-01T00:00:00+00:00",
+    )
+    assert code == 2
+    assert "exceed max_requests 1" in err
+    assert not receipt.exists()
+
+
+def test_dry_run_within_limits_still_writes_the_receipt(monkeypatch, tmp_path, capsys):
+    receipt = tmp_path / "receipt.json"
+    config = _capped_config(tmp_path, max_requests=6)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "llm-preflight",
+            str(config),
+            "--dry-run",
+            "--no-env-file",
+            "--approval-receipt",
+            str(receipt),
+            "--approval-note",
+            "checked",
+            "--approval-expires-at",
+            "2099-01-01T00:00:00+00:00",
+        ],
+    )
+    cli.main()
+    assert receipt.exists()
+
+
+def test_catalog_watch_dry_run_breach_exits_nonzero(monkeypatch, tmp_path, capsys):
+    watch = tmp_path / "watch.json"
+    watch.write_text(
+        '{"prompt":"hello","repetitions":3,"max_requests":1,"models":[{"model":"old"}]}'
+    )
+    approved = tmp_path / "approved.json"
+    approved.write_text('{"models": []}')
+    monkeypatch.setattr(
+        cli,
+        "resolve_models",
+        lambda _value: [{"provider": "mock", "model": "new", "response": "ok"}],
+    )
+    code, out, err = _cap_cli(
+        monkeypatch,
+        capsys,
+        "watch-new",
+        str(watch),
+        "--against",
+        str(approved),
+        "--snapshot",
+        str(tmp_path / "snapshot.json"),
+        "--test",
+        "--dry-run",
+    )
+    assert code == 2
+    assert "RUN PLAN" in out, (out, err)
+    assert "possible requests" in err
+    assert "exceed max_requests 1" in err
 
 
 _ALIAS_TABLE = {

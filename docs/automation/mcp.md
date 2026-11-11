@@ -97,12 +97,15 @@ The response's `result.structuredContent` includes these fields (an excerpt):
   "ok": true,
   "tests": ["config prompt"],
   "requests": 1,
-  "possible_requests": 2
+  "possible_requests": 2,
+  "budget_limits": {"max_requests": null, "max_estimated_cost_usd": null, "violations": []}
 }
 ```
 
 This built a plan without reading credentials or calling a provider. `ok`
-means the plan was produced, not that a model passed. To exercise the mock,
+means the plan was produced and breaks no limit in `budget_limits.violations`
+(a request or cost cap, or incomplete pricing under `require_current_pricing`);
+it does not mean a model passed. To exercise the mock,
 call `run_preflight` with the same config and inspect its structured decision:
 its local test passes, but `decision.state` remains `inconclusive` because no
 live provider was tested. The [CLI walkthrough](../guides/interactive-runs.md#cli-json-communication)

@@ -470,13 +470,14 @@ def _tools() -> list[dict[str, Any]]:
     )
     error_or_dry_run = _output_schema(
         {
-            "ok": {"const": True},
+            "ok": {"type": "boolean"},
             "models": {"type": "array", "items": {"type": "object"}},
             "requests": {"type": "integer", "minimum": 0},
             "possible_requests": {"type": "integer", "minimum": 0},
             "retry_max_attempts": {"type": "integer", "minimum": 1},
             "estimated_cost_usd": optional_number_schema,
             "maximum_estimated_cost_usd": optional_number_schema,
+            "budget_limits": {"type": "object"},
             "pricing_ledger": {"type": "array", "items": {"type": "object"}},
             "pricing_fingerprint": {"type": "string"},
             "pricing_warnings": {"type": "array", "items": {"type": "object"}},
@@ -500,6 +501,7 @@ def _tools() -> list[dict[str, Any]]:
             "retry_max_attempts",
             "estimated_cost_usd",
             "maximum_estimated_cost_usd",
+            "budget_limits",
             "pricing_ledger",
             "pricing_fingerprint",
             "pricing_warnings",
@@ -967,7 +969,10 @@ def _call(
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
         plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
-        return _tool_result({"ok": True, **dry_run_output(plan)}, standard=standard)
+        return _tool_result(
+            {"ok": not plan["budget_limits"]["violations"], **dry_run_output(plan)},
+            standard=standard,
+        )
     if name == "migrate_plan":
         config_path = _path(arguments["config"], workspace)
         _readonly_config(config_path)

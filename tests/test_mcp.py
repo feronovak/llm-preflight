@@ -222,6 +222,7 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "retry_max_attempts",
         "estimated_cost_usd",
         "maximum_estimated_cost_usd",
+        "budget_limits",
         "pricing_ledger",
         "pricing_fingerprint",
         "pricing_warnings",
@@ -403,6 +404,43 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     assert content["retirements"]["next_commands"] == [
         'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
     ]
+
+
+@pytest.mark.parametrize(("cap", "ok"), [(1, False), (6, True)])
+def test_dry_run_plan_breach_sets_ok_false(tmp_path, cap, ok):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 3,
+                "warmups": 0,
+                "max_requests": cap,
+                "models": [{"provider": "mock", "model": "m", "response": "ok"}],
+            }
+        )
+    )
+
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+
+    content = plan["result"]["structuredContent"]
+    assert plan["result"]["isError"] is False
+    assert content["ok"] is ok
+    assert content["possible_requests"] == 6
+    assert content["budget_limits"]["max_requests"] == cap
+    assert content["budget_limits"]["violations"] == (
+        [] if ok else ["possible requests 6 exceed max_requests 1"]
+    )
 
 
 def test_dry_run_plan_omits_a_next_command_whose_replacement_is_already_selected(

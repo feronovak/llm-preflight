@@ -20,6 +20,16 @@ Changes below are marked `Breaking:` where they can change an exit code.
 - The `--audit-source --ci` exit 0 line no longer says "no referenced model is retired, retiring or stale" when IDs
   are unknown. It says no referenced model has a retirement finding in the snapshot, and counts the model IDs that
   have no snapshot row and are not verified.
+- Breaking: `--dry-run` (also `catalog watch-new --test --dry-run`) now prints the plan and then fails with exit 2,
+  and the same message as the live run, when the config breaks a limit the live run refuses: `max_requests` below
+  the possible requests, `max_estimated_cost_usd` exceeded or with unknown pricing, or incomplete pricing under
+  `require_current_pricing`. It used to exit 0 and the live run then refused. The plan, text and JSON, carries
+  `budget_limits` and a `Limit breach:` line, and the MCP `dry_run_plan` tool returns `ok: false` with the plan.
+  Approval receipts written by 2.24.2 verify as `mismatch` because the hashed plan gains `budget_limits`;
+  record them again with `--dry-run --approval-receipt`. A non-numeric `max_requests` or `max_estimated_cost_usd`
+  is now an error message, not a traceback.
+- The `examples/vision` and `examples/project-integration` configs bound retries with `request.retry`
+  `max_attempts: 1`, so their one-request cap holds on a live run.
 
 ## 2.24.2 - 2026-11-11
 

@@ -273,32 +273,68 @@ def estimate_budget(
     }
 
 
+_COVERAGE_REFUSAL = (
+    "pricing coverage is incomplete; run --pricing-check and resolve "
+    "unknown, undated, or stale model prices before a paid benchmark"
+)
+
+
+def _cap(key: str, value: Any, kind: type[int | float]) -> Any:
+    try:
+        return kind(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{key} must be a number, not {value!r}") from None
+
+
+def budget_limits(
+    config: dict[str, Any],
+    budget: dict[str, Any],
+    models: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """The configured caps and every refusal `check_budget` makes, in its order."""
+    max_requests = config.get("max_requests")
+    max_cost = config.get("max_estimated_cost_usd")
+    request_cap = (
+        None if max_requests is None else _cap("max_requests", max_requests, int)
+    )
+    cost_cap = (
+        None if max_cost is None else _cap("max_estimated_cost_usd", max_cost, float)
+    )
+    violations = []
+    if config.get("require_current_pricing"):
+        coverage = pricing_coverage_report(
+            models if models is not None else resolve_models(config),
+            require_current_pricing=True,
+        )
+        if not coverage["enforcement_ok"]:
+            violations.append(_COVERAGE_REFUSAL)
+    if request_cap is not None and budget["possible_requests"] > request_cap:
+        violations.append(
+            f"possible requests {budget['possible_requests']} exceed max_requests {max_requests}"
+        )
+    cost = budget["maximum_estimated_cost_usd"]
+    if cost_cap is not None:
+        if cost is None:
+            violations.append(
+                "pricing is unknown; cannot enforce max_estimated_cost_usd"
+            )
+        elif cost > cost_cap:
+            violations.append(
+                f"estimated cost ${cost:.6f} exceeds max_estimated_cost_usd ${cost_cap:.6f}"
+            )
+    return {
+        "max_requests": max_requests,
+        "max_estimated_cost_usd": max_cost,
+        "violations": violations,
+    }
+
+
 def check_budget(config: dict[str, Any]) -> dict[str, Any]:
     models = resolve_models(config)
     budget = estimate_budget(config, models)
-    if config.get("require_current_pricing"):
-        coverage = pricing_coverage_report(models, require_current_pricing=True)
-        if not coverage["enforcement_ok"]:
-            raise ValueError(
-                "pricing coverage is incomplete; run --pricing-check and resolve "
-                "unknown, undated, or stale model prices before a paid benchmark"
-            )
-    max_requests = config.get("max_requests")
-    if max_requests is not None and budget["possible_requests"] > int(max_requests):
-        raise ValueError(
-            f"possible requests {budget['possible_requests']} exceed max_requests {max_requests}"
-        )
-    max_cost = config.get("max_estimated_cost_usd")
-    cost = budget["maximum_estimated_cost_usd"]
-    if max_cost is not None:
-        if cost is None:
-            raise ValueError(
-                "pricing is unknown; cannot enforce max_estimated_cost_usd"
-            )
-        if cost > float(max_cost):
-            raise ValueError(
-                f"estimated cost ${cost:.6f} exceeds max_estimated_cost_usd ${float(max_cost):.6f}"
-            )
+    violations = budget_limits(config, budget, models)["violations"]
+    if violations:
+        raise ValueError(violations[0])
     return budget
 
 

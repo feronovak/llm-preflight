@@ -58,6 +58,7 @@ from .features import (
     apply_model_aliases,
     apply_provider_presets,
     apply_smoke_mode,
+    budget_limits,
     check_budget,
     compare_results,
     doctor_report,
@@ -767,6 +768,7 @@ def dry_run_plan(
         "retry_max_attempts": budget["retry_max_attempts"],
         "estimated_cost_usd": budget["estimated_cost_usd"],
         "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
+        "budget_limits": budget_limits(budget_config, budget, models),
         "pricing_warnings": pricing_freshness_report(
             models,
             enforce_override_freshness=bool(config.get("require_current_pricing")),
@@ -804,6 +806,29 @@ def dry_run_output(plan: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+def _limit_lines(limits: dict[str, Any] | None) -> list[str]:
+    if limits is None:
+        return []
+    caps = []
+    if limits["max_requests"] is not None:
+        caps.append(f"max_requests {limits['max_requests']}")
+    if limits["max_estimated_cost_usd"] is not None:
+        caps.append(
+            f"max_estimated_cost_usd ${float(limits['max_estimated_cost_usd']):.6f}"
+        )
+    return [
+        *([f"Limits: {'; '.join(caps)}"] if caps else []),
+        *(f"Limit breach: {violation}" for violation in limits["violations"]),
+    ]
+
+
+def _raise_limit_breach(plan: dict[str, Any]) -> None:
+    """Fail a non-interactive dry run the way the live run would."""
+    violations = plan["budget_limits"]["violations"]
+    if violations:
+        raise ValueError(violations[0])
+
+
 def _format_dry_run_plan(plan: dict[str, Any]) -> str:
     if len(plan["models"]) <= 10:
         models = ", ".join(
@@ -836,6 +861,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{plan['possible_requests']} with {plan['retry_max_attempts']} attempts"
         ),
         f"Cost: {cost}",
+        *_limit_lines(plan.get("budget_limits")),
         f"Stop on: {plan['stop_on'] if plan['stop_on'] not in (None, 'none') else 'never'}",
         f"Saved responses: {plan['save_responses']}",
     ]
@@ -1813,6 +1839,8 @@ def _watch_new_main(argv: list[str]) -> None:
             if args.json
             else redact_secrets(_format_dry_run_plan(plan))
         )
+        if not args.interactive:
+            _raise_limit_breach(plan)
         return
     if not args.interactive:
         check_budget(_budget_config(config, args.tests))
@@ -3376,7 +3404,9 @@ def main() -> None:
             plan = dry_run_plan(config, profile_selector, today=today_utc())
             payload: dict[str, Any] = dry_run_output(plan)
             verification = None
-            if args.approval_receipt:
+            if args.approval_receipt and (
+                args.interactive or not plan["budget_limits"]["violations"]
+            ):
                 receipt = create_approval_receipt(
                     plan,
                     note=args.approval_note,
@@ -3413,6 +3443,8 @@ def main() -> None:
             )
             if verification is not None and not verification["ok"]:
                 raise SystemExit(1)
+            if not args.interactive:
+                _raise_limit_breach(plan)
             _retirement_exit(plan["retirements"]["decision"], args.ci)
             return
         check_budget(_budget_config(config, profile_selector))

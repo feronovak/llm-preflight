@@ -29,7 +29,8 @@ in the source repository.
   "request": {
     "system_prompt": "Route the ticket. Return one lowercase label: billing, technical, or account.",
     "temperature": 0,
-    "max_output_tokens": 20
+    "max_output_tokens": 20,
+    "retry": {"max_attempts": 1}
   },
   "validation": {"exact": "billing"},
   "validation_fixtures": [

@@ -108,8 +108,6 @@ For benchmark runs, read the decision before acting:
 Recent additions, including newly measured models, are on the
 [releases page](https://github.com/feronovak/llm-preflight/releases).
 
-<a id="tested-models"></a>
-
 ## Observed results on a support-routing contract
 
 The image shows **20 native model routes**: 19 measured on **2026-10-29** and
@@ -131,8 +129,6 @@ It also records `claude-mythos-5-2`, attempted on 2026-11-11: all 8 requests
 returned HTTP 404 (not available to the test account), so it has no results:
 [read all rows, the method and failure analysis](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
 Previous dated measurements remain available as history.
-
-<a id="purpose"></a>
 
 ## First live run
 
@@ -200,9 +196,7 @@ choose another file with `--env-file PATH` or skip it with `--no-env-file`.
 - **Configure a coding agent.** Follow
   [MCP for coding agents](#mcp-for-coding-agents) below.
 
-<a id="what-live-evidence-looks-like"></a>
-
-## See a contract change fail
+## Render a review report
 
 A review artifact retains the decision, contract validity, latency, usage,
 estimated cost and blocking warnings. Render saved schema-version-1 JSON as
@@ -293,8 +287,6 @@ for request/result examples and workspace boundaries, and the
 [coding-agent workflow](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
 for CLI commands.
 
-<a id="useful-commands-once-you-know-your-path"></a>
-
 ## Common jobs
 
 - **Audit existing model IDs:** `llm-preflight --audit-source .` reports literal
@@ -321,8 +313,8 @@ for CLI commands.
   ```
 
   Create the watch/approved files first with the
-  [model catalogue guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
-  Catalogue probes are a separate, potentially billable step.
+  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
+  Catalog probes are a separate, potentially billable step.
 
 ## Change a model safely
 
@@ -338,6 +330,20 @@ sends three built-in cases per model before configured retries: a capital-city
 answer, summary and rewrite. They check basic compatibility; use your own
 [application contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md)
 to establish whether the change meets your feature's rules.
+
+## Glossary
+
+- **Contract:** the output rule your application depends on, such as exact
+  text, a JSON schema or a set of allowed labels.
+- **Fixture:** a saved sample response, marked `pass` or `fail`, that checks
+  the validator locally without a provider request.
+- **Route:** the provider, endpoint and model ID a request is sent to.
+- **Decision:** the result state of a run: `pass`, `fail` or `inconclusive`.
+- **Evidence:** the saved result and proof-of-preflight record behind a
+  decision, kept for the change review.
+
+The config file is named `benchmark.json` because it also drives benchmark
+runs; the same file holds a contract's validators and fixtures.
 
 ## Safety boundary
 

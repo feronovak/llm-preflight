@@ -48,8 +48,9 @@ OpenRouter and an explicitly configured OpenAI-compatible endpoint use
 multipart `image_url` content. Gemini uses inline image data. This lets a Qwen
 image-capable model hosted through Model Studio be configured as an
 `openai_compatible` model with its workspace endpoint and `DASHSCOPE_API_KEY`.
-The Anthropic and OpenAI Responses adapters and the native Z.ai, DeepSeek, Qwen,
-Moonshot, MiniMax, Mistral and Cohere routes reject `input_images`.
+The Anthropic and OpenAI Responses adapters, Z.ai `glm-5.3`, and the native
+Moonshot, MiniMax, Mistral and Cohere routes reject `input_images`; native
+DeepSeek, Qwen and the other Z.ai models send multipart `image_url` content.
 
 Keep the contract mechanical. For example, check an OCR response against a
 JSON Schema, or require a routing label from an allowed set. Use a stable,

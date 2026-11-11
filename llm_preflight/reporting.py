@@ -740,6 +740,10 @@ def _card_retirement(provider: Any, model: Any, today: date) -> str:
         return f"snapshot row of {verdict['as_of']} is stale"
     if status == "active":
         return "active in the bundled snapshot"
+    if status == "alias_unmapped":
+        return "alias without a safe mapping; snapshot rows: " + ", ".join(
+            verdict["alias_candidates"]
+        )
     return "not in the bundled snapshot"
 
 

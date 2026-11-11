@@ -8,6 +8,12 @@ import pytest
 SNAPSHOT_REVIEW_DAY = date(2026, 11, 9)
 
 
+@pytest.fixture(autouse=True)
+def empty_credential_registry(monkeypatch):
+    """Credential values recorded for redaction never leak between tests."""
+    monkeypatch.setattr("llm_preflight.redaction._REGISTERED_CREDENTIALS", set())
+
+
 @pytest.fixture
 def snapshot_review_day(monkeypatch):
     """Pin "today" to the snapshot review day so example pricing checks do not

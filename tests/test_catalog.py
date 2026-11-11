@@ -672,3 +672,38 @@ def test_auto_watch_includes_current_direct_flagships(provider, model_id):
     assert re.search(source["include"], model_id)
     if provider == "gemini":
         assert not re.search(source["include"], "gemini-3.5-flash")
+
+
+def test_discovery_error_echoing_key_is_redacted(monkeypatch):
+    from llm_preflight.redaction import redact_secrets
+
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("DISCOVERY_TEST_KEY", key)
+
+    def echo_key(request, timeout):
+        raise ValueError(f"rejected credential {key}")
+
+    monkeypatch.setattr("llm_preflight.catalog.open_public_url", echo_key)
+    with pytest.raises(ValueError) as error:
+        discover_models(
+            {"provider": "openai", "limit": 1, "api_key_env": "DISCOVERY_TEST_KEY"}
+        )
+    assert redact_secrets(str(error.value)) == "rejected credential [REDACTED]"
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "gemini"])
+def test_native_discovery_error_echoing_key_is_redacted(monkeypatch, provider):
+    from llm_preflight.redaction import redact_secrets
+
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("DISCOVERY_TEST_KEY", key)
+
+    def echo_key(*args, **kwargs):
+        raise ValueError(f"rejected credential {key}")
+
+    monkeypatch.setattr("llm_preflight.catalog._get_json", echo_key)
+    with pytest.raises(ValueError) as error:
+        discover_models(
+            {"provider": provider, "limit": 1, "api_key_env": "DISCOVERY_TEST_KEY"}
+        )
+    assert redact_secrets(str(error.value)) == "rejected credential [REDACTED]"

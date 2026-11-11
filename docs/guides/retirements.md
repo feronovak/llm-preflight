@@ -99,7 +99,10 @@ an exit 0 is not evidence that none is in use.
 | `retiring` | A future retirement or deprecation is announced. An alias redirected to another model with no shutdown date is `active`, not `retiring`. | inconclusive |
 | `stale` | The snapshot row was reviewed more than 30 days ago, counted in UTC days like the pricing snapshot. Update llm-preflight or read the official page. | inconclusive |
 | `active` | The official page lists the model as active and the row is fresh. | pass |
+| `alias_unmapped` | An ID with no row of its own that could stand for one or more dated snapshot rows, and no safe single mapping: any OpenAI alias such as `gpt-5` or `o3` (OpenAI moves aliases to new snapshots), or an Anthropic alias whose candidate rows disagree. The verdict lists `alias_candidates`; name the dated snapshot ID your provider routes to. | inconclusive |
 | `unknown` | No snapshot row. Absence is not evidence. | none |
+
+An ID is first looked up in lower case. An Anthropic alias without a row of its own (`claude-opus-4-1`, `claude-sonnet-4-0`, `claude-3-7-sonnet-latest`) takes the verdict of the dated rows `<alias>-YYYYMMDD` when every one of them has the same status, retirement date and replacement; the verdict then carries `matched_id`. OpenAI aliases are never derived that way. With `--audit-source --ci`, `alias_unmapped` exits 3 where such an alias used to be `unknown` and exit 0.
 
 A stale row with a past retirement date is still `retired`; a date does not
 age. Unknown is never a verdict: it covers every provider without a bundled
@@ -123,8 +126,8 @@ Decision: inconclusive — nothing was audited: the path holds no source file ou
 
 Without `--ci` the scan and the dry-run exit 0 whatever they find, and the
 doctor fails only on a `retired` model, as it does for any failed check. With
-`--ci`, a `retired` model exits 1 and a `retiring` or `stale` model exits 3
-in all three commands, and a scan that read no file exits 3.
+`--ci`, a `retired` model exits 1 and a `retiring`, `stale` or `alias_unmapped`
+model exits 3 in all three commands, and a scan that read no file exits 3.
 
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
@@ -132,6 +135,16 @@ stale 30 days after their review date (the bundled rows are stale from the 31st
 day after the 2026-11-04 review date), after which `--ci` returns 3 for
 every non-retired model in the snapshot (retired stays 1) until the package is
 updated; models with no row stay at 0.
+
+The doctor and the dry-run report the end of that window as
+`snapshot.valid_until`: the oldest review date among the rows of the models in
+the config, plus 30 days (the last day those rows still pass). A retired row
+does not count, because staleness never changes its verdict. With no such row
+there is no `valid_until`. The scan JSON carries the bundled-wide date in
+`retirement_snapshot.valid_until`. In text output the doctor, dry-run and scan
+print a notice during the last 7 days of the window of the rows they used, and
+none when no row matches. The notice never changes the decision or the exit
+code.
 
 ## Next steps
 
@@ -225,6 +238,7 @@ replacement stays your step.
 | `snapshot_stale` | The row is older than 30 days, even when retired; update llm-preflight. The replacement's status is not reported. |
 | `route_base_url` | The row sets a custom `base_url`. The provider names the replacement for its public route only, so add it by hand with your own prices and run `--dry-run` on that config. |
 | `route_headers` | The row sets `headers`; add the replacement by hand. |
+| `alias_unmapped` | The ID is an alias with no safe mapping to one snapshot row; the next step lists the candidate rows. Name the dated snapshot ID, then run `migrate` again. |
 | `not_affected` | Active or unknown. |
 
 ### Candidate config

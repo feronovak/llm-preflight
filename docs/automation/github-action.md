@@ -36,10 +36,50 @@ published package to keep pull-request validation installable from PyPI.
 Update that pin after each newer package is published and the workflow
 succeeds against it.
 
+## Keep the pin current
+
+The bundled retirement rows go stale 30 days after their review date, and
+then `--ci` returns `inconclusive` (exit 3) until you move to a newer release.
+Official price rows follow the same 30-day rule from their own review dates.
+The Action runs the doctor and dry-run with `--json` and without `--ci`, so it
+prints no expiry notice and never exits 3 for a stale retirement row. A stale price row turns
+it red through the `--pricing-check` step (exit 1). Run
+`llm-preflight benchmark.json --doctor` locally or in your own CI to read
+`snapshot.valid_until` (the oldest selected row's review date plus 30 days)
+and the notice printed during its last 7 days.
+
+Dependabot moves the Action tag but not the `package-version` input. A tag's
+`action.yml` defaults to the package version of the release before it
+(`v2.24.2` defaults to `2.24.1`), so a tag-only pin installs the previous
+release and its data expires a release earlier. Keep `package-version` in
+your workflow, set to the tag's version, and bump both together:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+```
+
+```yaml
+steps:
+  - uses: feronovak/llm-preflight@v2.24.2
+    with:
+      config: benchmark.json
+      package-version: "2.24.2"
+```
+
+Dependabot's pull request changes the tag; edit `package-version` in that pull
+request to the same version.
+
 ## Paid smoke is opt-in
 
-Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and
-approved the spend. Supply credentials through GitHub Secrets or an approved
+The action's dry-run step fails when a configured limit is broken, as the
+CLI `--dry-run` exits 2 with the live run's error. Only set `run-paid: "true"`
+after a person has reviewed the dry-run bounds and approved the spend. Supply credentials through GitHub Secrets or an approved
 environment; do not commit an environment file or put a key in action inputs.
 
 The optional `env-file` input names an environment file for the paid smoke and

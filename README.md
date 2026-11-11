@@ -39,7 +39,26 @@ The activation command is for POSIX shells; PowerShell uses
 
 Already have LLM code? `llm-preflight --audit-source .` reports literal model
 IDs marked retired or retiring in the bundled snapshot. No config or key is
-needed.
+needed. Real output from a one-file fixture repo whose `app.py` names
+`claude-3-opus-20240229` (complete output):
+
+```text
+Decision: fail — 1 file audited; 1 model reference: 1 retired, 0 retiring or stale, 0 unknown.
+Exit 0 — add --ci to exit 1 on this decision.
+Files: tracked by git, plus untracked files .gitignore does not exclude.
+Retired:
+  claude-3-opus-20240229 (1 reference) — retired 2026-01-05, replacement claude-opus-4-8
+    app.py:3
+    Next: llm-preflight --quick "<your prompt>" --models anthropic:claude-3-opus-20240229,anthropic:claude-opus-4-8 --dry-run
+```
+
+Bundled rows go stale 30 days after review; doctor and dry-run JSON show the
+end of the selected models' window as `snapshot.valid_until` (scan JSON:
+`retirement_snapshot.valid_until`).
+
+Why not just a pytest assert? A pytest assert checks one reply inside your test
+suite. This adds a merge gate tied to a fresh CI record of the contract check;
+see [How it compares](#how-it-compares).
 
 ### 1. Catch an invalid response
 
@@ -50,7 +69,7 @@ Save this as `routing.json`. The app accepts `billing`, `technical` or
 ```json
 {
   "prompt": "I was charged twice. Reply with only the support queue label.",
-  "models": [{"name": "local-mock", "provider": "mock", "model": "local", "response": "billing"}],
+  "models": [{"name": "local-mock", "provider": "mock", "model": "local"}],
   "validation": {"allowed_values": ["billing", "technical", "account"]},
   "validation_fixtures": [
     {"name": "model-reply", "response": "billing", "expect": "pass"},
@@ -81,15 +100,15 @@ one does not, and `2` for an invalid config.
 
 ### 2. Now a mock benchmark run
 
-The mock benchmark has a different config and a different decision:
-
-The config file is named `benchmark.json` because it also drives benchmark runs;
-the same file holds a contract's validators and fixtures.
+The mock benchmark uses a different config and produces a different decision:
 
 ```bash
 llm-preflight init
 llm-preflight benchmark.json --no-save --no-env-file
 ```
+
+The config file is named `benchmark.json` because it also drives benchmark runs;
+the same file holds a contract's validators and fixtures.
 
 `init` refuses to overwrite an existing config. Look for `local-mock` with
 `PASS` in the quality gate: the mock replied `ok` and passed the exact-output

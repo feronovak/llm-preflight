@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 from urllib.parse import urlsplit
@@ -21,10 +22,35 @@ _SECRET_KEY_NAMES = {
 _SECRET_TEXT_PATTERNS: list[tuple[re.Pattern[str], int | None]] = [
     (re.compile(r"(?i)(authorization\s*:?\s*bearer\s+)([A-Za-z0-9._:/+=-]+)"), 1),
     (re.compile(r"(?i)(x-api-key\s*:?\s*)([A-Za-z0-9._:/+=-]+)"), 1),
+    (re.compile(r"(?i)(\bbearer\s+)([A-Za-z0-9._~+/=-]{16,})"), 1),
     (re.compile(r"\bsk-[A-Za-z0-9._-]+\b"), None),
     (re.compile(r"\bAIza[A-Za-z0-9_-]{20,}\b"), None),
     (re.compile(r"\bxai-[A-Za-z0-9_-]{16,}\b"), None),
 ]
+
+
+_MIN_CREDENTIAL_LENGTH = 8
+_REGISTERED_CREDENTIALS: set[str] = set()
+
+
+def credential_from_env(name: str | None) -> str | None:
+    """The value of environment variable `name`, remembered for redaction.
+
+    Provider keys without a known prefix (Mistral, MiniMax, Cohere, Z.ai,
+    `openai_compatible`) match no pattern, so each key read for a request is
+    recorded and masked wherever it is echoed. Values shorter than eight
+    characters are not recorded: they would mangle ordinary text, and real
+    keys are longer.
+    """
+    value = os.environ.get(name) if name else None
+    if value:
+        # A server or client may trim the value before echoing it.
+        _REGISTERED_CREDENTIALS.update(
+            candidate
+            for candidate in (value, value.strip())
+            if len(candidate) >= _MIN_CREDENTIAL_LENGTH
+        )
+    return value
 
 
 _PUBLIC_BASE_URLS = {
@@ -91,6 +117,8 @@ def _is_sensitive_key(key: str) -> bool:
 
 def _redact_text(value: str) -> str:
     redacted = value
+    for credential in sorted(_REGISTERED_CREDENTIALS, key=len, reverse=True):
+        redacted = redacted.replace(credential, REDACTED)
     for pattern, prefix_group in _SECRET_TEXT_PATTERNS:
         if prefix_group is None:
             redacted = pattern.sub(REDACTED, redacted)

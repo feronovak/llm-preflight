@@ -14,8 +14,10 @@ else: `fail` means a referenced model is retired, `inconclusive` means one is
 retiring, its snapshot row is stale, it is an alias without a safe mapping to
 one snapshot row (`alias_unmapped`), or no file was read, `pass` means every
 referenced model the snapshot lists is active, and `none` means no reference
-is in the retirement snapshot; it is not a pass. It covers only literal model
-IDs; a model chosen at run time needs review. `ok` does not reflect it. Then follow the
+is in the retirement snapshot; it is not a pass. Report
+`retirement_snapshot.valid_until`, the last day before the oldest bundled row
+turns stale. It covers only literal model IDs; a model chosen at run time needs
+review. `ok` does not reflect it. Then follow the
 [project integration guide](https://github.com/feronovak/llm-preflight/blob/main/docs/getting-started/project-integration.md)
 to create a benchmark; the other MCP tools read an existing config and do not
 create it.
@@ -28,6 +30,9 @@ create it.
    not reflect it. `ok: false` means the plan breaks a limit: report
    `budget_limits.violations` (a request or cost cap, or incomplete pricing
    under `require_current_pricing`); a live run refuses with the same message.
+   Report `retirements.snapshot.valid_until` with it: after that day the
+   selected models' snapshot rows are stale and the decision turns
+   `inconclusive`; it is absent when no selected model has a non-retired row.
 3. Stop before live provider traffic. You must not infer approval from a
    configuration, a dry-run, a tool call, or a previous result.
 4. Run a live preflight only after an explicit user instruction and only with

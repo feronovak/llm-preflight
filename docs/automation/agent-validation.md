@@ -38,8 +38,13 @@ llm-preflight benchmark.json --tests agent-smoke --smoke --json --no-save
 
 Report the dry-run `retirements` decision with the plan: `fail` means a
 selected model is retired, `inconclusive` means one is retiring or its
-snapshot row is stale. Neither is approval, and the agent must not choose a
-replacement the provider did not name.
+snapshot row is stale. An alias without a safe mapping to one snapshot row is
+`alias_unmapped`, also `inconclusive`. Report the day the selected rows turn
+stale: `retirement.snapshot.valid_until` in the `--doctor` JSON and
+`retirements.snapshot.valid_until` in the `--dry-run` JSON (absent when no
+selected model has a non-retired row); a dry run that breaks a limit exits 2;
+report `budget_limits.violations`. Neither is approval, and the agent must not
+choose a replacement the provider did not name.
 
 Each `--audit-source` reference carries a `retirement` object (status, date, provider-stated replacement, next step) and the payload a `decision` and `next_commands`. In a Git work tree the audit reads tracked and unignored files only; `file_selection` reports the mode, `file_selection_reason` why Git was not used, and the JSON is never capped. An audit that read no file is `inconclusive`, never a pass. See [source audit JSON](../reference/results.md#source-audit-json). An agent may run the printed `--dry-run` commands; it must not treat `unknown` as approval or choose a replacement the provider did not name.
 

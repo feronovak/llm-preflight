@@ -61,8 +61,10 @@ its `decision`: `fail` means a referenced model is retired, `inconclusive`
 means one is retiring, its snapshot row is stale, it is an alias without a
 safe mapping to one snapshot row (`alias_unmapped`), or no file was read, `pass`
 means every referenced model the snapshot lists is active, and `none` means
-no reference is in the retirement snapshot. It covers only literal model IDs;
-a model chosen at run time needs review.
+no reference is in the retirement snapshot. Report
+`retirement_snapshot.valid_until`, the last day before the oldest bundled row
+turns stale. It covers only literal model IDs; a model chosen at run time needs
+review.
 
 Start a preflight with a benchmark config that reflects the application's
 prompt and response contract. The other MCP tools use an existing
@@ -81,6 +83,9 @@ before a live run.
    not reflect it. `ok: false` means the plan breaks a limit: report
    `budget_limits.violations` (a request or cost cap, or incomplete pricing
    under `require_current_pricing`); a live run refuses with the same message.
+   Report `retirements.snapshot.valid_until` with it: after that day the
+   selected models' snapshot rows are stale and the decision turns
+   `inconclusive`; it is absent when no selected model has a non-retired row.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
@@ -1108,11 +1113,15 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                     "In a repository with no benchmark config, call audit_source "
                     "first and report its decision; `pass` means every "
                     "referenced model the retirement snapshot lists is active. "
+                    "Report its `retirement_snapshot.valid_until`, the last day "
+                    "before the oldest bundled row turns stale. "
                     "It covers only literal model IDs. "
                     "Use validate_config and dry_run_plan before a live run, and "
                     "report the dry_run_plan `retirements` decision: `fail` for a "
                     "retired model, `inconclusive` for a retiring model or a "
-                    "stale snapshot row. "
+                    "stale snapshot row, and its "
+                    "`retirements.snapshot.valid_until`, the day the selected "
+                    "rows turn stale. "
                     "For a retired model, migrate_plan reads the named "
                     "replacement without writing a file: " + _MIGRATE_FOLLOW_UP + " "
                     "Only call run_preflight for a paid config when the user "

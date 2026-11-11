@@ -2521,3 +2521,43 @@ def test_only_nonzero_one_hour_cache_writes_are_flagged(usage, expected):
     from llm_preflight.client import _one_hour_cache_writes
 
     assert _one_hour_cache_writes(usage) is expected
+
+
+@pytest.mark.parametrize("extra", [{}, {"adapter": "openai_responses"}])
+def test_http_error_body_echoing_unprefixed_key_is_redacted(monkeypatch, extra):
+    from llm_preflight.redaction import redact_secrets
+
+    key = "abcdEFGH12345678ijkl"
+    monkeypatch.setenv("UNPREFIXED_TEST_KEY", key)
+    client = create_client(
+        {
+            "provider": "openai_compatible",
+            "model": "model-a",
+            "base_url": "https://api.example.test/v1",
+            "api_key_env": "UNPREFIXED_TEST_KEY",
+            **extra,
+        },
+        10,
+    )
+
+    def raise_http_error(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url,
+            401,
+            "unauthorized",
+            {},
+            io.BytesIO(f"Incorrect API key provided: {key}".encode()),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", raise_http_error)
+    monkeypatch.setattr(
+        "llm_preflight.client.open_public_url",
+        lambda r, timeout: raise_http_error(r, timeout),
+    )
+    sample = client.run("hello", {})
+
+    assert sample["ok"] is False
+    assert key in sample["error"]
+    assert redact_secrets(sample["error"]) == (
+        "HTTP 401: Incorrect API key provided: [REDACTED]"
+    )

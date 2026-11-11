@@ -77,8 +77,9 @@ request to the same version.
 
 ## Paid smoke is opt-in
 
-Only set `run-paid: "true"` after a person has reviewed the dry-run bounds and
-approved the spend. Supply credentials through GitHub Secrets or an approved
+The action's dry-run step fails when a configured limit is broken, as the
+CLI `--dry-run` exits 2 with the live run's error. Only set `run-paid: "true"`
+after a person has reviewed the dry-run bounds and approved the spend. Supply credentials through GitHub Secrets or an approved
 environment; do not commit an environment file or put a key in action inputs.
 
 The optional `env-file` input names an environment file for the paid smoke and

@@ -222,6 +222,7 @@ def test_standard_mcp_describes_safe_tools_and_exposes_the_safe_workflow(tmp_pat
         "retry_max_attempts",
         "estimated_cost_usd",
         "maximum_estimated_cost_usd",
+        "budget_limits",
         "pricing_ledger",
         "pricing_fingerprint",
         "pricing_warnings",
@@ -403,6 +404,102 @@ def test_dry_run_plan_carries_the_same_retirement_report_as_the_cli(
     assert content["retirements"]["next_commands"] == [
         'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run'
     ]
+
+
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+@pytest.mark.parametrize("value", ["nan", "inf", pytest.param(10**400, id="huge-int")])
+def test_dry_run_plan_rejects_a_non_finite_cap(tmp_path, key, value):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                key: value,
+                "models": [
+                    {
+                        "provider": "mock",
+                        "model": "m",
+                        "response": "ok",
+                        "input_cost_per_million": 1,
+                        "output_cost_per_million": 1,
+                    }
+                ],
+            }
+        )
+    )
+
+    result = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )["result"]
+
+    assert result["isError"] is True
+    assert f"{key} must be a number" in json.dumps(result)
+    assert "NaN" not in json.dumps(result.get("structuredContent", {}))
+
+
+def test_dry_run_plan_schema_describes_budget_limits(tmp_path):
+    tools = mcp._response({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, tmp_path)
+    schema = next(
+        tool["outputSchema"]
+        for tool in tools["result"]["tools"]
+        if tool["name"] == "dry_run_plan"
+    )["oneOf"][1]["properties"]["budget_limits"]
+    assert set(schema["properties"]) == {
+        "max_requests",
+        "max_estimated_cost_usd",
+        "violations",
+    }
+    assert schema["required"] == [
+        "max_requests",
+        "max_estimated_cost_usd",
+        "violations",
+    ]
+    assert schema["properties"]["violations"]["items"] == {"type": "string"}
+
+
+@pytest.mark.parametrize(("cap", "ok"), [(1, False), (6, True)])
+def test_dry_run_plan_breach_sets_ok_false(tmp_path, cap, ok):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "repetitions": 3,
+                "warmups": 0,
+                "max_requests": cap,
+                "models": [{"provider": "mock", "model": "m", "response": "ok"}],
+            }
+        )
+    )
+
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+
+    content = plan["result"]["structuredContent"]
+    assert plan["result"]["isError"] is False
+    assert content["ok"] is ok
+    assert content["possible_requests"] == 6
+    assert content["budget_limits"]["max_requests"] == cap
+    assert content["budget_limits"]["violations"] == (
+        [] if ok else ["possible requests 6 exceed max_requests 1"]
+    )
 
 
 def test_mcp_retirement_report_carries_valid_until(tmp_path, monkeypatch):
@@ -869,8 +966,10 @@ def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect
         assert "`retirements` decision" in step
         assert "`fail` means a selected model is retired" in step
         assert (
-            "`inconclusive` means one is retiring or its snapshot row is stale" in step
+            "`inconclusive` means one is retiring, its snapshot row is stale, "
+            "or it is an `alias_unmapped`" in step
         )
+        assert "`ok: false` means" in step and "`budget_limits.violations`" in step
     for text in (mcp.SAFE_WORKFLOW, skill):
         assert "`ok` does not reflect it." in " ".join(text.split())
     assert "`ok` stays `true` for a retired model" in " ".join(guide.split())
@@ -1039,6 +1138,39 @@ def test_audit_source_reports_a_retired_model_in_a_workspace_without_a_config(
         "1 retired, 0 retiring or stale, 0 unknown."
     )
     assert json.loads(result["content"][1]["text"]) == content
+
+
+def test_audit_source_tool_resolves_alias(tmp_path, monkeypatch):
+    table = {
+        ("anthropic", "claude-opus-4-1-20250805"): {
+            "status": "retired",
+            "retirement_date": "2026-06-01",
+            "as_of": "2026-10-01",
+            "source_url": AUDIT_URL,
+        },
+        ("openai", "gpt-5-2025-08-07"): {
+            "status": "deprecated",
+            "retirement_date": "2026-12-11",
+            "as_of": "2026-10-01",
+            "source_url": AUDIT_URL,
+        },
+    }
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", table)
+    monkeypatch.setattr(mcp, "today_utc", lambda: date(2026, 10, 9))
+    (tmp_path / "app.py").write_text('a = "claude-opus-4-1"\nb = "gpt-5"\n')
+
+    result = _audit(tmp_path, {})["result"]
+
+    assert result["isError"] is False
+    by_model = {
+        item["model"]: item["retirement"]
+        for item in result["structuredContent"]["references"]
+    }
+    assert by_model["claude-opus-4-1"]["status"] == "retired"
+    assert by_model["claude-opus-4-1"]["matched_id"] == "claude-opus-4-1-20250805"
+    assert by_model["gpt-5"]["status"] == "alias_unmapped"
+    assert by_model["gpt-5"]["alias_candidates"] == ["gpt-5-2025-08-07"]
+    assert result["structuredContent"]["decision"] == "fail"
 
 
 def test_audit_source_matches_the_cli_json_and_first_text_line(

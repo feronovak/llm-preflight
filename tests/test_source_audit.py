@@ -164,6 +164,25 @@ def test_source_audit_findings_exclude_priced_models_with_unknown_retirement(
     assert report["decision"] == "none"
 
 
+def test_unmapped_alias_is_a_finding(tmp_path, monkeypatch):
+    dated = {
+        ("openai", "gpt-5.4-mini-2026-03-17"): {
+            "status": "active",
+            "as_of": "2026-10-01",
+            "source_url": URL,
+        }
+    }
+    monkeypatch.setattr(retirements, "PUBLIC_RETIREMENTS", dated)
+    (tmp_path / "app.py").write_text('fast = "gpt-5.4-mini"\n')
+
+    report = audit_source(tmp_path, today=TODAY)
+
+    assert report["references"][0]["status"] == "pricing_known"
+    assert report["references"][0]["retirement"]["status"] == "alias_unmapped"
+    assert [f["model"] for f in report["findings"]] == ["gpt-5.4-mini"]
+    assert report["decision"] == "inconclusive"
+
+
 def test_source_audit_lists_a_priced_model_with_a_stale_row_as_a_finding(
     tmp_path, monkeypatch
 ):

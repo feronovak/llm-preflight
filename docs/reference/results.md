@@ -36,9 +36,17 @@ and a stable `reason`: `eligible`, `catalog_evidence_required`,
 `unknown_pricing`, `undated_pricing`, `stale_pricing`, or
 `bounded_limits_required`. Agents must use this evidence rather than infer
 whether a newly discovered ID is safe to include in a paid smoke.
-Eligibility confirms that request and cost caps exist. The paid-run budget gate
-then enforces those caps against the dry-run's retry-expanded requests and
-maximum estimated cost; eligibility itself is not a cost estimate.
+Eligibility confirms that request and cost caps exist; it is not a cost
+estimate. The plan's `budget_limits` object holds the configured `max_requests`
+and `max_estimated_cost_usd` (each `null` when unset) and `violations`, the
+refusals the paid-run budget gate would give for this config, in its order:
+incomplete pricing under `require_current_pricing`, possible requests above
+`max_requests`, unknown pricing under a cost cap, and a maximum estimated cost
+above the cap. A non-interactive `--dry-run` prints the plan, then exits 2 with
+the first violation's message, and writes no approval receipt; the MCP
+`dry_run_plan` tool returns the plan with `ok: false`. The interactive preview
+only shows the violations. `budget_limits` is part of the plan an approval
+receipt hashes.
 
 Each `models[].base_url` in this JSON prints
 only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as
@@ -234,7 +242,8 @@ installed, Git could not list files (with Git's first error line, such as
 Each `references[]` entry has `path`, `line`,
 `provider`, `model`, pricing `status` and `confidence`, and a `retirement`
 verdict. `findings` lists the references with unknown pricing or a retired,
-retiring or stale verdict. `decision` (`fail`, `inconclusive`, `pass` or
+retiring, stale or `alias_unmapped` verdict (an alias such as `gpt-5` with
+dated snapshot rows but no safe single mapping, with its `alias_candidates`). `decision` (`fail`, `inconclusive`, `pass` or
 `none`) is the worst retirement decision across all references and drives
 the `--ci` exit code. When `files_scanned` is 0, including when every
 selected file was unreadable, the decision is `inconclusive`: an audit that read nothing has no evidence. `next_commands`,

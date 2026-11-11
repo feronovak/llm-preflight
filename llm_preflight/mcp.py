@@ -58,7 +58,8 @@ In a repository with no benchmark config, call `audit_source` first. It
 reports the literal model IDs in workspace source files with retirement and
 pricing verdicts, without a config, credentials, or provider requests. Report
 its `decision`: `fail` means a referenced model is retired, `inconclusive`
-means one is retiring, its snapshot row is stale, or no file was read, `pass`
+means one is retiring, its snapshot row is stale, it is an alias without a
+safe mapping to one snapshot row (`alias_unmapped`), or no file was read, `pass`
 means every referenced model the snapshot lists is active, and `none` means
 no reference is in the retirement snapshot. It covers only literal model IDs;
 a model chosen at run time needs review.
@@ -76,7 +77,10 @@ before a live run.
    intentionally unavailable for image inputs), pricing
    coverage, every non-eligible smoke reason, and the `retirements` decision:
    `fail` means a selected model is retired, `inconclusive` means one is
-   retiring or its snapshot row is stale. `ok` does not reflect it.
+   retiring, its snapshot row is stale, or it is an `alias_unmapped`. `ok` does
+   not reflect it. `ok: false` means the plan breaks a limit: report
+   `budget_limits.violations` (a request or cost cap, or incomplete pricing
+   under `require_current_pricing`); a live run refuses with the same message.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
@@ -326,7 +330,16 @@ def _tools() -> list[dict[str, Any]]:
     retirement_schema = {
         "type": "object",
         "properties": {
-            "status": {"enum": ["active", "retiring", "retired", "stale", "unknown"]},
+            "status": {
+                "enum": [
+                    "active",
+                    "retiring",
+                    "retired",
+                    "stale",
+                    "alias_unmapped",
+                    "unknown",
+                ]
+            },
             "decision": {"enum": ["pass", "inconclusive", "fail", "none"]},
             "reason": {"type": "string"},
             "next_step": {"type": "string"},
@@ -336,6 +349,8 @@ def _tools() -> list[dict[str, Any]]:
                 "enum": ["active", "retiring", "retired", "unknown"]
             },
             "next_command": {"type": "string"},
+            "matched_id": {"type": "string"},
+            "alias_candidates": strings_schema,
             "as_of": {"type": "string"},
             "source_url": {"type": "string"},
         },
@@ -460,13 +475,22 @@ def _tools() -> list[dict[str, Any]]:
     )
     error_or_dry_run = _output_schema(
         {
-            "ok": {"const": True},
+            "ok": {"type": "boolean"},
             "models": {"type": "array", "items": {"type": "object"}},
             "requests": {"type": "integer", "minimum": 0},
             "possible_requests": {"type": "integer", "minimum": 0},
             "retry_max_attempts": {"type": "integer", "minimum": 1},
             "estimated_cost_usd": optional_number_schema,
             "maximum_estimated_cost_usd": optional_number_schema,
+            "budget_limits": {
+                "type": "object",
+                "properties": {
+                    "max_requests": {"type": ["integer", "number", "null"]},
+                    "max_estimated_cost_usd": optional_number_schema,
+                    "violations": strings_schema,
+                },
+                "required": ["max_requests", "max_estimated_cost_usd", "violations"],
+            },
             "pricing_ledger": {"type": "array", "items": {"type": "object"}},
             "pricing_fingerprint": {"type": "string"},
             "pricing_warnings": {"type": "array", "items": {"type": "object"}},
@@ -490,6 +514,7 @@ def _tools() -> list[dict[str, Any]]:
             "retry_max_attempts",
             "estimated_cost_usd",
             "maximum_estimated_cost_usd",
+            "budget_limits",
             "pricing_ledger",
             "pricing_fingerprint",
             "pricing_warnings",
@@ -957,7 +982,10 @@ def _call(
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
         plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
-        return _tool_result({"ok": True, **dry_run_output(plan)}, standard=standard)
+        return _tool_result(
+            {"ok": not plan["budget_limits"]["violations"], **dry_run_output(plan)},
+            standard=standard,
+        )
     if name == "migrate_plan":
         config_path = _path(arguments["config"], workspace)
         _readonly_config(config_path)

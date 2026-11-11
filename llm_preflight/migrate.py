@@ -100,6 +100,8 @@ def _outcome(
     today: date,
 ) -> str:
     replacement = verdict.get("replacement")
+    if verdict["status"] == "alias_unmapped":
+        return "alias_unmapped"
     if verdict["status"] not in _AFFECTED:
         return "not_affected"
     if _is_stale(verdict, today):

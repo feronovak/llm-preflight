@@ -9,6 +9,7 @@ from llm_preflight.features import (
     apply_model_aliases,
     apply_provider_presets,
     apply_smoke_mode,
+    budget_limits,
     check_budget,
     compare_results,
     doctor_report,
@@ -378,6 +379,171 @@ def test_budget_check_rejects_excess_requests_and_cost():
     config["max_requests"] = 10
     with pytest.raises(ValueError, match="max_estimated_cost_usd"):
         check_budget(config)
+
+
+def _limits_config(**extra):
+    return {
+        "prompt": "hi",
+        "models": [{"model": "fake"}],
+        "repetitions": 3,
+        "warmups": 1,
+        **extra,
+    }
+
+
+def _limits(config):
+    return budget_limits(config, estimate_budget(config))
+
+
+def test_budget_limits_request_cap_breach_uses_live_message():
+    config = _limits_config(max_requests=2)
+    limits = _limits(config)
+    assert limits["max_requests"] == 2
+    assert limits["max_estimated_cost_usd"] is None
+    assert limits["violations"] == ["possible requests 8 exceed max_requests 2"]
+    with pytest.raises(ValueError) as live:
+        check_budget(config)
+    assert str(live.value) == limits["violations"][0]
+
+
+def test_budget_limits_at_boundary_is_not_a_breach():
+    assert _limits(_limits_config(max_requests=8))["violations"] == []
+    assert _limits(_limits_config())["violations"] == []
+
+
+def test_budget_limits_cost_cap_with_unknown_pricing():
+    config = _limits_config(max_estimated_cost_usd=1)
+    limits = _limits(config)
+    assert limits["max_estimated_cost_usd"] == 1
+    assert limits["violations"] == [
+        "pricing is unknown; cannot enforce max_estimated_cost_usd"
+    ]
+    with pytest.raises(ValueError) as live:
+        check_budget(config)
+    assert str(live.value) == limits["violations"][0]
+
+
+def test_budget_limits_cost_cap_breach_and_both_violations_in_live_order():
+    config = _limits_config(
+        models=[
+            {
+                "model": "expensive",
+                "input_cost_per_million": 10,
+                "output_cost_per_million": 20,
+            }
+        ],
+        request={"max_output_tokens": 1000},
+        max_requests=2,
+        max_estimated_cost_usd=0.0001,
+    )
+    violations = _limits(config)["violations"]
+    assert len(violations) == 2
+    assert violations[0].startswith("possible requests 8 exceed max_requests 2")
+    assert violations[1].startswith("estimated cost $")
+    assert violations[1].endswith("exceeds max_estimated_cost_usd $0.000100")
+    with pytest.raises(ValueError) as live:
+        check_budget(config)
+    assert str(live.value) == violations[0]
+    config["max_requests"] = 10
+    assert _limits(config)["violations"] == violations[1:]
+
+
+def test_budget_limits_cost_equal_to_the_cap_is_not_a_breach():
+    config = _limits_config(
+        models=[
+            {
+                "model": "priced",
+                "input_cost_per_million": 10,
+                "output_cost_per_million": 20,
+            }
+        ]
+    )
+    cost = estimate_budget(config)["maximum_estimated_cost_usd"]
+    config["max_estimated_cost_usd"] = cost
+    assert _limits(config)["violations"] == []
+    config["max_estimated_cost_usd"] = cost / 2
+    assert len(_limits(config)["violations"]) == 1
+
+
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+def test_budget_limits_rejects_a_cap_that_is_not_a_number(key):
+    config = _limits_config(**{key: []})
+    with pytest.raises(ValueError, match=f"{key} must be a number"):
+        _limits(config)
+    with pytest.raises(ValueError, match=f"{key} must be a number"):
+        check_budget(config)
+
+
+@pytest.mark.parametrize("key", ["max_requests", "max_estimated_cost_usd"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "nan",
+        "inf",
+        "-inf",
+        float("nan"),
+        float("inf"),
+        pytest.param(10**400, id="huge-int"),
+    ],
+)
+def test_budget_limits_rejects_a_non_finite_cap(key, value):
+    config = _limits_config(**{key: value})
+    with pytest.raises(ValueError, match=f"{key} must be a number"):
+        _limits(config)
+    with pytest.raises(ValueError, match=f"{key} must be a number"):
+        check_budget(config)
+
+
+COVERAGE_MESSAGE = "pricing coverage is incomplete; run --pricing-check"
+
+
+def test_budget_limits_lists_coverage_refusal_first():
+    config = _limits_config(
+        models=[{"provider": "openai_compatible", "model": "unpriced"}],
+        require_current_pricing=True,
+        max_requests=2,
+        max_estimated_cost_usd=1,
+    )
+    violations = _limits(config)["violations"]
+    assert len(violations) == 3
+    assert violations[0].startswith(COVERAGE_MESSAGE)
+    assert violations[1] == "possible requests 8 exceed max_requests 2"
+    assert violations[2] == "pricing is unknown; cannot enforce max_estimated_cost_usd"
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        ({"require_current_pricing": True}, COVERAGE_MESSAGE),
+        ({"max_requests": 2}, "possible requests 8 exceed max_requests 2"),
+        (
+            {"max_estimated_cost_usd": 1},
+            "pricing is unknown; cannot enforce max_estimated_cost_usd",
+        ),
+        (
+            {
+                "models": [
+                    {
+                        "model": "expensive",
+                        "input_cost_per_million": 10,
+                        "output_cost_per_million": 20,
+                    }
+                ],
+                "request": {"max_output_tokens": 1000},
+                "max_estimated_cost_usd": 0.0001,
+            },
+            "estimated cost $",
+        ),
+    ],
+)
+def test_check_budget_raises_first_violation_with_unchanged_messages(extra, message):
+    config = _limits_config(
+        **{"models": [{"provider": "openai_compatible", "model": "unpriced"}], **extra}
+    )
+    with pytest.raises(ValueError) as live:
+        check_budget(config)
+    assert str(live.value).startswith(message)
+    assert str(live.value) == _limits(config)["violations"][0]
 
 
 def test_budget_check_rejects_cost_cap_when_pricing_is_unknown():

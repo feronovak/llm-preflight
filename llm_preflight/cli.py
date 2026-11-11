@@ -58,6 +58,7 @@ from .features import (
     apply_model_aliases,
     apply_provider_presets,
     apply_smoke_mode,
+    budget_limits,
     check_budget,
     compare_results,
     doctor_report,
@@ -359,7 +360,12 @@ def _retirement_phrase(verdict: dict[str, Any]) -> str:
             if replacement
             else "no single replacement recorded"
         )
-        return f"{status} {when}, {tail}"
+        alias = (
+            f" (alias of {verdict['matched_id']})" if "matched_id" in verdict else ""
+        )
+        return f"{status} {when}, {tail}{alias}"
+    if status == "alias_unmapped":
+        return f"alias_unmapped (candidates: {', '.join(verdict['alias_candidates'])})"
     if status == "stale":
         return f"snapshot stale ({verdict['reason']})"
     return status
@@ -407,21 +413,53 @@ _AUDIT_NOTHING_READ = {
 }
 _AUDIT_NOTHING_UTF8 = "no selected source file could be read as UTF-8 text"
 _AUDIT_CI_EXIT = {
-    0: "no referenced model is retired, retiring or stale.",
-    1: "a referenced model is retired.",
-    3: "a referenced model is retiring or its snapshot row is stale.",
+    0: "no referenced model has a retirement finding in the snapshot",
+    1: "a referenced model is retired",
+    3: "a referenced model is retiring or its snapshot row is stale",
 }
 _AUDIT_CI_NOTHING_READ = "no file was audited, so nothing is verified."
 
 
-def _counted(count: int, noun: str) -> str:
-    return f"{count} {noun}{'' if count == 1 else 's'}"
+def _counted(count: int, noun: str, plural: str | None = None) -> str:
+    return f"{count} {noun if count == 1 else plural or noun + 's'}"
 
 
-def _audit_exit_line(decision: str, ci: bool, audited: bool = True) -> str:
+def _audit_ci_reason(
+    code: int, unknown_ids: int, unmapped_ids: int, retiring_refs: int
+) -> str:
+    notes = []
+    base = _AUDIT_CI_EXIT[code]
+    if code == 3 and unmapped_ids and not retiring_refs:
+        base = ""
+    if code == 3 and unmapped_ids:
+        notes.append(
+            f"{_counted(unmapped_ids, 'alias', 'aliases')} could not be mapped "
+            "to a snapshot row"
+        )
+    if code == 0 and unknown_ids:
+        notes.append(
+            f"{_counted(unknown_ids, 'model ID')} "
+            f"{'has' if unknown_ids == 1 else 'have'} no snapshot row and "
+            f"{'is' if unknown_ids == 1 else 'are'} not verified"
+        )
+    return "; ".join([part for part in [base, *notes] if part]) + "."
+
+
+def _audit_exit_line(
+    decision: str,
+    ci: bool,
+    audited: bool = True,
+    unknown_ids: int = 0,
+    unmapped_ids: int = 0,
+    retiring_refs: int = 0,
+) -> str:
     code = _RETIREMENT_EXIT.get(decision, 0)
     if ci:
-        reason = _AUDIT_CI_EXIT[code] if audited else _AUDIT_CI_NOTHING_READ
+        reason = (
+            _audit_ci_reason(code, unknown_ids, unmapped_ids, retiring_refs)
+            if audited
+            else _AUDIT_CI_NOTHING_READ
+        )
         return f"Exit {code} (--ci): {reason}"
     if code:
         return f"Exit 0 — add --ci to exit {code} on this decision."
@@ -488,6 +526,17 @@ def _format_audit_source(
     retired = statuses.count("retired")
     retiring = statuses.count("retiring") + statuses.count("stale")
     unknown = statuses.count("unknown")
+    unmapped = statuses.count("alias_unmapped")
+    unknown_ids = len(
+        {i["model"] for i in references if i["retirement"]["status"] == "unknown"}
+    )
+    unmapped_ids = len(
+        {
+            i["model"]
+            for i in references
+            if i["retirement"]["status"] == "alias_unmapped"
+        }
+    )
     decision = (
         "none (no reference is in the retirement snapshot)"
         if audit["decision"] == "none"
@@ -497,9 +546,12 @@ def _format_audit_source(
         (
             f"Decision: {decision} — {_counted(audit['files_scanned'], 'file')} "
             f"audited; {_counted(len(references), 'model reference')}: "
-            f"{retired} retired, {retiring} retiring or stale, {unknown} unknown."
+            f"{retired} retired, {retiring} retiring or stale, {unknown} unknown"
+            f"{f', {unmapped} alias unmapped' if unmapped else ''}."
         ),
-        _audit_exit_line(audit["decision"], ci),
+        _audit_exit_line(
+            audit["decision"], ci, True, unknown_ids, unmapped_ids, retiring
+        ),
         *files_lines,
     ]
     retired_groups = _audit_groups(
@@ -525,6 +577,17 @@ def _format_audit_source(
             lines.append(heading)
         for group in shown:
             lines.extend(_audit_group_lines(group, show_all, with_next=True))
+    unmapped_groups = _audit_groups(
+        [
+            item
+            for item in references
+            if item["retirement"]["status"] == "alias_unmapped"
+        ]
+    )
+    if unmapped_groups:
+        lines.append("Alias not mapped:")
+        for group in unmapped_groups:
+            lines.extend(_audit_group_lines(group, show_all, with_next=True))
     hidden_retired = len(retired_groups) - len(retired_shown)
     hidden_retiring = len(retiring_groups) - len(retiring_shown)
     if hidden_retired or hidden_retiring:
@@ -536,7 +599,8 @@ def _format_audit_source(
     unpriced = [
         item
         for item in audit["findings"]
-        if item["retirement"]["status"] not in {"retired", "retiring", "stale"}
+        if item["retirement"]["status"]
+        not in {"retired", "retiring", "stale", "alias_unmapped"}
     ]
     unpriced_groups = _audit_groups(unpriced)
     if unpriced and show_all:
@@ -728,6 +792,7 @@ def dry_run_plan(
         "retry_max_attempts": budget["retry_max_attempts"],
         "estimated_cost_usd": budget["estimated_cost_usd"],
         "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
+        "budget_limits": budget_limits(budget_config, budget, models),
         "pricing_warnings": pricing_freshness_report(
             models,
             enforce_override_freshness=bool(config.get("require_current_pricing")),
@@ -765,6 +830,29 @@ def dry_run_output(plan: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+def _limit_lines(limits: dict[str, Any] | None) -> list[str]:
+    if limits is None:
+        return []
+    caps = []
+    if limits["max_requests"] is not None:
+        caps.append(f"max_requests {limits['max_requests']}")
+    if limits["max_estimated_cost_usd"] is not None:
+        caps.append(
+            f"max_estimated_cost_usd ${float(limits['max_estimated_cost_usd']):.6f}"
+        )
+    return [
+        *([f"Limits: {'; '.join(caps)}"] if caps else []),
+        *(f"Limit breach: {violation}" for violation in limits["violations"]),
+    ]
+
+
+def _raise_limit_breach(plan: dict[str, Any]) -> None:
+    """Fail a non-interactive dry run the way the live run would."""
+    violations = plan["budget_limits"]["violations"]
+    if violations:
+        raise ValueError(violations[0])
+
+
 def _format_dry_run_plan(plan: dict[str, Any]) -> str:
     if len(plan["models"]) <= 10:
         models = ", ".join(
@@ -797,6 +885,7 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
             f"{plan['possible_requests']} with {plan['retry_max_attempts']} attempts"
         ),
         f"Cost: {cost}",
+        *_limit_lines(plan.get("budget_limits")),
         f"Stop on: {plan['stop_on'] if plan['stop_on'] not in (None, 'none') else 'never'}",
         f"Saved responses: {plan['save_responses']}",
     ]
@@ -861,14 +950,16 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
     flagged = [
         entry
         for entry in retirements.get("models", [])
-        if entry["status"] in {"retired", "retiring", "stale"}
+        if entry["status"] in {"retired", "retiring", "stale", "alias_unmapped"}
     ]
     if flagged:
+        unmapped = summary_counts.get("alias_unmapped", 0)
         lines.append(
             "Retirements: "
             f"{summary_counts.get('retired', 0)} retired; "
             f"{summary_counts.get('retiring', 0) + summary_counts.get('stale', 0)} "
-            f"retiring or stale; {summary_counts.get('unknown', 0)} unknown."
+            f"retiring or stale; {summary_counts.get('unknown', 0)} unknown"
+            f"{f'; {unmapped} alias unmapped' if unmapped else ''}."
         )
         for entry in flagged:
             lines.append(
@@ -1775,6 +1866,8 @@ def _watch_new_main(argv: list[str]) -> None:
             if args.json
             else redact_secrets(_format_dry_run_plan(plan))
         )
+        if not args.interactive:
+            _raise_limit_breach(plan)
         return
     if not args.interactive:
         check_budget(_budget_config(config, args.tests))
@@ -3338,7 +3431,9 @@ def main() -> None:
             plan = dry_run_plan(config, profile_selector, today=today_utc())
             payload: dict[str, Any] = dry_run_output(plan)
             verification = None
-            if args.approval_receipt:
+            if args.approval_receipt and (
+                args.interactive or not plan["budget_limits"]["violations"]
+            ):
                 receipt = create_approval_receipt(
                     plan,
                     note=args.approval_note,
@@ -3375,6 +3470,8 @@ def main() -> None:
             )
             if verification is not None and not verification["ok"]:
                 raise SystemExit(1)
+            if not args.interactive:
+                _raise_limit_breach(plan)
             _retirement_exit(plan["retirements"]["decision"], args.ci)
             return
         check_budget(_budget_config(config, profile_selector))

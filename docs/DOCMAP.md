@@ -22,9 +22,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/README.md`](README.md) | LLM Preflight documentation | unstamped | — | — |
 | [`docs/automation/agent-validation.md`](automation/agent-validation.md) | AI implementation testing | unstamped | — | — |
 | [`docs/automation/change-plans.md`](automation/change-plans.md) | Git-aware change plans | stamped | 2026-10-19 | v2.22.1 |
-| [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-10-29 | v2.23.0 |
+| [`docs/automation/ci.md`](automation/ci.md) | CI and JSON output | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/automation/coding-agents.md`](automation/coding-agents.md) | LLM and coding-agent guide | stamped | 2026-10-19 | v2.22.1 |
-| [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-10-29 | v2.23.0 |
+| [`docs/automation/github-action.md`](automation/github-action.md) | GitHub Marketplace Action | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/automation/mcp.md`](automation/mcp.md) | MCP server for coding agents | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/development/build-rating.md`](development/build-rating.md) | Build quality rating | unstamped | — | — |
 | [`docs/development/documentation.md`](development/documentation.md) | Writing documentation | unstamped | — | — |
@@ -48,9 +48,9 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/operations/troubleshooting.md`](operations/troubleshooting.md) | Troubleshooting | unstamped | — | — |
 | [`docs/product/when-to-use.md`](product/when-to-use.md) | When to use LLM Preflight | stamped | 2026-10-27 | v2.23.0 |
 | [`docs/reference/cli.md`](reference/cli.md) | CLI reference | stamped | 2026-11-10 | v2.24.0 |
-| [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-10-18 | v2.22.1 |
-| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-10-19 | v2.22.1 |
-| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract | stamped | 2026-08-30 | v2.7.5 |
+| [`docs/reference/configuration-schema.md`](reference/configuration-schema.md) | Configuration reference | stamped | 2026-11-11 | v2.24.2 |
+| [`docs/reference/configuration.md`](reference/configuration.md) | Configuration | stamped | 2026-11-11 | v2.24.2 |
+| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/reference/results.md`](reference/results.md) | Result JSON schema | stamped | 2026-11-10 | v2.24.0 |
 | [`examples/reports/README.md`](../examples/reports/README.md) | Reviewable report gallery | unstamped | — | — |
 | [`plugins/llm-preflight/skills/llm-preflight/SKILL.md`](../plugins/llm-preflight/skills/llm-preflight/SKILL.md) | LLM Preflight | unstamped | — | — |

@@ -283,8 +283,10 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
         "Release notes for every version are in the [changelog]"
         "(https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md)." in readme
     )
-    assert "## Common jobs" in readme
-    assert "catalog prepare benchmarks/watch.json" in readme
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert "## Common jobs" in model_change
+    assert "docs/guides/model-change.md#common-jobs" in readme
+    assert "catalog prepare benchmarks/watch.json" in model_change
     assert "## Safety boundary" in readme
     assert "llm-preflight==2.24.2" in workflow
     assert "starter workflow pins the latest published package, 2.24.2" in ci
@@ -299,7 +301,8 @@ def test_readme_leads_with_a_safe_first_run_and_workflow_choices():
     assert "**Configure a coding agent.**" in readme
     assert "llm-preflight-mcp --workspace" in readme
     assert "## Safety boundary" in readme
-    assert "## Common jobs" in readme
+    assert "## Common jobs" in (ROOT / "docs/guides/model-change.md").read_text()
+    assert "docs/guides/model-change.md#common-jobs" in readme
     assert "No preflight, no merge." in readme
     assert "A signed record" not in readme
     assert "The pre-merge check for LLM changes." not in readme
@@ -426,8 +429,9 @@ def test_agent_honesty_docs_distinguish_terminal_decisions_and_pricing_gates():
     assert readme.index("python3 -m pip install llm-preflight") < readme.index(
         "llm-preflight init"
     )
-    assert "pricing advisory" in readme
-    assert "fail-closed coverage gate" in readme
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert "pricing advisory" in model_change
+    assert "fail-closed coverage gate" in model_change
     assert "llmci" not in readme
     assert "llm-preflight benchmark.json --pricing-check" in coding_agents
     assert "llm-preflight benchmark.json --pricing-check" in agent_validation
@@ -715,8 +719,13 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     assert "developers.openai.com/api/docs/deprecations" in guide
     assert "guides/retirements.md" in docs_index
     assert "llm-preflight --audit-source ." in readme
-    assert readme.index("llm-preflight init") < readme.index("## Common jobs")
-    assert "llm-preflight --audit-source ." in readme.split("## Common jobs", 1)[1]
+    model_change = (ROOT / "docs/guides/model-change.md").read_text()
+    assert readme.index("llm-preflight init") < readme.index(
+        "llm-preflight --audit-source ."
+    )
+    assert (
+        "llm-preflight --audit-source ." in model_change.split("## Common jobs", 1)[1]
+    )
     assert "docs/guides/retirements.md" in readme
     assert (
         "retirement" in cli_reference.split("`--audit-source PATH`")[1].split("\n")[0]
@@ -1006,7 +1015,12 @@ def test_proof_of_preflight_guide_is_linked_from_every_entry_point():
     assert "gh attestation verify" in gate
     assert "Protect the producer and gate workflows" in gate
     assert "merge policy" in gate
-    assert "synthetic" in readme.split("## Try it in 60 seconds", 1)[0].lower()
+    assert (
+        "synthetic"
+        in readme.split("## Observed results on a support-routing contract", 1)[
+            0
+        ].lower()
+    )
     assert "(guides/proof-of-preflight.md)" in index
     assert "`attestation.py`" in feature_map and "`report --format svg`" in feature_map
     action_row = feature_map.split("GitHub Marketplace Action", 1)[1].split("\n")[0]
@@ -1174,9 +1188,42 @@ def test_readme_embeds_both_current_terminal_recordings():
     assert "../../docs/images/contract-break.svg" in gallery
 
 
+def test_readme_contract_check_demo_passes_then_fails_when_billing_becomes_sales(
+    tmp_path,
+):
+    readme = (ROOT / "README.md").read_text()
+    step = readme.split("### 1. Watch an invalid response get caught", 1)[1].split(
+        "\n### ", 1
+    )[0]
+    config = re.search(r"```json\n(.*?)\n```", step, re.DOTALL)
+    assert config is not None
+    assert "llm-preflight routing.json --contract-check --no-env-file" in step
+    expected = {"billing": 0, "sales": 1}
+    for response, code in expected.items():
+        path = tmp_path / f"{response}.json"
+        path.write_text(
+            config.group(1).replace(
+                '"response": "billing", "expect": "pass"',
+                f'"response": "{response}", "expect": "pass"',
+            )
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "llm_preflight", str(path)]
+            + ["--contract-check", "--no-env-file"],
+            cwd=tmp_path,
+            env={"PATH": str(Path(sys.executable).parent), "PYTHONPATH": str(ROOT)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == code, result.stdout + result.stderr
+
+
 def test_readme_first_run_is_the_isolated_mock_contract_demo(tmp_path):
     readme = (ROOT / "README.md").read_text()
-    quickstart = readme.split("## Try it in 60 seconds", 1)[1].split("\n### ", 1)[0]
+    quickstart = readme.split("### 2. Now a mock benchmark run", 1)[1].split(
+        "\n### ", 1
+    )[0]
     block = re.search(r"```bash\n(.*?)\n```", quickstart, re.DOTALL)
     assert block is not None
     commands = [

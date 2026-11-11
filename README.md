@@ -14,7 +14,7 @@ Define the JSON shape, routing labels, or exact output your feature needs.
 Check responses against those rules, preview provider requests and estimated
 cost, and keep evidence for the change review.
 
-It doesn't certify production behavior. It proves the check was done.
+It doesn't certify production behaviour. It proves the check was done.
 
 Built for engineers maintaining an LLM feature. Runs locally as a CLI, GitHub
 Action, or MCP server. Python 3.10+; no third-party runtime dependencies.
@@ -193,10 +193,20 @@ choose another file with `--env-file PATH` or skip it with `--no-env-file`.
 - **Automate an established contract.** Use
   [CI and JSON output](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/ci.md)
   or the [GitHub Action](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/github-action.md).
-- **Configure a coding agent.** Follow
-  [MCP for coding agents](#mcp-for-coding-agents) below.
+- **Configure a coding agent.** Start with
+  `llm-preflight-mcp --workspace "$PWD"` in a trusted repository and follow
+  [MCP for coding agents](#mcp-for-coding-agents) and the
+  [MCP server guide](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/mcp.md).
+- **Run everyday jobs.** Audit model IDs with `llm-preflight --audit-source .`
+  ([model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md)),
+  replace a retired model, inspect pricing, review Git changes, discover a
+  candidate with the
+  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md),
+  and change a model safely:
+  [common jobs](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#common-jobs)
+  and [change a model safely](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-change.md#change-a-model-safely).
 
-## Render a review report
+### Render a review report
 
 A review artifact retains the decision, contract validity, latency, usage,
 estimated cost and blocking warnings. Render saved schema-version-1 JSON as
@@ -236,7 +246,7 @@ records also need `gh attestation verify` before the gate. Follow
 to configure it. A local fixture pass or installed package does not enforce a
 merge policy.
 
-## MCP for coding agents
+### MCP for coding agents
 
 Install the package (`python3 -m pip install llm-preflight`), then configure the
 stdio command `llm-preflight-mcp` in your MCP client. If you installed into a
@@ -253,6 +263,8 @@ virtual environment, set `command` to the absolute path of that environment's
   }
 }
 ```
+
+The server has eight tools:
 
 | Tool | What it does | Can spend money |
 |---|---|---|
@@ -286,50 +298,6 @@ configured retries. See the
 for request/result examples and workspace boundaries, and the
 [coding-agent workflow](https://github.com/feronovak/llm-preflight/blob/main/docs/automation/coding-agents.md)
 for CLI commands.
-
-## Common jobs
-
-- **Audit existing model IDs:** `llm-preflight --audit-source .` reports literal
-  IDs marked retired or retiring in the bundled snapshot. No config or key is
-  needed. Add `--ci` to make the retirement decision affect the exit code;
-  without it, findings normally exit `0`. In Git, the scan reads tracked,
-  unignored files. See [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
-- **Replace a retired model:** `llm-preflight migrate benchmark.json --output migrate.json` writes a candidate of
-  the provider-named replacements and prints its plan. After you record an approval receipt,
-  `migrate ... --run --verify-approval-receipt R` runs one bounded smoke. See
-  [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md#migrate-report).
-- **Inspect pricing:** `--doctor` provides pricing advisory;
-  `--pricing-check` is the fail-closed coverage gate. Preview the run with
-  `llm-preflight benchmark.json --dry-run`.
-- **Review Git changes:** `llm-preflight benchmark.json --change-plan` proposes
-  checks from static signals; it does not authorize execution.
-- **Discover a candidate:** refresh metadata, prepare a plan and preview it:
-
-  ```bash
-  llm-preflight catalog refresh benchmarks/watch.json
-  llm-preflight catalog prepare benchmarks/watch.json \
-    --against benchmarks/approved.json --output benchmarks/candidates.json
-  llm-preflight benchmarks/candidates.json --migration-check --dry-run
-  ```
-
-  Create the watch/approved files first with the
-  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
-  Catalog probes are a separate, potentially billable step.
-
-## Change a model safely
-
-Put approved and candidate models in a reviewed config, then preview the
-built-in compatibility pack:
-
-```bash
-llm-preflight benchmark.json --migration-check --dry-run
-```
-
-After approving that plan, `llm-preflight benchmark.json --migration-check`
-sends three built-in cases per model before configured retries: a capital-city
-answer, summary and rewrite. They check basic compatibility; use your own
-[application contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md)
-to establish whether the change meets your feature's rules.
 
 ## Glossary
 
@@ -367,15 +335,13 @@ usually do not:
 
 See [when to use it](https://github.com/feronovak/llm-preflight/blob/main/docs/product/when-to-use.md).
 
-## Get help or try it in your project
+## Help, documentation, and contributing
 
 [Ask for setup help or a contract example](https://github.com/feronovak/llm-preflight/issues/new?template=setup-help.yml).
 Include the version, intended check and redacted output. Never share keys,
 private prompts or provider responses. Use the
 [security policy](https://github.com/feronovak/llm-preflight/blob/main/SECURITY.md)
 for vulnerabilities.
-
-## Documentation
 
 The [documentation homepage](https://github.com/feronovak/llm-preflight/blob/main/docs/index.md)
 routes by task. Consult [CLI reference](https://github.com/feronovak/llm-preflight/blob/main/docs/reference/cli.md),
@@ -387,8 +353,6 @@ The [AI implementation testing guide](https://github.com/feronovak/llm-preflight
 explains the intended workflow and scope.
 
 Release notes for every version are in the [changelog](https://github.com/feronovak/llm-preflight/blob/main/CHANGELOG.md).
-
-## Contributing and license
 
 See [Contributing](https://github.com/feronovak/llm-preflight/blob/main/CONTRIBUTING.md)
 for development and documentation standards. Released under the

@@ -174,3 +174,47 @@ surprise spend before requests are sent; a cost ceiling requires complete
 pricing for every selected model.
 
 See [configuration](../reference/configuration.md) for aliases and environment overlays.
+
+## Common jobs
+
+- **Audit existing model IDs:** `llm-preflight --audit-source .` reports literal
+  IDs marked retired or retiring in the bundled snapshot. No config or key is
+  needed. Add `--ci` to make the retirement decision affect the exit code;
+  without it, findings normally exit `0`. In Git, the scan reads tracked,
+  unignored files. See [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md).
+- **Replace a retired model:** `llm-preflight migrate benchmark.json --output migrate.json` writes a candidate of
+  the provider-named replacements and prints its plan. After you record an approval receipt,
+  `migrate ... --run --verify-approval-receipt R` runs one bounded smoke. See
+  [model retirements](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/retirements.md#migrate-report).
+- **Inspect pricing:** `--doctor` provides pricing advisory;
+  `--pricing-check` is the fail-closed coverage gate. Preview the run with
+  `llm-preflight benchmark.json --dry-run`.
+- **Review Git changes:** `llm-preflight benchmark.json --change-plan` proposes
+  checks from static signals; it does not authorize execution.
+- **Discover a candidate:** refresh metadata, prepare a plan and preview it:
+
+  ```bash
+  llm-preflight catalog refresh benchmarks/watch.json
+  llm-preflight catalog prepare benchmarks/watch.json \
+    --against benchmarks/approved.json --output benchmarks/candidates.json
+  llm-preflight benchmarks/candidates.json --migration-check --dry-run
+  ```
+
+  Create the watch/approved files first with the
+  [model catalog guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/model-catalog.md).
+  Catalog probes are a separate, potentially billable step.
+
+## Change a model safely
+
+Put approved and candidate models in a reviewed config, then preview the
+built-in compatibility pack:
+
+```bash
+llm-preflight benchmark.json --migration-check --dry-run
+```
+
+After approving that plan, `llm-preflight benchmark.json --migration-check`
+sends three built-in cases per model before configured retries: a capital-city
+answer, summary and rewrite. They check basic compatibility; use your own
+[application contract tests](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/output-contracts.md)
+to establish whether the change meets your feature's rules.

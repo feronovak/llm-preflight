@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- The retirement report now carries `snapshot.valid_until`, the last day the rows of the selected models are not stale, in the doctor and dry-run JSON (the scan JSON carries the bundled-wide date). Text output of the doctor, dry-run and scan adds a notice during the last 7 days; it never changes the decision or exit code. Saved dry-run plans change once because the plan now includes the field, so approval receipts for the old plan verify as `mismatch`.
+- The Action guide explains how to keep the pin current with Dependabot.
+
 ### Changed
 
 - `--audit-source` now reads whole model IDs in backtick strings in `.js`, `.mjs`, `.cjs`, `.ts` and `.tsx` files. A JavaScript or TypeScript project with a retired model ID in backticks now exits 1 under `--audit-source --ci` where it used to exit 0. `--change-plan` uses the same scanner, so a changed JavaScript or TypeScript file with a backtick model ID now reports a `model_id` trigger instead of `contract_surface`. Backticks in comments count too, and template strings with `${…}` are still not matched.

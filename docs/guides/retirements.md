@@ -133,6 +133,16 @@ day after the 2026-11-04 review date), after which `--ci` returns 3 for
 every non-retired model in the snapshot (retired stays 1) until the package is
 updated; models with no row stay at 0.
 
+The doctor and the dry-run report the end of that window as
+`snapshot.valid_until`: the oldest review date among the rows of the models in
+the config, plus 30 days (the last day those rows still pass). A retired row
+does not count, because staleness never changes its verdict. With no such row
+there is no `valid_until`. The scan JSON carries the bundled-wide date in
+`retirement_snapshot.valid_until`. In text output the doctor, dry-run and scan
+print a notice during the last 7 days of the window of the rows they used, and
+none when no row matches. The notice never changes the decision or the exit
+code.
+
 ## Next steps
 
 For a retired or retiring model with a provider-stated replacement, the output

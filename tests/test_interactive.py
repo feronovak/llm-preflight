@@ -6,7 +6,7 @@ from datetime import date
 
 import pytest
 
-from llm_preflight import cli, mcp
+from llm_preflight import cli, mcp, retirements
 
 
 def mock_config(**overrides):
@@ -95,6 +95,29 @@ def test_preview_uses_the_shared_plan_and_shows_retirement_evidence(monkeypatch)
     assert "retired" in text
     assert "Smoke eligibility:" in text
     assert "Pricing coverage:" in text
+
+
+def test_run_plan_prints_the_expiry_notice(monkeypatch):
+    monkeypatch.setattr(cli, "today_utc", lambda: date(2026, 11, 30))
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("anthropic", "claude-3-haiku-20240307"): {
+                "status": "active",
+                "as_of": "2026-11-04",
+                "source_url": "https://example.test/deprecations",
+            }
+        },
+    )
+    result, output = select(
+        mock_config(
+            models=[{"provider": "anthropic", "model": "claude-3-haiku-20240307"}]
+        ),
+        ["all", "", "1", "1", "n"],
+    )
+    assert result is None
+    assert "valid until 2026-12-04 (4 days left)" in "\n".join(output)
 
 
 def test_failed_fixtures_stop_before_execution_confirmation():

@@ -239,6 +239,10 @@ retiring or stale verdict. `decision` (`fail`, `inconclusive`, `pass` or
 the `--ci` exit code. When `files_scanned` is 0, including when every
 selected file was unreadable, the decision is `inconclusive`: an audit that read nothing has no evidence. `next_commands`,
 `retirement_snapshot`, `confidence` and `notes` complete the object.
+`retirement_snapshot.valid_until` is the oldest bundled row's review date plus
+30 days. The doctor and dry-run `retirements.snapshot.valid_until` is the same
+calculation over the rows of the selected models, and is absent when none has
+a row.
 
 ## Preflight record
 

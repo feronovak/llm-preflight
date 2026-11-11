@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -373,6 +373,67 @@ def test_snapshot_summary_reports_coverage_and_dates():
     assert summary["rows"] == len(PUBLIC_RETIREMENTS)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
+
+
+def test_snapshot_valid_until_is_oldest_row_plus_window(table):
+    summary = snapshot_summary()
+    oldest = date.fromisoformat(summary["oldest_as_of"])
+    assert (
+        summary["valid_until"]
+        == (oldest + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    )
+    # Last valid day: one day later the row is stale.
+    on_limit = date.fromisoformat(summary["valid_until"])
+    assert retirement_verdict("openai", "gpt-old-row", on_limit)["status"] != "stale"
+    day_after = on_limit + timedelta(days=1)
+    assert retirement_verdict("openai", "gpt-old-row", day_after)["status"] == "stale"
+
+
+def test_report_valid_until_comes_from_the_selected_rows_only(table):
+    selected = retirement_report([{"provider": "openai", "model": "gpt-new"}], TODAY)
+    row_date = date.fromisoformat(TABLE[("openai", "gpt-new")]["as_of"])
+    expected = (row_date + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
+    assert selected["snapshot"]["valid_until"] == expected
+    unknown = retirement_report([{"provider": "mock", "model": "local"}], TODAY)
+    assert "valid_until" not in unknown["snapshot"]
+
+
+def test_report_valid_until_ignores_retired_rows(monkeypatch):
+    def row(status, as_of, **extra):
+        return {"status": status, "as_of": as_of, "source_url": URL, **extra}
+
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-gone"): row(
+                "deprecated", "2026-10-01", retirement_date="2026-10-02"
+            ),
+            ("openai", "gpt-new"): row("active", "2026-10-06"),
+        },
+    )
+    gone = {"provider": "openai", "model": "gpt-gone"}
+    new = {"provider": "openai", "model": "gpt-new"}
+    only_retired = retirement_report([gone], TODAY)
+    assert only_retired["models"][0]["status"] == "retired"
+    assert "valid_until" not in only_retired["snapshot"]
+    mixed = retirement_report([gone, new], TODAY)
+    assert mixed["snapshot"]["valid_until"] == "2026-11-05"
+
+
+def test_expiry_notice_says_1_day_not_1_days():
+    notice = retirements.expiry_notice({"valid_until": "2026-12-04"}, date(2026, 12, 3))
+    assert "(1 day left)" in notice
+
+
+def test_expiry_notice_appears_7_days_before_and_not_8():
+    snapshot = {"valid_until": "2026-12-04"}
+    assert "valid until 2026-12-04" in retirements.expiry_notice(
+        snapshot, date(2026, 11, 27)
+    )
+    assert retirements.expiry_notice(snapshot, date(2026, 11, 26)) is None
+    assert "0 days left" in retirements.expiry_notice(snapshot, date(2026, 12, 4))
+    assert retirements.expiry_notice(snapshot, date(2026, 12, 5)) is None
 
 
 def test_worst_decision_orders_fail_over_inconclusive_over_pass():

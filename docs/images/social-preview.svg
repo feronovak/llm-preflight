@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="t d">
+  <title id="t">LLM Preflight</title>
+  <desc id="d">Check LLM responses against the output rules your application depends on, before changing a model, prompt, schema, or provider. Local CLI, GitHub Action and MCP server.</desc>
+  <rect width="1280" height="640" fill="#0d1117"/>
+  <rect width="1280" height="8" fill="#58a6ff"/>
+  <g font-family="Liberation Sans, Arial, Helvetica, sans-serif">
+    <text x="80" y="170" font-size="31" fill="#58a6ff" font-weight="700">llm-preflight</text>
+    <text x="80" y="270" font-size="64" fill="#e6edf3" font-weight="700">Check LLM responses against</text>
+    <text x="80" y="345" font-size="64" fill="#e6edf3" font-weight="700">your output rules before you</text>
+    <text x="80" y="420" font-size="64" fill="#e6edf3" font-weight="700">change the model.</text>
+    <text x="80" y="490" font-size="28" fill="#aeb9c7">Model, prompt, schema or provider: keep the decision, latency and cost as evidence.</text>
+  </g>
+  <rect x="80" y="530" width="1120" height="1" fill="#30363d"/>
+  <g font-family="Liberation Mono, DejaVu Sans Mono, monospace" font-size="24">
+    <text x="80" y="580" fill="#aeb9c7">Also flags retired model IDs · CLI · GitHub Action · MCP server</text>
+  </g>
+</svg>

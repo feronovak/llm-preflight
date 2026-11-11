@@ -73,36 +73,70 @@ def _all_measured_rows():
     ]
 
 
-def test_documented_model_list_matches_comparison_evidence():
+def _summary_rows():
+    return [r for r in _all_measured_rows() if r["model"] != "claude-mythos-5-2"]
+
+
+def _expected_cells(row):
+    """Passed, API errors, latency and cost as the data, not the renderer, gives them."""
+    errors = row["requests"] - row["api_successful"]
+    rate_limits = sum(f.get("category") == "rate_limit" for f in row["failures"])
+    passed = f"{row['valid']}/{row['api_successful']}"
+    if row.get("contract_failure_summary"):
+        passed += f" · {row['contract_failure_summary']}"
+    cost = row["estimated_cost_usd"]
+    return [
+        passed,
+        f"{errors} rate limits" if errors and rate_limits == errors else str(errors),
+        f"{row['mean_latency_seconds']:.3f}s",
+        f"${cost:.6f}"
+        if cost is not None
+        else f"${row['known_cost_subtotal_usd']:.6f} known",
+    ]
+
+
+def _svg_cells(path):
     import xml.etree.ElementTree as ET
 
-    rows = _all_measured_rows()
+    ns = {"svg": "http://www.w3.org/2000/svg"}
+    image = ET.parse(path).getroot()
+    shown = {}
+    for group in image.findall("svg:g[@data-model]", ns):
+        cells = ["".join(cell.itertext()) for cell in group.findall("svg:text", ns)]
+        shown[group.get("data-model")] = cells
+    return image, shown
+
+
+def test_documented_model_list_matches_comparison_evidence():
+    rows = _summary_rows()
     readme = (ROOT / "README.md").read_text()
     ns = {"svg": "http://www.w3.org/2000/svg"}
-    assert len(rows) == 25
+    assert len(rows) == 24
     for name in (
         "measured-models-2026-11-11.svg",
         "measured-models-2026-11-11-light.svg",
     ):
         assert name in readme
-        image = ET.parse(ROOT / "docs/images" / name).getroot()
-        shown = {
-            group.get("data-model"): [
-                "".join(cell.itertext()) for cell in group.findall("svg:text", ns)
-            ]
-            for group in image.findall("svg:g[@data-model]", ns)
-        }
+        image, shown = _svg_cells(ROOT / "docs/images" / name)
         assert set(shown) == {row["display_name"] for row in rows}
-        assert len(shown) == 25
-        mythos = shown["Claude Mythos 5.2"]
-        assert mythos[1:] == ["not available", "8 × HTTP 404", "—", "—"]
-        assert "0/8" not in " ".join(mythos)
-        assert shown["Kimi K3.1 Pro"][1:3] == ["3/3", "5 rate limits"]
+        for row in rows:
+            assert shown[row["display_name"]] == [
+                f"{row['display_name']} · {row['route']}",
+                *_expected_cells(row),
+            ]
+        assert "Mythos" not in "".join(image.itertext())
         assert "not a ranking" in image.find("svg:desc", ns).text
         assert not image.findall(".//svg:script", ns)
-    # The README table repeats every row for readers that cannot see the image.
+    section = readme.split("## Observed results", 1)[1].split("\n## ", 1)[0]
+    assert "Mythos" not in section
+    # The README table repeats every cell for readers that cannot see the image.
     for row in rows:
-        assert f"| {row['display_name']} | {row['route']} |" in readme
+        passed, errors, latency, cost = _expected_cells(row)
+        assert (
+            f"| {row['display_name']} | {row['route']} | "
+            f"{'Passed 8/8' if row['valid'] == 8 else 'Contract failures' if row['api_successful'] == 8 else 'Incomplete'}"
+            f" | {passed} | {errors} | {latency} | {cost} | {row['observed_on']} |"
+        ) in readme
     assert {row["provider"] for row in rows} == {
         "openai",
         "anthropic",
@@ -118,26 +152,81 @@ def test_documented_model_list_matches_comparison_evidence():
     assert all("OpenRouter" not in row["route"] for row in rows)
 
 
+def test_light_image_is_the_light_theme_render(tmp_path):
+    output = tmp_path / "light.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--theme",
+            "light",
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (
+        output.read_bytes()
+        == (ROOT / "docs/images/measured-models-2026-11-11-light.svg").read_bytes()
+    )
+
+
 def test_readme_counts_and_alt_text_follow_the_measured_data():
-    rows = _all_measured_rows()
+    rows = _summary_rows()
     readme = (ROOT / "README.md").read_text()
     checks = sum(row["requests"] for row in rows)
     passed = sum(row["valid"] for row in rows)
     known = sum(row["known_cost_subtotal_usd"] or 0 for row in rows)
     calls = sum(row["cost_coverage"]["known_requests"] for row in rows)
     full = sum(row["valid"] == row["requests"] for row in rows)
-    errors = sum(row["api_failures"] for row in rows)
+    assert (len(rows), checks, passed, full, calls) == (24, 192, 184, 20, 187)
+    assert sum(row["api_failures"] for row in rows) == 5
     assert f"**{passed} of {checks} checks" in readme
-    assert f"**{full} models passed all eight checks.**" in readme
+    assert f"**{full} models passed all eight\nchecks.**" in readme
     assert f"**${known:.8f}**" in readme
     assert f"across {calls} calls with usage" in readme
-    assert f"the {errors} error\nresponses" in readme
+    assert "the five error\nresponses" in readme
     assert f"**{len(rows)} native model routes**" in readme
-    assert "All 20" not in readme and "five more than this image" not in readme
+    assert "as of 2026-11-11" in readme
+    assert "between 2026-10-29" not in readme and "All 20" not in readme
     assert (
-        "25 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, "
-        "Kimi 3 responses and 5 rate limits, Mythos 0 responses (HTTP 404)"
+        "24 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, "
+        "Kimi 3 responses and 5 rate limits"
     ) in readme
+
+
+def test_the_guide_keeps_the_hidden_row_the_summary_leaves_out():
+    guide = (ROOT / "docs/guides/observed-model-comparison.md").read_text()
+    assert "`claude-mythos-5-2`" in guide and "HTTP 404" in guide
+
+
+def test_no_response_group_shows_not_available_not_zero_of_eight(tmp_path):
+    source = json.loads(
+        (ROOT / "docs/data/model-comparison-2026-11-11-five-models.json").read_text()
+    )
+    source["rows"] = [r for r in source["rows"] if r["model"] == "claude-mythos-5-2"]
+    data = tmp_path / "none.json"
+    data.write_text(json.dumps(source))
+    output = tmp_path / "none.svg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/render_measured_models.py"),
+            "--data",
+            str(data),
+            "--output",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    _, shown = _svg_cells(output)
+    assert shown["Claude Mythos 5.2"][1:] == ["not available", "8 × HTTP 404", "—", "—"]
 
 
 def test_historical_comparison_aggregates_keep_the_original_case_contract():
@@ -1394,7 +1483,7 @@ def test_measured_image_accepts_new_native_and_routed_evidence(tmp_path):
     }
     assert all(row[1:] == ["10/12", "4", row[3], "—"] for row in cells)
     text = "".join(image.itertext())
-    assert f"2 models · {row['requests']} requests each · measured 2026-10-20" in text
+    assert f"2 models · {row['requests']} requests each · as of 2026-10-20" in text
     assert "Last update" not in text
     assert image.find("svg:title", ns).text == "Native & routed <checks>"
 
@@ -1590,11 +1679,11 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
         )["rows"]
     ]
-    assert len(rows) == 25
+    assert len(rows) == 24
     names = [row["name"] for row in rows]
     assert names.index("Claude Fable 5.2") + 1 == names.index("Claude Fable 5.1")
     assert {row["date"] for row in rows} == {"2026-10-29", "2026-11-11"}
-    assert len([row for row in rows if row["date"] == "2026-11-11"]) == len(later)
+    assert len([row for row in rows if row["date"] == "2026-11-11"]) == len(later) - 1
 
 
 def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
@@ -1645,17 +1734,16 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     svg = ET.fromstring(module.render())
     ns = {"svg": "http://www.w3.org/2000/svg"}
     texts = list(svg.itertext())
-    assert "Eight application checks across 25 models" in texts
+    assert "Eight application checks across 24 models" in texts
     assert (
         "Small synthetic sample; passing does not establish overall model quality."
         in texts
     )
-    assert "25 models · 8 requests each · measured 2026-10-29 to 2026-11-11" in texts
+    assert "24 models · 8 requests each · as of 2026-11-11" in texts
     assert [g.get("data-group") for g in svg.findall("svg:g[@data-group]", ns)] == [
         "pass",
         "partial",
         "incomplete",
-        "none",
     ]
     rows = {
         row.get("data-model"): [
@@ -1675,9 +1763,8 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     assert rows["GPT-6.1 Terra"][1] == "8/8"
     assert rows["GPT-6.1 Terra"][4] == "$0.001218"
     assert svg.find("svg:desc", ns).text == (
-        "25 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, "
-        "Kimi K3.1 Pro 3 responses and 5 rate limits, "
-        "Claude Mythos 5.2 0 responses (HTTP 404). "
+        "24 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, "
+        "Kimi K3.1 Pro 3 responses and 5 rate limits. "
         "Small synthetic sample, not a ranking or production approval."
     )
 

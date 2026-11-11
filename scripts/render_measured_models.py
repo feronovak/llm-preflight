@@ -25,6 +25,8 @@ DEFAULT_LIGHT_OUTPUT = (
 )
 # A model added in a later aggregate is shown directly above its predecessor.
 ROW_ABOVE = {"claude-fable-5-2": "claude-fable-5-1"}
+# Models the default summary leaves out; their rows stay in the data and the guide.
+DEFAULT_HIDDEN = {"claude-mythos-5-2"}
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
     "gpt-6.1-sol": "GPT-6.1 Sol",
@@ -45,12 +47,14 @@ MODEL_NAMES = {
 
 def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
     """Read one aggregate, or concatenate the rows of several in the given order."""
+    hidden = DEFAULT_HIDDEN if data_paths is None else set()
     if data_paths is None:
         data_paths = DEFAULT_DATA
     if isinstance(data_paths, Path):
         data_paths = (data_paths,)
     first, *rest = (json.loads(path.read_text()) for path in data_paths)
     rows = [*first["rows"], *(r for d in rest for r in d["rows"])]
+    rows = [row for row in rows if row["model"] not in hidden]
     return {**first, "rows": place_above(rows)}
 
 
@@ -196,8 +200,8 @@ def render(
         else f"Eight application checks across {len(rows)} models"
     )
     request_count = data["rows"][0]["requests"]
-    dates = sorted({row["date"] for row in rows})
-    span = dates[0] if len(dates) == 1 else f"{dates[0]} to {dates[-1]}"
+    dates = sorted(row["date"] for row in rows)
+    as_of = dates[-1]
     groups = [
         (key, [r for r in rows if r["group"] == key])
         for key in GROUP_TITLES
@@ -242,7 +246,7 @@ def render(
         text(
             32,
             86,
-            f"{len(rows)} models · {request_count} requests each · measured {span}",
+            f"{len(rows)} models · {request_count} requests each · as of {as_of}",
             layout["subtitle_size"],
             "muted",
         ),

@@ -108,7 +108,7 @@ figure at its intended display width before publication.
 
 Generate the figure from retained aggregates; never edit its numerical SVG
 labels by hand. The default summary joins the October 29 and
-November 11 JSON files (the five-model aggregate and the Fable 5.2 aggregate), in that order, and keeps all 25 models in one image, grouped by result. It writes a dark and a light variant; the README shows them through `<picture>`. Repeat
+November 11 JSON files (the five-model aggregate and the Fable 5.2 aggregate), in that order, and keeps its 24 summarized models in one image, grouped by result (a hidden-model list in the script leaves out rows that stay in the guide). It writes a dark and a light variant; the README shows them through `<picture>`. Repeat
 `--data` to join other aggregates in the order given; a `--data` run uses only the
 files it names and never silently inherits historical rows.
 
@@ -193,7 +193,7 @@ new illustrations.
 
 | Asset | Profile and size | Source or regeneration |
 |---|---|---|
-| `docs/images/measured-models-2026-11-11.svg` | Current measured results, dark, 1040×1464; 25 rows in four result groups | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
+| `docs/images/measured-models-2026-11-11.svg` | Current measured results, dark, 1040×1380; 24 rows in three result groups | `scripts/render_measured_models.py`; October 29 and November 11 aggregates |
 | `docs/images/measured-models-2026-11-11-light.svg` | Light variant of the current measured results, same size and rows | Same renderer, `colors_light` tokens in `style.json` |
 | `docs/images/measured-models-2026-10-29.svg` | Previous measured results, 1280×1516; 19 rows | Retained October 29 aggregates; unchanged for older links |
 | `docs/images/measured-models.svg` | Historical measured results, 1280×946 | Retained October 14/earlier summary; unchanged for older documentation links |

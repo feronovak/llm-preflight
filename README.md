@@ -143,17 +143,16 @@ is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-We ran **25 native model routes** through eight synthetic support-routing and
-strict JSON cases each, between 2026-10-29 and 2026-11-11. **184 of 200 checks
-passed**: three outputs failed their contract, five Kimi calls returned HTTP 429
-and all eight Claude Mythos 5.2 calls returned HTTP 404, so that row has no
-result. **20 models passed all eight checks.** These are observations for this
-workload, not a ranking of general intelligence or production approval.
+We ran **24 native model routes** through eight synthetic support-routing and
+strict JSON cases each. **184 of 192 checks passed**: three outputs failed their
+contract and five Kimi calls returned HTTP 429. **20 models passed all eight
+checks.** These are observations for this workload as of 2026-11-11, not a
+ranking of general intelligence or production approval.
 
 <a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
 <picture>
 <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
-<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="25 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits, Mythos 0 responses (HTTP 404)" width="830">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="24 models attempted on 8 checks: 20 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
 </picture>
 </a>
 
@@ -161,13 +160,13 @@ Each request used a 1,024-token output allowance and one attempt, with no
 retries. Passed counts valid outputs out of API responses; API errors are
 separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
 averages API responses only. The known token-cost subtotal is **$0.09205434**
-across 187 calls with usage; the total is unknown because the 13 error
+across 187 calls with usage; the total is unknown because the five error
 responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 before comparing rows. It has the method and the failure analysis.
 
 <details>
-<summary>The same 25 rows as a table</summary>
+<summary>The same 24 rows as a table</summary>
 
 | Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured |
 |---|---|---|---|---|---|---|---|
@@ -195,7 +194,6 @@ before comparing rows. It has the method and the failure analysis.
 | GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.832s | $0.000162 | 2026-10-29 |
 | GLM 5.3 FlashX | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.091s | $0.000391 | 2026-10-29 |
 | Kimi K3.1 Pro | Moonshot/Kimi | Incomplete | 3/3 | 5 rate limits | 2.217s | $0.001668 known | 2026-10-29 |
-| Claude Mythos 5.2 | Anthropic | No response | not available | 8 × HTTP 404 | — | — | 2026-11-11 |
 
 </details>
 

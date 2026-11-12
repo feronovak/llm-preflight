@@ -1986,3 +1986,26 @@ def test_decision_doc_names_require_current_pricing():
     page = (ROOT / "docs/reference/decision.md").read_text()
 
     assert "require_current_pricing" in page
+
+
+def _published_version():
+    match = re.search(r'default: "(\d+\.\d+\.\d+)"', (ROOT / "action.yml").read_text())
+    assert match
+    return match.group(1)
+
+
+@pytest.mark.parametrize(
+    ("page", "pin"),
+    [
+        ("docs/automation/mcp.md", '"--from", "llm-preflight=={v}"'),
+        (
+            "docs/getting-started/project-integration.md",
+            'python -m pip install "llm-preflight=={v}"',
+        ),
+        ("docs/guides/native-providers.md", 'Set `package-version: "{v}"`'),
+    ],
+)
+def test_pages_pin_the_current_published_version(page, pin):
+    version = _published_version()
+
+    assert pin.format(v=version) in (ROOT / page).read_text()

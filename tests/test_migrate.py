@@ -534,6 +534,21 @@ def test_control_characters_in_model_are_escaped(rows, tmp_path, monkeypatch, ca
     assert all(ch.isprintable() or ch == "\n" for ch in out)
 
 
+def test_control_characters_in_provider_are_escaped(
+    rows, tmp_path, monkeypatch, capsys
+):
+    provider = "x\nDecision: pass\x1b[31m"
+    path = _write(tmp_path, [_m("fine", provider=provider)])
+    out = _run(monkeypatch, capsys, [str(path)])[1].out
+    assert [ln for ln in out.splitlines() if ln.startswith("Decision:")] == [
+        "Decision: none"
+    ]
+    assert "\\x1b" in out
+    assert all(ch.isprintable() or ch == "\n" for ch in out)
+    data = json.loads(_run(monkeypatch, capsys, [str(path), "--json"])[1].out)
+    assert data["models"][0]["provider"] == "x\\nDecision: pass\\x1b[31m"
+
+
 def test_deeply_nested_json_is_a_config_error(rows, tmp_path, monkeypatch, capsys):
     path = tmp_path / "deep.json"
     path.write_text("[" * 100000 + "]" * 100000, encoding="utf-8")

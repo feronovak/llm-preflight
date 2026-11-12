@@ -1873,7 +1873,7 @@ def test_guide_lists_the_five_added_models_with_their_recorded_results():
         assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
     for field in ("requests", "api_successful", "api_failures", "valid"):
         assert data["totals"][field] == sum(row[field] for row in data["rows"])
-    assert "26 models" in guide
+    assert "25 measured models" in guide
     serialized = json.dumps(data)
     for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
         assert marker not in serialized

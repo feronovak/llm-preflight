@@ -51,10 +51,10 @@ MODEL_PAGES = {
     "xai": "https://docs.x.ai/developers/models",
 }
 MODEL_ID_PREFIXES = {
-    "anthropic": "claude",
-    "openai": r"(?:gpt|o\d+)",
-    "gemini": "gemini",
-    "xai": "grok",
+    "anthropic": "claude-",
+    "openai": r"(?:gpt-|o\d)",
+    "gemini": "gemini-",
+    "xai": "grok-",
 }
 OPENROUTER_SOURCE = "openrouter"
 SNAPSHOT_VERSION = 1
@@ -300,7 +300,7 @@ def model_ids(provider: str, body: str) -> set[str]:
     prefix = MODEL_ID_PREFIXES[provider]
     pattern = (
         rf"""(?:>|\*\*|/models/|"name":")\s*"""
-        rf"""({prefix}-(?=[a-z0-9.-]*\d)[a-z0-9][a-z0-9.-]*?)\s*(?=[<*"?#)])"""
+        rf"""({prefix}[a-z0-9.-]*?)\s*(?=[<*"?#)])"""
     )
     return {i for i in re.findall(pattern, body) if not _ASSET.search(i)}
 
@@ -346,7 +346,7 @@ def openrouter_findings(
     """`new-model` and `price-signal` findings for covered providers only.
 
     A model an official page lists is that page's finding, not this one's. A new
-    model of a provider with an official page is marked `openrouter_only`.
+    model of a provider whose official page was read is marked `openrouter_only`.
     """
     items = payload.get("data") if isinstance(payload, dict) else None
     if not isinstance(items, list):
@@ -371,7 +371,7 @@ def openrouter_findings(
             findings.append(
                 {"key": f"new-model:{provider}:{name}", "type": "new-model",
                  "provider": provider, "model": name, "openrouter_id": model_id,
-                 "source": OPENROUTER_SOURCE, "openrouter_only": provider in MODEL_PAGES}
+                 "source": OPENROUTER_SOURCE, "openrouter_only": provider in (listed or {})}
             )  # fmt: skip
             continue
         model, (bundled_in, bundled_out, _) = match

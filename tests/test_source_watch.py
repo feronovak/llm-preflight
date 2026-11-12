@@ -641,7 +641,7 @@ def test_other_providers_keep_their_html_url(sw):
 OFFICIAL = {
     "anthropic": ("https://platform.claude.com/models", "models_anthropic.html"),
     "openai": ("https://developers.openai.com/models", "models_openai.html"),
-    "gemini": ("https://aistudio.google.com/docs/models", "models_gemini.md"),
+    "gemini": ("https://aistudio.google.com/docs/models", "models_gemini.md.txt"),
     "xai": ("https://docs.x.ai/models", "models_xai.html"),
 }
 
@@ -745,3 +745,29 @@ def test_real_model_pages_are_https_pages_with_an_id_family_each():
     sw = _load()
     assert set(sw.MODEL_PAGES) == set(sw.MODEL_ID_PREFIXES) == set(OFFICIAL)
     assert all(url.startswith("https://") for url in sw.MODEL_PAGES.values())
+
+
+def test_digitless_and_o_series_ids_are_read(sw):
+    body = (
+        '<td>o4-mini</td><td>o3</td><a href="/api/docs/models/o3-pro">x</a>'
+        '<a href="/api/docs/models/gpt-transcribe">x</a>'
+        '<a href="/docs/guides/gpt-linked">x</a><p>see gpt-prose here</p>'
+    )
+    assert sw.model_ids("openai", body) == {
+        "o4-mini", "o3", "o3-pro", "gpt-transcribe",
+    }  # fmt: skip
+
+
+def test_official_fixture_lists_digitless_and_o_series_ids(sw, monkeypatch):
+    keys = set(_new(sw.run(None, _official(sw, monkeypatch))[0]))
+    assert {"new-model:openai:gpt-transcribe", "new-model:openai:o4-mini"} <= keys
+    assert "new-model:openai:gpt-docs" not in keys
+
+
+def test_failed_official_page_does_not_mark_openrouter_findings(sw, monkeypatch):
+    findings, _ = sw.run(None, _official(sw, monkeypatch, openai=None))
+    nova = _new(findings)["new-model:openai:gpt-9-nova"]
+    assert nova["openrouter_only"] is False
+    assert "fetch-failed:https://developers.openai.com/models" in {
+        f["key"] for f in findings
+    }

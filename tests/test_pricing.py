@@ -13,6 +13,7 @@ from llm_preflight.pricing import (
     pricing_coverage_report,
     pricing_freshness_report,
     resolve_pricing,
+    sample_cost_evidence,
 )
 
 
@@ -1316,15 +1317,12 @@ def test_cache_writes_stay_unpriced_for_new_cache_read_rows():
 def test_cached_plus_written_tokens_above_input_stay_unpriced():
     model = apply_public_pricing({"provider": "openai", "model": "gpt-4.1"})
 
-    assert (
-        estimate_sample_cost(
-            {
-                "input_tokens": 100,
-                "cached_input_tokens": 80,
-                "cache_write_input_tokens": 30,
-                "output_tokens": 1,
-            },
-            model,
-        )
-        is None
-    )
+    sample = {
+        "input_tokens": 100,
+        "cached_input_tokens": 80,
+        "cache_write_input_tokens": 30,
+        "output_tokens": 1,
+    }
+
+    assert estimate_sample_cost(sample, model) is None
+    assert sample_cost_evidence(sample, model)[1] is True

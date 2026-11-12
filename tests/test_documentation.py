@@ -1873,7 +1873,7 @@ def test_guide_lists_the_five_added_models_with_their_recorded_results():
         assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
     for field in ("requests", "api_successful", "api_failures", "valid"):
         assert data["totals"][field] == sum(row[field] for row in data["rows"])
-    assert "26 models" in guide
+    assert "25 measured models" in guide
     serialized = json.dumps(data)
     for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
         assert marker not in serialized
@@ -1986,3 +1986,26 @@ def test_decision_doc_names_require_current_pricing():
     page = (ROOT / "docs/reference/decision.md").read_text()
 
     assert "require_current_pricing" in page
+
+
+def _published_version():
+    match = re.search(r'default: "(\d+\.\d+\.\d+)"', (ROOT / "action.yml").read_text())
+    assert match
+    return match.group(1)
+
+
+@pytest.mark.parametrize(
+    ("page", "pin"),
+    [
+        ("docs/automation/mcp.md", '"--from", "llm-preflight=={v}"'),
+        (
+            "docs/getting-started/project-integration.md",
+            'python -m pip install "llm-preflight=={v}"',
+        ),
+        ("docs/guides/native-providers.md", 'Set `package-version: "{v}"`'),
+    ],
+)
+def test_pages_pin_the_current_published_version(page, pin):
+    version = _published_version()
+
+    assert pin.format(v=version) in (ROOT / page).read_text()

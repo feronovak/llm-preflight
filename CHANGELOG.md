@@ -2,17 +2,19 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.25.1 - 2026-11-12
+
+Changes below are marked `Breaking:` where they can change an exit code.
 
 ### Added
 
-- The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13. Breaking: approval receipts recorded before this change verify as `mismatch` (exit 1), mock plans included, because the new row changes `retirements.snapshot.rows` (119 to 120) and `newest_as_of` in every dry-run plan. Record them again with `--dry-run --approval-receipt`.
+- The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13. Breaking: approval receipts recorded before this change verify as `mismatch` (exit 1), mock plans included, because the new row changes `retirements.snapshot.rows` (119 to 120) and `newest_as_of` in every dry-run plan. Record them again with `--dry-run --approval-receipt --replace-approval-receipt` (without `--replace-approval-receipt` the command exits 2 when the receipt file exists).
 
 ### Fixed
 
-- A run on `adapter: openai_responses` now fails with the tool-call error when the response contains a tool call (such as a `function_call` item), instead of passing on any text beside it.
-- `--replay` now checks the saved result's `source_config` shape like every other config path: a wrong-typed field such as `presets: 7` exits 2 and names the field instead of raising a traceback and exiting 1.
-- Estimates for cache hits on `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5` now use the published cache-read rates (USD per million tokens: 0.50, 0.10, 0.075, 0.02, 1.00, 0.50 and 0.20). They used the full input rate before, so estimates were too high. Cache writes stay unpriced for these models. Saved dry-run plans change once for configs using these models because the plan's model row gains `cached_input_cost_per_million`, so approval receipts recorded for them verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1); record them again. An owner-set `cached_input_cost_per_million` is kept only together with the owner's own input and output prices; otherwise the bundled rate now applies to these seven.
+- Breaking: a run on `adapter: openai_responses` now fails with the tool-call error when the response contains a tool call (such as a `function_call` item), instead of passing on any text beside it. Such a run exited 0 before and now exits 1.
+- Breaking: `--replay` now checks the saved result's `source_config` shape like every other config path: a wrong-typed field such as `presets: 7` exits 2 and names the field instead of raising a traceback and exiting 1.
+- Breaking: estimates for cache hits on `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5` now use the published cache-read rates (USD per million tokens: 0.50, 0.10, 0.075, 0.02, 1.00, 0.50 and 0.20). They used the full input rate before, so estimates were too high. Cache writes stay unpriced for these models. Saved dry-run plans change once for configs using these models because the plan's model row gains `cached_input_cost_per_million`, so approval receipts recorded for them verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1, where it exited 0); record them again. An owner-set `cached_input_cost_per_million` is kept only together with the owner's own input and output prices; otherwise the bundled rate now applies to these seven.
 
 ## 2.25.0 - 2026-11-11
 

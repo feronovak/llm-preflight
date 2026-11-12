@@ -1,7 +1,7 @@
 # GitHub Marketplace Action
 
 Use the `v2.25.0` Action with `package-version: "2.25.0"` for reproducible CI.
-The immutable release tag retains its earlier **2.24.1** default. An inconclusive paid decision remains exit 3; null cost
+The immutable release tag retains its earlier **2.24.2** default. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
 **Last reviewed:** 2026-11-11 · **As of:** v2.24.2

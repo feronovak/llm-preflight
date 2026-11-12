@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13.
+- The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13. Breaking: approval receipts recorded before this change verify as `mismatch` (exit 1), mock plans included, because the new row changes `retirements.snapshot.rows` (119 to 120) and `newest_as_of` in every dry-run plan. Record them again with `--dry-run --approval-receipt`.
 
 ### Fixed
 

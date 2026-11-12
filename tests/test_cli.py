@@ -5338,10 +5338,10 @@ _OWNER_CACHED_ONLY = {
 
 
 def test_dry_run_json_warns_on_ignored_owner_price():
-    plan = cli.dry_run_plan(_OWNER_CACHED_ONLY)
+    plan = cli.dry_run_plan(_OWNER_CACHED_ONLY, today=_date(2026, 11, 12))
     codes = [w.get("code") for w in plan["pricing_warnings"]]
-    assert codes == ["owner_price_ignored"]
-    assert plan["pricing_coverage"]["summary"]["priced"] == 1
+    assert codes.count("owner_price_ignored") == 1
+    assert plan["models"][0]["input_cost_per_million"] == 2.0
 
 
 def test_dry_run_text_prints_ignored_owner_price():
@@ -5361,7 +5361,11 @@ def _owner_dry_run_codes(monkeypatch, tmp_path, capsys, *extra):
     )
     cli.main()
     plan = json.loads(capsys.readouterr().out)
-    return [w.get("code") for w in plan["pricing_warnings"]]
+    return [
+        w["code"]
+        for w in plan["pricing_warnings"]
+        if w.get("code") == "owner_price_ignored"
+    ]
 
 
 def test_changed_since_dry_run_json_keeps_the_ignored_owner_price_warning(
@@ -5387,6 +5391,7 @@ def test_interactive_dry_run_json_keeps_the_ignored_owner_price_warning(
 
 
 def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 11, 12))
     leaked = "-".join(["sk", "proj", "x" * 12, "y" * 12])
     config = tmp_path / "benchmark.json"
     config.write_text(
@@ -5412,3 +5417,57 @@ def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, c
         out = capsys.readouterr().out
         assert leaked not in out
         assert "owner cached_input_cost_per_million ignored" in out
+
+
+def test_owner_write_rate_is_ignored_where_the_snapshot_prices_cache_writes():
+    config = {
+        "prompt": "hi",
+        "models": [
+            {
+                "provider": "anthropic",
+                "model": "claude-mythos-5-1",
+                "cache_write_input_cost_per_million": 3.3,
+            }
+        ],
+    }
+    plan = cli.dry_run_plan(config, today=_date(2026, 11, 12))
+    (warning,) = [
+        w for w in plan["pricing_warnings"] if w.get("code") == "owner_price_ignored"
+    ]
+    assert "owner cache_write_input_cost_per_million 3.3 ignored" in warning["message"]
+    assert plan["models"][0]["cache_write_input_cost_per_million"] == 12.5
+
+
+def test_owner_write_rate_applies_where_the_snapshot_has_no_write_rate():
+    config = {
+        "prompt": "hi",
+        "models": [
+            {
+                "provider": "openai",
+                "model": "gpt-4.1",
+                "cache_write_input_cost_per_million": 3.3,
+            }
+        ],
+    }
+    plan = cli.dry_run_plan(config, today=_date(2026, 11, 12))
+    assert "owner_price_ignored" not in [
+        w.get("code") for w in plan["pricing_warnings"]
+    ]
+    assert plan["models"][0]["cache_write_input_cost_per_million"] == 3.3
+
+
+def test_interactive_changed_since_preview_shows_the_ignored_owner_price(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(_OWNER_CACHED_ONLY_JSON)
+    previous = tmp_path / "previous.json"
+    previous.write_text('{"models": []}')
+    answers = iter(["all", "", "1", "1", "y"])
+    monkeypatch.setattr(
+        cli, "_interactive_input", lambda prompt, json_output: next(answers)
+    )
+    argv = ["llm-preflight", str(config), "--dry-run", "--json", "--interactive"]
+    monkeypatch.setattr(sys, "argv", [*argv, "--changed-since", str(previous)])
+    cli.main()
+    assert "owner cached_input_cost_per_million 0.9 ignored" in capsys.readouterr().err

@@ -750,8 +750,10 @@ def owner_price_warnings(
 ) -> list[dict[str, Any]]:
     """Warn when an owner price lost to the official snapshot.
 
-    An owner price applies only with both input and output prices.
-    Any other owner price field the snapshot replaces is ignored silently.
+    An owner price applies only with both input and output prices; any
+    other owner price field the snapshot replaces is ignored, and this names
+    it. An owner cache write rate is the exception: it applies where the
+    bundled row has no write rate, so it is not warned about.
     """
     resolved = {
         (m.get("provider", "openai_compatible"), m["model"]): m for m in resolved_models

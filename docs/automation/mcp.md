@@ -369,7 +369,7 @@ first and report its `decision` and each retired or retiring model.
    `budget_limits.violations`. Report `retirements.snapshot.valid_until` with
    it: after that day the selected models' snapshot rows are stale and the
    decision turns `inconclusive`; it is absent when no selected model has a
-   non-retired row.
+   non-retired row. Report `pricing_warnings` too, including `owner_price_ignored`: an owner price the bundled snapshot replaced, so the cost figure is not the owner's.
 4. Review the plan and explicitly authorize a paid run only after the intended
    smoke cohort is eligible and bounded.
 5. Use `run_preflight`, then retain the returned evidence or compare it with a

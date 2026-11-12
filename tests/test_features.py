@@ -1126,7 +1126,8 @@ def test_doctor_warns_on_ignored_owner_price(monkeypatch):
                     "cached_input_cost_per_million": 0.9,
                 }
             ],
-        }
+        },
+        today=_date(2026, 11, 12),
     )
     warnings = [c for c in report["checks"] if "owner" in c["message"]]
     assert len(warnings) == 1

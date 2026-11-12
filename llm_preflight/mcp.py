@@ -86,6 +86,8 @@ before a live run.
    Report `retirements.snapshot.valid_until` with it: after that day the
    selected models' snapshot rows are stale and the decision turns
    `inconclusive`; it is absent when no selected model has a non-retired row.
+   Report `pricing_warnings` too, including `owner_price_ignored`: an owner
+   price the bundled snapshot replaced, so the cost figure is not the owner's.
 3. Stop for explicit user approval before any live provider request. Do not
    infer approval from a plan, tool call, or configuration file.
 4. Only then call `run_preflight` with `confirm_paid_run: true`; retain the
@@ -1122,6 +1124,9 @@ def _response(message: dict[str, Any], workspace: Path) -> dict[str, Any] | None
                     "stale snapshot row, or an `alias_unmapped`, and its "
                     "`retirements.snapshot.valid_until`, the last day the "
                     "selected rows are valid. "
+                    "Report `pricing_warnings` too, including "
+                    "`owner_price_ignored`: an owner price the bundled "
+                    "snapshot replaced, so the cost figure is not the owner's. "
                     "For a retired model, migrate_plan reads the named "
                     "replacement without writing a file: " + _MIGRATE_FOLLOW_UP + " "
                     "Only call run_preflight for a paid config when the user "

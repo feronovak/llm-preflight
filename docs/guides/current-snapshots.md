@@ -300,6 +300,25 @@ GPT-5.6 Sol's promotional pricing is available until November 30, 2026, per
 the official model and pricing pages; no later rate is published, so no later
 transition is invented.
 
+### Cache-read rates for older OpenAI and Claude rows
+
+Checked 2026-11-12 against each model's official pricing page. These seven
+rows now price cache reads at the published rate instead of the full input
+rate. Standard USD rates per million tokens:
+
+| Model | Input | Cache read |
+|---|---:|---:|
+| [`gpt-4.1`](https://developers.openai.com/api/docs/models/gpt-4.1) | 2.00 | 0.50 |
+| [`gpt-4.1-mini`](https://developers.openai.com/api/docs/models/gpt-4.1-mini) | 0.40 | 0.10 |
+| [`gpt-5.4-mini`](https://developers.openai.com/api/docs/models/gpt-5.4-mini) | 0.75 | 0.075 |
+| [`gpt-5.4-nano`](https://developers.openai.com/api/docs/models/gpt-5.4-nano) | 0.20 | 0.02 |
+| [`claude-fable-5`](https://platform.claude.com/docs/en/about-claude/pricing) | 10.00 | 1.00 |
+| [`claude-opus-5`](https://platform.claude.com/docs/en/about-claude/pricing) | 5.00 | 0.50 |
+| [`claude-sonnet-5`](https://platform.claude.com/docs/en/about-claude/pricing) | 2.00 | 0.20 |
+
+Cache writes stay unbundled for these rows, so a result that reports cache
+writes still has no cost estimate.
+
 ### GPT-6.1 Sol pricing and request limits
 
 The [official model page](https://developers.openai.com/api/docs/models/gpt-6.1-sol)

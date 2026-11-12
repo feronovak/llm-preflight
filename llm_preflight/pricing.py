@@ -403,6 +403,13 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
             },
         ],
     },
+    ("openai", "gpt-4.1"): {"cached_input_cost_per_million": 0.5},
+    ("openai", "gpt-4.1-mini"): {"cached_input_cost_per_million": 0.1},
+    ("openai", "gpt-5.4-mini"): {"cached_input_cost_per_million": 0.075},
+    ("openai", "gpt-5.4-nano"): {"cached_input_cost_per_million": 0.02},
+    ("anthropic", "claude-fable-5"): {"cached_input_cost_per_million": 1.0},
+    ("anthropic", "claude-opus-5"): {"cached_input_cost_per_million": 0.5},
+    ("anthropic", "claude-sonnet-5"): {"cached_input_cost_per_million": 0.2},
     ("anthropic", "claude-fable-5-1"): {
         "cached_input_cost_per_million": 0.25,
     },

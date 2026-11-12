@@ -13,6 +13,7 @@ from llm_preflight.pricing import (
     pricing_coverage_report,
     pricing_freshness_report,
     resolve_pricing,
+    sample_cost_evidence,
 )
 
 
@@ -1252,3 +1253,76 @@ def test_cohere_command_a_plus_has_no_bundled_price():
         estimate_sample_cost({"input_tokens": 1000, "output_tokens": 100}, model)
         is None
     )
+
+
+PUBLISHED_CACHE_READ_ROWS = [
+    ("openai", "gpt-4.1", 2.0, 0.5),
+    ("openai", "gpt-4.1-mini", 0.4, 0.1),
+    ("openai", "gpt-5.4-mini", 0.75, 0.075),
+    ("openai", "gpt-5.4-nano", 0.2, 0.02),
+    ("anthropic", "claude-fable-5", 10.0, 1.0),
+    ("anthropic", "claude-opus-5", 5.0, 0.5),
+    ("anthropic", "claude-sonnet-5", 2.0, 0.2),
+]
+
+
+@pytest.mark.parametrize(
+    ("provider", "model_id", "input_price", "cached_price"),
+    PUBLISHED_CACHE_READ_ROWS,
+)
+def test_published_cache_read_rates_price_cache_hits(
+    provider, model_id, input_price, cached_price
+):
+    model = apply_public_pricing({"provider": provider, "model": model_id})
+
+    assert model["input_cost_per_million"] == input_price
+    assert model["cached_input_cost_per_million"] == cached_price
+    assert "cache_write_input_cost_per_million" not in model
+    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert estimate_sample_cost(
+        {"input_tokens": 1_000_000, "cached_input_tokens": 800_000, "output_tokens": 0},
+        model,
+    ) == pytest.approx(0.2 * input_price + 0.8 * cached_price)
+    assert estimate_sample_cost(
+        {"input_tokens": 1_000_000, "cached_input_tokens": 0, "output_tokens": 0},
+        model,
+    ) == pytest.approx(input_price)
+
+
+def test_claude_5_cache_reads_take_us_inference_multiplier():
+    usage = {
+        "input_tokens": 1_000_000,
+        "cached_input_tokens": 800_000,
+        "output_tokens": 0,
+    }
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-opus-5"})
+
+    assert estimate_sample_cost({**usage, "inference_geo": "us"}, model) == (
+        pytest.approx(1.1 * estimate_sample_cost(usage, model))
+    )
+
+
+def test_cache_writes_stay_unpriced_for_new_cache_read_rows():
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-sonnet-5"})
+
+    assert (
+        estimate_sample_cost(
+            {"input_tokens": 100, "cache_write_input_tokens": 10, "output_tokens": 1},
+            model,
+        )
+        is None
+    )
+
+
+def test_cached_plus_written_tokens_above_input_stay_unpriced():
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-4.1"})
+
+    sample = {
+        "input_tokens": 100,
+        "cached_input_tokens": 80,
+        "cache_write_input_tokens": 30,
+        "output_tokens": 1,
+    }
+
+    assert estimate_sample_cost(sample, model) is None
+    assert sample_cost_evidence(sample, model)[1] is True

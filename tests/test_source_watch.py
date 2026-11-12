@@ -45,6 +45,7 @@ def sw(monkeypatch):
         },
     )
     monkeypatch.setattr(module, "DEPRECATION_URLS", {})
+    monkeypatch.setattr(module, "MODEL_PAGES", {})
     monkeypatch.setattr(
         module,
         "PUBLIC_RETIREMENTS",
@@ -635,3 +636,112 @@ def test_other_providers_keep_their_html_url(sw):
     _, snapshot = sw.run(None, _reader())
     assert "<" not in " ".join(snapshot["pages"][PAGE]["lines"])
     assert set(snapshot["pages"]) == {PAGE, LIMIT}
+
+
+OFFICIAL = {
+    "anthropic": ("https://platform.claude.com/models", "models_anthropic.html"),
+    "openai": ("https://developers.openai.com/models", "models_openai.html"),
+    "gemini": ("https://aistudio.google.com/docs/models", "models_gemini.md"),
+    "xai": ("https://docs.x.ai/models", "models_xai.html"),
+}
+
+
+def _official(sw, monkeypatch, **overrides):
+    monkeypatch.setattr(sw, "MODEL_PAGES", {p: u for p, (u, _) in OFFICIAL.items()})
+    served = {sw.watched_url(u): f for u, f in OFFICIAL.values()}
+    for provider, name in overrides.items():
+        served[sw.watched_url(OFFICIAL[provider][0])] = name
+    base = _reader()
+
+    def read(url):
+        name = served.get(url, ...)
+        if name is ...:
+            return base(url)
+        if name is None:
+            raise sw.FetchError("HTTP 503")
+        return name.encode() if name.startswith("<") else (FIXTURES / name).read_bytes()
+
+    return read
+
+
+def _new(findings):
+    return {f["key"]: f for f in _by_type(findings, "new-model")}
+
+
+def test_official_pages_report_unbundled_ids_with_their_source(sw, monkeypatch):
+    findings, _ = sw.run(None, _official(sw, monkeypatch))
+    new = _new(findings)
+    assert new["new-model:anthropic:claude-haiku-9-1"]["source"] == (
+        "https://platform.claude.com/models"
+    )
+    assert new["new-model:openai:gpt-9-nova"]["source"] == (
+        "https://developers.openai.com/models"
+    )
+    assert new["new-model:gemini:gemini-9-argon"]["source"] == (
+        "https://aistudio.google.com/docs/models.md"
+    )
+    assert new["new-model:xai:grok-9.1"]["source"] == "https://docs.x.ai/models"
+    assert "new-model:xai:grok-9.1-0309" in new
+
+
+def test_official_pages_skip_bundled_ids_prose_aliases_and_assets(sw, monkeypatch):
+    keys = set(_new(sw.run(None, _official(sw, monkeypatch))[0]))
+    text = " ".join(keys)
+    for noise in ("5.6-terra", "claude-sonnet", "gpt-docs", "claude-api", "webp",
+                  "png", "hidden", "latest", "alias", "anthropic.claude"):  # fmt: skip
+        assert noise not in text
+    assert "new-model:gemini:gemini-9-flash" in keys  # link slug
+
+
+def test_model_seen_on_an_official_page_is_not_also_an_openrouter_finding(
+    sw, monkeypatch
+):
+    findings, _ = sw.run(None, _official(sw, monkeypatch))
+    assert [f["source"] for f in _by_type(findings, "new-model")
+            if f["model"] == "gpt-9-nova"] == ["https://developers.openai.com/models"]  # fmt: skip
+
+
+def test_openrouter_only_model_of_an_official_provider_is_marked(sw, monkeypatch):
+    read = _official(sw, monkeypatch, openai="models_openai_without_nova.html")
+    new = _new(sw.run(None, read)[0])
+    assert new["new-model:openai:gpt-9-nova"]["source"] == "openrouter"
+    assert new["new-model:openai:gpt-9-nova"]["openrouter_only"] is True
+
+
+def test_openrouter_model_of_another_provider_is_not_marked(sw, monkeypatch):
+    read = _official(sw, monkeypatch)
+    monkeypatch.setattr(sw, "MODEL_PAGES", {"anthropic": OFFICIAL["anthropic"][0]})
+    new = _new(sw.run(None, read)[0])
+    assert new["new-model:openai:gpt-9-nova"]["openrouter_only"] is False
+
+
+@pytest.mark.parametrize(
+    "body, reason",
+    [(None, "HTTP 503"), ("<html><body>moved</body></html>", "no model IDs listed")],
+)
+def test_unreadable_or_reshaped_official_page_is_fetch_failed(
+    sw, monkeypatch, body, reason
+):
+    read = _official(sw, monkeypatch, xai=body)
+    failed = {
+        f["url"]: f["reason"] for f in _by_type(sw.run(None, read)[0], "fetch-failed")
+    }
+    assert failed == {"https://docs.x.ai/models": reason}
+
+
+def test_official_findings_are_text_rendered_with_their_source(sw, monkeypatch):
+    findings, _ = sw.run(None, _official(sw, monkeypatch))
+    lines = sw.render_text(findings).splitlines()
+    assert (
+        "new-model: new-model:xai:grok-9.1 (source: https://docs.x.ai/models)" in lines
+    )
+    assert (
+        "new-model: new-model:openai:gpt-9-nova (source: https://developers.openai.com/models)"
+        in lines
+    )
+
+
+def test_real_model_pages_are_https_pages_with_an_id_family_each():
+    sw = _load()
+    assert set(sw.MODEL_PAGES) == set(sw.MODEL_ID_PREFIXES) == set(OFFICIAL)
+    assert all(url.startswith("https://") for url in sw.MODEL_PAGES.values())

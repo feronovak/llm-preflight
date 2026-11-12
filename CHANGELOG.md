@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- A Responses adapter run now fails with the tool-call error when the provider returns a `function_call` or `custom_tool_call` item, instead of passing on any text beside it. The Responses `provider_options` allowlist now also applies to routes with a provider other than `openai`, so `provider_options.tools` is rejected there too.
+
 ## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.

@@ -2561,3 +2561,48 @@ def test_http_error_body_echoing_unprefixed_key_is_redacted(monkeypatch, extra):
     assert redact_secrets(sample["error"]) == (
         "HTTP 401: Incorrect API key provided: [REDACTED]"
     )
+
+
+def _responses_reply(monkeypatch, payload):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *_args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setenv("COMPAT_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_k: FakeResponse())
+
+
+RESPONSES_ROUTE = {
+    "provider": "other",
+    "model": "model-a",
+    "adapter": "openai_responses",
+    "base_url": "https://api.example.com/v1",
+    "api_key_env": "COMPAT_KEY",
+}
+
+
+@pytest.mark.parametrize("text", ["", "pass"])
+def test_responses_function_call_is_an_error_never_a_text_pass(monkeypatch, text):
+    output = [{"type": "function_call", "name": "lookup", "arguments": "{}"}]
+    if text:
+        output.insert(
+            0,
+            {"type": "message", "content": [{"type": "output_text", "text": text}]},
+        )
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is False
+    assert "tool call" in sample["error"]
+
+
+def test_responses_route_rejects_tools_for_a_non_openai_provider():
+    client = create_client(RESPONSES_ROUTE, 10)
+    with pytest.raises(ValueError, match="tools"):
+        client.body("hello", {"provider_options": {"tools": [{"type": "function"}]}})

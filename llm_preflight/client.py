@@ -91,7 +91,7 @@ def validate_native_request_options(
         "claude-mythos-5-1",
         "claude-mythos-5-2",
     }
-    if provider == "openai" and model.get("adapter") == "openai_responses":
+    if model.get("adapter") == "openai_responses":
         supported = {
             "reasoning",
             "text",
@@ -99,7 +99,7 @@ def validate_native_request_options(
             "prompt_cache_retention",
             "prompt_cache_key",
         }
-        unsupported = _provider_options(options, provider).keys() - supported
+        unsupported = _provider_options(options, "openai").keys() - supported
         if unsupported:
             raise ValueError(
                 "Responses provider_options are unsupported: "
@@ -811,6 +811,18 @@ class ZaiClient(NativeTextClient):
         return body
 
 
+_RESPONSES_TOOL_ITEMS = {"function_call", "custom_tool_call"}
+
+
+def _reject_responses_tool_call(payload: dict[str, Any]) -> None:
+    output_items = payload.get("output", [])
+    if not isinstance(output_items, list):
+        return
+    for output in output_items:
+        if isinstance(output, dict) and output.get("type") in _RESPONSES_TOOL_ITEMS:
+            raise ValueError(TOOL_CALL_ERROR)
+
+
 class OpenAIResponsesClient(OpenAICompatibleClient):
     """OpenAI's Responses endpoint, used first for capability probes."""
 
@@ -883,6 +895,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                     )
                 usage = _stream_object(payload.get("usage"))
                 input_details = _stream_object(usage.get("input_tokens_details"))
+                _reject_responses_tool_call(payload)
                 text = payload.get("output_text")
                 if text is not None and not isinstance(text, str):
                     raise TypeError("Responses API returned malformed output text")

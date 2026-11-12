@@ -2606,3 +2606,11 @@ def test_responses_route_rejects_tools_for_a_non_openai_provider():
     client = create_client(RESPONSES_ROUTE, 10)
     with pytest.raises(ValueError, match="tools"):
         client.body("hello", {"provider_options": {"tools": [{"type": "function"}]}})
+
+
+def test_responses_route_keeps_other_options_for_a_non_openai_provider():
+    body = create_client(RESPONSES_ROUTE, 10).body(
+        "hello", {"provider_options": {"truncation": "auto"}}
+    )
+
+    assert body["truncation"] == "auto"

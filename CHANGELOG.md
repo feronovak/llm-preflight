@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- A Responses adapter run now fails with the tool-call error when the provider returns a `function_call` or `custom_tool_call` item, instead of passing on any text beside it. The Responses `provider_options` allowlist now also applies to routes with a provider other than `openai`, so `provider_options.tools` is rejected there too.
+- A Responses adapter run now fails with the tool-call error when the provider returns a `function_call` or `custom_tool_call` item, instead of passing on any text beside it. Breaking: a route with a provider other than `openai` and `adapter: openai_responses` now refuses `request.provider_options.tools`, `tool_choice` and `parallel_tool_calls` before planning, where they used to be forwarded. Migration: remove those keys; preflight reads text only and never runs tools. Other `provider_options` keys on such a route are unchanged.
 
 ## 2.25.0 - 2026-11-11
 

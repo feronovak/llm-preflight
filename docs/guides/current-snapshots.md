@@ -295,8 +295,9 @@ The adapter already retains reported cache-write counts. Cost accounting now
 prices those counts and the no-spend budget includes the possible write
 premium, 1.25 times the applicable input rate. Cache writes count toward the
 full request's 272k threshold. GPT-6.1 Sol's write rates remain as below.
-GPT-5.6 Sol's current offer lasts at least through November 21; no later
-rate is published, so no later transition is invented.
+GPT-5.6 Sol's promotional pricing is available until November 30, 2026, per
+the official model and pricing pages; no later rate is published, so no later
+transition is invented.
 
 ### GPT-6.1 Sol pricing and request limits
 

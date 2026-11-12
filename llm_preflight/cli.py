@@ -751,6 +751,7 @@ def dry_run_plan(
     today: date | None = None,
     *,
     pricing_evidence: bool = False,
+    owner_models: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """The no-spend plan shared by `--dry-run` and the MCP `dry_run_plan` tool.
 
@@ -758,7 +759,8 @@ def dry_run_plan(
     The CLI leaves them out of the plan an approval receipt hashes. A receipt
     hashes the whole plan, so a change to the plan's shape makes receipts
     written for the old shape verify as `mismatch`. Never mask a value here;
-    printed plans go through `dry_run_output`.
+    printed plans go through `dry_run_output`. `owner_models` is the owner's
+    original model rows when `config["models"]` already holds resolved rows.
     """
     budget_config = _budget_config(config, profile_selector)
     budget = estimate_budget(budget_config)
@@ -804,7 +806,10 @@ def dry_run_plan(
                 models,
                 enforce_override_freshness=bool(config.get("require_current_pricing")),
             )["warnings"],
-            *owner_price_warnings(config.get("models", []), models),
+            *owner_price_warnings(
+                config.get("models", []) if owner_models is None else owner_models,
+                models,
+            ),
         ],
         "pricing_coverage": pricing_coverage_report(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
@@ -2376,6 +2381,7 @@ def interactive_selection(
     selected_profile_selector: str | None = None,
     prepare_only: bool = False,
     workflow: bool = False,
+    owner_models: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], str | None] | None:
     services = InteractiveServices(
         resolve_models=resolve_models,
@@ -2400,6 +2406,7 @@ def interactive_selection(
         selected_profile_selector=selected_profile_selector,
         prepare_only=prepare_only,
         workflow=workflow,
+        owner_models=owner_models,
     )
 
 
@@ -3394,6 +3401,7 @@ def main() -> None:
             if not report_data["enforcement_ok"]:
                 raise SystemExit(1)
             return
+        owner_models = list(config.get("models", []))
         if args.changed_since:
             previous = load_json(args.changed_since)
             previous_models = previous.get("models", previous)
@@ -3430,6 +3438,7 @@ def main() -> None:
                 else None,
                 prepare_only=args.dry_run,
                 workflow=True,
+                owner_models=owner_models,
             )
             if selection is None:
                 return
@@ -3444,7 +3453,12 @@ def main() -> None:
                 elif args.quick:
                     _load_quick_env_file(args)
         if args.dry_run:
-            plan = dry_run_plan(config, profile_selector, today=today_utc())
+            plan = dry_run_plan(
+                config,
+                profile_selector,
+                today=today_utc(),
+                owner_models=owner_models,
+            )
             payload: dict[str, Any] = dry_run_output(plan)
             verification = None
             if args.approval_receipt and (

@@ -5348,3 +5348,67 @@ def test_dry_run_text_prints_ignored_owner_price():
     text = cli._format_dry_run_plan(cli.dry_run_plan(_OWNER_CACHED_ONLY))
     assert "Pricing warnings:" in text
     assert "- openai/gpt-4.1: owner cached_input_cost_per_million 0.9 ignored" in text
+
+
+_OWNER_CACHED_ONLY_JSON = json.dumps(_OWNER_CACHED_ONLY)
+
+
+def _owner_dry_run_codes(monkeypatch, tmp_path, capsys, *extra):
+    config = tmp_path / "benchmark.json"
+    config.write_text(_OWNER_CACHED_ONLY_JSON)
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--json", *extra]
+    )
+    cli.main()
+    plan = json.loads(capsys.readouterr().out)
+    return [w.get("code") for w in plan["pricing_warnings"]]
+
+
+def test_changed_since_dry_run_json_keeps_the_ignored_owner_price_warning(
+    monkeypatch, tmp_path, capsys
+):
+    previous = tmp_path / "previous.json"
+    previous.write_text('{"models": []}')
+    codes = _owner_dry_run_codes(
+        monkeypatch, tmp_path, capsys, "--changed-since", str(previous)
+    )
+    assert codes == ["owner_price_ignored"]
+
+
+def test_interactive_dry_run_json_keeps_the_ignored_owner_price_warning(
+    monkeypatch, tmp_path, capsys
+):
+    answers = iter(["all", "", "1", "1", "y"])
+    monkeypatch.setattr(
+        cli, "_interactive_input", lambda prompt, json_output: next(answers)
+    )
+    codes = _owner_dry_run_codes(monkeypatch, tmp_path, capsys, "--interactive")
+    assert codes == ["owner_price_ignored"]
+
+
+def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, capsys):
+    secret = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [
+                    {
+                        "provider": "openai",
+                        "model": "gpt-4.1",
+                        "cached_input_cost_per_million": secret,
+                    }
+                ],
+            }
+        )
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    for extra in ([], ["--json"]):
+        monkeypatch.setattr(
+            sys, "argv", ["llm-preflight", str(config), "--doctor", *extra]
+        )
+        cli.main()
+        out = capsys.readouterr().out
+        assert secret not in out
+        assert "owner cached_input_cost_per_million ignored" in out

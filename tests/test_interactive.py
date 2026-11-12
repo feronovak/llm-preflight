@@ -73,8 +73,8 @@ def test_preview_uses_the_shared_plan_and_shows_retirement_evidence(monkeypatch)
     plans = []
     original_plan = cli.dry_run_plan
 
-    def plan(config, profiles):
-        result = original_plan(config, profiles, today=date(2026, 10, 12))
+    def plan(config, profiles, **kwargs):
+        result = original_plan(config, profiles, today=date(2026, 10, 12), **kwargs)
         plans.append(result)
         return result
 

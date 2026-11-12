@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- `--dry-run`, `--doctor`, the interactive preview and the MCP `dry_run_plan` tool now warn (`owner_price_ignored`) when an owner price field is replaced by the bundled official snapshot, for example a cached-only rate on `gpt-4.1`. Resolved prices and cost figures are unchanged. Approval receipts recorded for an affected configuration verify as `mismatch` once, because `pricing_warnings` gains an entry; record them again with `--dry-run --approval-receipt --replace-approval-receipt`.
+- `--dry-run`, `--doctor`, the interactive preview and the MCP `dry_run_plan` tool now warn (`owner_price_ignored`) when an owner price field is replaced by the bundled official snapshot, for example a cached-only rate on `gpt-4.1`. Resolved prices and cost figures are unchanged. The interactive and `--changed-since` dry-run paths carry the warning too, and a non-numeric owner value is named without being echoed. Breaking: `--dry-run --verify-approval-receipt` exits 1 (`mismatch`) for a receipt recorded for an affected configuration, where it exited 0 before, because `pricing_warnings` gains an entry; `migrate --run` gates on the same receipt. Record such receipts again with `--dry-run --approval-receipt --replace-approval-receipt`.
 
 ## 2.25.1 - 2026-11-12
 

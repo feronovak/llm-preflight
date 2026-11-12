@@ -730,6 +730,21 @@ _OWNER_PRICE_FIELDS = (
 )
 
 
+def _ignored_owner_field(field: str, owner: Any, applied: Any) -> str:
+    """Name the field; show values only when they are plain finite numbers."""
+    if field == "pricing_tiers" or not _finite_number(owner):
+        return f"owner {field} ignored"
+    return f"owner {field} {owner} ignored (applied {applied})"
+
+
+def _finite_number(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
 def owner_price_warnings(
     config_models: list[dict[str, Any]], resolved_models: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -758,12 +773,7 @@ def owner_price_warnings(
         if metadata.get("source") != "official snapshot":
             continue
         ignored = [
-            (
-                "owner pricing_tiers ignored"
-                if field == "pricing_tiers"
-                else f"owner {field} {model[field]} ignored "
-                f"(applied {applied.get(field)})"
-            )
+            _ignored_owner_field(field, model[field], applied.get(field))
             for field in _OWNER_PRICE_FIELDS
             if model.get(field) is not None and model[field] != applied.get(field)
         ]

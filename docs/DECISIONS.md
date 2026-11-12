@@ -129,18 +129,16 @@ authorization remains separate from a numeric rating.
 
 **Consequence:** Until the receipt expires, each `--run` on the same candidate may spend up to `maximum_estimated_cost_usd` again. For a single run, choose a short expiry or delete the receipt afterwards. The receipt format and `authorizes_paid_run: false` are unchanged.
 
-## 2.25.1 is a patch version with `Breaking:` entries
+## A fix that corrects a wrong result is a patch
 
-**Decision:** Release 2.25.1 is a patch version although its changelog has `Breaking:` entries. The maintainer decided this on 2026-11-12.
+**Rule:** A fix that corrects a wrong verdict, price or exit code may invalidate approval receipts or change an exit code. It ships as a patch version, and its `CHANGELOG.md` entry is marked `Breaking:` and states the old and new behaviour. A new feature or a removed capability still follows semantic versioning (minor or major).
 
-**Scope:** This entry covers 2.25.1 only. The versioning rule in `AGENTS.md` is unchanged.
-
-**Consequence:** Each 2.25.1 change that can change an exit code is marked `Breaking:` in `CHANGELOG.md`.
+**Consequence:** Receipts recorded for an affected configuration are recorded again.
 
 ## 2.25.0 is a minor version
 
 **Decision:** Release 2.25.0 is a minor version although its changelog has `Breaking:` entries. The maintainer decided this on 2026-11-11.
 
-**Scope:** This entry covers 2.25.0 only. The versioning rule in `AGENTS.md` is unchanged.
+**Scope:** This entry covers 2.25.0 only.
 
 **Consequence:** Each 2.25.0 change that can change an exit code is marked `Breaking:` in `CHANGELOG.md`.

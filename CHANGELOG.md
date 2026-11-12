@@ -2,11 +2,15 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 2.25.2 - 2026-11-12
 
 ### Fixed
 
 - `--dry-run`, `--doctor`, the interactive preview and the MCP `dry_run_plan` tool now warn (`owner_price_ignored`) when an owner price field is replaced by the bundled official snapshot, for example a cached-only rate on `gpt-4.1`. Resolved prices and cost figures are unchanged. The interactive and `--changed-since` dry-run paths carry the warning too, and a non-numeric owner value is named without being echoed. Breaking: `--dry-run --verify-approval-receipt` exits 1 (`mismatch`) for a receipt recorded for an affected configuration, where it exited 0 before, because `pricing_warnings` gains an entry; `migrate --run` gates on the same receipt. Record such receipts again with `--dry-run --approval-receipt --replace-approval-receipt`.
+
+### Changed
+
+- The agent guidance (the MCP `initialize` instructions and `safe-workflow` resource, the Codex plugin skill, and the MCP and coding-agent guides) now tells an agent to report `pricing_warnings`, including `owner_price_ignored`, from a dry run. The configuration and pricing pages state that an owner `cache_write_input_cost_per_million` applies where the bundled row has no cache-write rate, and `docs/reference/results.md` describes `pricing_warnings` as covering ignored owner prices too.
 
 ## 2.25.1 - 2026-11-12
 

@@ -22,7 +22,7 @@ It does not judge semantic quality or authorize a production rollout.
    `retirement.snapshot.valid_until` in the `--doctor` JSON and
    `retirements.snapshot.valid_until` in the `--dry-run` JSON (absent when no
    selected model has a non-retired row); a dry run that breaks a limit exits
-   2; report `budget_limits.violations`.
+   2; report `budget_limits.violations`. Report `pricing_warnings` too, including `owner_price_ignored`: an owner price the bundled snapshot replaced, so the cost figure is not the owner's.
 3. Treat a validator failure as evidence, not a reason to weaken the validator.
    Inspect a saved response or add an explicitly approved contract change.
 4. Do not infer a provider for an unknown model ID. Use explicit

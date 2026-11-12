@@ -46,7 +46,7 @@ above the cap. A non-interactive `--dry-run` prints the plan, then exits 2 with
 the first violation's message, and writes no approval receipt; the MCP
 `dry_run_plan` tool returns the plan with `ok: false`. The interactive preview
 only shows the violations. `budget_limits` is part of the plan an approval
-receipt hashes.
+receipt hashes. The plan's `pricing_warnings` list also carries `owner_price_ignored`, one entry per model whose owner price field the bundled official snapshot replaced (the same warning appears in `--doctor` and the interactive preview); a saved run result's `pricing_warnings` does not.
 
 Each `models[].base_url` in this JSON prints
 only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as

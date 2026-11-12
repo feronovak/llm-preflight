@@ -975,6 +975,31 @@ def test_agent_guidance_reports_the_retirement_decision_that_ok_does_not_reflect
     assert "`ok` stays `true` for a retired model" in " ".join(guide.split())
 
 
+def test_agent_guidance_reports_pricing_warnings_including_owner_price_ignored(
+    tmp_path,
+):
+    root = Path(__file__).parent.parent
+    skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
+    guide = (root / "docs/automation/mcp.md").read_text()
+    coding_agents = (root / "docs/automation/coding-agents.md").read_text()
+    validation = (root / "docs/automation/agent-validation.md").read_text()
+    instructions = mcp._response(
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
+    )["result"]["instructions"]
+
+    for text in (
+        mcp.SAFE_WORKFLOW,
+        skill,
+        guide,
+        coding_agents,
+        validation,
+        instructions,
+    ):
+        step = " ".join(text.split())
+        assert "Report `pricing_warnings` too, including `owner_price_ignored`" in step
+        assert "an owner price the bundled snapshot replaced" in step
+
+
 def test_dry_run_plan_returns_the_cli_dry_run_plan_for_the_same_config(
     tmp_path, monkeypatch, capsys
 ):
@@ -2187,4 +2212,6 @@ def test_dry_run_plan_tool_reports_ignored_owner_price(tmp_path):
         tmp_path,
     )
     warnings = response["result"]["structuredContent"]["pricing_warnings"]
-    assert [w["code"] for w in warnings] == ["owner_price_ignored"]
+    assert [w["code"] for w in warnings if w["code"] == "owner_price_ignored"] == [
+        "owner_price_ignored"
+    ]

@@ -33,6 +33,8 @@ create it.
    Report `retirements.snapshot.valid_until` with it: after that day the
    selected models' snapshot rows are stale and the decision turns
    `inconclusive`; it is absent when no selected model has a non-retired row.
+   Report `pricing_warnings` too, including `owner_price_ignored`: an owner
+   price the bundled snapshot replaced, so the cost figure is not the owner's.
 3. Stop before live provider traffic. You must not infer approval from a
    configuration, a dry-run, a tool call, or a previous result.
 4. Run a live preflight only after an explicit user instruction and only with

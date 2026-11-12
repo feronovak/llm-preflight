@@ -533,7 +533,9 @@ def test_mcp_publisher_download_is_pinned_and_checksum_verified():
     job = _job_block("mcp-registry-publish")
 
     assert re.search(r"MCP_PUBLISHER_VERSION: v\d+\.\d+\.\d+\n", job)
-    assert re.search(r"MCP_PUBLISHER_SHA256: [0-9a-f]{64}\n", job)
+    assert re.search(
+        r"MCP_PUBLISHER_SHA256: [0-9a-f]{64}  # pragma: allowlist secret\n", job
+    )
     assert "releases/latest" not in job
     assert "sha256sum --check --strict" in job
     assert job.index("sha256sum --check") < job.index("tar xzf")

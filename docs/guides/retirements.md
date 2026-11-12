@@ -65,10 +65,10 @@ including in submodules. Global and system Git configuration still apply.
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
-The bundled retirement rows were rechecked on **2026-11-04**; the two newest
+The bundled retirement rows were rechecked on **2026-11-04**; the two Claude 5.2
 rows (`claude-fable-5-2` and `claude-mythos-5-2`) on **2026-11-09**, and
 `gpt-5.5-cyber-preview` on **2026-11-12**. Non-retired rows become stale on
-**2026-12-05** (day 31), the two newest on **2026-12-10**, that row on
+**2026-12-05** (day 31), the two Claude 5.2 rows on **2026-12-10**, that row on
 **2026-12-13**, and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## What the scan does not see

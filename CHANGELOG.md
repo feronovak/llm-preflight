@@ -8,6 +8,10 @@ All notable changes to this project are documented here.
 
 - The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13.
 
+### Fixed
+
+- `--replay` now checks the saved result's `source_config` shape like every other config path: a wrong-typed field such as `presets: 7` exits 2 and names the field instead of raising a traceback and exiting 1.
+
 ## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.

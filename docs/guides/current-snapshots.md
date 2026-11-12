@@ -14,9 +14,10 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. Explicit owner overrides
 retain their own evidence and review dates.
 
-The [latest comparison](observed-model-comparison.md) measured 26 models with
+The [latest comparison](observed-model-comparison.md) measured 25 models with
 eight cases each: 19 native routes on 2026-10-29, Claude Fable 5.2 and
-Gemini 3.1 Flash-Lite on 2026-11-11 and five more models on 2026-11-11. The first 20 models gave 152 of 160 validated
+Gemini 3.1 Flash-Lite on 2026-11-11 and four more models on 2026-11-11.
+A 26th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
 outputs, three contract failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.
@@ -295,8 +296,9 @@ The adapter already retains reported cache-write counts. Cost accounting now
 prices those counts and the no-spend budget includes the possible write
 premium, 1.25 times the applicable input rate. Cache writes count toward the
 full request's 272k threshold. GPT-6.1 Sol's write rates remain as below.
-GPT-5.6 Sol's current offer lasts at least through November 21; no later
-rate is published, so no later transition is invented.
+GPT-5.6 Sol's promotional pricing is available until November 30, 2026, per
+the official model and pricing pages; no later rate is published, so no later
+transition is invented.
 
 ### GPT-6.1 Sol pricing and request limits
 

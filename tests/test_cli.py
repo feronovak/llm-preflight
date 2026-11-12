@@ -5387,7 +5387,7 @@ def test_interactive_dry_run_json_keeps_the_ignored_owner_price_warning(
 
 
 def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, capsys):
-    secret = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"
+    leaked = "-".join(["sk", "proj", "x" * 12, "y" * 12])
     config = tmp_path / "benchmark.json"
     config.write_text(
         json.dumps(
@@ -5397,7 +5397,7 @@ def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, c
                     {
                         "provider": "openai",
                         "model": "gpt-4.1",
-                        "cached_input_cost_per_million": secret,
+                        "cached_input_cost_per_million": leaked,
                     }
                 ],
             }
@@ -5410,5 +5410,5 @@ def test_doctor_does_not_echo_a_non_numeric_owner_price(monkeypatch, tmp_path, c
         )
         cli.main()
         out = capsys.readouterr().out
-        assert secret not in out
+        assert leaked not in out
         assert "owner cached_input_cost_per_million ignored" in out

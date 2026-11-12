@@ -41,6 +41,7 @@ jobs:
       - run: bandit -q -r llm_preflight
       - name: Scan publishable files for secrets
         run: |
-          detect-secrets-hook --baseline .secrets.baseline \
+          detect-secrets-hook --baseline .secrets.baseline $(git ls-files \
             llm_preflight tests .github .env.example \
-            benchmark.example.json benchmark.auto.example.json pyproject.toml
+            benchmark.example.json benchmark.auto.example.json pyproject.toml) \
+            || [ $? -eq 3 ]  # 3 = baseline line numbers moved, not a new secret

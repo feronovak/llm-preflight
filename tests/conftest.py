@@ -1,4 +1,6 @@
+import ipaddress
 import os
+import socket
 from datetime import date, datetime
 
 import pytest
@@ -12,6 +14,34 @@ SNAPSHOT_REVIEW_DAY = date(2026, 11, 9)
 def empty_credential_registry(monkeypatch):
     """Credential values recorded for redaction never leak between tests."""
     monkeypatch.setattr("llm_preflight.redaction._REGISTERED_CREDENTIALS", set())
+
+
+def _is_loopback_host(host):
+    if host is None or host in ("", b""):
+        return True
+    name = os.fsdecode(host).lower()
+    if name == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(name.split("%", 1)[0]).is_loopback
+    except ValueError:
+        return False
+
+
+@pytest.fixture(autouse=True)
+def block_real_dns(monkeypatch):
+    """Fail any test that resolves a non-loopback host (CONTRIBUTING.md: no live network).
+
+    Tests that stub `getaddrinfo` themselves replace this guard for their own scope.
+    """
+    real_getaddrinfo = socket.getaddrinfo
+
+    def guarded(host, *args, **kwargs):
+        if not _is_loopback_host(host):
+            raise AssertionError(f"test attempted a real DNS lookup of {host!r}")
+        return real_getaddrinfo(host, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", guarded)
 
 
 @pytest.fixture

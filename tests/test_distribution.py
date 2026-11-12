@@ -31,8 +31,17 @@ def test_action_is_exercised_with_a_mock_config_and_read_only_permissions():
     assert "contents: read" in workflow
     assert "uses: ./" in workflow
     assert "examples/starter/mock-benchmark.json" in workflow
-    assert 'package-version: "2.25.2"' in workflow
     assert "run-paid" not in workflow
+
+
+def test_action_smoke_takes_the_package_version_from_the_action_default():
+    workflow = (ROOT / ".github/workflows/action-smoke.yml").read_text()
+    code = "\n".join(line.split("#", 1)[0] for line in workflow.splitlines())
+
+    assert "uses: ./" in code
+    assert "package-version" not in code
+    assert "llm-preflight==" not in code
+    assert not re.search(r"\d+\.\d+\.\d+", code)
 
 
 def test_marketplace_action_installs_the_latest_published_package():
@@ -658,10 +667,6 @@ def test_current_published_package_pins_are_2_23_1():
 
     root = Path(__file__).resolve().parent.parent
     assert 'default: "2.25.2"' in (root / "action.yml").read_text()
-    assert (
-        'package-version: "2.25.2"'
-        in (root / ".github/workflows/action-smoke.yml").read_text()
-    )
     assert (
         "llm-preflight==2.25.2"
         in (root / "examples/github-actions/preflight.yml").read_text()

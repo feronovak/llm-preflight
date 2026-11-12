@@ -2009,3 +2009,13 @@ def test_pages_pin_the_current_published_version(page, pin):
     version = _published_version()
 
     assert pin.format(v=version) in (ROOT / page).read_text()
+
+
+def test_release_docs_describe_the_registry_publish():
+    page = " ".join((ROOT / "docs/development/releases.md").read_text().split())
+    contributing = (ROOT / "CONTRIBUTING.md").read_text()
+
+    assert "mcp-publisher login github-oidc" in page
+    assert "**Re-run failed jobs**" in page
+    assert "a pin PR changes nothing under `.github/`" in page
+    assert "docs/development/releases.md" in contributing

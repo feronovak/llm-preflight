@@ -816,19 +816,35 @@ _RESPONSES_TOOL_ITEMS = {
     "custom_tool_call",
     "computer_call",
     "local_shell_call",
-    "shell_call",
     "apply_patch_call",
     "mcp_approval_request",
 }
 
 
+def _is_client_tool_item(item: Any) -> bool:
+    """True for an output item the client, not the provider, must execute."""
+    if not isinstance(item, dict):
+        return False
+    kind = item.get("type")
+    if not isinstance(kind, str):
+        return False
+    if kind == "shell_call":
+        environment = item.get("environment")
+        hosted = isinstance(environment, dict) and str(
+            environment.get("type")
+        ).startswith("container")
+        return not hosted
+    if kind == "tool_search_call":
+        return item.get("execution") == "client"
+    return kind in _RESPONSES_TOOL_ITEMS
+
+
 def _reject_responses_tool_call(payload: dict[str, Any]) -> None:
     output_items = payload.get("output", [])
-    if not isinstance(output_items, list):
-        return
-    for output in output_items:
-        if isinstance(output, dict) and output.get("type") in _RESPONSES_TOOL_ITEMS:
-            raise ValueError(TOOL_CALL_ERROR)
+    if isinstance(output_items, list) and any(
+        _is_client_tool_item(item) for item in output_items
+    ):
+        raise ValueError(TOOL_CALL_ERROR)
 
 
 class OpenAIResponsesClient(OpenAICompatibleClient):

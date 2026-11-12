@@ -64,13 +64,17 @@ def _anthropic(
 
 
 def _openai(
-    status: str, retirement_date: str | None = None, replacement: str | None = None
+    status: str,
+    retirement_date: str | None = None,
+    replacement: str | None = None,
+    as_of: str = _REVIEWED,
 ) -> dict[str, Any]:
     return _row(
         status,
         source_url=OPENAI_DEPRECATIONS_URL,
         retirement_date=retirement_date,
         replacement=replacement,
+        as_of=as_of,
     )
 
 
@@ -147,6 +151,8 @@ _ANTHROPIC: dict[str, dict[str, Any]] = {
 # whose page entry names more than one replacement, or a replacement that is
 # itself deprecated, carries none.
 _OPENAI: dict[str, dict[str, Any]] = {
+    # 2026-11-05 announcement: no replacement named on the page
+    "gpt-5.5-cyber-preview": _openai("deprecated", "2027-02-01", as_of="2026-11-12"),
     # 2026-10-14 announcement; aliases map to these dated snapshots on the
     # official model pages. The older gpt-4o-2024-05-13 keeps its October date.
     "gpt-4o": _openai("deprecated", "2027-01-14", "gpt-6-luna"),

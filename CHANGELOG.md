@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- The bundled retirement rows now include OpenAI `gpt-5.5-cyber-preview`: deprecated, removal 2027-02-01, no replacement named on the official page. `--audit-source --ci` and `--dry-run --ci` now exit `3` for it (it was `unknown`, exit `0`), and `1` from 2027-02-01. The row was reviewed on 2026-11-12 and becomes stale on 2026-12-13.
+
 ## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.

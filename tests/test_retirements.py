@@ -302,6 +302,12 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "as_of": "2026-11-04",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
+    assert PUBLIC_RETIREMENTS[("openai", "gpt-5.5-cyber-preview")] == {
+        "status": "deprecated",
+        "retirement_date": "2027-02-01",
+        "as_of": "2026-11-12",
+        "source_url": OPENAI_DEPRECATIONS_URL,
+    }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.1")] == {
         "status": "deprecated",
         "retirement_date": "2027-04-01",
@@ -327,7 +333,7 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "gemini", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 38
-    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 75
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 76
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 6
 
 
@@ -338,6 +344,25 @@ def test_claude_5_2_rows_are_active_and_dated_per_row(model):
         "as_of": "2026-11-09",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
+
+
+def test_gpt_5_5_cyber_preview_is_retiring_without_replacement():
+    model = "gpt-5.5-cyber-preview"
+    row = PUBLIC_RETIREMENTS[("openai", model)]
+    assert row["as_of"] == "2026-11-12"
+    assert row["source_url"] == OPENAI_DEPRECATIONS_URL
+    now = retirement_verdict("openai", model, date(2026, 11, 12))
+    assert (now["status"], now["decision"]) == ("retiring", "inconclusive")
+    assert "replacement" not in now
+    assert (
+        retirement_verdict("openai", model, date(2026, 12, 12))["status"] == "retiring"
+    )
+    last = retirement_verdict("openai", model, date(2027, 2, 1))
+    assert (last["status"], last["decision"]) == ("retired", "fail")
+    assert retirement_verdict("openai", model, date(2026, 12, 13))["status"] == "stale"
+    assert retirement_verdict("openai", "gpt-5.5", date(2026, 11, 12))["status"] == (
+        "unknown"
+    )
 
 
 def test_gemini_3_1_flash_lite_retires_on_2027_05_07():
@@ -524,7 +549,7 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
     assert summary["oldest_as_of"] == "2026-11-04"
-    assert summary["newest_as_of"] == "2026-11-09"
+    assert summary["newest_as_of"] == "2026-11-12"
     assert (
         retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 4))[
             "decision"

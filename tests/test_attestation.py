@@ -289,7 +289,7 @@ def test_attest_maps_the_saved_decision_onto_the_test_result_predicate(
     assert evidence["requests"] == 3
     assert evidence["costConfidence"] == saved["cost_confidence"]
     assert evidence["costUsd"] == saved["total_estimated_cost_usd"]
-    assert evidence["retirementSnapshot"] == "2026-11-09"
+    assert evidence["retirementSnapshot"] == "2026-11-12"
     assert evidence["claimsNotMade"] == [
         "production behaviour",
         "accuracy beyond the declared validators",
@@ -549,7 +549,7 @@ def test_verify_reports_intact_and_fresh_with_snapshot_and_signature_note(
         "Origin:    GitHub Actions "
         "https://github.com/acme/app/actions/runs/4425592351/attempts/1"
     ) in out
-    assert "Snapshot:  retirement snapshot 2026-11-09 (this verifier)" in out
+    assert "Snapshot:  retirement snapshot 2026-11-12 (this verifier)" in out
     assert "Signature: not checked here — use gh attestation verify" in out
     assert out.rstrip().endswith("Exit 0.")
     code, out, _ = _run(monkeypatch, capsys, "verify", record, "--json")
@@ -558,7 +558,7 @@ def test_verify_reports_intact_and_fresh_with_snapshot_and_signature_note(
     assert report["integrity"]["ok"] is True
     assert report["freshness"]["state"] == "fresh"
     assert report["freshness"]["age_days"] == 7
-    assert report["retirement_snapshot"] == "2026-11-09"
+    assert report["retirement_snapshot"] == "2026-11-12"
     assert report["signature"] == "not checked here — use gh attestation verify"
     assert report["origin"] == "github-actions"
 
@@ -1028,7 +1028,7 @@ def test_gate_blocks_a_record_superseded_by_the_verifier_snapshot(
 
     assert (code, report["reason_code"]) == (1, "superseded")
     assert "openai:gpt-4.1-mini (retired on 2027-01-14)" in report["why"]
-    assert "2026-11-09" in report["why"]
+    assert "2026-11-12" in report["why"]
 
 
 @pytest.mark.parametrize(

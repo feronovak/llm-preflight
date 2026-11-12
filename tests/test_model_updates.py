@@ -385,9 +385,10 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
     new_ids = {"claude-fable-5-2", "claude-mythos-5-2"}
-    retirement_dates = {"2026-11-04", "2026-11-09"}
+    pricing_dates = {"2026-11-04", "2026-11-09"}
+    retirement_dates = {*pricing_dates, "2026-11-12"}
     assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
-        *retirement_dates,
+        *pricing_dates,
         "2026-11-11",
     }
     assert {
@@ -406,6 +407,11 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         for (_, model), row in PUBLIC_RETIREMENTS.items()
         if row["as_of"] == "2026-11-09"
     } == new_ids
+    assert {
+        model
+        for (_, model), row in PUBLIC_RETIREMENTS.items()
+        if row["as_of"] == "2026-11-12"
+    } == {"gpt-5.5-cyber-preview"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

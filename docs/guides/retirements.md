@@ -66,9 +66,10 @@ The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
 The bundled retirement rows were rechecked on **2026-11-04**; the two newest
-rows (`claude-fable-5-2` and `claude-mythos-5-2`) on **2026-11-09**. Non-retired
-rows become stale on **2026-12-05** (day 31), the two newest on **2026-12-10**,
-and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
+rows (`claude-fable-5-2` and `claude-mythos-5-2`) on **2026-11-09**, and
+`gpt-5.5-cyber-preview` on **2026-11-12**. Non-retired rows become stale on
+**2026-12-05** (day 31), the two newest on **2026-12-10**, that row on
+**2026-12-13**, and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## What the scan does not see
 
@@ -198,10 +199,12 @@ from the ID.
 
 ## Release retirement review
 
-The 2.25.0 snapshot contains 119 rows: 38 Anthropic, 75 OpenAI and six Gemini.
+The snapshot contains 120 rows: 38 Anthropic, 76 OpenAI and six Gemini.
 The 117 older rows were reviewed on 2026-11-04; the two newer
 Anthropic rows, `claude-fable-5-2` and `claude-mythos-5-2`, were reviewed on
-2026-11-09 and become stale on 2026-12-10. Non-retired rows become stale on
+2026-11-09 and become stale on 2026-12-10. The OpenAI row
+`gpt-5.5-cyber-preview` (removal 2027-02-01, no replacement named) was reviewed
+on 2026-11-12 and becomes stale on 2026-12-13. Non-retired rows become stale on
 2026-12-05; retired rows remain failures. The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
 2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and

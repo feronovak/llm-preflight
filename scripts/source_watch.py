@@ -89,6 +89,11 @@ _SKIPPED_TAGS = {"script", "style", "noscript", "template", "svg"}
 GEMINI_DOCS_PREFIX = "https://aistudio.google.com/docs/"
 _CHROME_TAGS = {"nav", "footer"}
 _DATED_SUFFIX = re.compile(r"-\d{8}$")
+# A link whose target is not a model page; its text is a guide or API name.
+_OTHER_LINK = re.compile(
+    r"""<a\s[^>]*href=["'](?![^"']*/models/)[^"']*["'][^>]*>.*?</a>""",
+    re.DOTALL | re.IGNORECASE,
+)
 _ASSET = re.compile(r"\.(?:png|webp|jpe?g|svg|gif)$")
 
 
@@ -302,6 +307,7 @@ def model_ids(provider: str, body: str) -> set[str]:
         rf"""(?:>|\*\*|/models/|"name":")\s*"""
         rf"""({prefix}[a-z0-9.-]*?)\s*(?=[<*"?#)])"""
     )
+    body = _OTHER_LINK.sub("", body)
     return {i for i in re.findall(pattern, body) if not _ASSET.search(i)}
 
 

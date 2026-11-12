@@ -758,6 +758,15 @@ def test_digitless_and_o_series_ids_are_read(sw):
     }  # fmt: skip
 
 
+def test_link_text_of_a_non_model_link_is_not_an_id(sw):
+    body = (
+        '<a href="/docs/en/api/overview">claude-api</a>'
+        '<a href="/x">gpt-docs</a><a href="/api/docs/models/gpt-5.5">gpt-5.5</a>'
+    )
+    assert sw.model_ids("anthropic", body) == set()
+    assert sw.model_ids("openai", body) == {"gpt-5.5"}
+
+
 def test_official_fixture_lists_digitless_and_o_series_ids(sw, monkeypatch):
     keys = set(_new(sw.run(None, _official(sw, monkeypatch))[0]))
     assert {"new-model:openai:gpt-transcribe", "new-model:openai:o4-mini"} <= keys

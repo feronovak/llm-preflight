@@ -1,1 +1,0 @@
-PREFL-227: read digit-less and o-series model IDs, document the watch

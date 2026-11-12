@@ -13,6 +13,7 @@ from llm_preflight.client import (
     OpenAIResponsesClient,
     _retry_delay,
     create_client,
+    validate_native_request_options,
 )
 
 
@@ -2561,3 +2562,133 @@ def test_http_error_body_echoing_unprefixed_key_is_redacted(monkeypatch, extra):
     assert redact_secrets(sample["error"]) == (
         "HTTP 401: Incorrect API key provided: [REDACTED]"
     )
+
+
+def _responses_reply(monkeypatch, payload):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *_args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setenv("CUSTOM_KEY", "test")
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_k: FakeResponse())
+
+
+RESPONSES_ROUTE = {
+    "provider": "other",
+    "model": "model-a",
+    "adapter": "openai_responses",
+    "base_url": "https://api.example.com/v1",
+    "api_key_env": "CUSTOM_KEY",
+}
+
+
+@pytest.mark.parametrize("text", ["", "pass"])
+@pytest.mark.parametrize(
+    "item_type",
+    [
+        "function_call",
+        "custom_tool_call",
+        "computer_call",
+        "local_shell_call",
+        "shell_call",
+        "apply_patch_call",
+        "mcp_approval_request",
+        "tool_search_call",
+    ],
+)
+def test_responses_tool_item_is_an_error_never_a_text_pass(
+    monkeypatch, item_type, text
+):
+    output = [
+        {
+            "type": item_type,
+            "name": "lookup",
+            "arguments": "{}",
+            "execution": "client",
+        }
+    ]
+    if text:
+        output.insert(
+            0,
+            {"type": "message", "content": [{"type": "output_text", "text": text}]},
+        )
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is False
+    assert sample["error"] == TOOL_CALL_ERROR
+    assert sample["failure_category"] == "provider_error"
+    assert sample["attempts"] == 1
+    assert sample["input_tokens"] is None
+    assert sample["output_tokens"] is None
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        {"type": "web_search_call", "status": "completed"},
+        {
+            "type": "shell_call",
+            "environment": {"type": "container_reference"},
+        },
+        {"type": "tool_search_call", "execution": "server"},
+    ],
+)
+def test_responses_hosted_tool_item_with_text_still_passes_for_hosted_items(
+    monkeypatch, item
+):
+    output = [
+        item,
+        {"type": "message", "content": [{"type": "output_text", "text": "pass"}]},
+    ]
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is True
+    assert sample["response"] == "pass"
+
+
+@pytest.mark.parametrize("kind", [["function_call"], {"a": 1}, None, 7])
+def test_responses_malformed_item_type_is_ignored_not_a_crash(monkeypatch, kind):
+    output = [
+        {"type": kind},
+        {"type": "message", "content": [{"type": "output_text", "text": "pass"}]},
+    ]
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is True
+
+
+def test_responses_hosted_tool_item_with_text_still_passes(monkeypatch):
+    output = [
+        {"type": "web_search_call", "status": "completed"},
+        {"type": "message", "content": [{"type": "output_text", "text": "pass"}]},
+    ]
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is True
+    assert sample["response"] == "pass"
+
+
+def test_responses_route_forwards_tools_for_a_non_openai_provider():
+    options = {"provider_options": {"tools": [{"type": "function"}]}}
+    validate_native_request_options(RESPONSES_ROUTE, options)
+    body = create_client(RESPONSES_ROUTE, 10).body("hello", options)
+
+    assert body["tools"] == [{"type": "function"}]
+
+
+def test_responses_route_keeps_other_options_for_a_non_openai_provider():
+    body = create_client(RESPONSES_ROUTE, 10).body(
+        "hello", {"provider_options": {"truncation": "auto"}}
+    )
+
+    assert body["truncation"] == "auto"

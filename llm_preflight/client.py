@@ -811,6 +811,42 @@ class ZaiClient(NativeTextClient):
         return body
 
 
+_RESPONSES_TOOL_ITEMS = {
+    "function_call",
+    "custom_tool_call",
+    "computer_call",
+    "local_shell_call",
+    "apply_patch_call",
+    "mcp_approval_request",
+}
+
+
+def _is_client_tool_item(item: Any) -> bool:
+    """True for an output item the client, not the provider, must execute."""
+    if not isinstance(item, dict):
+        return False
+    kind = item.get("type")
+    if not isinstance(kind, str):
+        return False
+    if kind == "shell_call":
+        environment = item.get("environment")
+        hosted = isinstance(environment, dict) and str(
+            environment.get("type")
+        ).startswith("container")
+        return not hosted
+    if kind == "tool_search_call":
+        return item.get("execution") == "client"
+    return kind in _RESPONSES_TOOL_ITEMS
+
+
+def _reject_responses_tool_call(payload: dict[str, Any]) -> None:
+    output_items = payload.get("output", [])
+    if isinstance(output_items, list) and any(
+        _is_client_tool_item(item) for item in output_items
+    ):
+        raise ValueError(TOOL_CALL_ERROR)
+
+
 class OpenAIResponsesClient(OpenAICompatibleClient):
     """OpenAI's Responses endpoint, used first for capability probes."""
 
@@ -883,6 +919,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                     )
                 usage = _stream_object(payload.get("usage"))
                 input_details = _stream_object(usage.get("input_tokens_details"))
+                _reject_responses_tool_call(payload)
                 text = payload.get("output_text")
                 if text is not None and not isinstance(text, str):
                     raise TypeError("Responses API returned malformed output text")

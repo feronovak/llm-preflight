@@ -10,6 +10,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- A run on `adapter: openai_responses` now fails with the tool-call error when the response contains a tool call (such as a `function_call` item), instead of passing on any text beside it.
 - `--replay` now checks the saved result's `source_config` shape like every other config path: a wrong-typed field such as `presets: 7` exits 2 and names the field instead of raising a traceback and exiting 1.
 - Estimates for cache hits on `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5` now use the published cache-read rates (USD per million tokens: 0.50, 0.10, 0.075, 0.02, 1.00, 0.50 and 0.20). They used the full input rate before, so estimates were too high. Cache writes stay unpriced for these models. Saved dry-run plans change once for configs using these models because the plan's model row gains `cached_input_cost_per_million`, so approval receipts recorded for them verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1, and so does `migrate`); record them again. An owner-set `cached_input_cost_per_million` is kept only together with the owner's own input and output prices; otherwise the bundled rate now applies to these seven.
 

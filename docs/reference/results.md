@@ -188,7 +188,7 @@ by the configured contract but accepted by the declared consumer parser.
 A response that contains a tool call is a failed request, not a text answer:
 the sample has `ok` false, `failure_category` `provider_error` and unknown
 token counts, and the decision is `fail` with `api_failure`. This applies to
-the Chat Completions, Anthropic and Gemini routes, including a tool call that
+the Chat Completions, Responses (tool-call output items such as `function_call`), Anthropic and Gemini routes, including a tool call that
 follows text. The error text never names the tool or its arguments.
 
 Golden samples include normalized `golden_expected`, `golden_observed`, and

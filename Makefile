@@ -24,9 +24,9 @@ audit:
 	ruff check . --exclude results
 	mypy llm_preflight
 	bandit -q -r llm_preflight
-	detect-secrets-hook --baseline .secrets.baseline \
+	detect-secrets-hook --baseline .secrets.baseline $$(git ls-files \
 		llm_preflight tests .github .env.example \
-		benchmark.example.json benchmark.auto.example.json pyproject.toml
+		benchmark.example.json benchmark.auto.example.json pyproject.toml)
 
 # Real-clock check that the bundled examples are still priced and retirement-
 # current; the unit suite pins the date so it cannot catch snapshot expiry.

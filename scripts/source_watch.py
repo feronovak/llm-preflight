@@ -1,10 +1,11 @@
 """Nightly source watch: compare public upstream sources with the bundle.
 
-Reads the bundled pricing and retirement data, fetches the public OpenRouter
-model list and every official page the bundle cites, and reports what changed:
-a new model, a price signal, a changed page, a page that could not be read.
-It never edits bundled data; OpenRouter is a signal, the official page is the
-source. State is one snapshot file: `--previous` in, `--write` out.
+Reads the bundled pricing and retirement data, fetches the official model list
+page of Anthropic, OpenAI, Gemini and xAI, the public OpenRouter model list and
+every official page the bundle cites, and reports what changed: a new model, a
+price signal, a changed page, a page that could not be read. It never edits
+bundled data; OpenRouter is a signal (for the other providers the only one),
+the official page is the source. State is one snapshot file: `--previous` in, `--write` out.
 """
 
 from __future__ import annotations
@@ -41,6 +42,21 @@ DEPRECATION_URLS = {
     "OPENAI_DEPRECATIONS_URL": OPENAI_DEPRECATIONS_URL,
     "GEMINI_DEPRECATIONS_URL": GEMINI_DEPRECATIONS_URL,
 }
+# Official model list page per provider, read without a key. A page that lists
+# no ID of the provider's family has been reshaped or blocked.
+MODEL_PAGES = {
+    "anthropic": "https://platform.claude.com/docs/en/about-claude/models/overview",
+    "openai": "https://developers.openai.com/api/docs/models",
+    "gemini": "https://aistudio.google.com/docs/models",
+    "xai": "https://docs.x.ai/developers/models",
+}
+MODEL_ID_PREFIXES = {
+    "anthropic": "claude-",
+    "openai": r"(?:gpt-|o\d)",
+    "gemini": "gemini-",
+    "xai": "grok-",
+}
+OPENROUTER_SOURCE = "openrouter"
 SNAPSHOT_VERSION = 1
 TIMEOUT_SECONDS = 20
 MAX_BYTES = 5_000_000
@@ -73,6 +89,12 @@ _SKIPPED_TAGS = {"script", "style", "noscript", "template", "svg"}
 GEMINI_DOCS_PREFIX = "https://aistudio.google.com/docs/"
 _CHROME_TAGS = {"nav", "footer"}
 _DATED_SUFFIX = re.compile(r"-\d{8}$")
+# A link whose target is not a model page; its text is a guide or API name.
+_OTHER_LINK = re.compile(
+    r"""<a\s[^>]*href=["'](?![^"']*/models/)[^"']*["'][^>]*>.*?</a>""",
+    re.DOTALL | re.IGNORECASE,
+)
+_ASSET = re.compile(r"\.(?:png|webp|jpe?g|svg|gif)$")
 
 
 class FetchError(Exception):
@@ -277,6 +299,45 @@ def _comparable_id(model_id: str) -> str:
     return _normalized_model_id(_DATED_SUFFIX.sub("", model_id))
 
 
+def model_ids(provider: str, body: str) -> set[str]:
+    """Model IDs a provider's page names: a table cell, bold code, a model link
+    slug or a JSON `name`. Prose, aliases and asset file names are not read."""
+    prefix = MODEL_ID_PREFIXES[provider]
+    pattern = (
+        rf"""(?:>|\*\*|/models/|"name":")\s*"""
+        rf"""({prefix}[a-z0-9.-]*?)\s*(?=[<*"?#)])"""
+    )
+    body = _OTHER_LINK.sub("", body)
+    return {i for i in re.findall(pattern, body) if not _ASSET.search(i)}
+
+
+def official_findings(
+    read: Any,
+) -> tuple[list[dict[str, Any]], dict[str, set[str]]]:
+    """`new-model` findings from each official page, and the IDs each one lists."""
+    findings: list[dict[str, Any]] = []
+    listed: dict[str, set[str]] = {}
+    for provider, page in MODEL_PAGES.items():
+        url = watched_url(page)
+        try:
+            ids = model_ids(provider, read(url).decode("utf-8", errors="replace"))
+            if not ids:
+                raise FetchError("no model IDs listed")
+        except FetchError as error:
+            findings.append(
+                {"key": f"fetch-failed:{url}", "type": "fetch-failed", "url": url, "reason": str(error)}
+            )  # fmt: skip
+            continue
+        listed[provider] = {_comparable_id(i) for i in ids}
+        known = {_comparable_id(m) for (p, m) in PUBLIC_PRICING if p == provider}
+        findings += [
+            {"key": f"new-model:{provider}:{i}", "type": "new-model", "provider": provider,
+             "model": i, "source": url}
+            for i in sorted(ids) if _comparable_id(i) not in known
+        ]  # fmt: skip
+    return findings, listed
+
+
 def _per_million(value: Any) -> float | None:
     try:
         price = float(value) * 1_000_000
@@ -285,8 +346,14 @@ def _per_million(value: Any) -> float | None:
     return round(price, 6) if price >= 0 else None
 
 
-def openrouter_findings(payload: Any) -> list[dict[str, Any]]:
-    """`new-model` and `price-signal` findings for covered providers only."""
+def openrouter_findings(
+    payload: Any, listed: dict[str, set[str]] | None = None
+) -> list[dict[str, Any]]:
+    """`new-model` and `price-signal` findings for covered providers only.
+
+    A model an official page lists is that page's finding, not this one's. A new
+    model of a provider whose official page was read is marked `openrouter_only`.
+    """
     items = payload.get("data") if isinstance(payload, dict) else None
     if not isinstance(items, list):
         raise FetchError("unexpected JSON shape")
@@ -305,9 +372,12 @@ def openrouter_findings(payload: Any) -> list[dict[str, Any]]:
             continue
         match = bundled.get((provider, _comparable_id(name)))
         if match is None:
+            if _comparable_id(name) in (listed or {}).get(provider, ()):
+                continue
             findings.append(
                 {"key": f"new-model:{provider}:{name}", "type": "new-model",
-                 "provider": provider, "model": name, "openrouter_id": model_id}
+                 "provider": provider, "model": name, "openrouter_id": model_id,
+                 "source": OPENROUTER_SOURCE, "openrouter_only": provider in (listed or {})}
             )  # fmt: skip
             continue
         model, (bundled_in, bundled_out, _) = match
@@ -405,9 +475,9 @@ def run(
     previous: dict[str, Any] | None, read: Any = fetch
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """All findings plus the snapshot to write."""
-    findings: list[dict[str, Any]] = []
+    findings, listed = official_findings(read)
     try:
-        findings += openrouter_findings(json.loads(read(OPENROUTER_URL)))
+        findings += openrouter_findings(json.loads(read(OPENROUTER_URL)), listed)
     except (FetchError, ValueError) as error:
         reason = str(error) if isinstance(error, FetchError) else "invalid JSON"
         findings.append(
@@ -459,7 +529,12 @@ def write_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
 def render_text(findings: list[dict[str, Any]]) -> str:
     if not findings:
         return "source watch: no findings"
-    return "\n".join(f"{item['type']}: {item['key']}" for item in findings)
+    return "\n".join(
+        f"{item['type']}: {item['key']}"
+        + (f" (source: {item['source']})" if item.get("source") else "")
+        + (" (OpenRouter-only)" if item.get("openrouter_only") else "")
+        for item in findings
+    )
 
 
 def main(argv: list[str] | None = None, read: Any = fetch) -> int:

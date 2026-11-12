@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Estimates for cache hits on `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5` now use the published cache-read rates (USD per million tokens: 0.50, 0.10, 0.075, 0.02, 1.00, 0.50 and 0.20). They used the full input rate before, so estimates were too high. Cache writes stay unpriced for these models. Saved dry-run plans for these models change once because the pricing ledger gains the rate.
+
 ## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.

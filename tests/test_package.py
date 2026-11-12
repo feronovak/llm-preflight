@@ -502,6 +502,45 @@ def test_pypi_trusted_publisher_isolated_to_release_workflow():
     assert "PYPI_API_TOKEN" not in workflow
 
 
+def _job_block(name):
+    workflow = Path(".github/workflows/release.yml").read_text()
+    after = workflow.split(f"\n  {name}:\n", 1)[1]
+    following = re.search(r"^  [a-z][\w-]*:$", after, re.MULTILINE)
+    return after[: following.start()] if following else after
+
+
+def test_mcp_registry_publish_runs_after_pypi_on_v_tags():
+    workflow = Path(".github/workflows/release.yml").read_text()
+    job = _job_block("mcp-registry-publish")
+    top = workflow.split("\njobs:\n", 1)[0]
+
+    assert "needs: pypi-publish" in job
+    assert "if: startsWith(github.ref, 'refs/tags/v')" in job
+    assert "id-token: write" in job
+    for forbidden in ("environment:", "always()", "continue-on-error"):
+        assert forbidden not in job
+    assert "./mcp-publisher login github-oidc" in job
+    assert "./mcp-publisher publish server.json" in job
+    assert job.index("login github-oidc") < job.index("publish server.json")
+    assert "permissions:\n  contents: read\n" in top
+    assert "id-token" not in top
+    assert workflow.count("id-token: write") == 2
+    assert "secrets." not in workflow
+    assert "TOKEN" not in workflow
+
+
+def test_mcp_publisher_download_is_pinned_and_checksum_verified():
+    job = _job_block("mcp-registry-publish")
+
+    assert re.search(r"MCP_PUBLISHER_VERSION: v\d+\.\d+\.\d+\n", job)
+    assert re.search(r"MCP_PUBLISHER_SHA256: [0-9a-f]{64}\n", job)
+    assert "releases/latest" not in job
+    assert "sha256sum --check --strict" in job
+    assert job.index("sha256sum --check") < job.index("tar xzf")
+    assert "persist-credentials: false" in job
+    assert re.search(r"actions/checkout@[0-9a-f]{40} # v", job)
+
+
 def test_release_build_runs_the_real_clock_freshness_gate_before_building():
     workflow = Path(".github/workflows/release.yml").read_text()
     makefile = Path("Makefile").read_text()

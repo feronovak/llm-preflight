@@ -41,3 +41,43 @@ jobs:
           path: dist/
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+
+  mcp-registry-publish:
+    needs: pypi-publish
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.9
+      MCP_PUBLISHER_SHA256: 4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Wait until PyPI serves the release
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --output /dev/null "https://pypi.org/pypi/llm-preflight/${version}/json"; then
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "PyPI does not yet serve llm-preflight ${version}" >&2
+          exit 1
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location --output "${archive}" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/${archive}"
+          echo "${MCP_PUBLISHER_SHA256}  ${archive}" | sha256sum --check --strict
+          tar xzf "${archive}" mcp-publisher
+      - name: Log in to the MCP Registry with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+      - name: Publish server.json to the MCP Registry
+        run: ./mcp-publisher publish server.json

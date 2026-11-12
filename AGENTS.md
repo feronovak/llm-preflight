@@ -38,9 +38,11 @@ add planning files to Git or package artifacts.
 
 Use semantic versioning: `major.minor.bugfix`. Increase `major` for breaking
 changes, `minor` for backward-compatible product features, and `bugfix` for
-backward-compatible fixes and release-only corrections. Releases 2.25.0 and 2.25.1 are
-exceptions: each is a minor or patch version although its changelog has `Breaking:`
-entries (see `docs/DECISIONS.md`).
+backward-compatible fixes and release-only corrections. A fix that corrects a wrong
+verdict, price or exit code is a patch even when it invalidates receipts or changes an
+exit code; its changelog entry is marked `Breaking:` and states the old and new
+behaviour (see `docs/DECISIONS.md`). A new feature or a removed capability follows the
+rule above.
 
 ## Release Documentation Rule
 

@@ -311,6 +311,7 @@ def select_interactively(
     selected_profile_selector: str | None = None,
     prepare_only: bool = False,
     workflow: bool = False,
+    owner_models: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], str | None] | None:
     emit = output_fn
     output_fn = lambda message: emit(redact_secrets(message))
@@ -336,6 +337,7 @@ def select_interactively(
                 selected_profile_selector=selected_profile_selector,
                 prepare_only=prepare_only,
                 workflow=workflow,
+                owner_models=owner_models,
                 previous_choices=previous_choices,
                 available_models=available_models,
             )
@@ -360,6 +362,7 @@ def _select_once(
     workflow: bool = False,
     previous_choices: dict[int, Any] | None = None,
     available_models: list[dict[str, Any]] | None = None,
+    owner_models: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], str | None] | None:
     resolve_models = services.resolve_models
     dry_run_plan = services.make_plan
@@ -446,7 +449,11 @@ def _select_once(
     else:
         selected_config.pop("stop_on", None)
     selected_config.setdefault("save_responses", "failures")
-    plan = dry_run_plan(selected_config, profile_selector)
+    plan = dry_run_plan(
+        selected_config,
+        profile_selector,
+        owner_models=config.get("models", []) if owner_models is None else owner_models,
+    )
     output_fn("")
     output_fn(_stage_heading("Run Plan", "36", color))
     for line in redact_secrets(_format_dry_run_plan(plan)).splitlines()[1:]:

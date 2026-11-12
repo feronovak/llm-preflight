@@ -1326,3 +1326,144 @@ def test_cached_plus_written_tokens_above_input_stay_unpriced():
 
     assert estimate_sample_cost(sample, model) is None
     assert sample_cost_evidence(sample, model)[1] is True
+
+
+def _owner_warnings(models):
+    from llm_preflight.catalog import resolve_models
+    from llm_preflight.pricing import owner_price_warnings
+
+    return owner_price_warnings(models, resolve_models({"models": models}))
+
+
+def test_owner_cached_only_price_on_snapshot_model_warns():
+    from llm_preflight.catalog import resolve_models
+
+    models = [
+        {"provider": "openai", "model": "gpt-4.1", "cached_input_cost_per_million": 0.9}
+    ]
+    warnings = _owner_warnings(models)
+
+    assert len(warnings) == 1
+    assert warnings[0]["code"] == "owner_price_ignored"
+    assert warnings[0]["severity"] == "warning"
+    assert (
+        "cached_input_cost_per_million 0.9 ignored (applied 0.5)"
+        in (warnings[0]["message"])
+    )
+    assert resolve_models({"models": models})[0]["cached_input_cost_per_million"] == 0.5
+
+
+def test_owner_input_only_price_on_snapshot_model_warns():
+    warnings = _owner_warnings(
+        [{"provider": "openai", "model": "gpt-4.1", "input_cost_per_million": 1.0}]
+    )
+    assert len(warnings) == 1
+    assert "input_cost_per_million 1.0 ignored (applied 2.0)" in warnings[0]["message"]
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        {
+            "provider": "openai",
+            "model": "gpt-4.1",
+            "input_cost_per_million": 1.0,
+            "output_cost_per_million": 2.0,
+            "cached_input_cost_per_million": 0.9,
+        },
+        {
+            "provider": "openai",
+            "model": "gpt-4.1",
+            "cached_input_cost_per_million": 0.5,
+        },
+        {
+            "provider": "openai",
+            "model": "gpt-4.1-nano",
+            "cached_input_cost_per_million": 9,
+        },
+        {
+            "provider": "openai",
+            "model": "not-a-model",
+            "cached_input_cost_per_million": 1,
+        },
+        {
+            "provider": "openai",
+            "model": "gpt-4.1",
+            "base_url": "https://proxy.example/v1",
+            "cached_input_cost_per_million": 0.9,
+        },
+        {
+            "provider": "openai",
+            "model": "gpt-4.1",
+            "pricing_tiers": [{"max_input_tokens": 10, "input_cost_per_million": 1}],
+        },
+    ],
+)
+def test_owner_price_that_applies_or_is_not_snapshot_priced_does_not_warn(model):
+    assert _owner_warnings([model]) == []
+
+
+def test_owner_price_warning_judges_only_the_first_duplicate_row():
+    first = {"provider": "openai", "model": "gpt-4.1"}
+    second = {**first, "cached_input_cost_per_million": 0.9}
+    assert _owner_warnings([first, second]) == []
+
+
+def test_owner_price_warning_ignores_discovery_only_models():
+    from llm_preflight.pricing import owner_price_warnings
+
+    resolved = [{"provider": "openai", "model": "gpt-4.1"}]
+    assert owner_price_warnings([], resolved) == []
+
+
+_OWNER_TIERS = [
+    {
+        "input_cost_per_million": 9.0,
+        "output_cost_per_million": 90.0,
+        "cached_input_cost_per_million": 0.9,
+    }
+]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{}, {"cached_input_cost_per_million": 0.9}],
+    ids=["tiers-only", "tiers-and-cached"],
+)
+def test_owner_tiers_replaced_by_snapshot_tiers_warn(extra):
+    warnings = _owner_warnings(
+        [
+            {
+                "provider": "openai",
+                "model": "gpt-5.5",
+                "pricing_tiers": _OWNER_TIERS,
+                **extra,
+            }
+        ]
+    )
+    assert len(warnings) == 1
+    assert "owner pricing_tiers ignored" in warnings[0]["message"]
+
+
+def test_owner_cached_only_warning_leaves_the_pricing_fingerprint_unchanged():
+    from llm_preflight.catalog import resolve_models
+    from llm_preflight.features import estimate_budget
+
+    def fingerprint(model):
+        config = {"prompt": "hi", "models": [model]}
+        return estimate_budget(config)["pricing_fingerprint"]
+
+    base = {"provider": "openai", "model": "gpt-4.1"}
+    assert fingerprint({**base, "cached_input_cost_per_million": 0.9}) == fingerprint(
+        base
+    )
+    assert resolve_models({"models": [base]})[0]["cached_input_cost_per_million"] == 0.5
+
+
+def test_persisted_official_snapshot_row_does_not_warn():
+    from llm_preflight.catalog import resolve_models
+
+    resolved = resolve_models({"models": [{"provider": "openai", "model": "gpt-4.1"}]})[
+        0
+    ]
+    assert _owner_warnings([resolved]) == []

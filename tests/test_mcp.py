@@ -2157,3 +2157,34 @@ def test_valid_until_is_defined_as_the_last_valid_day_everywhere(tmp_path):
         "`inconclusive` for a retiring model or a stale snapshot row, or an "
         "`alias_unmapped`" in flat
     )
+
+
+def test_dry_run_plan_tool_reports_ignored_owner_price(tmp_path):
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [
+                    {
+                        "provider": "openai",
+                        "model": "gpt-4.1",
+                        "cached_input_cost_per_million": 0.9,
+                    }
+                ],
+            }
+        )
+    )
+    response = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+    warnings = response["result"]["structuredContent"]["pricing_warnings"]
+    assert [w["code"] for w in warnings] == ["owner_price_ignored"]

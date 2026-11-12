@@ -70,7 +70,7 @@ optional model fields are `name`, `base_url`, `api_key_env`, `api_version`,
 `headers`, `input_cost_per_million`, `output_cost_per_million`,
 `cached_input_cost_per_million`, `cache_write_input_cost_per_million`,
 `pricing_tiers`, `max_tokens_parameter`, and
-`supports_temperature`. An owner price needs `input_cost_per_million` and `output_cost_per_million` together; a cached-only rate is replaced by the bundled cache rate for `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5`. When setting explicit prices, also set
+`supports_temperature`. An owner price needs `input_cost_per_million` and `output_cost_per_million` together; a cached-only rate is replaced by the bundled cache rate for `gpt-4.1`, `gpt-4.1-mini`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-fable-5`, `claude-opus-5` and `claude-sonnet-5`. Dry run and doctor warn when this happens. When setting explicit prices, also set
 `pricing_metadata` with at least `source` and ISO-8601 `as_of`; otherwise
 `--pricing-check` reports the price as undated. `pricing_tiers` is an ordered per-request price list;
 each tier may set `up_to_input_tokens` before the next tier applies.

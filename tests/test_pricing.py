@@ -1395,7 +1395,6 @@ def test_owner_input_only_price_on_snapshot_model_warns():
         {
             "provider": "openai",
             "model": "gpt-4.1",
-            "cached_input_cost_per_million": 0.9,
             "pricing_tiers": [{"max_input_tokens": 10, "input_cost_per_million": 1}],
         },
     ],
@@ -1415,3 +1414,56 @@ def test_owner_price_warning_ignores_discovery_only_models():
 
     resolved = [{"provider": "openai", "model": "gpt-4.1"}]
     assert owner_price_warnings([], resolved) == []
+
+
+_OWNER_TIERS = [
+    {
+        "input_cost_per_million": 9.0,
+        "output_cost_per_million": 90.0,
+        "cached_input_cost_per_million": 0.9,
+    }
+]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{}, {"cached_input_cost_per_million": 0.9}],
+    ids=["tiers-only", "tiers-and-cached"],
+)
+def test_owner_tiers_replaced_by_snapshot_tiers_warn(extra):
+    warnings = _owner_warnings(
+        [
+            {
+                "provider": "openai",
+                "model": "gpt-5.5",
+                "pricing_tiers": _OWNER_TIERS,
+                **extra,
+            }
+        ]
+    )
+    assert len(warnings) == 1
+    assert "owner pricing_tiers ignored" in warnings[0]["message"]
+
+
+def test_owner_cached_only_warning_leaves_the_pricing_fingerprint_unchanged():
+    from llm_preflight.catalog import resolve_models
+    from llm_preflight.features import estimate_budget
+
+    def fingerprint(model):
+        config = {"prompt": "hi", "models": [model]}
+        return estimate_budget(config)["pricing_fingerprint"]
+
+    base = {"provider": "openai", "model": "gpt-4.1"}
+    assert fingerprint({**base, "cached_input_cost_per_million": 0.9}) == fingerprint(
+        base
+    )
+    assert resolve_models({"models": [base]})[0]["cached_input_cost_per_million"] == 0.5
+
+
+def test_persisted_official_snapshot_row_does_not_warn():
+    from llm_preflight.catalog import resolve_models
+
+    resolved = resolve_models({"models": [{"provider": "openai", "model": "gpt-4.1"}]})[
+        0
+    ]
+    assert _owner_warnings([resolved]) == []

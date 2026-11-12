@@ -726,6 +726,7 @@ _OWNER_PRICE_FIELDS = (
     "output_cost_per_million",
     "cached_input_cost_per_million",
     "cache_write_input_cost_per_million",
+    "pricing_tiers",
 )
 
 
@@ -734,7 +735,7 @@ def owner_price_warnings(
 ) -> list[dict[str, Any]]:
     """Warn when an owner price lost to the official snapshot.
 
-    An owner price applies only with both input and output prices (or tiers).
+    An owner price applies only with both input and output prices.
     Any other owner price field the snapshot replaces is ignored silently.
     """
     resolved = {
@@ -747,7 +748,7 @@ def owner_price_warnings(
         if key in seen:
             continue
         seen.add(key)
-        if model.get("pricing_tiers") or (
+        if (
             model.get("input_cost_per_million") is not None
             and model.get("output_cost_per_million") is not None
         ):
@@ -757,7 +758,12 @@ def owner_price_warnings(
         if metadata.get("source") != "official snapshot":
             continue
         ignored = [
-            f"owner {field} {model[field]} ignored (applied {applied.get(field)})"
+            (
+                "owner pricing_tiers ignored"
+                if field == "pricing_tiers"
+                else f"owner {field} {model[field]} ignored "
+                f"(applied {applied.get(field)})"
+            )
             for field in _OWNER_PRICE_FIELDS
             if model.get(field) is not None and model[field] != applied.get(field)
         ]

@@ -13,6 +13,7 @@ from llm_preflight.client import (
     OpenAIResponsesClient,
     _retry_delay,
     create_client,
+    validate_native_request_options,
 )
 
 
@@ -2588,8 +2589,22 @@ RESPONSES_ROUTE = {
 
 
 @pytest.mark.parametrize("text", ["", "pass"])
-def test_responses_function_call_is_an_error_never_a_text_pass(monkeypatch, text):
-    output = [{"type": "function_call", "name": "lookup", "arguments": "{}"}]
+@pytest.mark.parametrize(
+    "item_type",
+    [
+        "function_call",
+        "custom_tool_call",
+        "computer_call",
+        "local_shell_call",
+        "shell_call",
+        "apply_patch_call",
+        "mcp_approval_request",
+    ],
+)
+def test_responses_tool_item_is_an_error_never_a_text_pass(
+    monkeypatch, item_type, text
+):
+    output = [{"type": item_type, "name": "lookup", "arguments": "{}"}]
     if text:
         output.insert(
             0,
@@ -2602,10 +2617,24 @@ def test_responses_function_call_is_an_error_never_a_text_pass(monkeypatch, text
     assert "tool call" in sample["error"]
 
 
-def test_responses_route_rejects_tools_for_a_non_openai_provider():
-    client = create_client(RESPONSES_ROUTE, 10)
-    with pytest.raises(ValueError, match="tools"):
-        client.body("hello", {"provider_options": {"tools": [{"type": "function"}]}})
+def test_responses_hosted_tool_item_with_text_still_passes(monkeypatch):
+    output = [
+        {"type": "web_search_call", "status": "completed"},
+        {"type": "message", "content": [{"type": "output_text", "text": "pass"}]},
+    ]
+    _responses_reply(monkeypatch, {"status": "completed", "output": output})
+    sample = create_client(RESPONSES_ROUTE, 10).run("hello", {})
+
+    assert sample["ok"] is True
+    assert sample["response"] == "pass"
+
+
+def test_responses_route_forwards_tools_for_a_non_openai_provider():
+    options = {"provider_options": {"tools": [{"type": "function"}]}}
+    validate_native_request_options(RESPONSES_ROUTE, options)
+    body = create_client(RESPONSES_ROUTE, 10).body("hello", options)
+
+    assert body["tools"] == [{"type": "function"}]
 
 
 def test_responses_route_keeps_other_options_for_a_non_openai_provider():

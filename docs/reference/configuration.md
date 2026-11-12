@@ -267,9 +267,9 @@ With `provider: openai` and `adapter: openai_responses`, the supported
 `prompt_cache_retention` and `prompt_cache_key`. The adapter forwards these
 fields to Responses. Other fields are refused before planning; set the prompt,
 system prompt and output allowance through the normal configuration fields.
-With any other provider on `adapter: openai_responses`, the adapter reads the
-same `request.provider_options.openai` section and refuses only `tools`,
-`tool_choice` and `parallel_tool_calls`; other fields are forwarded.
+On any other provider, the adapter forwards `request.provider_options` (the
+`all` and `openai` sections, or flat keys) without this allowlist, and a
+returned tool call fails the request.
 The adapter uses `store: false`. GPT-6 pricing still requires standard service
 and 30-minute cache retention. GPT-6 Responses require completed response status;
 partial text from an incomplete or failed response cannot count as a success.

@@ -78,30 +78,6 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
     return dict(configured)
 
 
-_RESPONSES_TOOL_OPTIONS = {"tools", "tool_choice", "parallel_tool_calls"}
-_RESPONSES_OPENAI_OPTIONS = {
-    "reasoning",
-    "text",
-    "service_tier",
-    "prompt_cache_retention",
-    "prompt_cache_key",
-}
-
-
-def _validate_responses_options(provider: str, options: dict[str, Any]) -> None:
-    configured = _provider_options(options, "openai").keys()
-    if provider == "openai":
-        unsupported = configured - _RESPONSES_OPENAI_OPTIONS
-    else:
-        unsupported = configured & _RESPONSES_TOOL_OPTIONS
-    if unsupported:
-        raise ValueError(
-            "Responses provider_options are unsupported: "
-            + ", ".join(sorted(unsupported))
-            + "; use the configured prompt and request.max_output_tokens"
-        )
-
-
 def validate_native_request_options(
     model: dict[str, Any], options: dict[str, Any]
 ) -> None:
@@ -115,8 +91,21 @@ def validate_native_request_options(
         "claude-mythos-5-1",
         "claude-mythos-5-2",
     }
-    if model.get("adapter") == "openai_responses":
-        _validate_responses_options(provider, options)
+    if provider == "openai" and model.get("adapter") == "openai_responses":
+        supported = {
+            "reasoning",
+            "text",
+            "service_tier",
+            "prompt_cache_retention",
+            "prompt_cache_key",
+        }
+        unsupported = _provider_options(options, provider).keys() - supported
+        if unsupported:
+            raise ValueError(
+                "Responses provider_options are unsupported: "
+                + ", ".join(sorted(unsupported))
+                + "; use the configured prompt and request.max_output_tokens"
+            )
     if (
         provider == "anthropic"
         and _provider_options(options, provider).get("speed", "standard") != "standard"
@@ -822,7 +811,15 @@ class ZaiClient(NativeTextClient):
         return body
 
 
-_RESPONSES_TOOL_ITEMS = {"function_call", "custom_tool_call"}
+_RESPONSES_TOOL_ITEMS = {
+    "function_call",
+    "custom_tool_call",
+    "computer_call",
+    "local_shell_call",
+    "shell_call",
+    "apply_patch_call",
+    "mcp_approval_request",
+}
 
 
 def _reject_responses_tool_call(payload: dict[str, Any]) -> None:

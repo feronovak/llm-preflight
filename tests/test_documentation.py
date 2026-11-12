@@ -425,8 +425,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "docs/guides/model-change.md#common-jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in model_change
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.25.0" in workflow
-    assert "starter workflow pins the latest published package, 2.25.0" in ci
+    assert "llm-preflight==2.25.1" in workflow
+    assert "starter workflow pins the latest published package, 2.25.1" in ci
     assert (
         "| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract "
         "| stamped | 2026-11-11 | v2.24.2 |"
@@ -528,7 +528,7 @@ def test_readme_provider_starter_has_runnable_local_contract_fixtures(tmp_path):
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.25.0"' in action
+    assert 'default: "2.25.1"' in action
     assert "GITHUB_STEP_SUMMARY" in action
     assert "No generation requests were made by the default checks." in action
     assert 'python -m llm_preflight report "$result_file" --format markdown' in action
@@ -649,10 +649,10 @@ def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
     assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in action_guide
-    assert 'package-version: "2.25.0"' in action_guide
-    assert "source defaults to `2.25.0`" in action_guide
+    assert 'package-version: "2.25.1"' in action_guide
+    assert "source defaults to `2.25.1`" in action_guide
     assert (
-        "The immutable release tag retains its earlier **2.24.2** default"
+        "The immutable release tag retains its earlier **2.25.0** default"
         in action_guide
     )
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide
@@ -1181,11 +1181,11 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     for workflow in (gate, record):
         for reference in re.findall(r"uses: (\S+)", workflow):
             assert re.fullmatch(
-                r"feronovak/llm-preflight@v2\.25\.0|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                r"feronovak/llm-preflight@v2\.25\.1|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate
-    assert 'python -m pip install "llm-preflight==2.25.0"' in gate
+    assert 'python -m pip install "llm-preflight==2.25.1"' in gate
     assert "not an available package or tag yet" not in gate
     assert "not an available package or tag yet" not in record
     gate_fence = gate.split("```yaml", 1)[1].split("```", 1)[0]
@@ -1197,7 +1197,7 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     assert "gh attestation verify" in gate
     assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
     assert 'attest: "true"' in record and 'sign: "true"' in record
-    assert 'package-version: "2.25.0"' in record
+    assert 'package-version: "2.25.1"' in record
     assert "id-token: write" in record and "attestations: write" in record
     assert HONESTY_LINE in record
 

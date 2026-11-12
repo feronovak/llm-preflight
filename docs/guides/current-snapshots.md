@@ -1,12 +1,12 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-11 · **As of:** v2.25.0
+**Last reviewed:** 2026-11-12 · **As of:** v2.25.1
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.25.0**. The table records this version's reviewed
+Package version: **2.25.1**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
@@ -302,7 +302,7 @@ transition is invented.
 
 ### Cache-read rates for older OpenAI and Claude rows
 
-Checked 2026-11-12 against each model's official pricing page. These seven
+Checked 2026-11-12 against each model's official pricing page; the rows in the table above keep their 2026-11-04 review date and stale date. These seven
 rows now price cache reads at the published rate instead of the full input
 rate. Standard USD rates per million tokens:
 
@@ -373,9 +373,8 @@ route prices. A successful discovery is not an access or compatibility probe.
 These IDs are **not** in the snapshot table because they are not public
 first-party routes we can price honestly:
 
-| Gap | Status as of 2.21.0 |
+| Gap | Status |
 |---|---|
-| Kimi (Moonshot) native provider | Call via OpenRouter or `openai_compatible`. |
 | Z.ai native catalogue | Native `glm-5.3` chat is supported; discovery uses OpenRouter or explicit model entries. |
 | TypeSafe Jev as a chat model | Catalogue-visible typed-decision route only. |
 

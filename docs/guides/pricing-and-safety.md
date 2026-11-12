@@ -68,7 +68,7 @@ while explicit owner overrides are preserved.
 Unknown prices stay
 unknown; the tool never silently treats an OpenRouter route as a direct-provider
 price.
-Explicit per-model prices override the registry. When a provider reports cache-hit
+Explicit per-model prices override the registry; an owner price needs input and output together, and a cached-only rate is ignored. When a provider reports cache-hit
 tokens, the estimate applies the model's cached-input rate. Gemini 3.1 Pro
 Preview also uses its published per-request 200k-input tier, including thinking
 tokens in output usage. GPT-5.6 Luna/Terra/Sol and GPT-6 Astra/Sol/Luna price cache writes at 1.25

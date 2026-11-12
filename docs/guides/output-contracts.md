@@ -302,7 +302,7 @@ subset. It validates declarations only; it does not exercise a tool call.
 
 Top-level `tools` entries stay local and are never sent to a provider. Only
 `request.provider_options.tools` is forwarded, on the generic, Anthropic and
-Gemini routes and non-`openai` Responses routes (native routes, including `provider: openai` with Responses, refuse it), so a model that answers in text is
+Gemini routes and non-`openai` Responses routes (native routes, including `provider: openai` with Responses, refuse it, and so do `moonshot`, `minimax` and `mistral`; `zai` accepts it at dry run), so a model that answers in text is
 still checked. Preflight reads text only and never runs tools: a response that
 returns a tool call fails as a request error, even when it also carries text.
 

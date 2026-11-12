@@ -5327,3 +5327,24 @@ def test_audit_source_ci_retiring_model_and_unmapped_alias_name_both(
         "Exit 3 (--ci): a referenced model is retiring or its snapshot row is "
         "stale; 1 alias could not be mapped to a snapshot row."
     )
+
+
+_OWNER_CACHED_ONLY = {
+    "prompt": "hi",
+    "models": [
+        {"provider": "openai", "model": "gpt-4.1", "cached_input_cost_per_million": 0.9}
+    ],
+}
+
+
+def test_dry_run_json_warns_on_ignored_owner_price():
+    plan = cli.dry_run_plan(_OWNER_CACHED_ONLY)
+    codes = [w.get("code") for w in plan["pricing_warnings"]]
+    assert codes == ["owner_price_ignored"]
+    assert plan["pricing_coverage"]["summary"]["priced"] == 1
+
+
+def test_dry_run_text_prints_ignored_owner_price():
+    text = cli._format_dry_run_plan(cli.dry_run_plan(_OWNER_CACHED_ONLY))
+    assert "Pricing warnings:" in text
+    assert "- openai/gpt-4.1: owner cached_input_cost_per_million 0.9 ignored" in text

@@ -721,6 +721,65 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_OWNER_PRICE_FIELDS = (
+    "input_cost_per_million",
+    "output_cost_per_million",
+    "cached_input_cost_per_million",
+    "cache_write_input_cost_per_million",
+)
+
+
+def owner_price_warnings(
+    config_models: list[dict[str, Any]], resolved_models: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Warn when an owner price lost to the official snapshot.
+
+    An owner price applies only with both input and output prices (or tiers).
+    Any other owner price field the snapshot replaces is ignored silently.
+    """
+    resolved = {
+        (m.get("provider", "openai_compatible"), m["model"]): m for m in resolved_models
+    }
+    warnings: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for model in config_models:
+        key = (model.get("provider", "openai_compatible"), model["model"])
+        if key in seen:
+            continue
+        seen.add(key)
+        if model.get("pricing_tiers") or (
+            model.get("input_cost_per_million") is not None
+            and model.get("output_cost_per_million") is not None
+        ):
+            continue
+        applied = resolved.get(key) or {}
+        metadata = applied.get("pricing_metadata") or {}
+        if metadata.get("source") != "official snapshot":
+            continue
+        ignored = [
+            f"owner {field} {model[field]} ignored (applied {applied.get(field)})"
+            for field in _OWNER_PRICE_FIELDS
+            if model.get(field) is not None and model[field] != applied.get(field)
+        ]
+        if ignored:
+            warnings.append(
+                {
+                    "model": key[1],
+                    "provider": key[0],
+                    "severity": "warning",
+                    "code": "owner_price_ignored",
+                    "message": (
+                        "; ".join(ignored)
+                        + ": an owner price needs input_cost_per_million and "
+                        "output_cost_per_million together"
+                    ),
+                    "source": "official snapshot",
+                    "as_of": metadata.get("as_of"),
+                }
+            )
+    return warnings
+
+
 def pricing_freshness_report(
     models: list[dict[str, Any]],
     today: date | None = None,

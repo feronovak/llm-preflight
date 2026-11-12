@@ -1112,3 +1112,24 @@ def test_apply_environment_ignores_an_unselected_malformed_environment():
 def test_apply_environment_rejects_environments_that_is_not_an_object(environments):
     with pytest.raises(ValueError, match="'environments' must be an object"):
         apply_environment({"prompt": "hi", "environments": environments}, "ci")
+
+
+def test_doctor_warns_on_ignored_owner_price(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    report = doctor_report(
+        {
+            "prompt": "hi",
+            "models": [
+                {
+                    "provider": "openai",
+                    "model": "gpt-4.1",
+                    "cached_input_cost_per_million": 0.9,
+                }
+            ],
+        }
+    )
+    warnings = [c for c in report["checks"] if "owner" in c["message"]]
+    assert len(warnings) == 1
+    assert warnings[0]["severity"] == "warning"
+    assert warnings[0]["ok"] is True
+    assert report["ok"] is True

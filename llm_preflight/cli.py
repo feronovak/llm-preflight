@@ -75,7 +75,12 @@ from .migrate import build_report as build_migrate_report
 from .migrate import exit_code as migrate_exit_code
 from .migrate import format_report as format_migrate_report
 from .presets import preset_warnings
-from .pricing import pricing_coverage_report, pricing_freshness_report, resolve_pricing
+from .pricing import (
+    owner_price_warnings,
+    pricing_coverage_report,
+    pricing_freshness_report,
+    resolve_pricing,
+)
 from .profiles import BUILTIN_PROFILES
 from .redaction import (
     mask_base_url,
@@ -794,10 +799,13 @@ def dry_run_plan(
         "estimated_cost_usd": budget["estimated_cost_usd"],
         "maximum_estimated_cost_usd": budget["maximum_estimated_cost_usd"],
         "budget_limits": budget_limits(budget_config, budget, models),
-        "pricing_warnings": pricing_freshness_report(
-            models,
-            enforce_override_freshness=bool(config.get("require_current_pricing")),
-        )["warnings"],
+        "pricing_warnings": [
+            *pricing_freshness_report(
+                models,
+                enforce_override_freshness=bool(config.get("require_current_pricing")),
+            )["warnings"],
+            *owner_price_warnings(config.get("models", []), models),
+        ],
         "pricing_coverage": pricing_coverage_report(
             models, require_current_pricing=bool(config.get("require_current_pricing"))
         ),
@@ -891,6 +899,12 @@ def _format_dry_run_plan(plan: dict[str, Any]) -> str:
         f"Saved responses: {plan['save_responses']}",
     ]
     coverage = plan.get("pricing_coverage", {})
+    ignored = [
+        w for w in plan["pricing_warnings"] if w.get("code") == "owner_price_ignored"
+    ]
+    if coverage and ignored:
+        lines.append("Pricing warnings:")
+        lines.extend(f"- {w['provider']}/{w['model']}: {w['message']}" for w in ignored)
     if plan["pricing_warnings"] and not coverage:
         warning_count = len(plan["pricing_warnings"])
         lines.append(f"Pricing warnings: {warning_count} models need pricing review.")

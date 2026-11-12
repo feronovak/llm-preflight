@@ -14,6 +14,7 @@ from .contracts import (
     contract_fixtures_declared,
     without_prompt_files,
 )
+from .pricing import owner_price_warnings
 from .profiles import BUILTIN_PROFILES
 from .redaction import mask_base_urls, redact_secrets, without_private_fields
 from .runner import select_test_profiles
@@ -447,6 +448,10 @@ def _select_once(
         selected_config.pop("stop_on", None)
     selected_config.setdefault("save_responses", "failures")
     plan = dry_run_plan(selected_config, profile_selector)
+    # The selection holds resolved rows, so judge the owner's original rows.
+    plan["pricing_warnings"] += owner_price_warnings(
+        config.get("models", []), selected_models
+    )
     output_fn("")
     output_fn(_stage_heading("Run Plan", "36", color))
     for line in redact_secrets(_format_dry_run_plan(plan)).splitlines()[1:]:

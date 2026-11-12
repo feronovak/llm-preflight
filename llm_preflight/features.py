@@ -22,6 +22,7 @@ from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
 from .pricing import (
     estimate_sample_cost,
+    owner_price_warnings,
     pricing_coverage_report,
     resolve_pricing,
 )
@@ -421,6 +422,15 @@ def doctor_report(
                 }
             )
     for warning in pricing_coverage["warnings"]:
+        checks.append(
+            {
+                "ok": True,
+                "severity": warning["severity"],
+                "model": warning["model"],
+                "message": warning["message"],
+            }
+        )
+    for warning in owner_price_warnings(config.get("models", []), models):
         checks.append(
             {
                 "ok": True,

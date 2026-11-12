@@ -955,3 +955,19 @@ def test_watch_interactive_json_keeps_approval_prompts_off_stdout(
     assert bool(approved_calls) is approve
     if approve:
         assert "Synthetic approval completed" in captured.err
+
+
+def test_preview_shows_ignored_owner_price():
+    _, output = select(
+        mock_config(
+            models=[
+                {
+                    "provider": "openai",
+                    "model": "gpt-4.1",
+                    "cached_input_cost_per_million": 0.9,
+                }
+            ]
+        ),
+        ["all", "", "1", "1", "n"],
+    )
+    assert "owner cached_input_cost_per_million 0.9 ignored" in "\n".join(output)

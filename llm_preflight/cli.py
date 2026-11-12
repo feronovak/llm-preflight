@@ -106,6 +106,7 @@ from .runner import (
     select_custom_prompt,
     select_test_profiles,
     selected_profiles,
+    validate_config_shape,
     validate_config_validations,
 )
 from .source_audit import audit_source
@@ -3242,6 +3243,7 @@ def main() -> None:
             replay_result = load_json(args.replay)
             source_config_path = replay_result.get("source_config_path")
             try:
+                validate_config_shape(replay_result.get("source_config", {}))
                 config = replay_config(
                     replay_result, load_source_config(source_config_path)
                 )

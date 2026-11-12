@@ -3289,6 +3289,34 @@ def test_replay_loads_env_file_beside_the_recorded_source_config(tmp_path, monke
     assert loaded == [source_config.parent / ".env.production"]
 
 
+def test_replay_rejects_a_source_config_with_a_wrong_typed_presets_field(
+    tmp_path, monkeypatch, capsys
+):
+    result_path = tmp_path / "run.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "source_config": {
+                    "prompt": "Reply with ok.",
+                    "models": [],
+                    "presets": 7,
+                },
+                "models": [],
+                "settings": {},
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", "--replay", str(result_path), "--dry-run"]
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+
+    assert exc_info.value.code == 2
+    assert "'presets' must be a list of strings" in capsys.readouterr().err
+
+
 def test_models_from_cli_rejects_an_unprefixed_non_openai_model_name():
     with pytest.raises(ValueError, match="provider:model"):
         cli._models_from_cli("claude-3-opus")

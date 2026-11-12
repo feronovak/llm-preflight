@@ -2,7 +2,7 @@
 
 **Last reviewed:** 2026-11-11 · **As of:** v2.24.2
 
-**Latest measurement:** 2026-11-11, five added native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`, `claude-mythos-5-2`), beside `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **26 models** in all (the README image summarizes 25, without the Mythos row); eight cases each.
+**Latest measurement:** 2026-11-11, four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), beside `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **25 measured models** in all (the README image summarizes the same 25), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -144,8 +144,8 @@ a paid rerun. Local fixture checks do not execute application parser code.
 
 ## 2026-11-11 five added models
 
-On **2026-11-11** a separate owner-approved run measured five more native model
-IDs on the same eight cases and settings as the 2026-10-29 rows (1,024-token
+On **2026-11-11** a separate owner-approved run attempted five more native model
+IDs (four measured, one returned only HTTP 404) on the same eight cases and settings as the 2026-10-29 rows (1,024-token
 output allowance, low reasoning effort where supported, one attempt, no
 warmups, no retries), using source build 2.24.1, one model after another.
 Mistral Large 4 has no low-effort setting in this tool and ran with provider

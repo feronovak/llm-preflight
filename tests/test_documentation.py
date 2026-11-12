@@ -652,7 +652,7 @@ def test_marketplace_action_docs_describe_the_current_published_release():
     assert 'package-version: "2.25.2"' in action_guide
     assert "source defaults to `2.25.2`" in action_guide
     assert (
-        "The immutable release tag retains its earlier **2.25.0** default"
+        "The immutable release tag retains its earlier **2.25.1** default"
         in action_guide
     )
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide

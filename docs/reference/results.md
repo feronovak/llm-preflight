@@ -46,7 +46,7 @@ above the cap. A non-interactive `--dry-run` prints the plan, then exits 2 with
 the first violation's message, and writes no approval receipt; the MCP
 `dry_run_plan` tool returns the plan with `ok: false`. The interactive preview
 only shows the violations. `budget_limits` is part of the plan an approval
-receipt hashes.
+receipt hashes. The plan's `pricing_warnings` list also carries `owner_price_ignored`, one entry per model whose owner price field the bundled official snapshot replaced (the same warning appears in `--doctor` and the interactive preview); a saved run result's `pricing_warnings` does not.
 
 Each `models[].base_url` in this JSON prints
 only scheme and host[:port]. A path, query, userinfo or `;` parameter prints as
@@ -85,7 +85,7 @@ route as run and replays unchanged. A masked route never reaches a provider: a
 | `priced_cost_usd`, `cost_confidence`, `unpriced_models` | Known cost subtotal (`null` if none is known), coverage (`complete`, `partial`, or `unknown`), and models with missing usable prices. Missing usage alone does not make a model unpriced. |
 | `cost_coverage` | Additive counts across measured and warmup samples: `known_requests`, `missing_usage_requests`, `missing_price_requests`, and `unobserved_retry_requests`. Missing usage includes malformed counts. The two missing-evidence counts can overlap on one request. Retry attempts have no retained usage and prevent a complete total; known final-response cost remains in the subtotal. |
 | `usage_coverage` | Counts of requests reporting usable `input_tokens` and `output_tokens`, separately. Compare each with the sum of measured and warmup request counts before treating its token subtotal as complete. |
-| `pricing_warnings` | Pricing warnings: freshness or availability, and `owner_price_ignored` for an owner price field the bundled official snapshot replaced (`--dry-run`, `--doctor` and the MCP `dry_run_plan` tool). |
+| `pricing_warnings` | Pricing freshness or availability warnings. |
 | `pricing_coverage` | Coverage for every selected direct model and OpenRouter route, including `priced`, `undated`, `stale`, or `unknown` status, source, source URL, as-of date, stable warning code, remediation, and whether a mock fixture is pricing-exempt. The summary separates all `selected` rows from `billable` rows and `exempt` mock fixtures, so `priced` never counts a mock. `ok` is false for stale or unknown pricing; `enforcement_ok` additionally becomes false for undated pricing when `require_current_pricing` is enabled, and is the paid-run/CI gate verdict. |
 | `configuration_warnings` | Non-blocking comparability warnings implied by the selected configuration, such as including Anthropic with the `json` preset. Anthropic receives no equivalent native JSON-mode request, so those results are not directly comparable to providers that do. |
 | `pricing_ledger`, `pricing_fingerprint` | Redacted resolved per-model prices/provenance used by this run and their stable SHA-256 identity. These are additive fields in schema version 1. |

@@ -982,11 +982,19 @@ def test_agent_guidance_reports_pricing_warnings_including_owner_price_ignored(
     skill = (root / "plugins/llm-preflight/skills/llm-preflight/SKILL.md").read_text()
     guide = (root / "docs/automation/mcp.md").read_text()
     coding_agents = (root / "docs/automation/coding-agents.md").read_text()
+    validation = (root / "docs/automation/agent-validation.md").read_text()
     instructions = mcp._response(
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, tmp_path
     )["result"]["instructions"]
 
-    for text in (mcp.SAFE_WORKFLOW, skill, guide, coding_agents, instructions):
+    for text in (
+        mcp.SAFE_WORKFLOW,
+        skill,
+        guide,
+        coding_agents,
+        validation,
+        instructions,
+    ):
         step = " ".join(text.split())
         assert "Report `pricing_warnings` too, including `owner_price_ignored`" in step
         assert "an owner price the bundled snapshot replaced" in step

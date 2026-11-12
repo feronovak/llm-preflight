@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- `--replay` now checks the saved result's `source_config` shape like every other config path: a wrong-typed field such as `presets: 7` exits 2 and names the field instead of raising a traceback and exiting 1.
+
 ## 2.25.0 - 2026-11-11
 
 Changes below are marked `Breaking:` where they can change an exit code.

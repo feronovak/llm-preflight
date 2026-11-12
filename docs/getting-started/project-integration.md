@@ -119,7 +119,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "llm-preflight==2.25.1"
+      - run: python -m pip install "llm-preflight==2.25.2"
       - run: llm-preflight benchmark.json --contract-check
       - run: llm-preflight benchmark.json --dry-run --no-env-file --json
 ```

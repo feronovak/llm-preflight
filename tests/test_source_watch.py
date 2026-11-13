@@ -217,10 +217,10 @@ def test_change_past_the_old_storage_cap_still_shows(sw):
     def read(tail):
         return lambda url: page(tail) if url == PAGE else _reader()(url)
 
-    _, snapshot = sw.run(None, read("tail old value"))
-    findings, _ = sw.run(snapshot, read("tail new value"))
+    _, snapshot = sw.run(None, read("tail $1.00"))
+    findings, _ = sw.run(snapshot, read("tail $2.00"))
     [change] = _by_type(findings, "page-changed")
-    assert change["changed_lines"] == ["- tail old value", "+ tail new value"]
+    assert change["changed_lines"] == ["- tail $1.00", "+ tail $2.00"]
 
 
 def test_diff_lines_that_look_like_file_headers_are_kept(sw):
@@ -522,6 +522,177 @@ def test_cited_model_variant_row_is_kept(sw):
     lines = sw.scoped_lines(html, rows)
     assert any("1M context" in line for line in lines)
     assert not any("ünï" in line or "$8" in line for line in lines)
+
+
+SONNET = ["pricing anthropic/claude-sonnet-5-5"]
+
+
+def _kept(sw, html, rows=SONNET):
+    return " | ".join(sw.scoped_lines(html, rows))
+
+
+@pytest.mark.parametrize(
+    "first",
+    [
+        "Claude API",
+        "Claude Sonnet 5.5*",
+        "Claude 5.5 Sonnet",
+        "Claude Sonnet 5.5, Claude Opus 5.5",
+    ],
+)
+def test_row_that_is_not_a_different_model_id_is_kept(sw, first):
+    html = f"<main><table><tr><th>{first}</th><td>$6 note</td></tr></table></main>"
+    assert "$6 note" in _kept(sw, html)
+
+
+def test_row_of_a_different_model_id_is_still_dropped(sw):
+    html = "<main><table><tr><th>Claude Opus 5.5</th><td>$9</td></tr></table></main>"
+    assert "$9" not in _kept(sw, html)
+
+
+def test_unclosed_row_does_not_drop_text_after_the_table(sw):
+    html = (
+        "<main><table><tr><th>Claude Opus 5.5</th><td>$9</td></table>"
+        "<p>text after the table</p></main>"
+    )
+    assert "text after the table" in _kept(sw, html)
+
+
+def test_unclosed_row_does_not_drop_text_after_the_container(sw):
+    html = "<main><table><tr><th>Claude Opus 5.5</th></main><p>outside main</p>"
+    assert "outside main" not in _kept(sw, html + "<main>second</main>")
+    assert "second" in _kept(sw, html + "<main>second</main>")
+
+
+def test_partial_article_beside_a_price_table_falls_back_to_main(sw):
+    html = (
+        "<main><article>Promo: try our new tool</article>"
+        "<table><tr><th>Claude Sonnet 5.5</th><td>$3</td></tr></table></main>"
+    )
+    kept = _kept(sw, html)
+    assert "$3" in kept and "Promo" in kept
+
+
+@pytest.mark.parametrize(
+    "hidden", ["<script>var a = '<article>';</script>", "<!-- <article>x</article> -->"]
+)
+def test_article_in_script_or_comment_is_not_a_container(sw, hidden):
+    html = f"{hidden}<main>{PAD}<p>Input $3</p></main>"
+    assert "Input $3" in _kept(sw, html)
+
+
+def test_dated_and_undated_citations_keep_sibling_filtering(sw):
+    rows = [
+        "pricing anthropic/claude-haiku-4-5",
+        "pricing anthropic/claude-haiku-4-5-20251001",
+    ]
+    html = (
+        "<main><table><tr><th>Claude Haiku 4.5</th><td>$1</td></tr>"
+        "<tr><th>Claude Opus 5.5</th><td>$9</td></tr></table></main>"
+    )
+    kept = _kept(sw, html, rows)
+    assert "$1" in kept and "$9" not in kept
+
+
+def test_legacy_comparison_ignores_a_repeated_line_as_anchor(sw):
+    before = ["Learn more", "Old promo line", "Body text", "Learn more", "Input $2"]
+    scoped = ["Body text", "Learn more", "Input $2"]
+    assert sw._legacy_changes(before, scoped, scoped) == []
+
+
+def _change(sw, monkeypatch, old, new):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    page = lambda body: f"<main>{PAD}{body}</main>"
+    _, snapshot = sw.run(None, _reader({LIMIT: page(old)}))
+    ignored: list = []
+    findings, nxt = sw.run(snapshot, _reader({LIMIT: page(new)}), ignored)
+    return _by_type(findings, "page-changed"), ignored, nxt
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("<p>GPT-5.6 Terra supports chat</p>", "<p>GPT-5.6 Terra supports tools</p>"),
+        ("<p>Input $2.00</p>", "<p>Input $2.50</p>"),
+        ("<p>Input</p><p>Output 3</p>", "<p>Input</p><p>Output 3.50</p>"),
+        ("<p>Preview</p>", "<p>Preview until March 3</p>"),
+        ("<p>Cutoff 2026-01-01</p>", "<p>Cutoff 2026-02-01</p>"),
+        ("<p>Status: active</p>", "<p>Status: deprecated</p>"),
+        ("<p>Status: active</p>", "<p>Status: Shutdown planned</p>"),
+    ],
+)
+def test_relevant_change_is_a_finding(sw, monkeypatch, old, new):
+    changes, ignored, _ = _change(sw, monkeypatch, old, new)
+    assert len(changes) == 1 and ignored == []
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("<p>Try Codex today</p>", "<p>Build with Astra</p>"),
+        ("<ul><li>Home</li></ul>", "<ul><li>Home</li><li>Guides</li></ul>"),
+        ("<p>New: image tools</p>", "<p>New: voice tools</p>"),
+    ],
+)
+def test_layout_promo_or_navigation_change_is_ignored_and_reported(
+    sw, monkeypatch, old, new
+):
+    changes, ignored, nxt = _change(sw, monkeypatch, old, new)
+    assert changes == []
+    [item] = ignored
+    assert item["url"] == LIMIT and item["cited_by"] == ["pricing openai/gpt-5.6-terra"]
+    assert any(line.startswith(("- ", "+ ")) for line in item["changed_lines"])
+    assert nxt["pages"][LIMIT]["hash"] == sw.text_hash(nxt["pages"][LIMIT]["lines"])
+
+
+def test_ignored_change_is_recorded_so_it_is_not_reported_again(sw, monkeypatch):
+    _, ignored, nxt = _change(sw, monkeypatch, "<p>Try Codex</p>", "<p>Try Astra</p>")
+    assert len(ignored) == 1
+    again: list = []
+    same = _reader({LIMIT: f"<main>{PAD}<p>Try Astra</p></main>"})
+    findings, _ = sw.run(nxt, same, again)
+    assert _by_type(findings, "page-changed") == [] and again == []
+
+
+def test_price_in_a_row_that_names_no_model_is_not_lost(sw, monkeypatch):
+    changes, ignored, _ = _change(
+        sw,
+        monkeypatch,
+        "<table><tr><td>Batch</td><td>1.00 per million</td></tr></table>",
+        "<table><tr><td>Batch</td><td>0.50 per million</td></tr></table>",
+    )
+    assert len(changes) == 1 and ignored == []
+
+
+def test_relevant_line_past_the_excerpt_cap_still_makes_a_finding(sw, monkeypatch):
+    promo = "".join(f"<p>Promo {i}</p>" for i in range(30))
+    changes, _, _ = _change(
+        sw,
+        monkeypatch,
+        promo + "<p>Input $2</p>",
+        promo.replace("Promo", "Ad") + "<p>Input $3</p>",
+    )
+    assert len(changes) == 1 and len(changes[0]["changed_lines"]) == sw.EXCERPT_LINES
+
+
+def test_main_reports_ignored_changes_in_json_and_text(
+    sw, monkeypatch, tmp_path, capsys
+):
+    _single(sw, monkeypatch, "openai", "gpt-5.6-terra")
+    snap = tmp_path / "snap.json"
+    argv = ["--previous", str(snap), "--write", str(snap), "--json"]
+    old = f"<main>{PAD}<p>Try Codex</p></main>"
+    new = f"<main>{PAD}<p>Try Astra</p></main>"
+    assert sw.main(argv, _reader({LIMIT: old})) == 0
+    assert json.loads(capsys.readouterr().out)["ignored"] == []
+    assert sw.main(argv, _reader({LIMIT: new})) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert [f for f in out["findings"] if f["type"] == "page-changed"] == []
+    assert out["ignored"][0]["changed_lines"] == ["- Try Codex", "+ Try Astra"]
+    snap.write_text(snap.read_text())
+    assert sw.main(["--previous", str(snap)], _reader({LIMIT: old})) == 0
+    text = capsys.readouterr().out
+    assert "ignored page change" in text and "  - Try Astra" in text
 
 
 GEMINI = "https://aistudio.google.com/docs/pricing"

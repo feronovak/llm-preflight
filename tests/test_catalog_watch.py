@@ -114,3 +114,26 @@ def test_candidate_config_combines_new_candidates_with_approved_models():
         {"provider": "openai", "model": "candidate"},
     ]
     assert candidate["discovery"] == []
+
+
+def test_shipped_default_requests_pass_the_budget_check_for_mistral_large_4(
+    monkeypatch,
+):
+    from llm_preflight.cli import SMOKE_REQUEST, _provider_starter_config
+    from llm_preflight.features import check_budget
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    starter = _provider_starter_config(
+        "mistral", "mistral-large-4-0", "MISTRAL_API_KEY"
+    )
+    check_budget(starter)
+    watch = {"prompt": "Reply with ok.", "request": dict(SMOKE_REQUEST)}
+    mixed = build_candidate_config(
+        watch,
+        {"models": []},
+        [
+            {"provider": "openai", "model": "gpt-5.5"},
+            {"provider": "mistral", "model": "mistral-large-4-0"},
+        ],
+    )
+    check_budget(mixed)

@@ -13,7 +13,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- `gemini-4-hydrogen` gets the Gemini 4 request checks, with its own thinking levels: `LOW`, `MEDIUM`, `HIGH` and `XHIGH` are accepted and `MINIMAL` is rejected. As for `gemini-4-argon` and `gemini-4-carbon`, an explicit `cachedContent` and a `max_output_tokens` above 65,536 fail before any request, ignored sampling fields are omitted, and discovery no longer reports temperature support. A thinking level other than `LOW`, `MEDIUM` or `HIGH` on `gemini-4-argon` or `gemini-4-carbon` still fails, now naming the allowed levels.
+- `gemini-4-hydrogen` gets the Gemini 4 request checks, with its own thinking levels: `LOW`, `MEDIUM`, `HIGH` and `XHIGH` are accepted and `MINIMAL` is rejected. As for `gemini-4-argon` and `gemini-4-carbon`, an explicit `cachedContent` and a `max_output_tokens` above 65,536 fail before any request, ignored sampling fields are omitted, and discovery no longer reports temperature support. A thinking level other than `LOW`, `MEDIUM` or `HIGH` on `gemini-4-argon` or `gemini-4-carbon` still fails.
 
 ### Fixed
 

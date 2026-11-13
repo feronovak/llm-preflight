@@ -6,7 +6,9 @@ import pytest
 from llm_preflight.pricing import PUBLIC_PRICING
 from llm_preflight.retirements import PUBLIC_RETIREMENTS
 
-IMPORTANCE_FILE = Path(__file__).resolve().parents[1] / "docs" / "data" / "model-importance.json"
+IMPORTANCE_FILE = (
+    Path(__file__).resolve().parents[1] / "docs" / "data" / "model-importance.json"
+)
 
 
 def _rows() -> list[dict]:
@@ -20,13 +22,17 @@ def _bundled() -> set[tuple[str, str]]:
 def test_every_bundled_model_has_a_tier():
     rated = {(row["provider"], row["model"]) for row in _rows()}
     missing = sorted(_bundled() - rated)
-    assert not missing, f"bundled models without a tier in model-importance.json: {missing}"
+    assert not missing, (
+        f"bundled models without a tier in model-importance.json: {missing}"
+    )
 
 
 def test_every_listed_model_is_bundled():
     rated = {(row["provider"], row["model"]) for row in _rows()}
     unknown = sorted(rated - _bundled())
-    assert not unknown, f"model-importance.json lists models that are not bundled: {unknown}"
+    assert not unknown, (
+        f"model-importance.json lists models that are not bundled: {unknown}"
+    )
 
 
 def test_each_model_is_listed_once():
@@ -34,7 +40,9 @@ def test_each_model_is_listed_once():
     assert len(keys) == len(set(keys))
 
 
-@pytest.mark.parametrize("row", _rows(), ids=lambda row: f"{row['provider']}/{row['model']}")
+@pytest.mark.parametrize(
+    "row", _rows(), ids=lambda row: f"{row['provider']}/{row['model']}"
+)
 def test_row_has_tier_and_reason(row):
     assert row["tier"] in (1, 2, 3)
     assert isinstance(row["reason"], str) and row["reason"].strip()

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Fixed
+
+- The bundled replacements for four OpenAI models retiring on 2026-12-11 now match the official deprecations page: `gpt-5-2025-08-07` and `o3-2025-04-16` name `gpt-6.1-sol` (was `gpt-5.6-sol`), `gpt-5-mini-2025-08-07` names `gpt-6.1-terra` (was `gpt-5.6-terra`), and `gpt-5-nano-2025-08-07` names `gpt-6-luna` (was `gpt-5.6-luna`). The verdict, `migrate` and `next_command` show the new replacement. The four rows were reviewed on 2026-11-13 and become stale on 2026-12-14. Breaking: approval receipts recorded before this change verify as `mismatch` (exit 1), because `newest_as_of` in every dry-run plan is now 2026-11-13. Record them again with `--dry-run --approval-receipt --replace-approval-receipt`.
+
 ## 2.25.2 - 2026-11-12
 
 ### Fixed

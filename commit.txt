@@ -1,5 +1,0 @@
-PREFL-257: Add Gemini 4 Hydrogen to the measured-models comparison
-
-Retains the smoke record and the eight-case run for gemini-4-hydrogen,
-renders it into the measured-models image, and updates the README, guide,
-snapshot and index counts.

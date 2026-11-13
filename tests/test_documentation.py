@@ -71,6 +71,7 @@ def _all_measured_rows():
             "2026-11-11-five-models",
             "2026-11-11",
             "2026-11-11-flash-lite",
+            "2026-11-13",
         )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
@@ -116,7 +117,7 @@ def test_documented_model_list_matches_comparison_evidence():
     rows = _summary_rows()
     readme = (ROOT / "README.md").read_text()
     ns = {"svg": "http://www.w3.org/2000/svg"}
-    assert len(rows) == 25
+    assert len(rows) == 26
     for name in (
         "measured-models-2026-11-11.svg",
         "measured-models-2026-11-11-light.svg",
@@ -198,7 +199,7 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     known = sum(row["known_cost_subtotal_usd"] or 0 for row in rows)
     calls = sum(row["cost_coverage"]["known_requests"] for row in rows)
     full = sum(row["valid"] == row["requests"] for row in rows)
-    assert (len(rows), checks, passed, full, calls) == (25, 200, 192, 21, 195)
+    assert (len(rows), checks, passed, full, calls) == (26, 208, 200, 22, 203)
     assert sum(row["api_failures"] for row in rows) == 5
     assert f"**{passed} of {checks} checks" in readme
     assert f"**{full} models passed all eight\nchecks.**" in readme
@@ -206,10 +207,10 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     assert f"across {calls} calls with usage" in readme
     assert "the five error\nresponses" in readme
     assert f"**{len(rows)} native model routes**" in readme
-    assert "as of 2026-11-11" in readme
+    assert "as of 2026-11-13" in readme
     assert "between 2026-10-29" not in readme and "All 20" not in readme
     assert (
-        "25 models attempted on 8 checks: 21 passed 8/8, 3 passed 7/8, "
+        "26 models attempted on 8 checks: 22 passed 8/8, 3 passed 7/8, "
         "Kimi 3 responses and 5 rate limits"
     ) in readme
 
@@ -1694,16 +1695,23 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
     rows = table_rows(load_measured_data())
     later = [
         row
-        for day in ("2026-11-11-five-models", "2026-11-11", "2026-11-11-flash-lite")
+        for day in (
+            "2026-11-11-five-models",
+            "2026-11-11",
+            "2026-11-11-flash-lite",
+            "2026-11-13",
+        )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
         )["rows"]
     ]
-    assert len(rows) == 25
+    assert len(rows) == 26
     names = [row["name"] for row in rows]
     assert names.index("Claude Fable 5.2") + 1 == names.index("Claude Fable 5.1")
-    assert {row["date"] for row in rows} == {"2026-10-29", "2026-11-11"}
-    assert len([row for row in rows if row["date"] == "2026-11-11"]) == len(later) - 1
+    assert names.index("Gemini 4 Hydrogen") == names.index("Gemini 4 Carbon") + 1
+    assert {row["date"] for row in rows} == {"2026-10-29", "2026-11-11", "2026-11-13"}
+    assert len([row for row in rows if row["date"] == "2026-10-29"]) == 19
+    assert len([row for row in rows if row["date"] != "2026-10-29"]) == len(later) - 1
 
 
 def test_measured_rows_never_split_a_provider_inside_a_result_group():
@@ -1738,6 +1746,28 @@ def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
     assert data["totals"]["known_cost_subtotal_usd"] == row["known_cost_subtotal_usd"]
     for marker in ("/home/", "scratch", '"response":', '"api_key":'):
         assert marker not in json.dumps(data)
+
+
+def test_hydrogen_row_keeps_the_approved_bounds_and_settings():
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-11-13.json").read_text())
+    smoke = json.loads(
+        (ROOT / "docs/data/gemini-4-hydrogen-smoke-2026-11-13.json").read_text()
+    )
+    base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    assert data["approved_maximum_requests"] == 30
+    assert data["totals"]["requests"] + smoke["requests"] <= 30
+    assert data["planned_maximum_token_estimate_usd"] <= 1.0
+    assert data["method"]["case_set_sha256"] == base["method"]["case_set_sha256"]
+    (row,) = data["rows"]
+    assert row["model"] == "gemini-4-hydrogen" and row["requests"] == 8
+    assert row["retry_count"] == 0 and row["request"] == base["rows"][9]["request"]
+    assert row["valid"] + row["contract_failures"] == row["api_successful"]
+    assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+    assert data["totals"]["known_cost_subtotal_usd"] == row["known_cost_subtotal_usd"]
+    assert smoke["thinking_levels_checked_offline"]["MINIMAL"].startswith("rejected")
+    for payload in (data, smoke):
+        for marker in ("/home/", "scratch", '"response":', '"api_key":'):
+            assert marker not in json.dumps(payload)
 
 
 def test_flash_lite_row_keeps_the_approved_bounds_and_settings():
@@ -1789,12 +1819,12 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     svg = ET.fromstring(module.render())
     ns = {"svg": "http://www.w3.org/2000/svg"}
     texts = list(svg.itertext())
-    assert "Eight application checks across 25 models" in texts
+    assert "Eight application checks across 26 models" in texts
     assert (
         "Small synthetic sample; passing does not establish overall model quality."
         in texts
     )
-    assert "25 models · 8 requests each · as of 2026-11-11" in texts
+    assert "26 models · 8 requests each · as of 2026-11-13" in texts
     assert [g.get("data-group") for g in svg.findall("svg:g[@data-group]", ns)] == [
         "pass",
         "partial",
@@ -1818,7 +1848,7 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     assert rows["GPT-6.1 Terra"][1] == "8/8"
     assert rows["GPT-6.1 Terra"][4] == "$0.001218"
     assert svg.find("svg:desc", ns).text == (
-        "25 models attempted on 8 checks: 21 passed 8/8, 3 passed 7/8, "
+        "26 models attempted on 8 checks: 22 passed 8/8, 3 passed 7/8, "
         "Kimi K3.1 Pro 3 responses and 5 rate limits. "
         "Small synthetic sample, not a ranking or production approval."
     )
@@ -1873,7 +1903,7 @@ def test_guide_lists_the_five_added_models_with_their_recorded_results():
         assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
     for field in ("requests", "api_successful", "api_failures", "valid"):
         assert data["totals"][field] == sum(row[field] for row in data["rows"])
-    assert "25 measured models" in guide
+    assert "26 measured models" in guide
     serialized = json.dumps(data)
     for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
         assert marker not in serialized

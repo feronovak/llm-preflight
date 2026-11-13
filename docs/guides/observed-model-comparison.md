@@ -1,8 +1,8 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-11-11 · **As of:** v2.24.2
+**Last reviewed:** 2026-11-13 · **As of:** v2.25.3
 
-**Latest measurement:** 2026-11-11, four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), beside `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **25 measured models** in all (the README image summarizes the same 25), plus the one attempted route; eight cases each.
+**Latest measurement:** 2026-11-13, `gemini-4-hydrogen` (native Gemini route, eight cases), beside the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **26 measured models** in all (the README image summarizes the same 26), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -29,7 +29,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 21 of 26 with all added rows). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 22 of 27 with all added rows). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -60,7 +60,7 @@ The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,
 case and private-result hashes. The known token-cost subtotal is **$0.06902127**
 across **147** calls with usage (**$0.08218127** across **155** calls with Claude Fable 5.2,
-**$0.09205434** across **187** calls with the five-model rows, **$0.09384684** across **195** calls with all added rows). **Total cost remains unknown** because the five
+**$0.09205434** across **187** calls with the five-model rows, **$0.09384684** across **195** calls with the 2026-11-11 rows, **$0.10106784** across **203** calls with all added rows). **Total cost remains unknown** because the five
 API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
 the table and image label that subtotal as partial, while its full eight-call cost remains unknown. API errors
 are not assumed free. The approved maximum token-based estimate was **$1.64**,
@@ -200,6 +200,37 @@ retains the row, settings, config and result hashes. It was measured on a
 different day and build than the 2026-10-29 rows, so it is not a same-run
 comparison. The September study's 0.977s figure used two repetitions and a
 512-token output allowance and is not comparable.
+
+## 2026-11-13 Gemini 4 Hydrogen
+
+`gemini-4-hydrogen` had bundled prices and Gemini 4 request checks from 2.25.3
+but no measurement. On **2026-11-13** a separate owner-approved run, with
+source build 2.25.3, first sent one smoke request and then measured it on the
+same eight cases and settings as the 2026-10-29 rows: native Gemini route,
+`LOW` thinking, 1,024-token output allowance, one attempt, no warmups, no
+retries. The approved ceiling for both steps was 30 requests and $1.00; the
+smoke request and the eight cases used 9 requests.
+
+- **Smoke:** one request with `LOW` thinking returned the expected text and
+  reported 36 input and 21 output tokens, **$0.0002115**, which matches the
+  bundled 1.50 / 7.50 / 0.075 rates. The request checks accept `LOW`, `MEDIUM`,
+  `HIGH` and `XHIGH` and reject `MINIMAL` before any request (checked offline).
+  The [smoke record](../data/gemini-4-hydrogen-smoke-2026-11-13.json) keeps the
+  result.
+- **Measured run:** all 8 calls returned API responses and passed validation.
+  The planned maximum estimate was **$0.062283** and the measured cost was
+  **$0.007221** (759 input, 811 output tokens, usage on all 8 calls). Mean
+  latency was 2.784s. The
+  [machine-readable aggregate](../data/model-comparison-2026-11-13.json) retains
+  the row, settings, config and result hashes.
+
+| Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
+|---|---|---:|---:|---:|---:|
+| Gemini | `gemini-4-hydrogen` | 8/8 | 8/8 | 2.784s | $0.007221 |
+
+It was measured on a different day and build than the 2026-10-29 rows, so it is
+not a same-run comparison. This is scoped evidence on a small synthetic
+workload, not production approval.
 
 ## 2026-10-14 bounded comparison
 

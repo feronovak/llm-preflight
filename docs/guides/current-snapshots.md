@@ -17,10 +17,11 @@ row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber
 2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
 retain their own evidence and review dates.
 
-The [latest comparison](observed-model-comparison.md) measured 25 models with
+The [latest comparison](observed-model-comparison.md) measured 26 models with
 eight cases each: 19 native routes on 2026-10-29, Claude Fable 5.2 and
-Gemini 3.1 Flash-Lite on 2026-11-11 and four more models on 2026-11-11.
-A 26th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
+Gemini 3.1 Flash-Lite on 2026-11-11, four more models on 2026-11-11 and
+Gemini 4 Hydrogen on 2026-11-13.
+A 27th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
 outputs, three contract failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.

@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-13",
+  "reviewed_on": "2026-11-13",
+  "tool_version": "2.25.3",
+  "source_commit": "6b5ad07bb3bec0a8122235c0cbb3e1966003a586",
+  "source_dirty": false,
+  "approved_maximum_requests": 30,
+  "approved_maximum_token_estimate_usd": 1.0,
+  "planned_maximum_token_estimate_usd": 0.062283,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Gemini route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.007221,
+    "known_cost_subtotal_usd": 0.007221,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "gemini",
+      "model": "gemini-4-hydrogen",
+      "display_name": "Gemini 4 Hydrogen",
+      "route": "Gemini",
+      "observed_on": "2026-11-13",
+      "observed_model": "gemini-4-hydrogen",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 2.783792035006627,
+      "latency_p50_seconds": 2.0136465234973002,
+      "latency_p95_seconds": 6.31177313934313,
+      "mean_ttft_seconds": 2.7616879152483307,
+      "input_tokens": 759,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 811,
+      "estimated_cost_usd": 0.007221,
+      "known_cost_subtotal_usd": 0.007221,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.07,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-4-hydrogen",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-4-hydrogen"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.07,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "604902705ee054f3e2141a0c1764f00a282b653d32d7155ff0f2b3936e3197f1",
+      "result_sha256": "61bf0a7ccbfcef058238fddbc03dde3c6c4f893010b9fbd4a3585483805ea8c9",
+      "pricing_fingerprint": "88986c805ff25be9da3ac9e306a41e5577de45c8b4220262cad35933649eeeb3",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

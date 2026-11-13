@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-13",
+  "tool_version": "2.25.3",
+  "model": "gemini-4-hydrogen",
+  "route": "Gemini native",
+  "purpose": "one live request through the shipped Gemini 4 request checks",
+  "requests": 1,
+  "request": {
+    "max_output_tokens": 1024,
+    "retry": {
+      "max_attempts": 1
+    },
+    "provider_options": {
+      "gemini": {
+        "generationConfig": {
+          "thinkingConfig": {
+            "thinkingLevel": "LOW"
+          }
+        }
+      }
+    }
+  },
+  "thinking_levels_checked_offline": {
+    "MINIMAL": "rejected before any request",
+    "LOW": "accepted",
+    "MEDIUM": "accepted",
+    "HIGH": "accepted",
+    "XHIGH": "accepted"
+  },
+  "observed_model": "gemini-4-hydrogen",
+  "valid": true,
+  "latency_seconds": 2.1411277540028095,
+  "input_tokens": 36,
+  "output_tokens": 21,
+  "estimated_cost_usd": 0.0002115,
+  "bundled_rates_usd_per_million": {
+    "input": 1.5,
+    "output": 7.5,
+    "cached_input": 0.075
+  },
+  "cost_check": "36 x 1.50/1e6 + 21 x 7.50/1e6 = 0.0002115",
+  "config_sha256": "5d466579a64691bd1bcff500c4861fcd733237361141a41320776029d66cc228",
+  "pricing_fingerprint": "88986c805ff25be9da3ac9e306a41e5577de45c8b4220262cad35933649eeeb3",
+  "result_sha256": "9d70affabbc6859a19370d76ac68cd14ff40e9cf8bf881fef61c4e29a75e0e06"
+}

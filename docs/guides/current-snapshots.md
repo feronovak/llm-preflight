@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-12 · **As of:** v2.25.2
+**Last reviewed:** 2026-11-13 · **As of:** v2.25.2
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
@@ -11,7 +11,10 @@ public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
 rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-carbon`
-row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. Explicit owner overrides
+row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
+`gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
+`grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
+2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 25 models with
@@ -64,7 +67,8 @@ Rates are USD per million tokens. `as_of` is the actual review date. Long-contex
 bands and cache rates are recorded in the bundled ledger. The DeepSeek rows
 use peak rates; Qwen uses Singapore/International list rates. Cohere
 publishes no per-token price for Command A+, so it has no row: its cost is
-unknown until you supply your own rates.
+unknown until you supply your own rates. `gpt-5.6-cyber` supports only the
+Responses API, so a run needs `adapter: openai_responses`.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
@@ -73,6 +77,8 @@ unknown until you supply your own rates.
 | `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-11-04 |
 | `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-11-04 |
 | `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-11-04 |
+| `openai` | `gpt-6-cyber` | 20.00 | 100.00 | 2026-11-13 |
+| `openai` | `gpt-5.6-cyber` | 12.50 | 75.00 | 2026-11-13 |
 | `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-11-04 |
 | `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-11-04 |
 | `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-11-04 |
@@ -95,6 +101,7 @@ unknown until you supply your own rates.
 | `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-04 |
 | `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-04 |
 | `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-11 |
+| `gemini` | `gemini-4-hydrogen` | 1.50 | 7.50 | 2026-11-13 |
 | `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-04 |
 | `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-04 |
 | `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-04 |
@@ -103,6 +110,9 @@ unknown until you supply your own rates.
 | `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-04 |
 | `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-04 |
 | `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-04 |
+| `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-13 |
+| `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-13 |
+| `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-13 |
 | `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-04 |
 | `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-04 |
 | `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-04 |

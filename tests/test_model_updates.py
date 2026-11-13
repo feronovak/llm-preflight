@@ -153,6 +153,18 @@ def pricing_day(monkeypatch, day):
 
 
 @pytest.mark.parametrize(
+    "day", [date(2026, 11, 13), date(2026, 12, 1), date(2027, 1, 1)]
+)
+def test_gemini_4_hydrogen_pricing_is_flat(monkeypatch, day):
+    pricing_day(monkeypatch, day)
+    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4-hydrogen"})
+    assert model["input_cost_per_million"] == 1.5
+    assert model["output_cost_per_million"] == 7.5
+    assert model["cached_input_cost_per_million"] == 0.075
+    assert "pricing_tiers" not in model
+
+
+@pytest.mark.parametrize(
     "model_id,as_of",
     [("gemini-4-argon", "2026-11-04"), ("gemini-4-carbon", "2026-11-11")],
 )
@@ -386,11 +398,25 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
 
     new_ids = {"claude-fable-5-2", "claude-mythos-5-2"}
     pricing_dates = {"2026-11-04", "2026-11-09"}
+    cyber_ids = {
+        "gpt-6-cyber",
+        "gpt-5.6-cyber",
+        "gemini-4-hydrogen",
+        "grok-4.20-0309-reasoning",
+        "grok-4.20-0309-non-reasoning",
+        "grok-4.20-multi-agent-0309",
+    }
     retirement_dates = {*pricing_dates, "2026-11-12", "2026-11-13"}
     assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
         *pricing_dates,
         "2026-11-11",
+        "2026-11-13",
     }
+    assert {
+        model
+        for (_, model), rates in PUBLIC_PRICING.items()
+        if rates[2] == "2026-11-13"
+    } == cyber_ids
     assert {
         model
         for (_, model), rates in PUBLIC_PRICING.items()

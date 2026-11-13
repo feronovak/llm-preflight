@@ -21,7 +21,14 @@ MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
 MAX_OBSERVED_MODEL_CHARS = 256
-GEMINI_4_MODELS = frozenset({"gemini-4-argon", "gemini-4-carbon"})
+_GEMINI_4_THINKING_LEVELS = ("LOW", "MEDIUM", "HIGH")
+# Model-specific thinking levels; Hydrogen adds XHIGH and rejects MINIMAL.
+GEMINI_4_THINKING_LEVELS = {
+    "gemini-4-argon": _GEMINI_4_THINKING_LEVELS,
+    "gemini-4-carbon": _GEMINI_4_THINKING_LEVELS,
+    "gemini-4-hydrogen": (*_GEMINI_4_THINKING_LEVELS, "XHIGH"),
+}
+GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
 _QWEN_COMBINED_OUTPUT_MODELS = {
     "qwen3.8-max",
     "qwen3.8-max-0902",
@@ -1194,8 +1201,9 @@ class GeminiClient(ProviderClient):
             thinking = generation.get("thinkingConfig", {})
             if not isinstance(thinking, dict):
                 raise ValueError("Gemini 4 thinkingConfig must be an object")
-            if thinking.get("thinkingLevel", "MEDIUM") not in ("LOW", "MEDIUM", "HIGH"):
-                raise ValueError("Gemini 4 thinkingLevel must be LOW, MEDIUM, HIGH")
+            levels = GEMINI_4_THINKING_LEVELS[self.model["model"]]
+            if thinking.get("thinkingLevel", "MEDIUM") not in levels:
+                raise ValueError(f"Gemini 4 thinkingLevel must be {', '.join(levels)}")
         body.update(provider_options)
         return body
 

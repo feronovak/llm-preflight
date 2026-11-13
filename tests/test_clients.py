@@ -1730,7 +1730,7 @@ def test_transient_socket_errors_are_retried_by_exception_type(monkeypatch):
     assert sample["retry_reasons"] == ["network"]
 
 
-GEMINI_4_MODELS = ["gemini-4-argon", "gemini-4-carbon"]
+GEMINI_4_MODELS = ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen"]
 
 
 @pytest.mark.parametrize("model", ["gemini-3.8-flash", *GEMINI_4_MODELS])
@@ -1804,7 +1804,7 @@ def test_gemini_4_preserves_explicit_limits_and_omits_ignored_sampling(model, li
         (
             {"generationConfig": {"thinkingConfig": {"thinkingLevel": "MINIMAL"}}},
             32768,
-            "LOW, MEDIUM, HIGH",
+            "thinkingLevel must be LOW, MEDIUM, HIGH",
         ),
     ],
 )
@@ -1892,7 +1892,8 @@ def test_gemini_4_generate_content_protocol_and_cost(
     assert sample["input_tokens"] == 1000
     assert sample["cached_input_tokens"] == 800
     assert sample["output_tokens"] == 100
-    assert estimate_sample_cost(sample, model) == pytest.approx(0.00148)
+    expected_cost = 0.00111 if model_id == "gemini-4-hydrogen" else 0.00148
+    assert estimate_sample_cost(sample, model) == pytest.approx(expected_cost)
     assert captured == [
         (
             f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:streamGenerateContent?alt=sse",
@@ -2692,3 +2693,28 @@ def test_responses_route_keeps_other_options_for_a_non_openai_provider():
     )
 
     assert body["truncation"] == "auto"
+
+
+@pytest.mark.parametrize(
+    "model,accepted",
+    [
+        ("gemini-4-hydrogen", True),
+        ("gemini-4-argon", False),
+        ("gemini-4-carbon", False),
+    ],
+)
+def test_only_gemini_4_hydrogen_accepts_xhigh_thinking(model, accepted):
+    client = create_client({"provider": "gemini", "model": model}, 10)
+    options = {
+        "provider_options": {
+            "gemini": {
+                "generationConfig": {"thinkingConfig": {"thinkingLevel": "XHIGH"}}
+            }
+        }
+    }
+    if accepted:
+        body = client.body("hello", options)
+        assert body["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "XHIGH"}
+    else:
+        with pytest.raises(ValueError, match="thinkingLevel"):
+            client.body("hello", options)

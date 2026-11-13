@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Six models now have official snapshot prices, so their cost is no longer unknown (USD per million tokens, input / output / cached input): `gpt-6-cyber` 20.00 / 100.00 / 2.00 (cache write 25.00; above 272,000 input tokens 40.00 / 150.00 / 4.00, with no published long-context cache-write rate, so a budget for such a prompt that may write the cache stays unknown), `gpt-5.6-cyber` 12.50 / 75.00 / 1.25 (cache write 15.625), `gemini-4-hydrogen` 1.50 / 7.50 / 0.075, and `grok-4.20-0309-reasoning`, `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` 1.25 / 2.50 / 0.20 (2.50 / 5.00 / 0.40 from 200,000 input tokens). Saved plans for these models change once because they are now priced. `gpt-5.6-cyber` supports only the Responses API, so a run needs `adapter: openai_responses`.
+
+### Changed
+
+- `gemini-4-hydrogen` gets the Gemini 4 request checks, with its own thinking levels: `LOW`, `MEDIUM`, `HIGH` and `XHIGH` are accepted and `MINIMAL` is rejected. As for `gemini-4-argon` and `gemini-4-carbon`, an explicit `cachedContent` and a `max_output_tokens` above 65,536 fail before any request, ignored sampling fields are omitted, and discovery no longer reports temperature support. A thinking level other than `LOW`, `MEDIUM` or `HIGH` on `gemini-4-argon` or `gemini-4-carbon` still fails, now naming the allowed levels.
+
 ### Fixed
 
 - The bundled replacements for four OpenAI models retiring on 2026-12-11 now match the official deprecations page: `gpt-5-2025-08-07` and `o3-2025-04-16` name `gpt-6.1-sol` (was `gpt-5.6-sol`), `gpt-5-mini-2025-08-07` names `gpt-6.1-terra` (was `gpt-5.6-terra`), and `gpt-5-nano-2025-08-07` names `gpt-6-luna` (was `gpt-5.6-luna`). The verdict, `migrate` and `next_command` show the new replacement. The four rows were reviewed on 2026-11-13 and become stale on 2026-12-14. Breaking: approval receipts recorded before this change verify as `mismatch` (exit 1), because `newest_as_of` in every dry-run plan is now 2026-11-13. Record them again with `--dry-run --approval-receipt --replace-approval-receipt`.

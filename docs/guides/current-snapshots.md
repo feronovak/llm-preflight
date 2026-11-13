@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-12 · **As of:** v2.25.2
+**Last reviewed:** 2026-11-13 · **As of:** v2.25.2
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
@@ -11,7 +11,10 @@ public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
 rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-carbon`
-row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. Explicit owner overrides
+row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
+`gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
+`grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
+2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 25 models with
@@ -64,7 +67,8 @@ Rates are USD per million tokens. `as_of` is the actual review date. Long-contex
 bands and cache rates are recorded in the bundled ledger. The DeepSeek rows
 use peak rates; Qwen uses Singapore/International list rates. Cohere
 publishes no per-token price for Command A+, so it has no row: its cost is
-unknown until you supply your own rates.
+unknown until you supply your own rates. `gpt-5.6-cyber` supports only the
+Responses API, so a run needs `adapter: openai_responses`.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|

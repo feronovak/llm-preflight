@@ -86,7 +86,8 @@ the three commands above do not need a key or contact the provider.
   documented cached-usage field variants. Reasoning remains in billable usage.
   The provider rejects `temperature: 0` unless `top_p` is 1 (a live native run
   on 2026-11-13 returned HTTP 400, `top_p must be 1 when using greedy
-  sampling.`, type `invalid_request_greedy_sampling`, code 3054), so preflight
+  sampling.`, type `invalid_request_greedy_sampling`, code 3054; the capture is
+  [`mistral-large-4-0-greedy-sampling-400-2026-11-13.json`](../data/mistral-large-4-0-greedy-sampling-400-2026-11-13.json)), so preflight
   refuses that request before any spend; set `provider_options.mistral.top_p`
   to 1 or omit `temperature` in the run request. The top-level `low-latency`
   and `structured` presets set `temperature: 0` without `top_p`, so with them

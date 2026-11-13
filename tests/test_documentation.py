@@ -1748,6 +1748,21 @@ def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
         assert marker not in json.dumps(data)
 
 
+def test_mistral_greedy_sampling_capture_backs_the_guide_claim():
+    name = "mistral-large-4-0-greedy-sampling-400-2026-11-13.json"
+    text = (ROOT / "docs/data" / name).read_text()
+    data = json.loads(text)
+    assert data["model"] == "mistral-large-4-0" and data["http_status"] == 400
+    assert data["error_body"]["code"] == "3054"
+    assert data["error_body"]["type"] == "invalid_request_greedy_sampling"
+    assert data["request"]["temperature"] == 0 and "top_p" not in data["request"]
+    for marker in ("/home/", "scratch", '"api_key":', "Bearer"):
+        assert marker not in text
+    guide = (ROOT / "docs/guides/native-providers.md").read_text()
+    assert f"../data/{name}" in guide
+    assert name in (ROOT / "docs/data/README.md").read_text()
+
+
 def test_hydrogen_row_keeps_the_approved_bounds_and_settings():
     data = json.loads((ROOT / "docs/data/model-comparison-2026-11-13.json").read_text())
     smoke = json.loads(

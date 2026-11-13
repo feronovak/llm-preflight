@@ -2863,20 +2863,26 @@ def test_native_mistral_large_4_builtin_structured_tests_refused_with_accurate_m
 
 
 @pytest.mark.parametrize(
-    "request_options",
+    "request_options, top_level",
     [
-        {"provider_options": {"mistral": {"top_p": 1}}},
-        {"temperature": 0, "provider_options": {"mistral": {"top_p": 1}}},
-        {},
-        {"temperature": 0.7},
-        {"presets": ["structured"], "provider_options": {"mistral": {"top_p": 1}}},
-        {"presets": ["low-latency"], "provider_options": {"mistral": {"top_p": 1}}},
+        ({"provider_options": {"mistral": {"top_p": 1}}}, {}),
+        ({"temperature": 0, "provider_options": {"mistral": {"top_p": 1}}}, {}),
+        ({}, {}),
+        ({"temperature": 0.7}, {}),
+        ({"provider_options": {"mistral": {"top_p": 1}}}, {"presets": ["structured"]}),
+        (
+            {"provider_options": {"mistral": {"top_p": 1}}},
+            {"presets": ["low-latency"]},
+        ),
     ],
 )
 def test_native_mistral_large_4_remedies_in_message_pass(
-    monkeypatch, tmp_path, capsys, request_options
+    monkeypatch, tmp_path, capsys, request_options, top_level
 ):
-    config = _mistral_large_4_config("mistral-large-4-0", request_options)
+    config = {
+        **_mistral_large_4_config("mistral-large-4-0", request_options),
+        **top_level,
+    }
     code, err = _mistral_dry_run(monkeypatch, tmp_path, capsys, config)
     assert code == 0, err
 

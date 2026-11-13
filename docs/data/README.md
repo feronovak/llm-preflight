@@ -8,6 +8,7 @@ Recorded observations and ratings that other pages cite. Nothing here is read at
 |---|---|
 | `model-comparison-*.json` | One eight-case measured run per file: method, totals and one row per model (validity, latency, tokens, estimated cost). The [observed model comparison](../guides/observed-model-comparison.md) is built from them. |
 | `gemini-4-hydrogen-smoke-2026-11-13.json` | One live smoke request for `gemini-4-hydrogen`: the request checks that applied and the reported cost against the bundled rates. |
+| `mistral-large-4-0-greedy-sampling-400-2026-11-13.json` | The captured HTTP 400 from `mistral-large-4-0` for a request with `temperature: 0` and no `top_p`, and the same request without `temperature` passing. The [native providers guide](../guides/native-providers.md) cites it. |
 | `model-importance.json` | A tier and a one-line reason for every model in the bundled pricing and retirement data. |
 
 ## Model importance

@@ -406,7 +406,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "grok-4.20-0309-non-reasoning",
         "grok-4.20-multi-agent-0309",
     }
-    retirement_dates = {*pricing_dates, "2026-11-12"}
+    retirement_dates = {*pricing_dates, "2026-11-12", "2026-11-13"}
     assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
         *pricing_dates,
         "2026-11-11",
@@ -438,6 +438,16 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         for (_, model), row in PUBLIC_RETIREMENTS.items()
         if row["as_of"] == "2026-11-12"
     } == {"gpt-5.5-cyber-preview"}
+    assert {
+        model
+        for (_, model), row in PUBLIC_RETIREMENTS.items()
+        if row["as_of"] == "2026-11-13"
+    } == {
+        "gpt-5-2025-08-07",
+        "gpt-5-mini-2025-08-07",
+        "gpt-5-nano-2025-08-07",
+        "o3-2025-04-16",
+    }
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

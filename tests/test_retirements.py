@@ -549,7 +549,7 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
     assert summary["oldest_as_of"] == "2026-11-04"
-    assert summary["newest_as_of"] == "2026-11-12"
+    assert summary["newest_as_of"] == "2026-11-13"
     assert (
         retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 4))[
             "decision"
@@ -743,3 +743,23 @@ def test_snapshot_valid_until_uses_oldest_of_rows_reviewed_on_different_days(
     oldest = date.fromisoformat("2026-10-01")
     expected = (oldest + timedelta(days=retirements.DEFAULT_MAX_AGE_DAYS)).isoformat()
     assert report["snapshot"]["valid_until"] == expected
+
+
+def test_openai_june_2026_batch_names_page_replacements():
+    expected = {
+        "gpt-5-2025-08-07": "gpt-6.1-sol",
+        "gpt-5-mini-2025-08-07": "gpt-6.1-terra",
+        "gpt-5-nano-2025-08-07": "gpt-6-luna",
+        "o3-2025-04-16": "gpt-6.1-sol",
+    }
+    for model, replacement in expected.items():
+        row = PUBLIC_RETIREMENTS[("openai", model)]
+        assert row["status"] == "deprecated"
+        assert row["retirement_date"] == "2026-12-11"
+        assert row["replacement"] == replacement
+        assert row["as_of"] == "2026-11-13"
+    for model in ("gpt-5-pro-2025-10-06", "o3-pro-2025-06-10"):
+        assert "replacement" not in PUBLIC_RETIREMENTS[("openai", model)]
+    verdict = retirement_verdict("openai", "gpt-5-2025-08-07", date(2026, 11, 13))
+    assert verdict["status"] == "retiring"
+    assert verdict["replacement"] == "gpt-6.1-sol"

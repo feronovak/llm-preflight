@@ -2718,3 +2718,72 @@ def test_only_gemini_4_hydrogen_accepts_xhigh_thinking(model, accepted):
     else:
         with pytest.raises(ValueError, match="thinkingLevel"):
             client.body("hello", options)
+
+
+def _mistral_large_4_config(model, request):
+    return {
+        "prompt": "ok",
+        "models": [{"provider": "mistral", "model": model}],
+        "repetitions": 1,
+        "warmups": 0,
+        "max_requests": 1,
+        "max_estimated_cost_usd": 1,
+        "request": {"max_output_tokens": 1, "retry": {"max_attempts": 1}, **request},
+    }
+
+
+@pytest.mark.parametrize("model", ["mistral-large-4", "mistral-large-4-0"])
+@pytest.mark.parametrize(
+    "request_options",
+    [
+        {"temperature": 0},
+        {"temperature": 0.0},
+        {"temperature": 0, "provider_options": {"mistral": {"top_p": 0.95}}},
+        {"provider_options": {"mistral": {"temperature": 0}}},
+        {"temperature": 0.7, "provider_options": {"mistral": {"temperature": 0}}},
+    ],
+)
+@pytest.mark.parametrize("surface", ["wire", "budget", "doctor"])
+def test_native_mistral_large_4_refuses_greedy_sampling_without_top_p_one(
+    monkeypatch, model, request_options, surface
+):
+    from llm_preflight.features import check_budget, doctor_report
+
+    config = _mistral_large_4_config(model, request_options)
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    if surface == "doctor":
+        report = doctor_report(config)
+        assert report["ok"] is False
+        assert any("top_p" in check["message"] for check in report["checks"])
+    else:
+        with pytest.raises(ValueError, match="top_p"):
+            if surface == "budget":
+                check_budget(config)
+            else:
+                create_client(config["models"][0], 10).body("ok", config["request"])
+
+
+@pytest.mark.parametrize("scope", ["mistral", "all"])
+@pytest.mark.parametrize("top_p", [1, 1.0])
+def test_native_mistral_large_4_accepts_greedy_sampling_with_top_p_one(
+    monkeypatch, scope, top_p
+):
+    from llm_preflight.features import check_budget
+
+    config = _mistral_large_4_config(
+        "mistral-large-4-0",
+        {"temperature": 0, "provider_options": {scope: {"top_p": top_p}}},
+    )
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    body = create_client(config["models"][0], 10).body("ok", config["request"])
+    assert body["temperature"] == 0
+    assert body["top_p"] == top_p
+    check_budget(config)
+
+
+@pytest.mark.parametrize("request_options", [{}, {"temperature": 0.7}])
+def test_native_mistral_large_4_non_greedy_request_is_unchanged(request_options):
+    config = _mistral_large_4_config("mistral-large-4-0", request_options)
+    body = create_client(config["models"][0], 10).body("ok", config["request"])
+    assert "top_p" not in body
+    assert body.get("temperature") == request_options.get("temperature")

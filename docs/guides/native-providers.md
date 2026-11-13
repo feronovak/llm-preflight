@@ -83,7 +83,9 @@ the three commands above do not need a key or contact the provider.
 - Mistral Large 4 is a public-preview model. Both `mistral-large-4` and
   `mistral-large-4-0` have reviewed prices. The adapter checks complete text
   streams, extracts final text from typed reasoning/text blocks, and accepts
-  documented cached-usage field variants. Reasoning remains in billable usage.
+  documented cached-usage field variants. Reasoning remains in billable usage. The provider rejects `temperature: 0`
+  unless `top_p` is 1, so preflight refuses that request before any spend; set
+  `provider_options.mistral.top_p` to 1 or omit `temperature`.
 - Cohere's adapter uses v2 Chat and bills from `usage.billed_units`, not the
   larger count that can include provider-injected tokens. Cohere publishes no
   per-token price for Command A+, so the snapshot has no bundled price: cost is

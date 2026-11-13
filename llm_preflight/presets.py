@@ -93,8 +93,6 @@ def expand_presets(request: dict[str, Any], presets: list[str]) -> dict[str, Any
 
     if "low-latency" in expanded:
         updated.setdefault("temperature", 0)
-        # Mistral Large 4 rejects temperature 0 unless top_p is 1.
-        _setdefault_nested(provider_options, ("mistral", "top_p"), 1)
         updated.setdefault("max_output_tokens", 256)
 
     return updated

@@ -1179,7 +1179,14 @@ def test_mistral_large_4_without_request_block_is_refused_like_the_run(
 
 
 @pytest.mark.parametrize("preset", ["low-latency", "structured"])
-def test_low_latency_presets_keep_mistral_large_4_requests_valid(monkeypatch, preset):
+def test_greedy_presets_leave_the_request_for_other_providers_unchanged(preset):
+    request = expand_presets({}, [preset])
+    assert request["temperature"] == 0
+    assert "top_p" not in request["provider_options"].get("mistral", {})
+
+
+@pytest.mark.parametrize("preset", ["low-latency", "structured"])
+def test_greedy_presets_need_top_p_one_for_mistral_large_4(monkeypatch, preset):
     config = {
         "prompt": "ok",
         "models": [{"provider": "mistral", "model": "mistral-large-4-0"}],
@@ -1191,6 +1198,7 @@ def test_low_latency_presets_keep_mistral_large_4_requests_valid(monkeypatch, pr
     }
     monkeypatch.setenv("MISTRAL_API_KEY", "test")
     request = expand_presets({}, [preset])
-    assert request["temperature"] == 0
-    assert request["provider_options"]["mistral"]["top_p"] == 1
+    with pytest.raises(ValueError, match="top_p"):
+        check_budget({**config, "request": request})
+    request["provider_options"]["mistral"] = {"top_p": 1}
     check_budget({**config, "request": request})

@@ -7,6 +7,7 @@ import pytest
 
 from llm_preflight.pricing import (
     PUBLIC_PRICING,
+    PUBLIC_PRICING_SOURCES,
     apply_live_catalog_pricing,
     apply_public_pricing,
     estimate_sample_cost,
@@ -236,6 +237,9 @@ def test_gpt_5_6_pricing_has_cache_and_long_context_tiers(
     ("model_id", "short_input", "short_output"),
     [
         ("grok-4.3", 1.25, 2.5),
+        ("grok-4.20-0309-reasoning", 1.25, 2.5),
+        ("grok-4.20-0309-non-reasoning", 1.25, 2.5),
+        ("grok-4.20-multi-agent-0309", 1.25, 2.5),
         ("grok-4.5", 2.0, 6.0),
         ("grok-4.6", 2.0, 6.0),
         ("grok-4.7", 2.0, 6.0),
@@ -251,6 +255,64 @@ def test_grok_long_context_rate_starts_at_200000_tokens(
     assert estimate_sample_cost(
         {"input_tokens": 200_000, "output_tokens": 100}, model
     ) == pytest.approx((200_000 * short_input + 100 * short_output) * 2 / 1_000_000)
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "grok-4.20-0309-reasoning",
+        "grok-4.20-0309-non-reasoning",
+        "grok-4.20-multi-agent-0309",
+    ],
+)
+def test_grok_4_20_pricing_has_cache_and_long_context_tiers(model_id):
+    model = apply_public_pricing({"provider": "xai", "model": model_id})
+
+    assert model["cached_input_cost_per_million"] == 0.2
+    assert model["pricing_tiers"][1] == {
+        "input_cost_per_million": 2.5,
+        "output_cost_per_million": 5.0,
+        "cached_input_cost_per_million": 0.4,
+    }
+    assert PUBLIC_PRICING_SOURCES[("xai", model_id)] == (
+        "https://docs.x.ai/developers/pricing"
+    )
+
+
+def test_gpt_6_cyber_pricing_has_cache_write_and_long_context_tiers():
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6-cyber"})
+
+    assert model["cached_input_cost_per_million"] == 2.0
+    assert model["cache_write_input_cost_per_million"] == 25.0
+    assert model["pricing_tiers"][1]["cache_write_input_cost_per_million"] is None
+    short = {"input_tokens": 272_000, "output_tokens": 100}
+    long = {"input_tokens": 272_001, "output_tokens": 100}
+    assert estimate_sample_cost(short, model) == pytest.approx(
+        (272_000 * 20 + 100 * 100) / 1_000_000
+    )
+    assert estimate_sample_cost(long, model) == pytest.approx(
+        (272_001 * 40 + 100 * 150) / 1_000_000
+    )
+    written = {**short, "cache_write_input_tokens": 1_000}
+    assert estimate_sample_cost(written, model) == pytest.approx(
+        (271_000 * 20 + 1_000 * 25 + 100 * 100) / 1_000_000
+    )
+    assert (
+        estimate_sample_cost({**long, "cache_write_input_tokens": 1_000}, model) is None
+    )
+
+
+def test_gpt_5_6_cyber_pricing_is_flat_with_cache_write():
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-5.6-cyber"})
+
+    assert model["input_cost_per_million"] == 12.5
+    assert model["output_cost_per_million"] == 75.0
+    assert model["cached_input_cost_per_million"] == 1.25
+    assert model["cache_write_input_cost_per_million"] == 15.625
+    assert "pricing_tiers" not in model
+    assert PUBLIC_PRICING_SOURCES[("openai", "gpt-5.6-cyber")] == (
+        "https://developers.openai.com/api/docs/models/gpt-5.6-cyber"
+    )
 
 
 def test_grok_4_3_pricing_has_cache_and_long_context_tiers():
@@ -694,12 +756,15 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("openai", "gpt-6.1-terra"): (1.0, 5.0, "2026-11-04"),
         ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-11-04"),
         ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-11-04"),
+        ("openai", "gpt-6-cyber"): (20.0, 100.0, "2026-11-13"),
+        ("openai", "gpt-5.6-cyber"): (12.5, 75.0, "2026-11-13"),
         ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-11-04"),
         ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-11-04"),
         ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-11-04"),
         ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-11-04"),
         ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-11-04"),
         ("gemini", "gemini-4-carbon"): (2.0, 10.0, "2026-11-11"),
+        ("gemini", "gemini-4-hydrogen"): (1.5, 7.5, "2026-11-13"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-04"),
         ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-04"),
         ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-04"),
@@ -712,6 +777,9 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),
         ("xai", "grok-4.3"): (1.25, 2.5, "2026-11-04"),
+        ("xai", "grok-4.20-0309-reasoning"): (1.25, 2.5, "2026-11-13"),
+        ("xai", "grok-4.20-0309-non-reasoning"): (1.25, 2.5, "2026-11-13"),
+        ("xai", "grok-4.20-multi-agent-0309"): (1.25, 2.5, "2026-11-13"),
         ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-04"),
         ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-04"),
         ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-04"),

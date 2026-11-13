@@ -358,6 +358,26 @@ def test_pre_run_cost_estimate_counts_cjk_characters_as_whole_tokens():
     assert cjk["estimated_cost_usd"] == 4.0
 
 
+def test_gpt_6_cyber_budget_is_unknown_above_272k_input():
+    from llm_preflight.pricing import apply_public_pricing
+
+    model = apply_public_pricing({"provider": "openai", "model": "gpt-6-cyber"})
+
+    def budget(chars):
+        return estimate_budget(
+            {
+                "prompt": "a" * chars,
+                "models": [model],
+                "repetitions": 1,
+                "warmups": 0,
+                "request": {"max_output_tokens": 1},
+            }
+        )
+
+    assert budget(4 * 100_000)["estimated_cost_usd"] is not None
+    assert budget(4 * 272_100)["estimated_cost_usd"] is None
+
+
 def test_budget_check_rejects_excess_requests_and_cost():
     config = {
         "prompt": "hi",

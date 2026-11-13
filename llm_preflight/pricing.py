@@ -38,12 +38,15 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("openai", "gpt-6.1-terra"): (1.0, 5.0, "2026-11-04"),
     ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-11-04"),
     ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-11-04"),
+    ("openai", "gpt-6-cyber"): (20.0, 100.0, "2026-11-13"),
+    ("openai", "gpt-5.6-cyber"): (12.5, 75.0, "2026-11-13"),
     ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.5, "2026-11-04"),
     ("gemini", "gemini-3.1-pro-preview"): (2.0, 12.0, "2026-11-04"),
     ("gemini", "gemini-3.6-flash"): (0.75, 3.75, "2026-11-04"),
     ("gemini", "gemini-3.8-flash"): (0.75, 3.75, "2026-11-04"),
     ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-11-04"),
     ("gemini", "gemini-4-carbon"): (2.0, 10.0, "2026-11-11"),
+    ("gemini", "gemini-4-hydrogen"): (1.5, 7.5, "2026-11-13"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-04"),
     ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-04"),
     ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-04"),
@@ -56,6 +59,9 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
     ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),
     ("xai", "grok-4.3"): (1.25, 2.5, "2026-11-04"),
+    ("xai", "grok-4.20-0309-reasoning"): (1.25, 2.5, "2026-11-13"),
+    ("xai", "grok-4.20-0309-non-reasoning"): (1.25, 2.5, "2026-11-13"),
+    ("xai", "grok-4.20-multi-agent-0309"): (1.25, 2.5, "2026-11-13"),
     ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-04"),
     ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-04"),
     ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-04"),
@@ -125,6 +131,8 @@ _MODEL_PRICING_PAGES = {
             "gpt-6.1-terra",
             "gpt-6-sol",
             "gpt-6-luna",
+            "gpt-6-cyber",
+            "gpt-5.6-cyber",
         )
     },
     (
@@ -284,6 +292,29 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
             },
         ],
     },
+    ("openai", "gpt-6-cyber"): {
+        "cached_input_cost_per_million": 2.0,
+        "cache_write_input_cost_per_million": 25.0,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 272_000,
+                "input_cost_per_million": 20.0,
+                "output_cost_per_million": 100.0,
+                "cached_input_cost_per_million": 2.0,
+                "cache_write_input_cost_per_million": 25.0,
+            },
+            {
+                "input_cost_per_million": 40.0,
+                "output_cost_per_million": 150.0,
+                "cached_input_cost_per_million": 4.0,
+                "cache_write_input_cost_per_million": None,
+            },
+        ],
+    },
+    ("openai", "gpt-5.6-cyber"): {
+        "cached_input_cost_per_million": 1.25,
+        "cache_write_input_cost_per_million": 15.625,
+    },
     ("openai", "gpt-6.1-sol"): {
         "cached_input_cost_per_million": 0.1,
         "cache_write_input_cost_per_million": 2.5,
@@ -375,6 +406,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     ("gemini", "gemini-4-carbon"): {
         "cached_input_cost_per_million": 0.1,
     },
+    ("gemini", "gemini-4-hydrogen"): {
+        "cached_input_cost_per_million": 0.075,
+    },
     ("deepseek", "deepseek-flash"): {
         "cached_input_cost_per_million": 0.006,
     },
@@ -458,6 +492,54 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
         ],
     },
     ("xai", "grok-4.3"): {
+        "cached_input_cost_per_million": 0.2,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 199_999,
+                "input_cost_per_million": 1.25,
+                "output_cost_per_million": 2.5,
+                "cached_input_cost_per_million": 0.2,
+            },
+            {
+                "input_cost_per_million": 2.5,
+                "output_cost_per_million": 5.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("xai", "grok-4.20-0309-reasoning"): {
+        "cached_input_cost_per_million": 0.2,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 199_999,
+                "input_cost_per_million": 1.25,
+                "output_cost_per_million": 2.5,
+                "cached_input_cost_per_million": 0.2,
+            },
+            {
+                "input_cost_per_million": 2.5,
+                "output_cost_per_million": 5.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("xai", "grok-4.20-0309-non-reasoning"): {
+        "cached_input_cost_per_million": 0.2,
+        "pricing_tiers": [
+            {
+                "up_to_input_tokens": 199_999,
+                "input_cost_per_million": 1.25,
+                "output_cost_per_million": 2.5,
+                "cached_input_cost_per_million": 0.2,
+            },
+            {
+                "input_cost_per_million": 2.5,
+                "output_cost_per_million": 5.0,
+                "cached_input_cost_per_million": 0.4,
+            },
+        ],
+    },
+    ("xai", "grok-4.20-multi-agent-0309"): {
         "cached_input_cost_per_million": 0.2,
         "pricing_tiers": [
             {

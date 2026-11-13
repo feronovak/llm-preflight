@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Six models now have official snapshot prices, so their cost is no longer unknown (USD per million tokens, input / output / cached input): `gpt-6-cyber` 20.00 / 100.00 / 2.00 (cache write 25.00; above 272,000 input tokens 40.00 / 150.00 / 4.00, with no published long-context cache-write rate, so a budget for such a prompt that may write the cache stays unknown), `gpt-5.6-cyber` 12.50 / 75.00 / 1.25 (cache write 15.625), `gemini-4-hydrogen` 1.50 / 7.50 / 0.075, and `grok-4.20-0309-reasoning`, `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` 1.25 / 2.50 / 0.20 (2.50 / 5.00 / 0.40 from 200,000 input tokens). Saved plans for these models change once because they are now priced.
+
 ## 2.25.2 - 2026-11-12
 
 ### Fixed

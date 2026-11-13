@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- `mistral-large-4` and `mistral-large-4-0` with `temperature: 0` and no `top_p: 1` are now refused before any request, with a message naming the constraint, instead of ending as an HTTP 400 at run time. Set `provider_options.mistral.top_p` to 1 or omit `temperature`. The `init --provider` starter and the catalog watch request now set that `top_p`, so they pass for Mistral Large 4.
+- `mistral-large-4` and `mistral-large-4-0` with `temperature: 0` and no `top_p: 1` are now refused before any request, with a message naming the constraint, instead of ending as an HTTP 400 at run time. Set `provider_options.mistral.top_p` to 1 or omit `temperature`. The `init --provider` starter and the catalog watch request now set that `top_p`, so they pass for Mistral Large 4. The `low-latency` and `structured` presets set it too, and doctor and `--dry-run` apply the default request when a config has no `request` block, as a run does.
 
 ## 2.25.3 - 2026-11-13
 

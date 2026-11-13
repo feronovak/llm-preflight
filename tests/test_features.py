@@ -18,7 +18,7 @@ from llm_preflight.features import (
     matrix_report,
     replay_config,
 )
-from llm_preflight.presets import preset_warnings
+from llm_preflight.presets import expand_presets, preset_warnings
 
 
 def _summary(latency, cost, success=1.0):
@@ -1154,3 +1154,43 @@ def test_doctor_warns_on_ignored_owner_price(monkeypatch):
     assert warnings[0]["severity"] == "warning"
     assert warnings[0]["ok"] is True
     assert report["ok"] is True
+
+
+@pytest.mark.parametrize("surface", ["budget", "doctor"])
+def test_mistral_large_4_without_request_block_is_refused_like_the_run(
+    monkeypatch, surface
+):
+    config = {
+        "prompt": "ok",
+        "models": [{"provider": "mistral", "model": "mistral-large-4-0"}],
+        "repetitions": 1,
+        "warmups": 0,
+        "max_requests": 1,
+        "max_estimated_cost_usd": 1,
+    }
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    if surface == "doctor":
+        report = doctor_report(config)
+        assert report["ok"] is False
+        assert any("top_p" in check["message"] for check in report["checks"])
+    else:
+        with pytest.raises(ValueError, match="top_p"):
+            check_budget(config)
+
+
+@pytest.mark.parametrize("preset", ["low-latency", "structured"])
+def test_low_latency_presets_keep_mistral_large_4_requests_valid(monkeypatch, preset):
+    config = {
+        "prompt": "ok",
+        "models": [{"provider": "mistral", "model": "mistral-large-4-0"}],
+        "presets": [preset],
+        "repetitions": 1,
+        "warmups": 0,
+        "max_requests": 2,
+        "max_estimated_cost_usd": 1,
+    }
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    request = expand_presets({}, [preset])
+    assert request["temperature"] == 0
+    assert request["provider_options"]["mistral"]["top_p"] == 1
+    check_budget({**config, "request": request})

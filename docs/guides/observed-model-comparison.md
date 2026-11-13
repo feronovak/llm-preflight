@@ -29,7 +29,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 21 of 26 with all added rows). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 22 of 27 with all added rows). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -60,7 +60,7 @@ The [machine-readable aggregates](../data/model-comparison-2026-10-29.json)
 retain all 19 rows, request settings, reported identities, token/cost coverage,
 case and private-result hashes. The known token-cost subtotal is **$0.06902127**
 across **147** calls with usage (**$0.08218127** across **155** calls with Claude Fable 5.2,
-**$0.09205434** across **187** calls with the five-model rows, **$0.09384684** across **195** calls with all added rows). **Total cost remains unknown** because the five
+**$0.09205434** across **187** calls with the five-model rows, **$0.09384684** across **195** calls with the 2026-11-11 rows, **$0.10106784** across **203** calls with all added rows). **Total cost remains unknown** because the five
 API errors supplied no usage. Kimi's partial known cost is retained in the JSON;
 the table and image label that subtotal as partial, while its full eight-call cost remains unknown. API errors
 are not assumed free. The approved maximum token-based estimate was **$1.64**,

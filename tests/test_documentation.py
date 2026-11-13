@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-13 · **As of:** v2.25.3" in page
+    assert "**Last reviewed:** 2026-11-13 · **As of:** v2.25.4" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -1746,6 +1746,21 @@ def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
     assert data["totals"]["known_cost_subtotal_usd"] == row["known_cost_subtotal_usd"]
     for marker in ("/home/", "scratch", '"response":', '"api_key":'):
         assert marker not in json.dumps(data)
+
+
+def test_mistral_greedy_sampling_capture_backs_the_guide_claim():
+    name = "mistral-large-4-0-greedy-sampling-400-2026-11-13.json"
+    text = (ROOT / "docs/data" / name).read_text()
+    data = json.loads(text)
+    assert data["model"] == "mistral-large-4-0" and data["http_status"] == 400
+    assert data["error_body"]["code"] == "3054"
+    assert data["error_body"]["type"] == "invalid_request_greedy_sampling"
+    assert data["request"]["temperature"] == 0 and "top_p" not in data["request"]
+    for marker in ("/home/", "scratch", '"api_key":', "Bearer"):
+        assert marker not in text
+    guide = (ROOT / "docs/guides/native-providers.md").read_text()
+    assert f"../data/{name}" in guide
+    assert name in (ROOT / "docs/data/README.md").read_text()
 
 
 def test_hydrogen_row_keeps_the_approved_bounds_and_settings():

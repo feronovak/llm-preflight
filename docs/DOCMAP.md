@@ -33,7 +33,7 @@ A `scaffolded` document is a skeleton the tool wrote; it asserts nothing.
 | [`docs/development/visual-assets.md`](development/visual-assets.md) | Visual asset specification | stamped | 2026-10-19 | v2.22.2 |
 | [`docs/getting-started/project-integration.md`](getting-started/project-integration.md) | Set up a real project | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/getting-started/safe-demo.md`](getting-started/safe-demo.md) | Getting started | stamped | 2026-11-11 | v2.24.2 |
-| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-13 | v2.25.3 |
+| [`docs/guides/current-snapshots.md`](guides/current-snapshots.md) | Official pricing snapshots and native routes | stamped | 2026-11-13 | v2.25.4 |
 | [`docs/guides/interactive-runs.md`](guides/interactive-runs.md) | Interactive benchmark mode | stamped | 2026-11-10 | v2.24.0 |
 | [`docs/guides/model-catalog.md`](guides/model-catalog.md) | Model catalogue: discover, test, and keep models | stamped | 2026-11-11 | v2.24.2 |
 | [`docs/guides/model-change.md`](guides/model-change.md) | Workflows | unstamped | — | — |

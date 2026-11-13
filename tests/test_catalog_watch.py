@@ -5,6 +5,26 @@ from llm_preflight.catalog_watch import (
 )
 
 
+def test_catalog_init_writes_a_watch_request_valid_for_mistral_large_4(
+    monkeypatch, tmp_path
+):
+    import json
+    import sys
+
+    from llm_preflight import cli
+
+    monkeypatch.chdir(tmp_path)
+    workspace = tmp_path / "benchmarks"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", "catalog", "init", str(workspace), "--providers", "mistral"],
+    )
+    cli.main()
+    watch = json.loads((workspace / "watch.json").read_text())
+    assert watch["request"]["provider_options"]["mistral"]["top_p"] == 1
+
+
 def _model(provider, model, **extra):
     return {"provider": provider, "model": model, "name": model, **extra}
 

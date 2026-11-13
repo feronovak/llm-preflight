@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-13",
+  "tool_version": "2.25.3",
+  "model": "mistral-large-4-0",
+  "route": "Mistral native",
+  "purpose": "one live request with the shipped smoke request checks, which set temperature 0",
+  "requests": 2,
+  "request": {
+    "prompt": "Reply with ok.",
+    "max_output_tokens": 128,
+    "temperature": 0
+  },
+  "http_status": 400,
+  "error_body": {
+    "object": "error",
+    "message": "top_p must be 1 when using greedy sampling.",
+    "type": "invalid_request_greedy_sampling",
+    "code": "3054"
+  },
+  "usage_returned": false,
+  "second_request": {
+    "request": "the same pack without temperature",
+    "http_status": 200,
+    "valid": true,
+    "observed_model": "mistral-large-4-0",
+    "input_tokens": 19,
+    "output_tokens": 21
+  },
+  "source": "captured output of the smoke run on the observed date; no new request made"
+}

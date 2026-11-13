@@ -4,9 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.25.4 - 2026-11-13
+
 ### Fixed
 
-- `mistral-large-4` and `mistral-large-4-0` with `temperature: 0` and no `top_p: 1` are now refused before any request, with a message naming the constraint, instead of ending as an HTTP 400 at run time. Set `provider_options.mistral.top_p` to 1 or omit `temperature`. The `init --provider` starter and the catalog watch request now set that `top_p`, so they pass for Mistral Large 4. Doctor and `--dry-run` apply the default request when a config has no `request` block, as a run does.
+- `mistral-large-4` and `mistral-large-4-0` with `temperature: 0` and no `top_p: 1` are now refused before any request, with a message naming the constraint, instead of ending as an HTTP 400 at run time. Set `provider_options.mistral.top_p` to 1 or omit `temperature` in the run request. The `init --provider` starter and the catalog watch request now set that `top_p`, so they pass for Mistral Large 4. Doctor and `--dry-run` apply the default request when a config has no `request` block, as a run does. Breaking: for such a config, `--dry-run` and a run now exit 2 before any request, where `--dry-run` exited 0 and the run exited 1 with the HTTP 400 case failed; `--doctor` now reports the model as failed and exits 1, where it exited 0. This also applies to a config with no `request` block and to the top-level `low-latency` and `structured` presets, which set `temperature` 0 and are refused too unless `top_p` is 1. The built-in tests that use the `structured` preset (`structured-output-check`, `strict-json-extraction`, `code-patch-summary`, `source-grounded-quiz`, and the `agent-smoke` suite that contains them) are refused even with `top_p` 1, because they replace `provider_options`: `--dry-run` exits 2 where it exited 0, a run exits 2 where it exited 1, and `--doctor` with `profiles` exits 1 where it exited 0. To keep a configuration runnable, set `provider_options.mistral.top_p` to 1 or omit `temperature` in the run request; to test this model, use a custom prompt with its own request instead of those built-in tests. No request fingerprint changes.
 
 ## 2.25.3 - 2026-11-13
 

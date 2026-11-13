@@ -173,13 +173,21 @@ _OPENAI: dict[str, dict[str, Any]] = {
     # 2026-09-11: no replacement named on the page
     "gpt-5.4-cyber": _openai("deprecated", "2026-10-01"),
     # 2026-06-11 announcement
-    "gpt-5-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
-    "gpt-5-mini-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-terra"),
-    "gpt-5-nano-2025-08-07": _openai("deprecated", "2026-12-11", "gpt-5.6-luna"),
-    # The page names gpt-5.6-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
+    "gpt-5-2025-08-07": _openai(
+        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-13"
+    ),
+    "gpt-5-mini-2025-08-07": _openai(
+        "deprecated", "2026-12-11", "gpt-6.1-terra", as_of="2026-11-13"
+    ),
+    "gpt-5-nano-2025-08-07": _openai(
+        "deprecated", "2026-12-11", "gpt-6-luna", as_of="2026-11-13"
+    ),
+    # The page names gpt-6.1-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
     "gpt-5-pro-2025-10-06": _openai("deprecated", "2026-12-11"),
     "o3-pro-2025-06-10": _openai("deprecated", "2026-12-11"),
-    "o3-2025-04-16": _openai("deprecated", "2026-12-11", "gpt-5.6-sol"),
+    "o3-2025-04-16": _openai(
+        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-13"
+    ),
     # 2026-05-08 announcement
     "gpt-5.2-chat-latest": _openai("deprecated", "2026-08-10", "gpt-5.6-sol"),
     "gpt-5.3-chat-latest": _openai("deprecated", "2026-08-10", "gpt-5.6-sol"),
@@ -199,9 +207,7 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "o1": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini-2025-01-31": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "o3-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    # The page lists gpt-4-1106-preview twice: the 2025-09-26 batch (shutdown
-    # 2026-03-26) and this 2026-04-22 batch. The later entry is an extension
-    # (maintainer decision, 2026-10-10).
+    # The page lists gpt-4-1106-preview once, in this 2026-04-22 batch.
     "gpt-4-1106-preview": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
     "gpt-4.1-nano": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
     "gpt-4.1-nano-2025-04-14": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
@@ -245,7 +251,7 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "o1-preview": _openai("deprecated", "2025-07-28"),
     # The page names o4-mini, itself retiring on 2026-10-23; not recorded.
     "o1-mini": _openai("deprecated", "2025-10-27"),
-    # The page names gpt-4.1/gpt-4o, now deprecated themselves; not recorded.
+    # The page names gpt-4.1, now deprecated itself; not recorded.
     "gpt-4.5-preview": _openai("deprecated", "2025-07-14"),
     "gpt-4-32k": _openai("deprecated", "2025-06-06"),
     "gpt-4-32k-0613": _openai("deprecated", "2025-06-06"),

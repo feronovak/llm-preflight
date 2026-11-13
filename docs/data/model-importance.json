@@ -1,0 +1,976 @@
+{
+  "schema_version": 1,
+  "tiers": {
+    "1": "top: current-generation general-purpose models a team would pick today",
+    "2": "current: other generally available text models",
+    "3": "niche: previews, restricted access, deprecated or retiring, OpenRouter-only"
+  },
+  "models": [
+    {
+      "provider": "anthropic",
+      "model": "claude-1.0",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-1.1",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-1.2",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-1.3",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-2.0",
+      "tier": 3,
+      "reason": "retired 2025-07-21"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-2.1",
+      "tier": 3,
+      "reason": "retired 2025-07-21"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-5-haiku-20241022",
+      "tier": 3,
+      "reason": "retired 2026-02-19"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20240620",
+      "tier": 3,
+      "reason": "retired 2025-10-28"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "tier": 3,
+      "reason": "retired 2025-10-28"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-7-sonnet-20250219",
+      "tier": 3,
+      "reason": "retired 2026-02-19"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-haiku-20240307",
+      "tier": 3,
+      "reason": "retired 2026-04-20"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-opus-20240229",
+      "tier": 3,
+      "reason": "retired 2026-01-05"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-sonnet-20240229",
+      "tier": 3,
+      "reason": "retired 2025-07-21"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5",
+      "tier": 2,
+      "reason": "previous Fable release, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "tier": 2,
+      "reason": "previous Fable release, still active; measured 2026-10-29"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-fable-5-2",
+      "tier": 1,
+      "reason": "newest Anthropic flagship, measured 2026-11-11"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": 2,
+      "reason": "older Anthropic generation, dated snapshot, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "tier": 1,
+      "reason": "current Anthropic Haiku, measured 2026-10-29"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-instant-1.0",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-instant-1.1",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-instant-1.2",
+      "tier": 3,
+      "reason": "retired 2024-11-06"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-mythos-5",
+      "tier": 3,
+      "reason": "restricted access (verified customers only)"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-mythos-5-1",
+      "tier": 3,
+      "reason": "restricted access (verified customers only)"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-mythos-5-2",
+      "tier": 3,
+      "reason": "restricted access; all eight measured calls returned HTTP 404 on 2026-11-11"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-mythos-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement None"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-1-20250805",
+      "tier": 3,
+      "reason": "retired 2026-08-05"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-20250514",
+      "tier": 3,
+      "reason": "retired 2026-06-15"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-5-20251101",
+      "tier": 2,
+      "reason": "older Anthropic generation, dated snapshot, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "tier": 2,
+      "reason": "older Anthropic generation, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-7",
+      "tier": 2,
+      "reason": "older Anthropic generation, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+      "tier": 2,
+      "reason": "older Anthropic generation, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-5",
+      "tier": 2,
+      "reason": "previous Opus release, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "tier": 1,
+      "reason": "current Anthropic Opus, measured 2026-10-29"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514",
+      "tier": 3,
+      "reason": "retired 2026-06-15"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-5-20250929",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-11-30"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "tier": 2,
+      "reason": "older Anthropic generation, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5",
+      "tier": 2,
+      "reason": "previous Sonnet release, still active"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "tier": 1,
+      "reason": "current Anthropic Sonnet, measured 2026-10-29"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "tier": 2,
+      "reason": "DeepSeek small size, measured 2026-10-29"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "tier": 2,
+      "reason": "DeepSeek small size"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash-vision-exp",
+      "tier": 3,
+      "reason": "experimental vision variant"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-pro",
+      "tier": 1,
+      "reason": "newest DeepSeek flagship, measured 2026-10-29"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-05-07"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.1-pro-preview",
+      "tier": 3,
+      "reason": "preview model"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "tier": 3,
+      "reason": "alias that redirects to gemini-3.6-flash"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.6-flash",
+      "tier": 2,
+      "reason": "previous Gemini generation, still active; measured 2026-10-29"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.7-flash",
+      "tier": 3,
+      "reason": "alias that redirects to gemini-3.8-flash"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.8-flash",
+      "tier": 2,
+      "reason": "previous Gemini generation, still active; measured 2026-10-29"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-4-argon",
+      "tier": 1,
+      "reason": "Gemini 4 generation, measured 2026-10-29"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-4-carbon",
+      "tier": 1,
+      "reason": "Gemini 4 generation, measured 2026-11-11"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-4-hydrogen",
+      "tier": 1,
+      "reason": "Gemini 4 generation, measured 2026-11-13"
+    },
+    {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "tier": 1,
+      "reason": "newest MiniMax flagship, measured 2026-11-11"
+    },
+    {
+      "provider": "minimax",
+      "model": "MiniMax-M3.1-Flash",
+      "tier": 2,
+      "reason": "MiniMax small size"
+    },
+    {
+      "provider": "mistral",
+      "model": "mistral-large-4",
+      "tier": 1,
+      "reason": "newest Mistral flagship, measured 2026-11-11"
+    },
+    {
+      "provider": "mistral",
+      "model": "mistral-large-4-0",
+      "tier": 2,
+      "reason": "versioned ID of mistral-large-4"
+    },
+    {
+      "provider": "moonshot",
+      "model": "kimi-k3.1-pro",
+      "tier": 1,
+      "reason": "newest Moonshot flagship, measured 2026-10-29"
+    },
+    {
+      "provider": "moonshot",
+      "model": "kimi-k3.1-pro-highspeed",
+      "tier": 3,
+      "reason": "not accessible on the native route in the provider check (native-providers guide)"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-0125",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-0301",
+      "tier": 3,
+      "reason": "deprecated, retirement 2024-09-13"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-0613",
+      "tier": 3,
+      "reason": "deprecated, retirement 2024-09-13"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-1106",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-09-28"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-16k-0613",
+      "tier": 3,
+      "reason": "deprecated, retirement 2024-09-13"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-completions",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo-instruct",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-09-28"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-0125-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-03-26"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-0314",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-03-26"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-0613",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-0613-completions",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-1106-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-1106-vision-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2024-12-06"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-32k",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-06-06"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-32k-0314",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-06-06"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-32k-0613",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-06-06"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-completions",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-turbo",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-turbo-2024-04-09",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-turbo-completions",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-turbo-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-03-26"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-turbo-preview-completions",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-03-26"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4-vision-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2024-12-06"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1-2025-04-14",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1-nano",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.1-nano-2025-04-14",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4.5-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-07-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-2024-05-13",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-2024-08-06",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-2024-11-20",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-mini-2024-07-18",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-01-14"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-mini-search-preview-2025-03-11",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-search-preview-2025-03-11",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-2025-08-07",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-chat-latest",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-codex",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-mini-2025-08-07",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-nano-2025-08-07",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-pro-2025-10-06",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-04-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1-2025-11-13",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-04-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1-chat-latest",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1-codex",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1-codex-max",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.1-codex-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.2-chat-latest",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-08-10"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.2-codex",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.3-chat-latest",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-08-10"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-04-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-cyber",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-mini",
+      "tier": 2,
+      "reason": "older OpenAI generation, still active"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-nano",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-04-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-nano-2026-03-17",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-04-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "tier": 2,
+      "reason": "older OpenAI generation, still active"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.5-cyber-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2027-02-01"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-cyber",
+      "tier": 2,
+      "reason": "specialised cyber variant"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "tier": 2,
+      "reason": "older OpenAI generation, still active"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "tier": 2,
+      "reason": "older OpenAI generation, still active"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "tier": 2,
+      "reason": "older OpenAI generation, still active"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "tier": 1,
+      "reason": "top OpenAI tier, measured 2026-10-29"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-cyber",
+      "tier": 2,
+      "reason": "specialised cyber variant"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "tier": 1,
+      "reason": "current OpenAI small size, measured 2026-10-29"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-sol",
+      "tier": 2,
+      "reason": "GPT-6 generation, superseded by gpt-6.1-sol"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "tier": 1,
+      "reason": "newest OpenAI flagship, measured 2026-10-29"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-terra",
+      "tier": 1,
+      "reason": "newest OpenAI mid size, measured 2026-10-29"
+    },
+    {
+      "provider": "openai",
+      "model": "o1",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o1-2024-12-17",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o1-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-10-27"
+    },
+    {
+      "provider": "openai",
+      "model": "o1-preview",
+      "tier": 3,
+      "reason": "deprecated, retirement 2025-07-28"
+    },
+    {
+      "provider": "openai",
+      "model": "o1-pro",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o1-pro-2025-03-19",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-2025-04-16",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-deep-research",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-deep-research-2025-06-26",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-mini-2025-01-31",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o3-pro-2025-06-10",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-12-11"
+    },
+    {
+      "provider": "openai",
+      "model": "o4-mini",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o4-mini-2025-04-16",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-10-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o4-mini-deep-research",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "openai",
+      "model": "o4-mini-deep-research-2025-06-26",
+      "tier": 3,
+      "reason": "deprecated, retirement 2026-07-23"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.7-plus",
+      "tier": 2,
+      "reason": "older Qwen generation, still available"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-flash",
+      "tier": 2,
+      "reason": "Qwen small size, measured 2026-11-11"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-max",
+      "tier": 1,
+      "reason": "newest Qwen flagship, measured 2026-10-29"
+    },
+    {
+      "provider": "typesafe",
+      "model": "jev-1.13.0",
+      "tier": 3,
+      "reason": "typed-decision model, not a generic text model"
+    },
+    {
+      "provider": "typesafe",
+      "model": "jev-1.14.0",
+      "tier": 3,
+      "reason": "typed-decision model, not a generic text model"
+    },
+    {
+      "provider": "typesafe",
+      "model": "jev-latest",
+      "tier": 3,
+      "reason": "typed-decision model, not a generic text model"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.20-0309-non-reasoning",
+      "tier": 2,
+      "reason": "dated snapshot, non-reasoning variant"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.20-0309-reasoning",
+      "tier": 2,
+      "reason": "dated snapshot, reasoning-only variant"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.20-multi-agent-0309",
+      "tier": 2,
+      "reason": "dated snapshot, multi-agent variant"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.3",
+      "tier": 2,
+      "reason": "older xAI generation, still active"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.5",
+      "tier": 2,
+      "reason": "older xAI generation, still active"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.6",
+      "tier": 2,
+      "reason": "older xAI generation, still active"
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.7",
+      "tier": 1,
+      "reason": "newest xAI general-purpose model, measured 2026-10-29"
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3",
+      "tier": 1,
+      "reason": "newest Z.ai flagship, measured 2026-10-29"
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3-flash",
+      "tier": 2,
+      "reason": "Z.ai small size, measured 2026-10-29"
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3-flashx",
+      "tier": 2,
+      "reason": "Z.ai small size, measured 2026-10-29"
+    }
+  ]
+}

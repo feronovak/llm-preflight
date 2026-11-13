@@ -2787,3 +2787,21 @@ def test_native_mistral_large_4_non_greedy_request_is_unchanged(request_options)
     body = create_client(config["models"][0], 10).body("ok", config["request"])
     assert "top_p" not in body
     assert body.get("temperature") == request_options.get("temperature")
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [
+        {"temperature": 0},
+        {"temperature": 0, "provider_options": {"mistral": {"top_p": 0.9}}},
+    ],
+)
+def test_mistral_large_4_refusal_names_every_remedy(request_options):
+    model = {"provider": "mistral", "model": "mistral-large-4-0"}
+    with pytest.raises(ValueError) as error:
+        validate_native_request_options(model, request_options)
+    message = str(error.value)
+    assert "provider_options.mistral.top_p to 1" in message
+    assert "omit temperature" in message
+    assert "low-latency" in message
+    assert "structured" in message

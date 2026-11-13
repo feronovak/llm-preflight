@@ -100,8 +100,10 @@ def _reject_mistral_greedy_without_top_p_one(
     if _is_number(temperature, 0) and not _is_number(provider_options.get("top_p"), 1):
         raise ValueError(
             "Mistral Large 4 rejects temperature 0 unless top_p is 1 (greedy "
-            "sampling); set provider_options.mistral.top_p to 1, omit temperature, or "
-            "remove the low-latency/structured preset that sets it"
+            "sampling); set provider_options.mistral.top_p to 1 or omit temperature "
+            "in the run request. The built-in tests that use the structured preset "
+            "(such as agent-smoke) cannot run on this model: use a custom prompt "
+            "with its own request instead"
         )
 
 

@@ -2739,6 +2739,7 @@ def _mistral_large_4_config(model, request):
         {"temperature": 0},
         {"temperature": 0.0},
         {"temperature": 0, "provider_options": {"mistral": {"top_p": 0.95}}},
+        {"temperature": 0, "provider_options": {"mistral": {"top_p": True}}},
         {"provider_options": {"mistral": {"temperature": 0}}},
         {"temperature": 0.7, "provider_options": {"mistral": {"temperature": 0}}},
     ],
@@ -2781,7 +2782,9 @@ def test_native_mistral_large_4_accepts_greedy_sampling_with_top_p_one(
     check_budget(config)
 
 
-@pytest.mark.parametrize("request_options", [{}, {"temperature": 0.7}])
+@pytest.mark.parametrize(
+    "request_options", [{}, {"temperature": 0.7}, {"temperature": False}]
+)
 def test_native_mistral_large_4_non_greedy_request_is_unchanged(request_options):
     config = _mistral_large_4_config("mistral-large-4-0", request_options)
     body = create_client(config["models"][0], 10).body("ok", config["request"])
@@ -2803,5 +2806,85 @@ def test_mistral_large_4_refusal_names_every_remedy(request_options):
     message = str(error.value)
     assert "provider_options.mistral.top_p to 1" in message
     assert "omit temperature" in message
-    assert "low-latency" in message
-    assert "structured" in message
+    assert "built-in tests" in message
+    assert "custom prompt" in message
+    assert "remove the low-latency/structured preset" not in message
+
+
+def _mistral_dry_run(monkeypatch, tmp_path, capsys, config, *extra):
+    import sys
+
+    if extra:
+        config = {
+            k: v
+            for k, v in config.items()
+            if k not in {"max_requests", "max_estimated_cost_usd"}
+        }
+
+    from llm_preflight import cli
+
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(config))
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(path), *extra, "--dry-run"])
+    try:
+        cli.main()
+    except SystemExit as stop:
+        code = stop.code or 0
+    else:
+        code = 0
+    return code, capsys.readouterr().err
+
+
+@pytest.mark.parametrize("model", ["mistral-large-4", "mistral-large-4-0"])
+@pytest.mark.parametrize(
+    "tests",
+    [
+        "structured-output-check",
+        "strict-json-extraction",
+        "code-patch-summary",
+        "source-grounded-quiz",
+        "agent-smoke",
+    ],
+)
+def test_native_mistral_large_4_builtin_structured_tests_refused_with_accurate_message(
+    monkeypatch, tmp_path, capsys, model, tests
+):
+    config = _mistral_large_4_config(
+        model, {"provider_options": {"mistral": {"top_p": 1}}}
+    )
+    code, err = _mistral_dry_run(
+        monkeypatch, tmp_path, capsys, config, "--tests", tests
+    )
+    assert code == 2
+    assert "built-in tests" in err
+    assert "custom prompt" in err
+    assert "remove the low-latency/structured preset" not in err
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [
+        {"provider_options": {"mistral": {"top_p": 1}}},
+        {"temperature": 0, "provider_options": {"mistral": {"top_p": 1}}},
+        {},
+        {"temperature": 0.7},
+        {"presets": ["structured"], "provider_options": {"mistral": {"top_p": 1}}},
+        {"presets": ["low-latency"], "provider_options": {"mistral": {"top_p": 1}}},
+    ],
+)
+def test_native_mistral_large_4_remedies_in_message_pass(
+    monkeypatch, tmp_path, capsys, request_options
+):
+    config = _mistral_large_4_config("mistral-large-4-0", request_options)
+    code, err = _mistral_dry_run(monkeypatch, tmp_path, capsys, config)
+    assert code == 0, err
+
+
+@pytest.mark.parametrize("tests", ["structured-output-check", "agent-smoke"])
+def test_other_mistral_model_keeps_builtin_tests(monkeypatch, tmp_path, capsys, tests):
+    config = _mistral_large_4_config("mistral-medium-3", {})
+    code, err = _mistral_dry_run(
+        monkeypatch, tmp_path, capsys, config, "--tests", tests
+    )
+    assert code == 0, err

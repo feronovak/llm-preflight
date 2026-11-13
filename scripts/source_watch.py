@@ -94,7 +94,27 @@ _OTHER_LINK = re.compile(
     r"""<a\s[^>]*href=["'](?![^"']*/models/)[^"']*["'][^>]*>.*?</a>""",
     re.DOTALL | re.IGNORECASE,
 )
+# Text that reads as one model name: words, digits, dots and dashes only.
+_MODEL_TEXT = re.compile(r"[\w.\u2013\u2014-]+")
 _ASSET = re.compile(r"\.(?:png|webp|jpe?g|svg|gif)$")
+# A changed page line is a finding only when it names a cited model or carries
+# one of these signals; any other change is reported as ignored.
+PRICE_SIGNAL = re.compile(
+    r"[$€£¥]\s?\d|\b(?:usd|eur|gbp)\b|\d\s?%|\d+\.\d{2,}"
+    r"|\bper\s+(?:million|thousand|1m|1k|token)|/\s?[mk]tok",
+    re.IGNORECASE,
+)
+_MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec"
+DATE_SIGNAL = re.compile(
+    rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b(?:{_MONTHS})[a-z]*\.?\s+\d|\b\d{{1,2}}\s+(?:{_MONTHS})"
+    r"|\b(?:19|20)\d{2}\b|\bq[1-4]\b",
+    re.IGNORECASE,
+)
+RETIREMENT_SIGNAL = re.compile(
+    r"\b(?:deprecat\w*|retir\w*|sunset\w*|shut\s?down|end[- ]of[- ]life|eol"
+    r"|discontinu\w*|decommission\w*|legacy|no longer (?:available|supported))",
+    re.IGNORECASE,
+)
 
 
 class FetchError(Exception):
@@ -142,11 +162,14 @@ class _TextExtractor(HTMLParser):
         self._chrome = 0
         self._row_open = False
         self._row_dropped = False
+        self.tags: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in _SKIPPED_TAGS:
             self._skip += 1
             return
+        if not self._skip:
+            self.tags.add(tag)
         if tag == self._container:
             self._inside += 1
         elif tag in _CHROME_TAGS and self._container and self._inside:
@@ -164,9 +187,10 @@ class _TextExtractor(HTMLParser):
             self._inside = max(0, self._inside - 1)
             if not self._inside:
                 self._chrome = 0
+                self._row_open = self._row_dropped = False
         elif tag in _CHROME_TAGS:
             self._chrome = max(0, self._chrome - 1)
-        elif tag == "tr":
+        elif tag in ("tr", "table"):
             self._row_open = self._row_dropped = False
         if tag in _BLOCK_TAGS:
             self.parts.append("\n")
@@ -195,30 +219,52 @@ def normalise_html(html: str) -> list[str]:
     return _lines(html, _TextExtractor())
 
 
-def _container_tag(html: str) -> str | None:
-    for tag in ("article", "main"):
-        if re.search(rf"<{tag}[\s>/]", html, re.IGNORECASE):
-            return tag
-    return None
+def _container_lines(html: str, rows: list[str]) -> list[str]:
+    """Scoped lines of `article`, else `main`, else the whole page.
+
+    Landmarks are read from parsed tags, so one inside a script or a comment
+    does not count. An `article` that holds only part of what `main` holds
+    (a promo beside the price table) loses to `main`.
+    """
+    probe = _TextExtractor()
+    _lines(html, probe)
+    is_sibling = _sibling_matcher(rows)
+    found = [t for t in ("article", "main") if t in probe.tags]
+    scoped = {t: _lines(html, _TextExtractor(t, is_sibling)) for t in found}
+    if (
+        "article" in scoped
+        and "main" in scoped
+        and not set(scoped["main"]) <= set(scoped["article"])
+    ):
+        return scoped["main"]
+    return scoped[found[0]] if found else _lines(html, _TextExtractor(None, is_sibling))
 
 
 def _sibling_matcher(rows: list[str]) -> Callable[[str], bool] | None:
     """Match other models' table rows, only when `rows` cite one model."""
-    models = {row.split("/", 1)[1] if "/" in row else None for row in rows}
-    if len(models) != 1 or None in models:
+    models = {_comparable_id(m) for m in map(_row_model, rows)}
+    if len(models) != 1 or "" in models:
         return None
-    cited = _comparable_id(models.pop() or "")
+    cited = models.pop()
     prefix = cited.split("-")[0] + "-"
+    cited_words = set(cited.split("-"))
 
     def is_sibling(text: str) -> bool:
         slug = _comparable_id("-".join(text.casefold().split()))
         return (
-            slug.startswith(prefix)
-            and slug != cited
+            _MODEL_TEXT.fullmatch(slug) is not None
+            and slug.startswith(prefix)
+            and any(c.isdigit() for c in slug)
+            and set(slug.split("-")) != cited_words
             and not slug.startswith(cited + "-")
         )
 
     return is_sibling
+
+
+def _row_model(row: str) -> str:
+    """The model ID a `pricing`/`retirement` row cites, or "" for a constant."""
+    return row.split("/", 1)[1] if "/" in row else ""
 
 
 def scoped_lines(html: str, rows: list[str]) -> list[str]:
@@ -226,8 +272,7 @@ def scoped_lines(html: str, rows: list[str]) -> list[str]:
 
     Anything that cannot be classified stays in, so a miss is noise, not silence.
     """
-    container = _container_tag(html)
-    return _lines(html, _TextExtractor(container, _sibling_matcher(rows)))
+    return _container_lines(html, rows)
 
 
 def unreadable_reason(
@@ -402,10 +447,30 @@ def _excerpt(lines: list[str]) -> list[str]:
     return [line[:EXCERPT_CHARS] for line in lines][:EXCERPT_LINES]
 
 
+def _changed_lines(old: list[str], new: list[str]) -> list[str]:
+    body = list(difflib.unified_diff(old, new, lineterm="", n=0))[2:]
+    return [f"{line[0]} {line[1:]}" for line in body if line[0] in "+-"]
+
+
 def changed_excerpt(old: list[str], new: list[str]) -> list[str]:
     """Bounded `-`/`+` lines between two page versions."""
-    body = list(difflib.unified_diff(old, new, lineterm="", n=0))[2:]
-    return _excerpt([f"{line[0]} {line[1:]}" for line in body if line[0] in "+-"])
+    return _excerpt(_changed_lines(old, new))
+
+
+def _names_cited_model(text: str, rows: list[str]) -> bool:
+    slug = _normalized_model_id("-".join(text.casefold().split()))
+    cited = {_comparable_id(_row_model(row)) for row in rows} - {""}
+    return any(model in slug for model in cited)
+
+
+def is_relevant_change(changed: list[str], rows: list[str]) -> bool:
+    """True when a changed line names a cited model or has a price, date or
+    retirement word. Anything else (layout, promo, navigation) is not data."""
+    return any(
+        _names_cited_model(line[2:], rows)
+        or any(s.search(line) for s in (PRICE_SIGNAL, DATE_SIGNAL, RETIREMENT_SIGNAL))
+        for line in changed
+    )
 
 
 def _legacy_changes(before: list[str], scoped: list[str], full: list[str]) -> list[str]:
@@ -413,9 +478,12 @@ def _legacy_changes(before: list[str], scoped: list[str], full: list[str]) -> li
 
     Sets, not a sequence diff: lines like `Pricing` occur in both chrome and
     content. A line removed outside the first and last scoped anchor is missed.
+    Only a line that occurs once in `before` anchors, so a repeated line cannot
+    pull a removed chrome block into the span.
     """
     outside = set(Counter(full) - Counter(scoped))
-    anchors = set(scoped) - outside
+    once = {line for line, count in Counter(before).items() if count == 1}
+    anchors = (set(scoped) - outside) & once
     seen = set(before)
     added = [line for line in scoped if line not in seen]
     spots = [i for i, line in enumerate(before) if line in anchors]
@@ -425,13 +493,19 @@ def _legacy_changes(before: list[str], scoped: list[str], full: list[str]) -> li
         if spots
         else []
     )
-    return _excerpt([f"- {line}" for line in removed] + [f"+ {line}" for line in added])
+    return [f"- {line}" for line in removed] + [f"+ {line}" for line in added]
 
 
 def watch_pages(
-    previous: dict[str, Any] | None, read: Any = fetch
+    previous: dict[str, Any] | None,
+    read: Any = fetch,
+    ignored: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Fetch every cited page; return findings and the next `pages` snapshot."""
+    """Fetch every cited page; return findings and the next `pages` snapshot.
+
+    A change with no cited model, price, date or retirement word is no finding;
+    it is appended to `ignored`, and the snapshot still records the new page.
+    """
     old_pages = (previous or {}).get("pages", {})
     pages: dict[str, Any] = {}
     findings = []
@@ -457,13 +531,19 @@ def watch_pages(
             continue
         if before.get("scoped"):
             changed = (
-                changed_excerpt(before["lines"], lines)
+                _changed_lines(before["lines"], lines)
                 if before["hash"] != digest
                 else []
             )
         else:
             changed = _legacy_changes(before["lines"], lines, full)
-        if changed:
+        if changed and not is_relevant_change(changed, rows):
+            if ignored is not None:
+                ignored.append(
+                    {"url": url, "changed_lines": _excerpt(changed), "cited_by": rows}
+                )
+        elif changed:
+            changed = _excerpt(changed)
             findings.append(
                 {"key": f"page-changed:{url}:{digest}", "type": "page-changed", "url": url,
                  "changed_lines": changed, "cited_by": rows}
@@ -472,7 +552,9 @@ def watch_pages(
 
 
 def run(
-    previous: dict[str, Any] | None, read: Any = fetch
+    previous: dict[str, Any] | None,
+    read: Any = fetch,
+    ignored: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """All findings plus the snapshot to write."""
     findings, listed = official_findings(read)
@@ -483,7 +565,7 @@ def run(
         findings.append(
             {"key": f"fetch-failed:{OPENROUTER_URL}", "type": "fetch-failed", "url": OPENROUTER_URL, "reason": reason}
         )  # fmt: skip
-    page_findings, pages = watch_pages(previous, read)
+    page_findings, pages = watch_pages(previous, read, ignored)
     return findings + page_findings, {"version": SNAPSHOT_VERSION, "pages": pages}
 
 
@@ -526,15 +608,21 @@ def write_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
         temp.unlink(missing_ok=True)
 
 
-def render_text(findings: list[dict[str, Any]]) -> str:
-    if not findings:
-        return "source watch: no findings"
-    return "\n".join(
+def render_text(
+    findings: list[dict[str, Any]], ignored: list[dict[str, Any]] | None = None
+) -> str:
+    lines = [
         f"{item['type']}: {item['key']}"
         + (f" (source: {item['source']})" if item.get("source") else "")
         + (" (OpenRouter-only)" if item.get("openrouter_only") else "")
         for item in findings
-    )
+    ] or ["source watch: no findings"]
+    for item in ignored or []:
+        lines.append(
+            f"ignored page change (no cited model, price, date or retirement word): {item['url']}"
+        )
+        lines += [f"  {line}" for line in item["changed_lines"]]
+    return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None, read: Any = fetch) -> int:
@@ -548,11 +636,12 @@ def main(argv: list[str] | None = None, read: Any = fetch) -> int:
     except (OSError, ValueError) as error:
         print(f"source watch: cannot read previous snapshot: {error}", file=sys.stderr)
         return 2
-    findings, snapshot = run(previous, read)
+    ignored: list[dict[str, Any]] = []
+    findings, snapshot = run(previous, read, ignored)
     print(
-        json.dumps({"findings": findings}, indent=2)
+        json.dumps({"findings": findings, "ignored": ignored}, indent=2)
         if args.json
-        else render_text(findings)
+        else render_text(findings, ignored)
     )
     if args.write:
         try:

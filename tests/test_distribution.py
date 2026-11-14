@@ -47,7 +47,7 @@ def test_action_smoke_takes_the_package_version_from_the_action_default():
 def test_marketplace_action_installs_the_latest_published_package():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.25.3"' in action
+    assert 'default: "2.25.4"' in action
     assert 'python -m pip install "llm-preflight==${version}"' in action
     assert "sleep 20" in action
 
@@ -666,8 +666,8 @@ def test_current_published_package_pins_are_2_23_1():
     from pathlib import Path
 
     root = Path(__file__).resolve().parent.parent
-    assert 'default: "2.25.3"' in (root / "action.yml").read_text()
+    assert 'default: "2.25.4"' in (root / "action.yml").read_text()
     assert (
-        "llm-preflight==2.25.3"
+        "llm-preflight==2.25.4"
         in (root / "examples/github-actions/preflight.yml").read_text()
     )

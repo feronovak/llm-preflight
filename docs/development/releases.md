@@ -48,10 +48,18 @@ under `.github/`.
 
 ## Automatic maintenance releases
 
-A release that only refreshes model data can be tagged without a manual step.
-This section describes the check that decides it. The workflow that acts on the
-result is planned and not active yet: until it lands, every release is still
-tagged by the maintainer.
+A release that only refreshes model data is tagged and published without a
+manual step. This section describes the two release paths and the check that
+chooses between them.
+
+### Two paths
+
+- **Data-only release.** `.github/workflows/auto-release.yml` classifies the
+  range, tags it and publishes it, as described below. It acts only while the
+  repository variable `AUTO_RELEASE` is `on`; otherwise it reports its verdict
+  in the run summary and stops.
+- **Any other release.** No tag is created. The maintainer tags the release and
+  publishes it as before, and `release.yml` runs after the GitHub release.
 
 ### What qualifies
 
@@ -104,3 +112,49 @@ Python reads them, and any encoding other than UTF-8 does not qualify. A deleted
 The workflow runs the classifier from the base tag, never from the head, so a
 range cannot approve its own rules. The first release that contains the
 classifier is therefore still tagged by the maintainer.
+
+### What the workflow does
+
+1. It starts when the `tests` workflow succeeds for a push to `main`, and
+   continues only when that commit changed the `pyproject.toml` version: the
+   merged release-prep commit, which has already passed review.
+2. It waits up to 20 minutes for the seven required checks on that commit.
+3. It runs the base tag's classifier. A base tag that has no classifier, or a
+   range that does not qualify, ends the run with the reasons in the summary
+   and no tag.
+4. For a qualifying range, the `release` job (the only job with write access)
+   creates the tag `vX.Y.Z` at that exact commit; an existing tag that points
+   elsewhere fails the job. It then dispatches `testpypi.yml` and waits for it,
+   creates the GitHub release from the `CHANGELOG.md` section, and dispatches
+   `release.yml` on the tag. `release.yml` publishes to PyPI and the MCP
+   Registry as for a manual release. A tag, a release or a run created with the
+   workflow token does not start other workflows by itself, which is why the
+   two dispatches exist.
+
+`release.yml` runs from a manual dispatch only on a `v*` tag; on a branch its
+`build` job is skipped. It still checks that the tag equals the package
+version.
+
+The first release that contains the classifier is tagged by the maintainer,
+because its base tag has no classifier. Automatic releases start with the one
+after it.
+
+### If an automatic release fails
+
+A failure after the tag leaves the tag in place and publishes nothing more. A
+red `testpypi.yml` or `release.yml` run is recovered by re-running its failed
+jobs; the registry step has its own recovery path above. A failed job before
+the tag (checks not green, classifier error) creates nothing: fix the cause and
+re-run the failed `auto-release` run, or tag by hand.
+
+### Maintainer steps
+
+These are repository settings that the workflow cannot change and this page
+does not verify:
+
+- Allow the GitHub Actions app to create `v*` tags: restrict tag creation in
+  one ruleset with that bypass, and keep update and deletion restricted in a
+  second ruleset without it, so release tags stay immutable.
+- Set the repository variable `AUTO_RELEASE` to `on`.
+- Check whether the `pypi` environment has required reviewers. If it has, an
+  automatic release waits for that approval at the PyPI job.

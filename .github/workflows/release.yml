@@ -3,12 +3,15 @@ name: release
 on:
   release:
     types: [published]
+  # Started by auto-release.yml on a v* tag; a dispatch on a branch is skipped.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1

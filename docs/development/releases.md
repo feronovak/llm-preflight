@@ -65,11 +65,19 @@ A release qualifies when every change since the previous `v*` tag is one of:
 - the version files, as a patch bump of the previous tag: `pyproject.toml`,
   `llm_preflight/__init__.py`, `server.json` and the Codex plugin manifest,
   all naming the same version, with a dated `CHANGELOG.md` heading for it;
-- the data documentation: `docs/data/`, the measured-model images and guides,
-  `README.md` and the data tests (`test_pricing.py`, `test_retirements.py`,
-  `test_model_updates.py`, `test_documentation.py`, `test_package.py`);
+- the data documentation: `docs/data/`, the measured-model images and guides
+  (`observed-model-comparison.md`, `current-snapshots.md`), `visual-assets.md`,
+  `docs/DOCMAP.md`, `docs/index.md`, `README.md` and the data tests
+  (`test_pricing.py`, `test_retirements.py`, `test_model_updates.py`,
+  `test_documentation.py`, `test_package.py`);
 - substituting the previous release's version in `action.yml`, `examples/`,
   other documentation pages and `tests/test_distribution.py`.
+
+A pin PR must stay a pure substitution. Each changed line differs from the
+base only in versions, and every new version equals the version of the tag the
+range starts from. Write pinned text so it names the current pin and nothing
+else: do not add or move an older version (for example a history of earlier
+release defaults), because that would make the next range fail the check.
 
 Any other change does not qualify, including a new feature, a `Breaking:`
 change of behaviour, anything under `.github/` or `scripts/`, and a dependency

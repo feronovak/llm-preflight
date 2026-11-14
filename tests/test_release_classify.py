@@ -77,7 +77,7 @@ def _bump(text: str, version: str) -> str:
 class Repo:
     """A temp git repo whose base commit holds the real data files."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, extra: dict[str, str] | None = None) -> None:
         self.path = path
         _git(path, "init", "-q")
         for relative in REAL_FILES:
@@ -93,6 +93,8 @@ class Repo:
         _write(path, "scripts/render_measured_models.py", "VALUE = 1\n")
         _write(path, "tests/conftest.py", "VALUE = 1\n")
         _write(path, ".github/workflows/tests.yml", "name: tests\n")
+        for relative, text in (extra or {}).items():
+            _write(path, relative, text)
         _git(path, "add", "-A")
         _git(path, "commit", "-q", "-m", "base")
         _git(path, "tag", f"v{BASE_VERSION}")
@@ -187,11 +189,7 @@ def test_model_tuple_in_comprehension_qualifies(repo):
     )
     repo.edit(
         RETIREMENTS,
-        lambda t: _replace(
-            t,
-            'for model in ("gemini-3.6-flash"',
-            'for model in ("gemini-new", "gemini-3.6-flash"',
-        ),
+        lambda t: _replace(t, "for model in (", 'for model in ("gemini-new", '),
     )
     repo.release_prep()
     assert repo.classify()["reasons"] == []
@@ -217,6 +215,25 @@ def test_previous_pin_substitution_qualifies(repo):
     repo.edit(CI_DOC, lambda t: t.replace(PREVIOUS_VERSION, BASE_VERSION))
     repo.release_prep()
     assert repo.classify()["reasons"] == []
+
+
+def test_real_action_guide_pin_is_a_pure_substitution(tmp_path):
+    # The shape of a pin PR: the guide names only the current pin, so moving
+    # the previous release's version to the base tag's version is all it takes.
+    guide = "docs/automation/github-action.md"
+    current = (ROOT / guide).read_text(encoding="utf-8")
+    line = re.compile(rf"\b{MAJOR}\.{MINOR}\.(\d+)\b")
+
+    def lower(match):
+        patch = int(match.group(1))
+        return f"{MAJOR}.{MINOR}.{max(patch - 1, 0)}"
+
+    # Every pin in the guide moves up by one release, history included.
+    previous = line.sub(lower, current)
+    pinned = Repo(tmp_path, {guide: previous})
+    pinned.edit(guide, lambda _: current)
+    pinned.release_prep()
+    assert pinned.classify()["reasons"] == []
 
 
 # --- does not qualify: logic ---------------------------------------------------

@@ -652,9 +652,8 @@ def test_marketplace_action_docs_describe_the_current_published_release():
     assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in action_guide
     assert 'package-version: "2.25.4"' in action_guide
     assert "source defaults to `2.25.4`" in action_guide
-    assert (
-        "The immutable release tag retains its earlier **2.25.3** default"
-        in action_guide
+    assert "An immutable release tag keeps the default of the release before it" in (
+        " ".join(action_guide.split())
     )
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide
     assert "published package to keep pull-request validation installable" in " ".join(

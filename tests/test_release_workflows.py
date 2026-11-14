@@ -88,6 +88,8 @@ def test_tag_at_head_sha_then_testpypi_then_release_then_dispatch():
     ]
     assert steps == sorted(steps)
     assert "--verify-tag" in release
+    # Manual releases are titled with the bare version; the tag keeps the v.
+    assert '--verify-tag --title "${VERSION}"' in release
     assert (
         'gh workflow run "${workflow}" --repo "${REPO}" --ref "v${VERSION}"' in release
     )
@@ -108,6 +110,45 @@ def test_release_dispatch_only_for_v_tags_and_checks_version():
     assert 'test "${GITHUB_REF_NAME}" = "v$(python -c' in build
     assert re.search(r"^permissions:\n  contents: read$", RELEASE, re.MULTILINE)
     assert "contents: write" not in RELEASE and "actions: write" not in RELEASE
+
+
+def _guard_step() -> str:
+    build = _job(RELEASE, "build")
+    start = build.index("      - name: Require a tagged commit on main")
+    end = build.index("      - uses: actions/setup-python")
+    return build[start:end]
+
+
+def test_dispatch_requires_tag_commit_on_main_before_any_build():
+    build = _job(RELEASE, "build")
+    guard = _guard_step()
+    assert "if: github.event_name == 'workflow_dispatch'" in guard
+    assert 'git merge-base --is-ancestor "${GITHUB_SHA}" origin/main' in guard
+    assert "fetch-depth: 0" in build.split("Require a tagged commit")[0]
+    # Everything that builds or publishes comes after the guard.
+    assert build.index("Require a tagged commit") < build.index(
+        "make release-freshness"
+    )
+    assert build.index("Require a tagged commit") < build.index("python -m build")
+    assert "needs: build" in _job(RELEASE, "pypi-publish")
+
+
+def test_dispatch_requires_an_existing_github_release():
+    guard = _guard_step()
+    assert 'gh release view "${GITHUB_REF_NAME}"' in guard
+    # Read-only: the guard adds no permission beyond the workflow's contents: read.
+    assert "permissions:" not in _job(RELEASE, "build")
+    assert re.search(r"^permissions:\n  contents: read$", RELEASE, re.MULTILINE)
+
+
+def test_published_release_path_is_not_gated_by_the_dispatch_guards():
+    build = _job(RELEASE, "build")
+    assert "github.event_name == 'release' ||" in build
+    # The only step that mentions the guards is conditional on a dispatch.
+    assert build.count("merge-base") == 1
+    assert build.count("gh release view") == 1
+    assert build.count("if: github.event_name == 'workflow_dispatch'") == 1
+    assert 'test "${GITHUB_REF_NAME}" = "v$(python -c' in build
 
 
 def test_no_other_workflow_grants_write():

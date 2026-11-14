@@ -147,6 +147,6 @@ jobs:
         run: |
           set -euo pipefail
           awk -v heading="## ${VERSION} - " 'index($0, heading) == 1 {found = 1; next} found && /^## / {exit} found' CHANGELOG.md > "${RUNNER_TEMP}/notes.md"
-          gh release create "v${VERSION}" --repo "${REPO}" --verify-tag --title "v${VERSION}" --notes-file "${RUNNER_TEMP}/notes.md"
+          gh release create "v${VERSION}" --repo "${REPO}" --verify-tag --title "${VERSION}" --notes-file "${RUNNER_TEMP}/notes.md"
       - name: Publish to PyPI and the MCP Registry
         run: bash "${RUNNER_TEMP}/dispatch_and_watch.sh" release.yml

@@ -132,8 +132,12 @@ classifier is therefore still tagged by the maintainer.
    two dispatches exist.
 
 `release.yml` runs from a manual dispatch only on a `v*` tag; on a branch its
-`build` job is skipped. It still checks that the tag equals the package
-version.
+`build` job is skipped. A dispatched run also fails before it builds anything
+unless two guards hold: the tagged commit is an ancestor of `main`, and a
+GitHub release exists for the tag (a read-only check with the workflow's
+`contents: read` token). The workflow that creates the release does so before
+it dispatches. A release published on GitHub is not subject to these guards.
+Both paths still check that the tag equals the package version.
 
 The first release that contains the classifier is tagged by the maintainer,
 because its base tag has no classifier. Automatic releases start with the one

@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import io
 import json
 import re
 import subprocess  # nosec B404
 import sys
+import tokenize
 from datetime import date
 from typing import Any
 
@@ -113,15 +115,29 @@ def _show(rev: str, path: str) -> str:
         raise ClassifierError(f"{path} at {rev} is not UTF-8") from error
 
 
-def _parse(source: str, label: str) -> ast.Module:
+def _parse(rev: str, path: str) -> ast.Module:
+    """Parse the bytes Python would execute, rejecting a non-UTF-8 encoding.
+
+    A ``# coding:`` line or a BOM changes how Python reads the file, so a diff
+    that hides code behind one must not qualify. Parsing the raw bytes applies
+    the declaration the way an import does.
+    """
+    label = f"{path} at {rev}"
+    data = _git("show", f"{rev}:{path}")
     try:
-        return ast.parse(source)
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(data).readline)
+        if encoding != "utf-8":
+            raise ClassifierError(f"{label} declares encoding {encoding}")
+        return ast.parse(data)
     except (SyntaxError, ValueError) as error:
         raise ClassifierError(f"{label} does not parse: {error}") from error
 
 
 def _changes(base: str, head: str) -> list[tuple[str, list[str]]]:
-    raw = _git("diff", "--name-status", "-M", "-z", base, head).decode("utf-8")
+    try:
+        raw = _git("diff", "--name-status", "-M", "-z", base, head).decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ClassifierError("a changed path is not UTF-8") from error
     parts = raw.split("\0")
     changes: list[tuple[str, list[str]]] = []
     index = 0
@@ -192,13 +208,13 @@ class _ValueChecker:
     """Allow only literal data in a table value (see module docstring)."""
 
     def __init__(
-        self, tables: tuple[str, ...], builders: tuple[str, ...], base: ast.AST
+        self, tables: tuple[str, ...], builders: tuple[str, ...], base: ast.AST | None
     ):
         self.tables = tables
         self.builders = builders
         self.shapes: set[str] = set()
         self.iters: set[str] = set()
-        for node in ast.walk(base):
+        for node in ast.walk(base) if base else ():
             if isinstance(node, _COMPREHENSIONS):
                 self.shapes.add(_blank_iters(node))
                 self.iters.update(ast.dump(g.iter) for g in node.generators)
@@ -252,8 +268,8 @@ class _ValueChecker:
 
 def _data_file_reasons(path: str, base: str, head: str) -> list[str]:
     tables = DATA_TABLES[path]
-    base_tree = _parse(_show(base, path), f"{path} at {base}")
-    head_tree = _parse(_show(head, path), f"{path} at {head}")
+    base_tree = _parse(base, path)
+    head_tree = _parse(head, path)
     reasons = [
         f"{path}: {name} is assigned {len(stmts)} times, not once"
         for name, stmts in _table_statements(head_tree, tables).items()
@@ -263,9 +279,13 @@ def _data_file_reasons(path: str, base: str, head: str) -> list[str]:
         return reasons
     if _skeleton(base_tree, tables) != _skeleton(head_tree, tables):
         return [f"{path}: code outside the data tables changed"]
-    checker = _ValueChecker(tables, BUILDERS[path], base_tree)
+    base_statements = _table_statements(base_tree, tables)
     for name, (stmt,) in _table_statements(head_tree, tables).items():
         assert isinstance(stmt, (ast.Assign, ast.AnnAssign))
+        # Shapes come from this table's own base value, not the whole module.
+        checker = _ValueChecker(
+            tables, BUILDERS[path], getattr(base_statements[name][0], "value", None)
+        )
         reasons += [
             f"{path}: {name} contains {problem}"
             for problem in checker.problems(stmt.value)
@@ -309,8 +329,8 @@ def _json_versions(path: str, base: str, head: str) -> tuple[list[str], list[str
     return reasons, versions
 
 
-def _init_version(source: str, label: str) -> tuple[str, str]:
-    tree = _parse(source, label)
+def _init_version(rev: str) -> tuple[str, str]:
+    tree = _parse(rev, INIT)
     version = ""
     body: list[ast.stmt] = []
     for stmt in tree.body:
@@ -344,8 +364,8 @@ def _version_reasons(
     base: str, head: str, base_version: str
 ) -> tuple[list[str], str | None]:
     reasons, found = _pyproject_reasons(base, head)
-    _, skeleton_before = _init_version(_show(base, INIT), INIT)
-    init_after, skeleton_after = _init_version(_show(head, INIT), INIT)
+    _, skeleton_before = _init_version(base)
+    init_after, skeleton_after = _init_version(head)
     if skeleton_before != skeleton_after:
         reasons.append(f"{INIT}: code other than __version__ changed")
     found.append(init_after)

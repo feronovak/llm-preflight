@@ -88,8 +88,10 @@ so a changed function, constant, import or annotation fails. Each table must be
 assigned exactly once, and its new value may contain only literals, other
 tables and calls to the row builders. A comprehension qualifies only when it
 has the same shape as one in the base and its source is unchanged or a literal
-tuple or list, so a model name can be added to an existing list. Comments do
-not count as changes. A deleted or renamed data file does not qualify.
+tuple or list, so a model name can be added to an existing list. The shape
+must come from the same table in the base. Comments do not count as changes,
+but an encoding declaration or a byte-order mark does: the files are parsed as
+Python reads them, and any encoding other than UTF-8 does not qualify. A deleted or renamed data file does not qualify.
 
 The workflow runs the classifier from the base tag, never from the head, so a
 range cannot approve its own rules. The first release that contains the

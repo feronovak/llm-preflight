@@ -309,6 +309,57 @@ LOGIC_EDITS = {
 }
 
 
+def test_non_utf8_encoding_declaration_is_rejected(repo):
+    # Under GBK the last byte of the euro sign swallows the backslash, so the
+    # string closes early and the print runs at import time.
+    smuggled = 'OPENAI_DEPRECATIONS_URL = "\u20ac\\"; print(\'SMUGGLED\') # "'
+    repo.edit(
+        RETIREMENTS,
+        lambda t: (
+            "# coding: gbk\n"
+            + re.sub(
+                r"^OPENAI_DEPRECATIONS_URL = .*$",
+                lambda _: smuggled,
+                t,
+                count=1,
+                flags=re.MULTILINE,
+            )
+        ),
+    )
+    repo.release_prep()
+    with pytest.raises(rc.ClassifierError, match="declares encoding gbk"):
+        repo.classify()
+
+
+def test_utf8_bom_is_rejected(repo):
+    repo.edit(PRICING, lambda t: "\ufeff" + t)
+    repo.release_prep()
+    with pytest.raises(rc.ClassifierError, match="utf-8-sig"):
+        repo.classify()
+
+
+def test_comprehension_copied_from_outside_the_table_does_not_qualify(repo):
+    routing = (
+        "    **{key: _MODEL_PRICING_PAGES.get(key, _PROVIDER_PRICING_PAGES[key[0]])"
+        " for key in PUBLIC_PRICING},\n"
+    )
+    repo.edit(
+        PRICING,
+        lambda t: _replace(
+            t, "PUBLIC_PRICING_CHANGES = {\n", "PUBLIC_PRICING_CHANGES = {\n" + routing
+        ),
+    )
+    repo.release_prep()
+    _assert_no(repo.classify(), "PUBLIC_PRICING_CHANGES")
+
+
+def test_non_utf8_path_is_an_error(repo):
+    (repo.path / os.fsdecode(b"bad-\xff.txt")).write_text("x\n", encoding="utf-8")
+    repo.release_prep()
+    with pytest.raises(rc.ClassifierError, match="not UTF-8"):
+        repo.classify()
+
+
 @pytest.mark.parametrize("name", sorted(LOGIC_EDITS))
 def test_logic_edit_does_not_qualify(repo, name):
     path, change = LOGIC_EDITS[name]

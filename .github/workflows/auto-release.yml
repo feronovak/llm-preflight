@@ -1,0 +1,152 @@
+name: auto-release
+
+# Tags and publishes a release whose changes since the previous tag are only
+# model data (see docs/development/releases.md). The classifier runs from the
+# base tag, so a range cannot approve its own rules. Until the repository
+# variable AUTO_RELEASE is "on", this workflow only reports its verdict.
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      qualifies: ${{ steps.classify.outputs.qualifies }}
+      version: ${{ steps.classify.outputs.version }}
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a version change in the head commit
+        id: prep
+        run: |
+          set -euo pipefail
+          old="$(git show "${HEAD_SHA}^:pyproject.toml" | sed -n 's/^version = "\(.*\)"$/\1/p')"
+          new="$(git show "${HEAD_SHA}:pyproject.toml" | sed -n 's/^version = "\(.*\)"$/\1/p')"
+          if [ "${old}" = "${new}" ]; then
+            echo "prep=false" >> "${GITHUB_OUTPUT}"
+            echo "Not a release-prep commit: version stays ${new}." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          echo "prep=true" >> "${GITHUB_OUTPUT}"
+      - name: Wait for the required checks on the head commit
+        if: steps.prep.outputs.prep == 'true'
+        run: |
+          python3 - "${REPO}" "${HEAD_SHA}" <<'PY'
+          import json, subprocess, sys, time
+
+          REQ = ["test (3.10)", "test (3.11)", "test (3.12)", "test (3.13)", "security", "mock-action", "check"]
+          repo, sha = sys.argv[1:3]
+          api = f"repos/{repo}/commits/{sha}/check-runs?per_page=100"
+          for _ in range(40):
+              done = subprocess.run(["gh", "api", api], capture_output=True, text=True, timeout=60, check=True)
+              runs = {r["name"]: r for r in json.loads(done.stdout)["check_runs"]}
+              state = {k: runs[k]["conclusion"] or runs[k]["status"] if k in runs else "missing" for k in REQ}
+              print(state, flush=True)
+              if set(state.values()) == {"success"}:
+                  sys.exit(0)
+              if any(v not in ("success", "queued", "in_progress", "pending", "missing") for v in state.values()):
+                  sys.exit("a required check did not succeed")
+              time.sleep(30)
+          sys.exit("required checks still pending after 20 minutes")
+          PY
+      - name: Classify the range with the base tag's classifier
+        id: classify
+        if: steps.prep.outputs.prep == 'true'
+        run: |
+          set -euo pipefail
+          base="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${HEAD_SHA}^")"
+          if ! git show "${base}:scripts/release_classify.py" > "${RUNNER_TEMP}/release_classify.py"; then
+            echo "qualifies=false" >> "${GITHUB_OUTPUT}"
+            echo "${base} has no classifier, so the maintainer tags this release." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          set +e
+          python3 -I "${RUNNER_TEMP}/release_classify.py" --base "${base}" --head "${HEAD_SHA}" > "${RUNNER_TEMP}/verdict.json"
+          status=$?
+          set -e
+          { echo '```json'; cat "${RUNNER_TEMP}/verdict.json"; echo '```'; } >> "${GITHUB_STEP_SUMMARY}"
+          case "${status}" in
+            0)
+              echo "qualifies=true" >> "${GITHUB_OUTPUT}"
+              echo "version=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' "${RUNNER_TEMP}/verdict.json")" >> "${GITHUB_OUTPUT}"
+              ;;
+            1) echo "qualifies=false" >> "${GITHUB_OUTPUT}" ;;
+            *) echo "The classifier failed with exit ${status}." >&2; exit 1 ;;
+          esac
+
+  release:
+    needs: classify
+    if: needs.classify.outputs.qualifies == 'true' && vars.AUTO_RELEASE == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      actions: write
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      VERSION: ${{ needs.classify.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Create the tag at the release-prep commit
+        run: |
+          set -euo pipefail
+          [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          existing="$(gh api "repos/${REPO}/git/matching-refs/tags/v${VERSION}" --jq '.[] | select(.ref == "refs/tags/v'"${VERSION}"'") | .object.sha')"
+          if [ -z "${existing}" ]; then
+            gh api "repos/${REPO}/git/refs" -f "ref=refs/tags/v${VERSION}" -f "sha=${HEAD_SHA}" > /dev/null
+          elif [ "${existing}" != "${HEAD_SHA}" ]; then
+            echo "Tag v${VERSION} already points at ${existing}, not ${HEAD_SHA}." >&2
+            exit 1
+          fi
+      - name: Write the dispatch helper
+        run: |
+          cat > "${RUNNER_TEMP}/dispatch_and_watch.sh" <<'SH'
+          set -euo pipefail
+          workflow="$1"
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run "${workflow}" --repo "${REPO}" --ref "v${VERSION}"
+          run_id=""
+          for _ in $(seq 1 24); do
+            sleep 5
+            run_id="$(gh run list --repo "${REPO}" --workflow "${workflow}" --event workflow_dispatch --branch "v${VERSION}" --json databaseId,headSha,createdAt --jq "[.[] | select(.headSha == \"${HEAD_SHA}\" and .createdAt >= \"${started}\")] | first | .databaseId // empty")"
+            [ -n "${run_id}" ] && break
+          done
+          [ -n "${run_id}" ] || { echo "No ${workflow} run started." >&2; exit 1; }
+          gh run watch "${run_id}" --repo "${REPO}" --exit-status
+          SH
+      - name: Validate on TestPyPI
+        run: bash "${RUNNER_TEMP}/dispatch_and_watch.sh" testpypi.yml
+      - name: Create the GitHub release
+        run: |
+          set -euo pipefail
+          awk -v heading="## ${VERSION} - " 'index($0, heading) == 1 {found = 1; next} found && /^## / {exit} found' CHANGELOG.md > "${RUNNER_TEMP}/notes.md"
+          gh release create "v${VERSION}" --repo "${REPO}" --verify-tag --title "v${VERSION}" --notes-file "${RUNNER_TEMP}/notes.md"
+      - name: Publish to PyPI and the MCP Registry
+        run: bash "${RUNNER_TEMP}/dispatch_and_watch.sh" release.yml

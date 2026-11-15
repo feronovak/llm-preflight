@@ -136,6 +136,9 @@ def test_dispatch_requires_tag_commit_on_main_before_any_build():
 def test_dispatch_requires_an_existing_github_release():
     guard = _guard_step()
     assert 'gh release view "${GITHUB_REF_NAME}"' in guard
+    # The token is scoped to this step and never stored by gh.
+    assert "        env:\n          GH_TOKEN: ${{ github.token }}\n" in guard
+    assert "gh auth login" not in RELEASE
     # Read-only: the guard adds no permission beyond the workflow's contents: read.
     assert "permissions:" not in _job(RELEASE, "build")
     assert re.search(r"^permissions:\n  contents: read$", RELEASE, re.MULTILINE)

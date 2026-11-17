@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- The pricing review date for `qwen3.8-max`, `qwen3.8-flash` and `qwen3.7-plus` is now 2026-11-17, re-checked against the official Model Studio pricing page. Prices are unchanged, so their snapshot stays fresh through 2026-12-17.
+
 ## 2.25.6 - 2026-11-17
 
 ### Added

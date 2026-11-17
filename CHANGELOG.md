@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- `qwen4-max` now has an official snapshot price on the native `qwen` route: 1.50 / 4.50 USD per million tokens (input / output), cached input 0.075 and cache write 1.875 (5-minute rate). Saved plans for this model change once because it is now priced.
+
 ## 2.25.4 - 2026-11-13
 
 ### Fixed

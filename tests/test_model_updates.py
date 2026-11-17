@@ -411,6 +411,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         *pricing_dates,
         "2026-11-11",
         "2026-11-13",
+        "2026-11-17",
     }
     assert {
         model

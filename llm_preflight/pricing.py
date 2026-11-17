@@ -69,6 +69,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-04"),
     ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-04"),
     ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-04"),
+    ("qwen", "qwen4-max"): (1.5, 4.5, "2026-11-17"),
     ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-04"),
     ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-04"),
     ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-11-04"),
@@ -135,6 +136,10 @@ _MODEL_PRICING_PAGES = {
             "gpt-5.6-cyber",
         )
     },
+    (
+        "qwen",
+        "qwen4-max",
+    ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
     (
         "qwen",
         "qwen3.8-max",
@@ -414,6 +419,10 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("deepseek", "deepseek-v4-pro"): {
         "cached_input_cost_per_million": 0.044,
+    },
+    ("qwen", "qwen4-max"): {
+        "cached_input_cost_per_million": 0.075,
+        "cache_write_input_cost_per_million": 1.875,
     },
     ("qwen", "qwen3.8-max"): {
         "cached_input_cost_per_million": None,

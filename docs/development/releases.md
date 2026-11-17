@@ -12,12 +12,13 @@ jobs run in this order:
 1. `build` checks that the tag equals `v<__version__>`, runs
    `make release-freshness`, builds the wheel and sdist and uploads them.
 2. `pypi-publish` publishes them to PyPI. It runs in the `pypi` environment,
-   which has no required reviewers: the `v*` tag is the only human gate (see
-   [Decisions](../DECISIONS.md)). It is the only job with a PyPI
-   trusted-publishing identity.
+   which has no required reviewers, so no person approves it after the tag (see
+   [Decisions](../DECISIONS.md)): the maintainer's `v*` tag approves a manual
+   release, and `AUTO_RELEASE` being `on` approves an automatic one. It is the
+   only job with a PyPI trusted-publishing identity.
 3. `mcp-registry-publish` publishes `server.json` to the MCP Registry. It needs
    `pypi-publish` and runs only for `v*` tags. It has no environment, so it
-   adds no second approval; the `pypi` approval already gates it.
+   adds no second approval; the `pypi-publish` job already gates it.
 
 `mcp-registry-publish` waits until PyPI serves the released version, downloads
 `mcp-publisher`, checks its SHA-256 against the value pinned in the workflow,

@@ -259,9 +259,9 @@ Record each applicable gate separately as `pass`, `fail` or `unverified`:
      within 14 days of release blocks publication until refreshed or accepted
      by the owner in writing;
    - publication runs through trusted publishing behind a protected
-     environment that accepts only release tags; the owner's approval is the
-     tag itself, and the environment has no required reviewers
-     (`docs/DECISIONS.md`);
+     environment that accepts only release tags and has no required reviewers
+     (`docs/DECISIONS.md`); the owner's approval is the `v*` tag for a manual
+     release, and `AUTO_RELEASE` being `on` for an automatic data-only release;
    - the rollback is named: the PyPI yank procedure, the previous good version and
      the pin revert;
    - after publication, every declared channel (PyPI, GitHub release, Action

@@ -30,7 +30,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
     ):
-        assert f"| `qwen` | `{model}` | {rates} | 2026-11-04 |" in page
+        assert f"| `qwen` | `{model}` | {rates} | 2026-11-17 |" in page
     assert "Model Studio" in page and "account console" in page
     for (provider, model_id), (_, _, as_of) in PUBLIC_PRICING.items():
         rows = [

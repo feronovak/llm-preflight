@@ -126,9 +126,9 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-04 |
 | `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-04 |
 | `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-04 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-04 |
-| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-04 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-17 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-17 |
+| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-17 |
 | `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-11-04 |
 | `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-11-04 |
 | `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-11-04 |

@@ -11,13 +11,14 @@ jobs run in this order:
 
 1. `build` checks that the tag equals `v<__version__>`, runs
    `make release-freshness`, builds the wheel and sdist and uploads them.
-2. `pypi-publish` publishes them to PyPI. It runs in the `pypi` environment;
-   any required reviewers of that environment approve it here. An automatic
-   release (below) needs the environment to have none. It is the only job with
-   a PyPI trusted-publishing identity.
+2. `pypi-publish` publishes them to PyPI. It runs in the `pypi` environment,
+   which has no required reviewers, so no person approves it after the tag (see
+   [Decisions](../DECISIONS.md)): the maintainer's `v*` tag approves a manual
+   release, and `AUTO_RELEASE` being `on` approves an automatic one. It is the
+   only job with a PyPI trusted-publishing identity.
 3. `mcp-registry-publish` publishes `server.json` to the MCP Registry. It needs
    `pypi-publish` and runs only for `v*` tags. It has no environment, so it
-   adds no second approval; the `pypi` approval already gates it.
+   adds no second approval; the `pypi-publish` job already gates it.
 
 `mcp-registry-publish` waits until PyPI serves the released version, downloads
 `mcp-publisher`, checks its SHA-256 against the value pinned in the workflow,
@@ -184,5 +185,6 @@ They are the maintainer's own steps:
   `AUTO_RELEASE_APP_CLIENT_ID` and `AUTO_RELEASE_APP_PRIVATE_KEY`.
 - Set the repository variable `AUTO_RELEASE` to `on`. Until then the workflow
   only reports its verdict.
-- Make sure the `pypi` environment has no required reviewers, or an automatic
-  release stops at the PyPI job waiting for approval.
+- The `pypi` environment has no required reviewers by design; an environment
+  reviewer would stop an automatic release at the PyPI job waiting for
+  approval.

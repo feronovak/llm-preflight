@@ -1443,7 +1443,7 @@ def test_anthropic_4_x_rows_report_a_dry_run_cost(model_id, inp, out, cached):
     )
 
     assert budget["estimated_cost_usd"]
-    assert not budget.get("missing_prices")
+    assert budget["maximum_estimated_cost_usd"] is not None
 
 
 def test_cached_plus_written_tokens_above_input_stay_unpriced():

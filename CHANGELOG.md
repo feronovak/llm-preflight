@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- The four DeepSeek rows (`deepseek-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`) were re-reviewed against the official pricing page on 2026-11-17; their prices are unchanged and they now become stale on 2026-12-18. The legacy `deepseek-v4-flash` names bill at the Flash price.
+- The four DeepSeek rows (`deepseek-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`) were re-reviewed against the official pricing page on 2026-11-17; their prices are unchanged and they now become stale on 2026-12-18. The legacy `deepseek-v4-flash` names bill at the Flash price. Approval receipts and attestations recorded for a DeepSeek plan before this change no longer match and need recording again.
 
 ## 2.25.6 - 2026-11-17
 

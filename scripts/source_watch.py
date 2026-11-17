@@ -104,6 +104,7 @@ PRICE_SIGNAL = re.compile(
     r"|\bper\s+(?:million|thousand|1m|1k|token)|/\s?[mk]tok",
     re.IGNORECASE,
 )
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
 _MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec"
 DATE_SIGNAL = re.compile(
     rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b(?:{_MONTHS})[a-z]*\.?\s+\d|\b\d{{1,2}}\s+(?:{_MONTHS})"
@@ -223,20 +224,22 @@ def _container_lines(html: str, rows: list[str]) -> list[str]:
     """Scoped lines of `article`, else `main`, else the whole page.
 
     Landmarks are read from parsed tags, so one inside a script or a comment
-    does not count. An `article` that holds only part of what `main` holds
-    (a promo beside the price table) loses to `main`.
+    does not count. An `article` inside `main` that holds only part of it (a
+    promo beside the price table) loses to `main`; an `article` beside `main`
+    is read together with it.
     """
     probe = _TextExtractor()
     _lines(html, probe)
     is_sibling = _sibling_matcher(rows)
     found = [t for t in ("article", "main") if t in probe.tags]
     scoped = {t: _lines(html, _TextExtractor(t, is_sibling)) for t in found}
-    if (
-        "article" in scoped
-        and "main" in scoped
-        and not set(scoped["main"]) <= set(scoped["article"])
-    ):
-        return scoped["main"]
+    if "article" in scoped and "main" in scoped:
+        article, main = scoped["article"], scoped["main"]
+        if set(article) <= set(main):
+            return main
+        if set(main) <= set(article):
+            return article
+        return main + [line for line in article if line not in set(main)]
     return scoped[found[0]] if found else _lines(html, _TextExtractor(None, is_sibling))
 
 
@@ -463,10 +466,23 @@ def _names_cited_model(text: str, rows: list[str]) -> bool:
     return any(model in slug for model in cited)
 
 
+def _number_edit(changed: list[str]) -> bool:
+    """True when a removed and an added line differ only in their numbers, such
+    as a bare `0.3` -> `0.5` price cell under a header that names the unit."""
+    old, new = ([line[2:] for line in changed if line[0] == c] for c in "-+")
+    shapes = {_NUMBER.sub("#", line) for line in old}
+    return any(
+        _NUMBER.sub("#", line) in shapes and line not in old
+        for line in new
+        if _NUMBER.search(line)
+    )
+
+
 def is_relevant_change(changed: list[str], rows: list[str]) -> bool:
     """True when a changed line names a cited model or has a price, date or
-    retirement word. Anything else (layout, promo, navigation) is not data."""
-    return any(
+    retirement word, or a number was edited in place. Anything else (layout,
+    promo, navigation) is not data."""
+    return _number_edit(changed) or any(
         _names_cited_model(line[2:], rows)
         or any(s.search(line) for s in (PRICE_SIGNAL, DATE_SIGNAL, RETIREMENT_SIGNAL))
         for line in changed

@@ -581,6 +581,15 @@ def test_article_in_script_or_comment_is_not_a_container(sw, hidden):
     assert "Input $3" in _kept(sw, html)
 
 
+def test_article_beside_main_is_read_together_with_it(sw):
+    html = (
+        "<body><main><p>Welcome to our docs</p></main><article><table><tr>"
+        "<td>Claude Sonnet 5.5</td><td>$3</td></tr></table></article></body>"
+    )
+    kept = _kept(sw, html)
+    assert "$3" in kept and "Welcome" in kept
+
+
 def test_dated_and_undated_citations_keep_sibling_filtering(sw):
     rows = [
         "pricing anthropic/claude-haiku-4-5",
@@ -661,6 +670,18 @@ def test_price_in_a_row_that_names_no_model_is_not_lost(sw, monkeypatch):
         "<table><tr><td>Batch</td><td>1.00 per million</td></tr></table>",
         "<table><tr><td>Batch</td><td>0.50 per million</td></tr></table>",
     )
+    assert len(changes) == 1 and ignored == []
+
+
+@pytest.mark.parametrize(("old", "new"), [("0.3", "0.5"), ("15", "20")])
+def test_bare_number_edit_under_a_unit_header_is_a_finding(sw, monkeypatch, old, new):
+    def table(value):
+        return (
+            "<h2>Sonnet prices (per 1M tokens)</h2><table><tr><td>Cache read</td>"
+            f"<td>{value}</td></tr></table>"
+        )
+
+    changes, ignored, _ = _change(sw, monkeypatch, table(old), table(new))
     assert len(changes) == 1 and ignored == []
 
 

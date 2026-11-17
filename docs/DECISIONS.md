@@ -142,3 +142,9 @@ authorization remains separate from a numeric rating.
 **Scope:** This entry covers 2.25.0 only.
 
 **Consequence:** Each 2.25.0 change that can change an exit code is marked `Breaking:` in `CHANGELOG.md`.
+
+## The release tag is the only human gate for publishing
+
+**Decision:** The `pypi` GitHub environment has no required reviewers. The owner's approval to publish is the `v*` tag; the environment accepts only `v*` tags and nothing else gates the PyPI job. The maintainer decided this on 2026-11-17.
+
+**Consequence:** Build-rating gate 5 reads the owner's approval as the tag. `docs/development/releases.md` states that the environment has no required reviewers.

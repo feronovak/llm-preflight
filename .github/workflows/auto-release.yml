@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Require the head commit on main
-        run: git merge-base --is-ancestor "${HEAD_SHA}" origin/main
+        run: git merge-base --is-ancestor "${HEAD_SHA}" refs/remotes/origin/main
       - name: Require a version change in the head commit
         id: prep
         run: |

@@ -117,7 +117,7 @@ classifier is therefore still tagged by the maintainer.
 ### What the workflow does
 
 1. It starts when the `tests` workflow succeeds for a push to `main`. Its
-   first step requires the commit to be an ancestor of `origin/main`, because a
+   first step requires the commit to be an ancestor of `refs/remotes/origin/main`, because a
    tag or branch named `main` would otherwise match the trigger. It continues
    only when that commit changed the `pyproject.toml` version: the merged
    release-prep commit, which has already passed review.

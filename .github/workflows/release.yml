@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/main
           gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" > /dev/null
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:

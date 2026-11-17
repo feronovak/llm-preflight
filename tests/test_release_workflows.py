@@ -1,4 +1,5 @@
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -68,7 +69,7 @@ def test_release_job_gated_on_qualifies_and_switch():
 
 def test_head_must_be_on_main_before_anything_else_in_classify():
     classify = _job(AUTO, "classify")
-    guard = 'git merge-base --is-ancestor "${HEAD_SHA}" origin/main'
+    guard = 'git merge-base --is-ancestor "${HEAD_SHA}" refs/remotes/origin/main'
     assert guard in classify
     assert "fetch-depth: 0" in classify
     # The guard is the first step after the checkout.
@@ -157,7 +158,9 @@ def test_dispatch_requires_tag_commit_on_main_before_any_build():
     build = _job(RELEASE, "build")
     guard = _guard_step()
     assert "if: github.event_name == 'workflow_dispatch'" in guard
-    assert 'git merge-base --is-ancestor "${GITHUB_SHA}" origin/main' in guard
+    assert (
+        'git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/main' in guard
+    )
     assert "fetch-depth: 0" in build.split("Require a tagged commit")[0]
     # Everything that builds or publishes comes after the guard.
     assert build.index("Require a tagged commit") < build.index(
@@ -195,3 +198,32 @@ def test_no_other_workflow_grants_write():
         text = path.read_text(encoding="utf-8")
         assert "actions: write" not in text, path.name
         assert "contents: write" not in text, path.name
+
+
+def test_guards_name_the_full_remote_ref_never_the_short_one():
+    for text in (AUTO, RELEASE):
+        assert text.count("refs/remotes/origin/main") == 1
+        assert re.search(r"(?<![/\w])origin/main", text) is None
+
+
+def test_short_origin_main_is_ambiguous_but_the_full_ref_is_not(tmp_path):
+    # A tag named origin/main wins the short name; the full ref cannot be spoofed.
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    git("init", "-q", "-b", "main")
+    git("commit", "-q", "--allow-empty", "-m", "base")
+    git("update-ref", "refs/remotes/origin/main", "HEAD")
+    git("checkout", "-q", "-b", "unmerged")
+    git("commit", "-q", "--allow-empty", "-m", "unmerged")
+    git("tag", "origin/main")
+    head = git("rev-parse", "HEAD").stdout.strip()
+    assert git("merge-base", "--is-ancestor", head, "origin/main").returncode == 0
+    full = git("merge-base", "--is-ancestor", head, "refs/remotes/origin/main")
+    assert full.returncode == 1

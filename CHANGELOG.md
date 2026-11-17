@@ -4,13 +4,15 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.25.6 - 2026-11-17
+
 ### Added
 
-- `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and `claude-sonnet-4-6` now have official snapshot prices, so a smoke or dry run reports a cost instead of "missing price" (USD per million tokens, input / output / cached input): 5.00 / 25.00 / 0.50 for the three Opus models and 3.00 / 15.00 / 0.30 for Sonnet 4.6. No cache-write rate is bundled, as for the other Anthropic rows. Saved plans for these models change once because they are now priced. `claude-opus-4-5-20251101` does not support `inference_geo`, so a plan that sets it is refused before any request, as for `claude-haiku-4-5-20251001`.
+- `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and `claude-sonnet-4-6` now have official snapshot prices, so a smoke or dry run reports a cost instead of "missing price" (USD per million tokens, input / output / cached input): 5.00 / 25.00 / 0.50 for the three Opus models and 3.00 / 15.00 / 0.30 for Sonnet 4.6. No cache-write rate is bundled, as for the other Anthropic rows. Saved plans for these models change once because they are now priced. `claude-opus-4-5-20251101` does not support `inference_geo`, so a plan that sets it is refused before any request, as for `claude-haiku-4-5-20251001`. Breaking: for a config that sets `inference_geo` for `claude-opus-4-5-20251101`, `--dry-run` now exits 2 where it exited 0, `--doctor` exits 1 where it exited 0, a run stops with exit 2 before any request (it used to send one the API rejects with HTTP 400), and the MCP `dry_run_plan` tool returns an error. To keep such a config runnable, remove `inference_geo` for this model, then record receipts again with `--dry-run --approval-receipt --replace-approval-receipt`. The four priced models also change exit codes: `--pricing-check` now exits 0 where it exited 1, and `--dry-run` exits 0 where it exited 2 when the config sets `require_current_pricing` or `max_estimated_cost_usd`.
 
 ### Fixed
 
-- `claude-opus-4-7` no longer fails with `HTTP 400: temperature is deprecated for this model`: default requests now omit `temperature` for it, like the other Anthropic models that reject it.
+- `claude-opus-4-7` no longer fails with `HTTP 400: temperature is deprecated for this model`: default requests now omit `temperature` for it, and so does a `temperature` set in the run request, like the other Anthropic models that reject it.
 
 ### Changed
 

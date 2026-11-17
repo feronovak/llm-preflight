@@ -1219,12 +1219,12 @@ def test_us_inference_geo_prices_every_token_category_on_fable_5_2():
     )
 
 
-HAIKU_4_5 = "claude-haiku-4-5-20251001"
+NO_GEO = ["claude-haiku-4-5-20251001", "claude-opus-4-5-20251101"]
 
 
 @pytest.mark.parametrize(
     "model_id",
-    sorted(m for p, m in PUBLIC_PRICING if p == "anthropic" and m != HAIKU_4_5),
+    sorted(m for p, m in PUBLIC_PRICING if p == "anthropic" and m not in NO_GEO),
 )
 def test_us_inference_geo_raises_the_plan_estimate_on_every_supporting_anthropic_row(
     model_id,
@@ -1234,11 +1234,12 @@ def test_us_inference_geo_raises_the_plan_estimate_on_every_supporting_anthropic
     assert _geo_budget(model_id, "us") == pytest.approx(standard * 1.1)
 
 
+@pytest.mark.parametrize("model_id", NO_GEO)
 @pytest.mark.parametrize("geo", ["us", "global"])
-def test_haiku_4_5_refuses_any_inference_geo_at_plan_time(geo):
-    with pytest.raises(ValueError, match="does not support inference_geo"):
-        _geo_budget(HAIKU_4_5, geo)
-    assert _geo_budget(HAIKU_4_5, None)
+def test_models_without_inference_geo_refuse_it_at_plan_time(model_id, geo):
+    with pytest.raises(ValueError, match=f"{model_id} does not support inference_geo"):
+        _geo_budget(model_id, geo)
+    assert _geo_budget(model_id, None)
 
 
 def test_reported_not_available_wins_over_a_requested_us_geo(monkeypatch):

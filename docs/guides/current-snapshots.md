@@ -14,8 +14,10 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
-2026-11-13 and become stale on 2026-12-14. The `qwen4-max` row was reviewed on
-2026-11-17 and becomes stale on 2026-12-18. Explicit owner overrides
+2026-11-13 and become stale on 2026-12-14. The `qwen4-max`,
+`claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and
+`claude-sonnet-4-6` rows were reviewed on
+2026-11-17 and become stale on 2026-12-18. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 27 models with
@@ -97,6 +99,10 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-04 |
 | `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-11-04 |
 | `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-04 |
+| `anthropic` | `claude-opus-4-7` | 5.00 | 25.00 | 2026-11-17 |
+| `anthropic` | `claude-opus-4-6` | 5.00 | 25.00 | 2026-11-17 |
+| `anthropic` | `claude-opus-4-5-20251101` | 5.00 | 25.00 | 2026-11-17 |
+| `anthropic` | `claude-sonnet-4-6` | 3.00 | 15.00 | 2026-11-17 |
 | `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-11-04 |
 | `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-11-04 |
 | `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-04 |
@@ -280,7 +286,7 @@ a write rate alone does not replace the bundled one. `speed` other than `standar
 every Anthropic row, because fast mode has its own rates. `inference_geo: us` in
 `provider_options.anthropic` multiplies every token category by 1.1 on bundled
 Anthropic rows, as the official pricing page lists; `claude-haiku-4-5-20251001`
-does not support the option and refuses any `inference_geo` at plan time.
+and `claude-opus-4-5-20251101` do not support the option and refuse any `inference_geo` at plan time.
 `global` or no option is the standard cost, a reported `not_available` is the
 standard cost even when `us` was requested, any other requested value leaves the
 cost unavailable, and an owner override is used as given. A response that

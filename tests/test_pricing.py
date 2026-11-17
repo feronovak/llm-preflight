@@ -787,6 +787,10 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-09"),
         ("anthropic", "claude-mythos-5-2"): (8.0, 40.0, "2026-11-09"),
         ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-04"),
+        ("anthropic", "claude-opus-4-5-20251101"): (5.0, 25.0, "2026-11-17"),
+        ("anthropic", "claude-opus-4-6"): (5.0, 25.0, "2026-11-17"),
+        ("anthropic", "claude-opus-4-7"): (5.0, 25.0, "2026-11-17"),
+        ("anthropic", "claude-sonnet-4-6"): (3.0, 15.0, "2026-11-17"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-04"),
         ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-04"),
         ("xai", "grok-4.3"): (1.25, 2.5, "2026-11-04"),
@@ -1384,8 +1388,19 @@ def test_claude_5_cache_reads_take_us_inference_multiplier():
     )
 
 
-def test_cache_writes_stay_unpriced_for_new_cache_read_rows():
-    model = apply_public_pricing({"provider": "anthropic", "model": "claude-sonnet-5"})
+CLAUDE_4_X_ROWS = [
+    ("claude-opus-4-5-20251101", 5.0, 25.0, 0.5),
+    ("claude-opus-4-6", 5.0, 25.0, 0.5),
+    ("claude-opus-4-7", 5.0, 25.0, 0.5),
+    ("claude-sonnet-4-6", 3.0, 15.0, 0.3),
+]
+
+
+@pytest.mark.parametrize(
+    "model_id", ["claude-sonnet-5", *[r[0] for r in CLAUDE_4_X_ROWS]]
+)
+def test_cache_writes_stay_unpriced_for_new_cache_read_rows(model_id):
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
 
     assert (
         estimate_sample_cost(
@@ -1394,6 +1409,41 @@ def test_cache_writes_stay_unpriced_for_new_cache_read_rows():
         )
         is None
     )
+
+
+@pytest.mark.parametrize(("model_id", "inp", "out", "cached"), CLAUDE_4_X_ROWS)
+def test_claude_4_x_official_snapshot_pricing(model_id, inp, out, cached):
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+
+    assert model["input_cost_per_million"] == inp
+    assert model["output_cost_per_million"] == out
+    assert model["cached_input_cost_per_million"] == cached
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://platform.claude.com/docs/en/about-claude/pricing"
+    )
+    assert "cache_write_input_cost_per_million" not in model
+    assert "pricing_tiers" not in model
+    assert estimate_sample_cost(
+        {"input_tokens": 900_000, "output_tokens": 0}, model
+    ) == pytest.approx(0.9 * inp)
+
+
+@pytest.mark.parametrize(("model_id", "inp", "out", "cached"), CLAUDE_4_X_ROWS)
+def test_anthropic_4_x_rows_report_a_dry_run_cost(model_id, inp, out, cached):
+    from llm_preflight.features import estimate_budget
+
+    budget = estimate_budget(
+        {
+            "prompt": "hello",
+            "models": [{"provider": "anthropic", "model": model_id}],
+            "repetitions": 1,
+            "warmups": 0,
+        }
+    )
+
+    assert budget["estimated_cost_usd"]
+    assert budget["maximum_estimated_cost_usd"] is not None
 
 
 def test_cached_plus_written_tokens_above_input_stay_unpriced():

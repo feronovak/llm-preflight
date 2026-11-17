@@ -29,6 +29,8 @@ GEMINI_4_THINKING_LEVELS = {
     "gemini-4-hydrogen": (*_GEMINI_4_THINKING_LEVELS, "XHIGH"),
 }
 GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
+_NO_INFERENCE_GEO_MODELS = {"claude-haiku-4-5-20251001", "claude-opus-4-5-20251101"}
+
 _QWEN_COMBINED_OUTPUT_MODELS = {
     "qwen4-max",
     "qwen3.8-max",
@@ -147,10 +149,10 @@ def validate_native_request_options(
         )
     if (
         provider == "anthropic"
-        and model_id == "claude-haiku-4-5-20251001"
+        and model_id in _NO_INFERENCE_GEO_MODELS
         and "inference_geo" in _provider_options(options, provider)
     ):
-        raise ValueError("claude-haiku-4-5-20251001 does not support inference_geo")
+        raise ValueError(f"{model_id} does not support inference_geo")
     if provider not in {
         "zai",
         "deepseek",

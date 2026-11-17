@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Fixed
+
+- `claude-opus-4-7` no longer fails with `HTTP 400: temperature is deprecated for this model`: default requests now omit `temperature` for it, like the other Anthropic models that reject it.
+
 ### Changed
 
 - Added `qwen4-max` to the measured-models comparison: an eight-case run on the native `qwen` route, rendered into the results image and the README table.

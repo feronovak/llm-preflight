@@ -319,7 +319,7 @@ The server exposes eight tools.
 | Tool | What it does | Provider access |
 |---|---|---|
 | `audit_source` | Audits literal model IDs under an optional workspace-relative `path` (default: the workspace) and returns the CLI `--audit-source --json` object, with secret-like strings redacted, and the decision as the first text line. Needs no benchmark config. | Never contacts a provider or loads credentials. |
-| `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. | Never contacts a provider or loads credentials. |
+| `validate_config` | Validates one benchmark configuration's structure. Like the CLI `--doctor`, it does not evaluate `validation_fixtures`; prove them with the CLI `--contract-check`. `run_preflight` refuses a config whose fixtures fail. It does not run the native request checks that `--doctor` runs, so it can return `ok: true` for a config that `--doctor` fails, such as `claude-opus-4-5-20251101` with `inference_geo`; run `dry_run_plan`, which refuses such a config, after a change. | Never contacts a provider or loads credentials. |
 | `dry_run_plan` | Returns the same plan as the CLI `--dry-run --json` (models, tests, redacted request, cost plan, `models[].base_url` masked to scheme and host[:port] with any path, query or userinfo shown as `/[REDACTED]` (a base URL that is not http(s) with a plain host prints as `[REDACTED]`), per-model `smoke_eligibility`, `retirements`, configuration warnings, `pricing_warnings` including `owner_price_ignored` for an owner price the snapshot replaced) plus `ok`, `pricing_ledger`, and `pricing_fingerprint`. | Never contacts a provider or loads credentials. |
 | `run_preflight` | Runs the configured benchmark. The result masks each `base_url` as `--dry-run --json` does. | A live-provider run requires explicit paid-run confirmation. |
 | `diff_baseline` | Compares two saved result artifacts. | Never contacts a provider. |
@@ -360,7 +360,7 @@ first and report its `decision` and each retired or retiring model.
 
 1. Select an existing benchmark that reflects the application's deployed
    prompt and response contract. Prove its fixtures with `--contract-check`.
-2. Ask the agent to run `validate_config` after an LLM-related change.
+2. Ask the agent to run `validate_config` after an LLM-related change. It checks structure only, not the native request checks `--doctor` runs, so step 3 is the check that refuses an unsupported option.
 3. Ask it to run `dry_run_plan` and report models, request count, estimated
    cost, every non-eligible `smoke_eligibility` reason, and the `retirements`
    decision: `fail` means a selected model is retired, `inconclusive` means one is retiring, its snapshot row is stale, or it is an `alias_unmapped`. The tool's `ok` stays `true` for a

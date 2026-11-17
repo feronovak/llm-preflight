@@ -629,7 +629,7 @@ def test_qwen_3_8_max_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 2.0
     assert model["output_cost_per_million"] == 6.0
     assert model["cached_input_cost_per_million"] is None
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
@@ -641,7 +641,7 @@ def test_qwen_3_8_flash_official_snapshot_pricing():
     assert model["input_cost_per_million"] == 0.15
     assert model["output_cost_per_million"] == 0.47
     assert model["cached_input_cost_per_million"] is None
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
@@ -812,9 +812,9 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-17"),
         ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-17"),
         ("qwen", "qwen4-max"): (1.5, 4.5, "2026-11-17"),
-        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-04"),
-        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-04"),
-        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-11-04"),
+        ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-17"),
+        ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-17"),
+        ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-11-17"),
         ("zai", "glm-5.3"): (1.4, 4.4, "2026-11-04"),
         ("typesafe", "jev-latest"): (0.042, 0.0, "2026-11-04"),
         ("typesafe", "jev-1.13.0"): (0.042, 0.0, "2026-11-04"),
@@ -1258,7 +1258,7 @@ def test_native_model_studio_cache_price_needs_reviewed_account_evidence(model_i
     assert model["pricing_metadata"]["source_url"] == (
         "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
     )
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
     cached = {"input_tokens": 100, "cached_input_tokens": 50, "output_tokens": 10}
     assert estimate_sample_cost(cached, model) is None
     uncached = {**cached, "cached_input_tokens": 0}

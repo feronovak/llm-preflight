@@ -142,3 +142,9 @@ authorization remains separate from a numeric rating.
 **Scope:** This entry covers 2.25.0 only.
 
 **Consequence:** Each 2.25.0 change that can change an exit code is marked `Breaking:` in `CHANGELOG.md`.
+
+## The pypi environment has no required reviewers
+
+**Decision:** The `pypi` GitHub environment has no required reviewers, so no person approves the PyPI job after the tag. The owner's approval to publish is the `v*` tag for a manual release, and turning the repository variable `AUTO_RELEASE` on for an automatic data-only release, where the GitHub App creates the tag. The maintainer decided this on 2026-11-17.
+
+**Consequence:** Build-rating gate 5 reads the owner's approval as that tag or variable. `docs/development/releases.md` states that the environment has no required reviewers.

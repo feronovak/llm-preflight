@@ -14,7 +14,8 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
-2026-11-13 and become stale on 2026-12-14. The `qwen4-max`,
+2026-11-13 and become stale on 2026-12-14. The `qwen4-max`, `qwen3.8-max`,
+`qwen3.8-flash`, `qwen3.7-plus`,
 `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and
 `claude-sonnet-4-6` rows were reviewed on
 2026-11-17 and become stale on 2026-12-18. Explicit owner overrides
@@ -182,7 +183,7 @@ route, settings and date.
 
 The Max and Flash rows use Model Studio Singapore/International standard
 input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
-on November 4. Other regions and deployment scopes require their own reviewed
+on November 17. Other regions and deployment scopes require their own reviewed
 overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
 must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed

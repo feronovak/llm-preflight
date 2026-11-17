@@ -1009,6 +1009,7 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         "claude-fable-5-1",
         "claude-fable-5-2",
         "claude-mythos-5-2",
+        "claude-opus-4-7",
         "claude-opus-4-8",
         "claude-opus-5",
         "claude-opus-5-5",
@@ -1017,6 +1018,16 @@ def test_current_anthropic_models_omit_unsupported_temperature():
         assert "temperature" not in client.body(
             "hello", {"temperature": 0, "max_output_tokens": 16}
         )
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-4-5-20251101", "claude-opus-4-6", "claude-sonnet-4-6"],
+)
+def test_earlier_anthropic_models_keep_temperature(model):
+    client = create_client({"provider": "anthropic", "model": model}, 10)
+    body = client.body("hello", {"temperature": 0, "max_output_tokens": 16})
+    assert body["temperature"] == 0
 
 
 @pytest.mark.parametrize(

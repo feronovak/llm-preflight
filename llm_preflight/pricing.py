@@ -18,7 +18,6 @@ from .retirements import GEMINI_MODEL_REDIRECTS
 # freshness still requires a new review. Redirected Gemini aliases have no
 # reviewed effective-route price and are deliberately omitted.
 # DeepSeek snapshots use peak rates (input, cache hit, output); off-peak is half.
-# Qwen
 # Qwen 3.8 snapshots use Model Studio Singapore/International list rates;
 # its cache-hit price needs account-console evidence. TypeSafe Jev bills input only.
 # Snapshot rows were reviewed against their primary official sources on

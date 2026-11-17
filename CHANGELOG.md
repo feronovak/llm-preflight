@@ -7,7 +7,7 @@ All notable changes to this project are documented here.
 ### Added
 
 - `qwen4-max` now has an official snapshot price on the native `qwen` route: 1.50 / 4.50 USD per million tokens (input / output), cached input 0.075 and cache write 1.875 (5-minute rate). Saved plans for this model change once because it is now priced.
-- `qwen4-max` on the native `qwen` route now sends `max_completion_tokens` by default, so the output limit covers reasoning plus the answer, as for Qwen 3.8. Breaking: a `qwen4-max` config with `max_tokens_parameter: max_tokens` and thinking not explicitly disabled is now refused before any request, with a message naming the constraint: `--dry-run` exits 2 where it exited 0, and a run exits 2 before any request where it sent the request and could exit 0 or 1. To keep such a config runnable, set `max_tokens_parameter` to `max_completion_tokens` (the default) or explicitly disable thinking.
+- `qwen4-max` on the native `qwen` route now sends `max_completion_tokens` by default, so the output limit covers reasoning plus the answer, as for Qwen 3.8. Breaking: a `qwen4-max` config with `max_tokens_parameter: max_tokens` and thinking not explicitly disabled is now refused before any request, with a message naming the constraint: `--dry-run` exits 2 where it exited 0, `--doctor` now reports the model as failed and exits 1, where it exited 0, and a run exits 2 before any request where it sent the request and could exit 0 or 1. To keep such a config runnable, set `max_tokens_parameter` to `max_completion_tokens` (the default) or explicitly disable thinking.
 
 ## 2.25.4 - 2026-11-13
 

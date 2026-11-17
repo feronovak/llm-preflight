@@ -77,8 +77,14 @@ def _bump(text: str, version: str) -> str:
 class Repo:
     """A temp git repo whose base commit holds the real data files."""
 
-    def __init__(self, path: Path, extra: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        path: Path,
+        extra: dict[str, str] | None = None,
+        tag: str = BASE_VERSION,
+    ) -> None:
         self.path = path
+        self.tag = tag
         _git(path, "init", "-q")
         for relative in REAL_FILES:
             _write(path, relative, (ROOT / relative).read_text(encoding="utf-8"))
@@ -97,7 +103,7 @@ class Repo:
             _write(path, relative, text)
         _git(path, "add", "-A")
         _git(path, "commit", "-q", "-m", "base")
-        _git(path, "tag", f"v{BASE_VERSION}")
+        _git(path, "tag", f"v{tag}")
 
     def read(self, relative: str) -> str:
         return (self.path / relative).read_text(encoding="utf-8")
@@ -127,7 +133,7 @@ class Repo:
         previous = Path.cwd()
         try:
             os.chdir(self.path)
-            return rc.classify(f"v{BASE_VERSION}", head)
+            return rc.classify(f"v{self.tag}", head)
         finally:
             os.chdir(previous)
 
@@ -220,19 +226,24 @@ def test_previous_pin_substitution_qualifies(repo):
 def test_real_action_guide_pin_is_a_pure_substitution(tmp_path):
     # The shape of a pin PR: the guide names only the current pin, so moving
     # the previous release's version to the base tag's version is all it takes.
+    # The base is the pin the guide names, not the package version: between a
+    # release-prep merge and its pin PR they differ.
     guide = "docs/automation/github-action.md"
     current = (ROOT / guide).read_text(encoding="utf-8")
-    line = re.compile(rf"\b{MAJOR}\.{MINOR}\.(\d+)\b")
+    pins = set(re.findall(r"feronovak/llm-preflight@v(\d+\.\d+\.\d+)", current))
+    assert len(pins) == 1
+    (pin,) = pins
+    major, minor, patch = (int(part) for part in pin.split("."))
+    line = re.compile(rf"\b{major}\.{minor}\.(\d+)\b")
 
     def lower(match):
-        patch = int(match.group(1))
-        return f"{MAJOR}.{MINOR}.{max(patch - 1, 0)}"
+        return f"{major}.{minor}.{max(int(match.group(1)) - 1, 0)}"
 
     # Every pin in the guide moves up by one release, history included.
     previous = line.sub(lower, current)
-    pinned = Repo(tmp_path, {guide: previous})
+    pinned = Repo(tmp_path, {guide: previous}, tag=pin)
     pinned.edit(guide, lambda _: current)
-    pinned.release_prep()
+    pinned.release_prep(version=f"{major}.{minor}.{patch + 1}")
     assert pinned.classify()["reasons"] == []
 
 

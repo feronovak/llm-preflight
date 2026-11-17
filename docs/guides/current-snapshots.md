@@ -1,12 +1,12 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-13 · **As of:** v2.25.4
+**Last reviewed:** 2026-11-17 · **As of:** v2.25.5
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.25.4**. The table records this version's reviewed
+Package version: **2.25.5**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
@@ -14,7 +14,8 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
-2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
+2026-11-13 and become stale on 2026-12-14. The `qwen4-max` row was reviewed on
+2026-11-17 and becomes stale on 2026-12-18. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 26 models with

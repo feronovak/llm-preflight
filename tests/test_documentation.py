@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-13 · **As of:** v2.25.4" in page
+    assert "**Last reviewed:** 2026-11-17 · **As of:** v2.25.5" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -39,6 +39,21 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
             if line.startswith(f"| `{provider}` | `{model_id}` |")
         ]
         assert len(rows) == 1 and rows[0].endswith(f"| {as_of} |"), rows
+
+
+def test_current_snapshots_review_paragraph_names_every_review_date():
+    from datetime import date, timedelta
+
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    page = (ROOT / "docs/guides/current-snapshots.md").read_text()
+    paragraph = " ".join(
+        next(p for p in page.split("\n\n") if "were reviewed on" in p).split()
+    )
+    for day in {as_of for _, _, as_of in PUBLIC_PRICING.values()}:
+        stale = date.fromisoformat(day) + timedelta(days=31)
+        assert day in paragraph, day
+        assert f"stale on {stale.isoformat()}" in paragraph, day
 
 
 def test_docs_home_and_mcp_guide_are_first_class_entry_points():

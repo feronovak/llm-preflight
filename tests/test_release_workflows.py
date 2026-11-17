@@ -63,7 +63,41 @@ def test_release_job_gated_on_qualifies_and_switch():
     assert "needs: classify" in release
     assert "needs.classify.outputs.qualifies == 'true'" in release
     assert "vars.AUTO_RELEASE == 'on'" in release
-    assert "environment:" not in release
+    assert "environment: auto-release" in release
+
+
+def test_head_must_be_on_main_before_anything_else_in_classify():
+    classify = _job(AUTO, "classify")
+    guard = 'git merge-base --is-ancestor "${HEAD_SHA}" origin/main'
+    assert guard in classify
+    assert "fetch-depth: 0" in classify
+    # The guard is the first step after the checkout.
+    assert classify.index(guard) < classify.index("Require a version change")
+    assert classify.index("actions/checkout") < classify.index(guard)
+    assert "if:" not in classify[classify.index(guard) - 120 : classify.index(guard)]
+
+
+def test_app_token_only_in_release_job_and_only_for_the_tag():
+    classify = _job(AUTO, "classify")
+    release = _job(AUTO, "release")
+    assert "environment:" not in classify
+    assert "secrets." not in classify
+    assert AUTO.count("secrets.") == 2
+    assert AUTO.count("actions/create-github-app-token@") == 1
+    assert re.search(r"create-github-app-token@[0-9a-f]{40} # v", release)
+    assert "permission-contents: write" in release
+    # Only the tag step receives the App token; every other step keeps the
+    # workflow token.
+    assert AUTO.count("steps.app-token.outputs.token") == 1
+    tag_step = release[release.index("Create the tag at the release-prep commit") :]
+    tag_step = tag_step[: tag_step.index("      - name: Write the dispatch helper")]
+    assert "GH_TOKEN: ${{ steps.app-token.outputs.token }}" in tag_step
+    assert "GH_TOKEN: ${{ github.token }}" in release.split("    steps:")[0]
+
+
+def test_watch_polls_at_a_slow_interval():
+    assert "gh run watch" in AUTO
+    assert "--interval 30 --exit-status" in AUTO
 
 
 def test_classifier_runs_from_base_tag():

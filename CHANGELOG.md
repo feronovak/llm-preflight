@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Added `qwen4-max` to the measured-models comparison: an eight-case run on the native `qwen` route, rendered into the results image and the README table.
+
 ## 2.25.5 - 2026-11-17
 
 ### Added

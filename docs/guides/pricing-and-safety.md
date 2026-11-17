@@ -60,7 +60,7 @@ through OpenRouter. Selected direct OpenAI, Gemini, Anthropic, xAI, DeepSeek,
 Qwen, and TypeSafe prices are maintained as timestamped `official snapshot`
 records. The IDs and headline rates in this package are listed in
 [current snapshots](current-snapshots.md). DeepSeek snapshots use peak
-cache-miss rates; off-peak is half. Gemini 4 Argon and Gemini 3.6/3.8 Flash
+rates (input, cache hit, output); off-peak is half. Gemini 4 Argon and Gemini 3.6/3.8 Flash
 use the published introductory rates and their scheduled UTC price changes.
 These transitions do not refresh snapshot review dates. Redirected Gemini
 3.5/3.7 aliases have unknown effective prices; saved official rates are removed,

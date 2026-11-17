@@ -595,13 +595,16 @@ def test_gemini_4_is_not_invented_as_a_public_snapshot():
     assert "pricing_metadata" not in model
 
 
-def test_deepseek_flash_snapshot_uses_conservative_peak_rates():
-    model = apply_public_pricing({"provider": "deepseek", "model": "deepseek-flash"})
+@pytest.mark.parametrize(
+    "model_id", ["deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"]
+)
+def test_deepseek_flash_snapshot_uses_conservative_peak_rates(model_id):
+    model = apply_public_pricing({"provider": "deepseek", "model": model_id})
 
     assert model["input_cost_per_million"] == 0.3
     assert model["output_cost_per_million"] == 1.2
     assert model["cached_input_cost_per_million"] == 0.006
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
     assert model["pricing_metadata"]["source_url"] == (
         "https://api-docs.deepseek.com/quick_start/pricing"
     )
@@ -730,6 +733,10 @@ def test_deepseek_v4_pro_snapshot_uses_conservative_peak_rates():
     assert model["input_cost_per_million"] == 1.32
     assert model["output_cost_per_million"] == 3.96
     assert model["cached_input_cost_per_million"] == 0.044
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://api-docs.deepseek.com/quick_start/pricing"
+    )
 
 
 @pytest.mark.parametrize("model_id", ["jev-latest", "jev-1.13.0"])
@@ -800,10 +807,10 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-04"),
         ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-04"),
         ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-04"),
-        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-11-04"),
-        ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-04"),
-        ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-04"),
-        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-04"),
+        ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-11-17"),
+        ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-17"),
+        ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-17"),
+        ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-17"),
         ("qwen", "qwen4-max"): (1.5, 4.5, "2026-11-17"),
         ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-17"),
         ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-17"),
@@ -1599,3 +1606,44 @@ def test_persisted_official_snapshot_row_does_not_warn():
         0
     ]
     assert _owner_warnings([resolved]) == []
+
+
+def test_deepseek_restamp_changes_the_pricing_fingerprint_a_receipt_binds(monkeypatch):
+    from datetime import datetime, timezone
+
+    from llm_preflight import pricing
+    from llm_preflight.approval import create_approval_receipt, verify_approval_receipt
+
+    models = [{"provider": "deepseek", "model": "deepseek-flash"}]
+    now = datetime(2026, 11, 17, tzinfo=timezone.utc)
+    key = ("deepseek", "deepseek-flash")
+    with monkeypatch.context() as old_snapshot:
+        old_snapshot.setitem(
+            pricing.PUBLIC_PRICING,
+            key,
+            (*pricing.PUBLIC_PRICING[key][:2], "2026-11-04"),
+        )
+        before = pricing.resolve_pricing(models)["fingerprint"]
+    receipt = create_approval_receipt(
+        {"pricing_fingerprint": before},
+        note="reviewed",
+        expires_at="2026-12-01T00:00:00+00:00",
+        now=now,
+    )
+    plan = {"pricing_fingerprint": pricing.resolve_pricing(models)["fingerprint"]}
+
+    verdict = verify_approval_receipt(receipt, plan, now=now)
+
+    assert verdict["state"] == "mismatch"
+
+
+def test_snapshot_review_day_covers_every_bundled_review_date(snapshot_review_day):
+    from datetime import timedelta
+
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    dates = [date.fromisoformat(row[2]) for row in PUBLIC_PRICING.values()]
+    message = "bump SNAPSHOT_REVIEW_DAY in tests/conftest.py"
+
+    assert max(dates) <= snapshot_review_day, message
+    assert snapshot_review_day <= min(dates) + timedelta(days=30), message

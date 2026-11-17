@@ -60,6 +60,7 @@ def snapshot_review_day(monkeypatch):
             )
 
     monkeypatch.setattr("llm_preflight.pricing.datetime", ReviewDatetime)
+    return SNAPSHOT_REVIEW_DAY
 
 
 @pytest.fixture

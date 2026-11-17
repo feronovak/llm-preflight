@@ -607,6 +607,19 @@ def test_deepseek_flash_snapshot_uses_conservative_peak_rates():
     )
 
 
+def test_qwen_4_max_official_snapshot_pricing():
+    model = apply_public_pricing({"provider": "qwen", "model": "qwen4-max"})
+
+    assert model["input_cost_per_million"] == 1.5
+    assert model["output_cost_per_million"] == 4.5
+    assert model["cached_input_cost_per_million"] == 0.075
+    assert model["cache_write_input_cost_per_million"] == 1.875
+    assert model["pricing_metadata"]["as_of"] == "2026-11-17"
+    assert model["pricing_metadata"]["source_url"] == (
+        "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+    )
+
+
 def test_qwen_3_8_max_official_snapshot_pricing():
     model = apply_public_pricing({"provider": "qwen", "model": "qwen3.8-max"})
 
@@ -787,6 +800,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-04"),
         ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-04"),
         ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-04"),
+        ("qwen", "qwen4-max"): (1.5, 4.5, "2026-11-17"),
         ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-04"),
         ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-04"),
         ("qwen", "qwen3.7-plus"): (0.4, 1.6, "2026-11-04"),

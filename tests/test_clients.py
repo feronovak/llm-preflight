@@ -353,7 +353,9 @@ def test_qwen_uses_the_model_studio_compatible_chat_adapter():
     assert client.model["api_key_env"] == "DASHSCOPE_API_KEY"
 
 
-@pytest.mark.parametrize("model", ["qwen3.8-max", "qwen3.8-max-0902", "qwen3.8-flash"])
+@pytest.mark.parametrize(
+    "model", ["qwen4-max", "qwen3.8-max", "qwen3.8-max-0902", "qwen3.8-flash"]
+)
 @pytest.mark.parametrize("limit", [None, 1, 4096])
 def test_native_qwen_3_8_caps_reasoning_and_answer_tokens_together(model, limit):
     client = create_client({"provider": "qwen", "model": model}, 10)
@@ -371,6 +373,24 @@ def test_native_qwen_3_8_caps_reasoning_and_answer_tokens_together(model, limit)
     assert "max_tokens" not in body
     assert body["enable_thinking"] is True
     assert body["reasoning_effort"] == "low"
+
+
+def test_native_qwen_4_max_budget_bound_follows_the_combined_limit():
+    from llm_preflight.features import check_budget
+
+    def estimate(limit):
+        config = {
+            "prompt": "Reply with ok",
+            "models": [{"provider": "qwen", "model": "qwen4-max"}],
+            "request": {"max_output_tokens": limit},
+            "repetitions": 1,
+            "warmups": 0,
+        }
+        body = create_client(config["models"][0], 10).body("ok", config["request"])
+        assert body["max_completion_tokens"] == limit
+        return check_budget(config)["estimated_cost_usd"]
+
+    assert estimate(4096) - estimate(128) == pytest.approx((4096 - 128) * 4.5 / 1e6)
 
 
 @pytest.mark.parametrize(

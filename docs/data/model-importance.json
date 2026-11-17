@@ -890,9 +890,15 @@
     },
     {
       "provider": "qwen",
-      "model": "qwen3.8-max",
+      "model": "qwen4-max",
       "tier": 1,
-      "reason": "newest Qwen flagship, measured 2026-10-29"
+      "reason": "newest Qwen flagship"
+    },
+    {
+      "provider": "qwen",
+      "model": "qwen3.8-max",
+      "tier": 2,
+      "reason": "previous Qwen flagship, measured 2026-10-29"
     },
     {
       "provider": "typesafe",

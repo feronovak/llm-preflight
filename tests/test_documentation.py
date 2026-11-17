@@ -25,6 +25,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
     assert "Gemini 4" in page
     assert "no live Gemini 4 result has been measured" not in page
     assert "16/16" in page and "observed-model-comparison.md" in page
+    assert "| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |" in page
     for model, rates in (
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),

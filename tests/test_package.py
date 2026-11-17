@@ -462,7 +462,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.25.4",
+        "llm-preflight==2.25.5",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",
@@ -526,7 +526,11 @@ def test_mcp_registry_publish_runs_after_pypi_on_v_tags():
     assert "id-token" not in top
     assert workflow.count("id-token: write") == 2
     assert "secrets." not in workflow
-    assert "TOKEN" not in workflow
+    # No stored credential: nothing runs `gh auth login`, and the only token in
+    # this workflow is the read-only GH_TOKEN scoped to the dispatch guard step.
+    assert "gh auth login" not in workflow
+    assert workflow.count("TOKEN") == 1
+    assert "GH_TOKEN: ${{ github.token }}" in workflow
 
 
 def test_mcp_publisher_download_is_pinned_and_checksum_verified():

@@ -14,7 +14,8 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
-2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
+2026-11-13 and become stale on 2026-12-14. The `qwen4-max` row was reviewed on
+2026-11-17 and becomes stale on 2026-12-18. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 26 models with

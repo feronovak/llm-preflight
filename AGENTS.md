@@ -57,7 +57,8 @@ The release preflight must also verify that package artifacts contain only
 user-facing documentation and required examples: `README.md`, `LICENSE`,
 `CHANGELOG.md`, `SECURITY.md` when applicable, and example configuration files.
 
-Before creating or pushing a release tag, finalize `CHANGELOG.md`: replace the
+Before creating or pushing a release tag, or merging a release commit that the
+auto-release workflow may tag, finalize `CHANGELOG.md`: replace the
 `Unreleased` placeholder for that version with the release date, verify the
 entries describe the shipped behavior, and include the finalized file in the
 release commit. Never publish a release whose tagged changelog still labels

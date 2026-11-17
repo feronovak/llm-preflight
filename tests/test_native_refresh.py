@@ -137,6 +137,11 @@ def test_native_cohort_text_transport(
             "max_output_tokens": 512,
             "temperature": 0,
             "retry": {"max_attempts": 1},
+            **(
+                {"provider_options": {"mistral": {"top_p": 1}}}
+                if provider == "mistral"
+                else {}
+            ),
         },
     )
     assert sample["ok"] is True

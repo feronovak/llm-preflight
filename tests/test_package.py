@@ -9,8 +9,8 @@ from llm_preflight.runner import load_config, run_benchmark
 
 
 def test_package_version_is_consistent():
-    assert __version__ == "2.25.3"
-    assert 'version = "2.25.3"' in Path("pyproject.toml").read_text()
+    assert __version__ == "2.25.5"
+    assert 'version = "2.25.5"' in Path("pyproject.toml").read_text()
     server = json.loads(Path("server.json").read_text())
     assert server["version"] == __version__
     assert {package["version"] for package in server["packages"]} == {__version__}
@@ -462,7 +462,7 @@ def test_first_run_starters_and_github_workflow_are_safe_and_documented():
         "retention-days:",
         # The starter must install the latest published package, not an
         # unreleased source version under development.
-        "llm-preflight==2.25.3",
+        "llm-preflight==2.25.5",
         "--doctor --json",
         "--pricing-check",
         "--smoke --dry-run --json",
@@ -526,7 +526,11 @@ def test_mcp_registry_publish_runs_after_pypi_on_v_tags():
     assert "id-token" not in top
     assert workflow.count("id-token: write") == 2
     assert "secrets." not in workflow
-    assert "TOKEN" not in workflow
+    # No stored credential: nothing runs `gh auth login`, and the only token in
+    # this workflow is the read-only GH_TOKEN scoped to the dispatch guard step.
+    assert "gh auth login" not in workflow
+    assert workflow.count("TOKEN") == 1
+    assert "GH_TOKEN: ${{ github.token }}" in workflow
 
 
 def test_mcp_publisher_download_is_pinned_and_checksum_verified():

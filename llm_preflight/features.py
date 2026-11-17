@@ -16,7 +16,7 @@ from .client import (
     requested_inference_geo,
     validate_native_request_options,
 )
-from .contracts import profile_request_options
+from .contracts import DEFAULT_REQUEST, profile_request_options
 from .decision import legacy_cost_evidence
 from .eligibility import incompatible_text_smoke_reason
 from .presets import SUPPORTED_PRESETS, expand_presets
@@ -133,7 +133,10 @@ def _retry_max_attempts(request: dict[str, Any]) -> int:
 
 def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Return every nominal request shape, including warmups, for cost safety."""
-    request = dict(config.get("request", {}))
+    # Same default as the runner: presets expand onto an empty request.
+    request = dict(
+        config.get("request", {} if config.get("presets") else DEFAULT_REQUEST)
+    )
     warmups = int(config.get("warmups", 1))
     selector = config.get("profiles")
     if not selector:

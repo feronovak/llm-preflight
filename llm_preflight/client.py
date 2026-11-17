@@ -30,6 +30,7 @@ GEMINI_4_THINKING_LEVELS = {
 }
 GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
 _QWEN_COMBINED_OUTPUT_MODELS = {
+    "qwen4-max",
     "qwen3.8-max",
     "qwen3.8-max-0902",
     "qwen3.8-flash",
@@ -83,6 +84,28 @@ def _provider_options(options: dict[str, Any], provider: str) -> dict[str, Any]:
             merged.update(value)
         return merged
     return dict(configured)
+
+
+def _is_number(value: Any, expected: int) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and value == expected
+    )
+
+
+def _reject_mistral_greedy_without_top_p_one(
+    options: dict[str, Any], provider_options: dict[str, Any]
+) -> None:
+    temperature = provider_options.get("temperature", options.get("temperature"))
+    if _is_number(temperature, 0) and not _is_number(provider_options.get("top_p"), 1):
+        raise ValueError(
+            "Mistral Large 4 rejects temperature 0 unless top_p is 1 (greedy "
+            "sampling); set provider_options.mistral.top_p to 1 or omit temperature "
+            "in the run request. The built-in tests that use the structured preset "
+            "(such as agent-smoke) cannot run on this model: use a custom prompt "
+            "with its own request instead"
+        )
 
 
 def validate_native_request_options(
@@ -202,6 +225,8 @@ def validate_native_request_options(
             raise ValueError(
                 "native text preflight does not execute tools or hosted retrieval"
             )
+    if provider == "mistral" and model_id in {"mistral-large-4", "mistral-large-4-0"}:
+        _reject_mistral_greedy_without_top_p_one(options, provider_options)
     if provider == "moonshot":
         cache_options = provider_options.get("prompt_cache_options", {})
         if (

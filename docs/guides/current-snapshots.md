@@ -1,12 +1,12 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-13 · **As of:** v2.25.3
+**Last reviewed:** 2026-11-17 · **As of:** v2.25.5
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.25.3**. The table records this version's reviewed
+Package version: **2.25.5**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 Rows were reviewed on 2026-11-04 UTC and become stale on 2026-12-05. Strict
 pricing then blocks execution. The `claude-fable-5-2` and `claude-mythos-5-2`
@@ -14,14 +14,15 @@ rows were reviewed on 2026-11-09 and become stale on 2026-12-10. The `gemini-4-c
 row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber`,
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
-2026-11-13 and become stale on 2026-12-14. Explicit owner overrides
+2026-11-13 and become stale on 2026-12-14. The `qwen4-max` row was reviewed on
+2026-11-17 and becomes stale on 2026-12-18. Explicit owner overrides
 retain their own evidence and review dates.
 
-The [latest comparison](observed-model-comparison.md) measured 26 models with
+The [latest comparison](observed-model-comparison.md) measured 27 models with
 eight cases each: 19 native routes on 2026-10-29, Claude Fable 5.2 and
 Gemini 3.1 Flash-Lite on 2026-11-11, four more models on 2026-11-11 and
-Gemini 4 Hydrogen on 2026-11-13.
-A 27th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
+Gemini 4 Hydrogen on 2026-11-13 and Qwen4 Max on 2026-11-17.
+A 28th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
 outputs, three contract failures and five Kimi rate-limit errors. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.
@@ -118,6 +119,7 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-04 |
 | `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-04 |
 | `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-04 |
+| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |
 | `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-04 |
 | `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-04 |
 | `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-04 |
@@ -181,7 +183,8 @@ to `null`, so reported cache hits leave cost unknown until an explicit reviewed
 override is supplied. QwenCloud cache prices are not substituted.
 
 2.22.0 also uses `max_completion_tokens` for native Qwen 3.8
-Max, Max-0902 and Flash, covering reasoning plus answer. Planner, doctor and
+Max, Max-0902 and Flash, covering reasoning plus answer; `qwen4-max` uses it
+too. Planner, doctor and
 transport reject token-limit fields in provider options. An explicit legacy
 `max_tokens` setting requires explicitly disabled thinking. The
 [native smoke guide](native-chinese-models.md) supplies an example usable with

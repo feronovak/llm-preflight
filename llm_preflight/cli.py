@@ -1072,6 +1072,14 @@ def _starter_config() -> dict[str, Any]:
     }
 
 
+# Mistral Large 4 rejects temperature 0 unless top_p is 1; only its section reads this.
+SMOKE_REQUEST: dict[str, Any] = {
+    "temperature": 0,
+    "max_output_tokens": 128,
+    "provider_options": {"mistral": {"top_p": 1}},
+}
+
+
 def _provider_starter_config(
     provider: str, model: str, api_key_env: str, env_file: str | None = None
 ) -> dict[str, Any]:
@@ -1099,7 +1107,7 @@ def _provider_starter_config(
         "max_requests": 3,
         "max_estimated_cost_usd": 0.05,
         "save_responses": "failures",
-        "request": {"temperature": 0, "max_output_tokens": 128},
+        "request": dict(SMOKE_REQUEST),
     }
     if env_file is not None:
         config["env_file"] = env_file
@@ -2120,7 +2128,7 @@ def _catalog_main(argv: list[str]) -> None:
             "concurrency": 1,
             "max_requests": 100,
             "max_estimated_cost_usd": 0.05,
-            "request": {"temperature": 0, "max_output_tokens": 128},
+            "request": dict(SMOKE_REQUEST),
             "discovery": [sources[name] for name in names],
         }
         watch_path.write_text(json.dumps(watch, indent=2) + "\n", encoding="utf-8")

@@ -20,6 +20,7 @@ DEFAULT_DATA = (
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}.json",
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-flash-lite.json",
     ROOT / "docs/data/model-comparison-2026-11-13.json",
+    ROOT / "docs/data/model-comparison-2026-11-17.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (
@@ -45,6 +46,7 @@ MODEL_ORDER = (
     "grok-4.7",
     "deepseek-v4-pro",
     "deepseek-flash",
+    "qwen4-max",
     "qwen3.8-max",
     "qwen3.8-flash",
     "MiniMax-M3",

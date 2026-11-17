@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-13 · **As of:** v2.25.3" in page
+    assert "**Last reviewed:** 2026-11-17 · **As of:** v2.25.5" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -25,6 +25,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
     assert "Gemini 4" in page
     assert "no live Gemini 4 result has been measured" not in page
     assert "16/16" in page and "observed-model-comparison.md" in page
+    assert "| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |" in page
     for model, rates in (
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
@@ -38,6 +39,21 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
             if line.startswith(f"| `{provider}` | `{model_id}` |")
         ]
         assert len(rows) == 1 and rows[0].endswith(f"| {as_of} |"), rows
+
+
+def test_current_snapshots_review_paragraph_names_every_review_date():
+    from datetime import date, timedelta
+
+    from llm_preflight.pricing import PUBLIC_PRICING
+
+    page = (ROOT / "docs/guides/current-snapshots.md").read_text()
+    paragraph = " ".join(
+        next(p for p in page.split("\n\n") if "were reviewed on" in p).split()
+    )
+    for day in {as_of for _, _, as_of in PUBLIC_PRICING.values()}:
+        stale = date.fromisoformat(day) + timedelta(days=31)
+        assert day in paragraph, day
+        assert f"stale on {stale.isoformat()}" in paragraph, day
 
 
 def test_docs_home_and_mcp_guide_are_first_class_entry_points():
@@ -72,6 +88,7 @@ def _all_measured_rows():
             "2026-11-11",
             "2026-11-11-flash-lite",
             "2026-11-13",
+            "2026-11-17",
         )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
@@ -117,7 +134,7 @@ def test_documented_model_list_matches_comparison_evidence():
     rows = _summary_rows()
     readme = (ROOT / "README.md").read_text()
     ns = {"svg": "http://www.w3.org/2000/svg"}
-    assert len(rows) == 26
+    assert len(rows) == 27
     for name in (
         "measured-models-2026-11-11.svg",
         "measured-models-2026-11-11-light.svg",
@@ -199,7 +216,7 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     known = sum(row["known_cost_subtotal_usd"] or 0 for row in rows)
     calls = sum(row["cost_coverage"]["known_requests"] for row in rows)
     full = sum(row["valid"] == row["requests"] for row in rows)
-    assert (len(rows), checks, passed, full, calls) == (26, 208, 200, 22, 203)
+    assert (len(rows), checks, passed, full, calls) == (27, 216, 208, 23, 211)
     assert sum(row["api_failures"] for row in rows) == 5
     assert f"**{passed} of {checks} checks" in readme
     assert f"**{full} models passed all eight\nchecks.**" in readme
@@ -207,10 +224,10 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     assert f"across {calls} calls with usage" in readme
     assert "the five error\nresponses" in readme
     assert f"**{len(rows)} native model routes**" in readme
-    assert "as of 2026-11-13" in readme
+    assert "as of 2026-11-17" in readme
     assert "between 2026-10-29" not in readme and "All 20" not in readme
     assert (
-        "26 models attempted on 8 checks: 22 passed 8/8, 3 passed 7/8, "
+        "27 models attempted on 8 checks: 23 passed 8/8, 3 passed 7/8, "
         "Kimi 3 responses and 5 rate limits"
     ) in readme
 
@@ -426,8 +443,8 @@ def test_docs_match_the_2_10_0_workflow_and_current_workflow_pin():
     assert "docs/guides/model-change.md#common-jobs" in readme
     assert "catalog prepare benchmarks/watch.json" in model_change
     assert "## Safety boundary" in readme
-    assert "llm-preflight==2.25.3" in workflow
-    assert "starter workflow pins the latest published package, 2.25.3" in ci
+    assert "llm-preflight==2.25.5" in workflow
+    assert "starter workflow pins the latest published package, 2.25.5" in ci
     assert (
         "| [`docs/reference/decision.md`](reference/decision.md) | Agent decision contract "
         "| stamped | 2026-11-11 | v2.24.2 |"
@@ -529,7 +546,7 @@ def test_readme_provider_starter_has_runnable_local_contract_fixtures(tmp_path):
 def test_marketplace_action_writes_no_spend_and_paid_github_summaries():
     action = (ROOT / "action.yml").read_text()
 
-    assert 'default: "2.25.3"' in action
+    assert 'default: "2.25.5"' in action
     assert "GITHUB_STEP_SUMMARY" in action
     assert "No generation requests were made by the default checks." in action
     assert 'python -m llm_preflight report "$result_file" --format markdown' in action
@@ -650,11 +667,10 @@ def test_marketplace_action_docs_describe_the_current_published_release():
     action_guide = (ROOT / "docs/automation/github-action.md").read_text()
 
     assert "**Last reviewed:** 2026-11-11 · **As of:** v2.24.2" in action_guide
-    assert 'package-version: "2.25.3"' in action_guide
-    assert "source defaults to `2.25.3`" in action_guide
-    assert (
-        "The immutable release tag retains its earlier **2.25.2** default"
-        in action_guide
+    assert 'package-version: "2.25.5"' in action_guide
+    assert "source defaults to `2.25.5`" in action_guide
+    assert "An immutable release tag keeps the default of the release before it" in (
+        " ".join(action_guide.split())
     )
     assert "`v2.22.1` release tag retains the `2.22.0`" in action_guide
     assert "published package to keep pull-request validation installable" in " ".join(
@@ -1182,11 +1198,11 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     for workflow in (gate, record):
         for reference in re.findall(r"uses: (\S+)", workflow):
             assert re.fullmatch(
-                r"feronovak/llm-preflight@v2\.25\.3|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
+                r"feronovak/llm-preflight@v2\.25\.5|[\w.-]+/[\w./-]+@[0-9a-f]{40}",
                 reference,
             ), reference
     assert "on:\n  pull_request:" in gate
-    assert 'python -m pip install "llm-preflight==2.25.3"' in gate
+    assert 'python -m pip install "llm-preflight==2.25.5"' in gate
     assert "not an available package or tag yet" not in gate
     assert "not an available package or tag yet" not in record
     gate_fence = gate.split("```yaml", 1)[1].split("```", 1)[0]
@@ -1198,7 +1214,7 @@ def test_gate_and_record_workflows_pin_every_action_and_the_package():
     assert "gh attestation verify" in gate
     assert "--predicate-type https://in-toto.io/attestation/test-result/v0.1" in gate
     assert 'attest: "true"' in record and 'sign: "true"' in record
-    assert 'package-version: "2.25.3"' in record
+    assert 'package-version: "2.25.5"' in record
     assert "id-token: write" in record and "attestations: write" in record
     assert HONESTY_LINE in record
 
@@ -1700,16 +1716,22 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
             "2026-11-11",
             "2026-11-11-flash-lite",
             "2026-11-13",
+            "2026-11-17",
         )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
         )["rows"]
     ]
-    assert len(rows) == 26
+    assert len(rows) == 27
     names = [row["name"] for row in rows]
     assert names.index("Claude Fable 5.2") + 1 == names.index("Claude Fable 5.1")
     assert names.index("Gemini 4 Hydrogen") == names.index("Gemini 4 Carbon") + 1
-    assert {row["date"] for row in rows} == {"2026-10-29", "2026-11-11", "2026-11-13"}
+    assert {row["date"] for row in rows} == {
+        "2026-10-29",
+        "2026-11-11",
+        "2026-11-13",
+        "2026-11-17",
+    }
     assert len([row for row in rows if row["date"] == "2026-10-29"]) == 19
     assert len([row for row in rows if row["date"] != "2026-10-29"]) == len(later) - 1
 
@@ -1748,6 +1770,21 @@ def test_added_comparison_row_keeps_the_approved_bounds_and_settings():
         assert marker not in json.dumps(data)
 
 
+def test_mistral_greedy_sampling_capture_backs_the_guide_claim():
+    name = "mistral-large-4-0-greedy-sampling-400-2026-11-13.json"
+    text = (ROOT / "docs/data" / name).read_text()
+    data = json.loads(text)
+    assert data["model"] == "mistral-large-4-0" and data["http_status"] == 400
+    assert data["error_body"]["code"] == "3054"
+    assert data["error_body"]["type"] == "invalid_request_greedy_sampling"
+    assert data["request"]["temperature"] == 0 and "top_p" not in data["request"]
+    for marker in ("/home/", "scratch", '"api_key":', "Bearer"):
+        assert marker not in text
+    guide = (ROOT / "docs/guides/native-providers.md").read_text()
+    assert f"../data/{name}" in guide
+    assert name in (ROOT / "docs/data/README.md").read_text()
+
+
 def test_hydrogen_row_keeps_the_approved_bounds_and_settings():
     data = json.loads((ROOT / "docs/data/model-comparison-2026-11-13.json").read_text())
     smoke = json.loads(
@@ -1768,6 +1805,23 @@ def test_hydrogen_row_keeps_the_approved_bounds_and_settings():
     for payload in (data, smoke):
         for marker in ("/home/", "scratch", '"response":', '"api_key":'):
             assert marker not in json.dumps(payload)
+
+
+def test_qwen4_max_row_keeps_the_approved_bounds_and_settings():
+    data = json.loads((ROOT / "docs/data/model-comparison-2026-11-17.json").read_text())
+    base = json.loads((ROOT / "docs/data/model-comparison-2026-10-29.json").read_text())
+    assert data["approved_maximum_requests"] == 8
+    assert data["planned_maximum_token_estimate_usd"] <= 0.2
+    assert data["method"]["case_set_sha256"] == base["method"]["case_set_sha256"]
+    (row,) = data["rows"]
+    assert row["model"] == "qwen4-max" and row["requests"] == 8
+    (qwen,) = (r for r in base["rows"] if r["model"] == "qwen3.8-max")
+    assert row["retry_count"] == 0 and row["request"] == qwen["request"]
+    assert row["valid"] + row["contract_failures"] == row["api_successful"]
+    assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
+    assert data["totals"]["known_cost_subtotal_usd"] == row["known_cost_subtotal_usd"]
+    for marker in ("/home/", "scratch", '"response":', '"api_key":'):
+        assert marker not in json.dumps(data)
 
 
 def test_flash_lite_row_keeps_the_approved_bounds_and_settings():
@@ -1819,12 +1873,12 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     svg = ET.fromstring(module.render())
     ns = {"svg": "http://www.w3.org/2000/svg"}
     texts = list(svg.itertext())
-    assert "Eight application checks across 26 models" in texts
+    assert "Eight application checks across 27 models" in texts
     assert (
         "Small synthetic sample; passing does not establish overall model quality."
         in texts
     )
-    assert "26 models · 8 requests each · as of 2026-11-13" in texts
+    assert "27 models · 8 requests each · as of 2026-11-17" in texts
     assert [g.get("data-group") for g in svg.findall("svg:g[@data-group]", ns)] == [
         "pass",
         "partial",
@@ -1848,7 +1902,7 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     assert rows["GPT-6.1 Terra"][1] == "8/8"
     assert rows["GPT-6.1 Terra"][4] == "$0.001218"
     assert svg.find("svg:desc", ns).text == (
-        "26 models attempted on 8 checks: 22 passed 8/8, 3 passed 7/8, "
+        "27 models attempted on 8 checks: 23 passed 8/8, 3 passed 7/8, "
         "Kimi K3.1 Pro 3 responses and 5 rate limits. "
         "Small synthetic sample, not a ranking or production approval."
     )
@@ -1903,7 +1957,7 @@ def test_guide_lists_the_five_added_models_with_their_recorded_results():
         assert re.fullmatch(r"[0-9a-f]{64}", row["result_sha256"])
     for field in ("requests", "api_successful", "api_failures", "valid"):
         assert data["totals"][field] == sum(row[field] for row in data["rows"])
-    assert "26 measured models" in guide
+    assert "27 measured models" in guide
     serialized = json.dumps(data)
     for marker in ("/home/", "scratch", '"response":', '"api_key":', "req_01"):
         assert marker not in serialized

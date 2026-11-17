@@ -84,6 +84,19 @@ the three commands above do not need a key or contact the provider.
   `mistral-large-4-0` have reviewed prices. The adapter checks complete text
   streams, extracts final text from typed reasoning/text blocks, and accepts
   documented cached-usage field variants. Reasoning remains in billable usage.
+  The provider rejects `temperature: 0` unless `top_p` is 1 (a live native run
+  on 2026-11-13 returned HTTP 400, `top_p must be 1 when using greedy
+  sampling.`, type `invalid_request_greedy_sampling`, code 3054; the capture is
+  [`mistral-large-4-0-greedy-sampling-400-2026-11-13.json`](../data/mistral-large-4-0-greedy-sampling-400-2026-11-13.json)), so preflight
+  refuses that request before any spend; set `provider_options.mistral.top_p`
+  to 1 or omit `temperature` in the run request. The top-level `low-latency`
+  and `structured` presets set `temperature: 0` without `top_p`, so with them
+  set `top_p` to 1 as well. The built-in tests that use the `structured`
+  preset (`structured-output-check`, `strict-json-extraction`,
+  `code-patch-summary`, `source-grounded-quiz`, and the `agent-smoke` suite
+  that contains them) cannot run on this model, because they replace
+  `provider_options` and drop `top_p`; use a custom prompt with its own request
+  instead.
 - Cohere's adapter uses v2 Chat and bills from `usage.billed_units`, not the
   larger count that can include provider-injected tokens. Cohere publishes no
   per-token price for Command A+, so the snapshot has no bundled price: cost is
@@ -131,7 +144,7 @@ configured native models; no metadata discovery endpoint is integrated.
 | Source audit and change plans | New literal model families and explicit provider prefixes; an explicit OpenRouter route does not inherit native prices. Literal scanning does not resolve an application's dynamic endpoint or execute its parser. |
 | MCP | Existing contract, pricing and plan tools reuse native validation. Read-only tools accept configured models and refuse provider discovery. Live calls retain explicit confirmation requirements. |
 | Saved results and reports | Existing normalized usage, observed model identity, cost coverage and decision fields; no new live result is implied by fixtures. |
-| GitHub Action | Runs the installed package. Set `package-version: "2.25.3"` to use these providers. |
+| GitHub Action | Runs the installed package. Set `package-version: "2.25.5"` to use these providers. |
 | Agent plugin | Existing guidance requires reporting the contract, price/plan decision, warnings and unknown evidence before any live work. |
 
 DeepSeek's `deepseek-flash` currently resolves to V4.1-Flash-1017. The legacy

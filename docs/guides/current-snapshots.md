@@ -182,7 +182,8 @@ to `null`, so reported cache hits leave cost unknown until an explicit reviewed
 override is supplied. QwenCloud cache prices are not substituted.
 
 2.22.0 also uses `max_completion_tokens` for native Qwen 3.8
-Max, Max-0902 and Flash, covering reasoning plus answer. Planner, doctor and
+Max, Max-0902 and Flash, covering reasoning plus answer; `qwen4-max` uses it
+too. Planner, doctor and
 transport reject token-limit fields in provider options. An explicit legacy
 `max_tokens` setting requires explicitly disabled thinking. The
 [native smoke guide](native-chinese-models.md) supplies an example usable with

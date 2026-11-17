@@ -30,6 +30,7 @@ GEMINI_4_THINKING_LEVELS = {
 }
 GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
 _QWEN_COMBINED_OUTPUT_MODELS = {
+    "qwen4-max",
     "qwen3.8-max",
     "qwen3.8-max-0902",
     "qwen3.8-flash",

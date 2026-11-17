@@ -17,7 +17,8 @@ from .retirements import GEMINI_MODEL_REDIRECTS
 # rates through 2026-11-30. Published date changes are applied below; snapshot
 # freshness still requires a new review. Redirected Gemini aliases have no
 # reviewed effective-route price and are deliberately omitted.
-# DeepSeek snapshots use peak cache-miss rates; off-peak is half. Qwen
+# DeepSeek snapshots use peak rates (input, cache hit, output); off-peak is half.
+# Qwen
 # Qwen 3.8 snapshots use Model Studio Singapore/International list rates;
 # its cache-hit price needs account-console evidence. TypeSafe Jev bills input only.
 # Snapshot rows were reviewed against their primary official sources on
@@ -69,10 +70,10 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-04"),
     ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-04"),
     ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-04"),
-    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-11-04"),
-    ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-04"),
-    ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-04"),
-    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-04"),
+    ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-11-17"),
+    ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-17"),
+    ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-17"),
+    ("deepseek", "deepseek-v4-pro"): (1.32, 3.96, "2026-11-17"),
     ("qwen", "qwen4-max"): (1.5, 4.5, "2026-11-17"),
     ("qwen", "qwen3.8-max"): (2.0, 6.0, "2026-11-04"),
     ("qwen", "qwen3.8-flash"): (0.15, 0.47, "2026-11-04"),

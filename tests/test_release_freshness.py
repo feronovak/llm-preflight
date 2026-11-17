@@ -21,12 +21,16 @@ def _script():
     return module
 
 
-def test_release_freshness_passes_on_the_snapshot_review_day(capsys):
-    assert _script().main(["--today", "2026-11-04"]) == 0
+def test_release_freshness_passes_on_the_snapshot_review_day(
+    capsys, snapshot_review_day
+):
+    today = snapshot_review_day.isoformat()
+
+    assert _script().main(["--today", today]) == 0
 
     output = capsys.readouterr().out
     assert "FAIL" not in output
-    assert "Release freshness on 2026-11-04: pass" in output
+    assert f"Release freshness on {today}: pass" in output
 
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):

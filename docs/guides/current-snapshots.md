@@ -15,8 +15,9 @@ row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber
 `gpt-5.6-cyber`, `gemini-4-hydrogen`, `grok-4.20-0309-reasoning`,
 `grok-4.20-0309-non-reasoning` and `grok-4.20-multi-agent-0309` rows were reviewed on
 2026-11-13 and become stale on 2026-12-14. The `qwen4-max`,
-`claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and
-`claude-sonnet-4-6` rows were reviewed on
+`claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
+`claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
+`deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
 2026-11-17 and become stale on 2026-12-18. Explicit owner overrides
 retain their own evidence and review dates.
 
@@ -121,10 +122,10 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-13 |
 | `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-13 |
 | `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-13 |
-| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-04 |
-| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-04 |
-| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-04 |
-| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-04 |
+| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-17 |
+| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-17 |
+| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-17 |
+| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-17 |
 | `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |
 | `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-04 |
 | `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-04 |
@@ -143,7 +144,7 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-11-04 |
 | `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-11-04 |
 
-DeepSeek rows use peak cache-miss rates. Qwen rows use USD list rates; the
+DeepSeek rows use peak rates (input, cache hit, output); off-peak is half. Qwen rows use USD list rates; the
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
 is a conservative estimate for that model. It has a higher band above 256k
 input. GPT-5.5, GPT-6 and several Grok/Gemini IDs have long-context bands.

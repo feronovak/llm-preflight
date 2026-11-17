@@ -7,7 +7,7 @@ import pytest
 
 # Deterministic clock at or after every bundled snapshot review date.
 # Bump it when a newly reviewed row would otherwise be in the future.
-SNAPSHOT_REVIEW_DAY = date(2026, 11, 9)
+SNAPSHOT_REVIEW_DAY = date(2026, 11, 17)
 
 
 @pytest.fixture(autouse=True)
@@ -60,6 +60,7 @@ def snapshot_review_day(monkeypatch):
             )
 
     monkeypatch.setattr("llm_preflight.pricing.datetime", ReviewDatetime)
+    return SNAPSHOT_REVIEW_DAY
 
 
 @pytest.fixture

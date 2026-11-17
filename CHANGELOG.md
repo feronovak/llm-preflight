@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Added
 
 - `qwen4-max` now has an official snapshot price on the native `qwen` route: 1.50 / 4.50 USD per million tokens (input / output), cached input 0.075 and cache write 1.875 (5-minute rate). Saved plans for this model change once because it is now priced.
+- `qwen4-max` on the native `qwen` route now sends `max_completion_tokens` by default, so the output limit covers reasoning plus the answer, as for Qwen 3.8. An explicit `max_tokens_parameter: max_tokens` is accepted only with explicitly disabled thinking; with thinking not explicitly disabled it now fails before any request, where before it was sent.
 
 ## 2.25.4 - 2026-11-13
 

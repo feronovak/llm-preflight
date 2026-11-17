@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7` and `claude-sonnet-4-6` now have official snapshot prices, so a smoke or dry run reports a cost instead of "missing price" (USD per million tokens, input / output / cached input): 5.00 / 25.00 / 0.50 for the three Opus models and 3.00 / 15.00 / 0.30 for Sonnet 4.6. No cache-write rate is bundled, as for the other Anthropic rows. Saved plans for these models change once because they are now priced. `claude-opus-4-5-20251101` does not support `inference_geo`, so a plan that sets it is refused before any request, as for `claude-haiku-4-5-20251001`.
+
 ### Changed
 
 - Added `qwen4-max` to the measured-models comparison: an eight-case run on the native `qwen` route, rendered into the results image and the README table.

@@ -1,6 +1,6 @@
 # GitHub Marketplace Action
 
-Use the `v2.25.7` Action with `package-version: "2.25.7"` for reproducible CI.
+Use the `v2.25.8` Action with `package-version: "2.25.8"` for reproducible CI.
 An immutable release tag keeps the default of the release before it. An inconclusive paid decision remains exit 3; null cost
 and incomplete subtotals remain visible in attached evidence.
 
@@ -13,14 +13,14 @@ contract-preflight gate, not an evaluation platform or deployment approval.
 ```yaml
 steps:
   - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-  - uses: feronovak/llm-preflight@v2.25.7
+  - uses: feronovak/llm-preflight@v2.25.8
     with:
       config: benchmark.json
-      package-version: "2.25.7"
+      package-version: "2.25.8"
 ```
 
 The Action installs the exact `package-version` input. The current repository
-source defaults to `2.25.7`; each release tag defaults to the package version of the release before it. The `v2.22.1` release tag retains the `2.22.0`
+source defaults to `2.25.8`; each release tag defaults to the package version of the release before it. The `v2.22.1` release tag retains the `2.22.0`
 default, so the example sets the input explicitly. The default execution path
 makes no provider generation request. For a non-mock config, the `--doctor`
 step exits 1 when a model's key variable is unset, so supply each key variable
@@ -50,7 +50,7 @@ and the notice printed during its last 7 days.
 
 Dependabot moves the Action tag but not the `package-version` input. A tag's
 `action.yml` defaults to the package version of the release before it
-(for example `v2.25.7` defaults to the release before it), so a tag-only pin installs the previous
+(for example `v2.25.8` defaults to the release before it), so a tag-only pin installs the previous
 release and its data expires a release earlier. Keep `package-version` in
 your workflow, set to the tag's version, and bump both together:
 
@@ -66,10 +66,10 @@ updates:
 
 ```yaml
 steps:
-  - uses: feronovak/llm-preflight@v2.25.7
+  - uses: feronovak/llm-preflight@v2.25.8
     with:
       config: benchmark.json
-      package-version: "2.25.7"
+      package-version: "2.25.8"
 ```
 
 Dependabot's pull request changes the tag; edit `package-version` in that pull
@@ -89,10 +89,10 @@ credentials in GitHub Secrets rather than in a file in the repository.
 ```yaml
 steps:
   - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-  - uses: feronovak/llm-preflight@v2.25.7
+  - uses: feronovak/llm-preflight@v2.25.8
     with:
       config: benchmark.json
-      package-version: "2.25.7"
+      package-version: "2.25.8"
       run-paid: "true"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -138,7 +138,7 @@ the pull request's head commit as `commit`; it then checks that commit's
 configuration with the workflow and credentials of `main`. The protected
 environment's required reviewers approve each paid run.
 
-The workflow below uses `v2.25.7` with `package-version` `2.25.7`. The older `v2.22.1` release tag retains the `2.22.0` default; explicit package pins also make older tag behavior clear.
+The workflow below uses `v2.25.8` with `package-version` `2.25.8`. The older `v2.22.1` release tag retains the `2.22.0` default; explicit package pins also make older tag behavior clear.
 
 ```yaml
 name: LLM preflight record
@@ -164,10 +164,10 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
-      - uses: feronovak/llm-preflight@v2.25.7
+      - uses: feronovak/llm-preflight@v2.25.8
         with:
           config: benchmark.json
-          package-version: "2.25.7"
+          package-version: "2.25.8"
           run-paid: "true"
           attest: "true"
           sign: "true"

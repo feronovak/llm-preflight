@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- `gpt-6.2-astra` and `gpt-6.2-sol` now have official snapshot prices, so a smoke or dry run reports a cost instead of "missing price" (USD per million tokens, input / output / cached input / 30-minute cache write, up to 272,000 input tokens): 8.00 / 40.00 / 0.40 / 10.00 for Astra and 2.00 / 10.00 / 0.10 / 2.50 for Sol; above that, 16.00 / 60.00 / 0.80 / 20.00 and 4.00 / 15.00 / 0.20 / 5.00. Both are rated tier 1 in the model importance list. Like the other GPT-6 models they omit `temperature`, accept only the standard service tier and 30-minute cache retention, and require a completed response status. Saved plans for these models change once because they are now priced.
+
 ### Changed
 
 - The four DeepSeek rows (`deepseek-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`) were re-reviewed against the official pricing page on 2026-11-17; their prices are unchanged and they now become stale on 2026-12-18. The legacy `deepseek-v4-flash` names bill at the Flash price. Breaking: approval receipts recorded for a DeepSeek plan before this change verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1), because the pricing review date is part of the plan; record them again with `--dry-run --approval-receipt --replace-approval-receipt`.

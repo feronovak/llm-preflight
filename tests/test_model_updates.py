@@ -412,7 +412,13 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "2026-11-11",
         "2026-11-13",
         "2026-11-17",
+        "2026-11-18",
     }
+    assert {
+        model
+        for (_, model), rates in PUBLIC_PRICING.items()
+        if rates[2] == "2026-11-18"
+    } == {"gpt-6.2-astra", "gpt-6.2-sol"}
     assert {
         model
         for (_, model), rates in PUBLIC_PRICING.items()

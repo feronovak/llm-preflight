@@ -121,6 +121,8 @@ def test_runtime_url_validation_failure_becomes_a_normal_api_failure(monkeypatch
         "gpt-6-astra",
         "gpt-6.1-sol",
         "gpt-6.1-terra",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol",
         "gpt-6-sol",
         "gpt-6-luna",
     ],

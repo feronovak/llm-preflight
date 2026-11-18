@@ -54,7 +54,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next (the four GLM and Kimi rows below are re-measured on 2026-11-18, above). All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows before the 2026-11-18 re-measure, 26 of 29 after it). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |

@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-18",
+  "reviewed_on": "2026-11-18",
+  "tool_version": "2.25.6",
+  "source_commit": "4d90c724447bae53490f18fbe8a60e17a5320d3e",
+  "source_dirty": false,
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.3,
+  "planned_maximum_token_estimate_usd": 0.083325,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native OpenAI Responses route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.002076,
+    "known_cost_subtotal_usd": 0.002076,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "openai",
+      "model": "gpt-6.2-sol",
+      "display_name": "GPT-6.2 Sol",
+      "route": "OpenAI",
+      "observed_on": "2026-11-18",
+      "observed_model": "gpt-6.2-sol",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.4707087377537391,
+      "latency_p50_seconds": 1.3541474235098576,
+      "latency_p95_seconds": 2.213448339588649,
+      "mean_ttft_seconds": null,
+      "input_tokens": 548,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 98,
+      "estimated_cost_usd": 0.002076,
+      "known_cost_subtotal_usd": 0.002076,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.3,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "openai": {
+            "reasoning": {
+              "effort": "low"
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-openai-gpt-6-2-sol",
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-6.2-sol",
+            "adapter": "openai_responses"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "openai": {
+              "reasoning": {
+                "effort": "low"
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.3,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "c06e0e9c7f1601cfe50836abec5d370441ae74189144cf55a975bf88891ed8b8",
+      "result_sha256": "89e323edc2e22662f80a0759c85b35410cc6929e514d9610ae305028b99f524c",
+      "pricing_fingerprint": "ec308f4b990359a8876f011faaf8be80881e99383f67410244ff201fd383ab31",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

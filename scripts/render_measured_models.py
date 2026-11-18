@@ -21,6 +21,7 @@ DEFAULT_DATA = (
     ROOT / f"docs/data/model-comparison-{CURRENT_MEASUREMENT}-flash-lite.json",
     ROOT / "docs/data/model-comparison-2026-11-13.json",
     ROOT / "docs/data/model-comparison-2026-11-17.json",
+    ROOT / "docs/data/model-comparison-2026-11-18.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (
@@ -28,6 +29,7 @@ DEFAULT_LIGHT_OUTPUT = (
 )
 # Display order inside each result group: provider, then model, newest/largest first.
 MODEL_ORDER = (
+    "gpt-6.2-sol",
     "gpt-6-astra",
     "gpt-6.1-sol",
     "gpt-6.1-terra",
@@ -60,6 +62,7 @@ MODEL_ORDER = (
 DEFAULT_HIDDEN = {"claude-mythos-5-2"}
 MODEL_NAMES = {
     "gpt-6-astra": "GPT-6 Astra",
+    "gpt-6.2-sol": "GPT-6.2 Sol",
     "gpt-6.1-sol": "GPT-6.1 Sol",
     "gpt-6-luna": "GPT-6 Luna",
     "claude-opus-5-5": "Claude Opus 5.5",

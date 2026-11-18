@@ -138,41 +138,42 @@ For benchmark runs, read the decision before acting:
 
 ## New
 
-Claude Fable 5.2, Gemini 3.1 Flash-Lite, Gemini 4 Hydrogen, Qwen4 Max and four more models in the
+Claude Fable 5.2, Gemini 3.1 Flash-Lite, Gemini 4 Hydrogen, Qwen4 Max, GPT-6.2 Sol and four more models in the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
-The guide covers 28 routes; the 28th, Claude Mythos 5.2, returned HTTP 404 on
+The guide covers 29 routes; the 29th, Claude Mythos 5.2, returned HTTP 404 on
 all eight calls. Everything else
 is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-We ran **27 native model routes** through eight synthetic support-routing and
-strict JSON cases each. **208 of 216 checks passed**: three outputs failed their
-contract and five Kimi calls returned HTTP 429. **23 models passed all eight
-checks.** These are observations for this workload as of 2026-11-17, not a
+We ran **28 native model routes** through eight synthetic support-routing and
+strict JSON cases each. **216 of 224 checks passed**: three outputs failed their
+contract and five Kimi calls returned HTTP 429. **24 models passed all eight
+checks.** These are observations for this workload as of 2026-11-18, not a
 ranking of general intelligence or production approval.
 
 <a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
 <picture>
 <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
-<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="27 models attempted on 8 checks: 23 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="28 models attempted on 8 checks: 24 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
 </picture>
 </a>
 
 Each request used a 1,024-token output allowance and one attempt, with no
 retries. Passed counts valid outputs out of API responses; API errors are
 separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
-averages API responses only. The known token-cost subtotal is **$0.10321584**
-across 211 calls with usage; the total is unknown because the five error
+averages API responses only. The known token-cost subtotal is **$0.10529184**
+across 219 calls with usage; the total is unknown because the five error
 responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 before comparing rows. It has the method and the failure analysis.
 
 <details>
-<summary>The same 27 rows as a table</summary>
+<summary>The same 28 rows as a table</summary>
 
 | Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured |
 |---|---|---|---|---|---|---|---|
+| GPT-6.2 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.471s | $0.002076 | 2026-11-18 |
 | GPT-6 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 2.089s | $0.010580 | 2026-10-29 |
 | GPT-6.1 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.476s | $0.002116 | 2026-10-29 |
 | GPT-6.1 Terra | OpenAI | Passed 8/8 | 8/8 | 0 | 1.192s | $0.001218 | 2026-10-29 |

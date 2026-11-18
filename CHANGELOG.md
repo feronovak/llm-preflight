@@ -10,6 +10,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Added `gpt-6.2-sol` to the measured-models comparison: an eight-case run on the native `openai` route, rendered into the results image and the README table.
 - The four DeepSeek rows (`deepseek-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`) were re-reviewed against the official pricing page on 2026-11-17; their prices are unchanged and they now become stale on 2026-12-18. The legacy `deepseek-v4-flash` names bill at the Flash price. Breaking: approval receipts recorded for a DeepSeek plan before this change verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1), because the pricing review date is part of the plan; record them again with `--dry-run --approval-receipt --replace-approval-receipt`.
 - The pricing review date for `qwen3.8-max`, `qwen3.8-flash` and `qwen3.7-plus` is now 2026-11-17, re-checked against the official Model Studio pricing page. Prices are unchanged, so their snapshot stays fresh through 2026-12-17.
 

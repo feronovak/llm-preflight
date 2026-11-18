@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-17 · **As of:** v2.25.7" in page
+    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.7" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -915,7 +915,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
-    assert "stale from the 31st day after the 2026-11-04 review date" in guide
+    assert "stale from the 31st day after the 2026-11-18 review date" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 

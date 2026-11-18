@@ -316,7 +316,7 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-4-1106-preview")] == {
-        "status": "deprecated",
+        "status": "retired",
         "retirement_date": "2026-10-23",
         "replacement": "gpt-5.6-sol",
         "as_of": "2026-11-18",

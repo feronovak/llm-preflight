@@ -853,7 +853,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in guide
+    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.8" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()

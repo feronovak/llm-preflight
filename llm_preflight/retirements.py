@@ -189,79 +189,77 @@ _OPENAI: dict[str, dict[str, Any]] = {
         "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-18"
     ),
     # 2026-05-08 announcement
-    "gpt-5.2-chat-latest": _openai("deprecated", "2026-08-10", "gpt-5.6-sol"),
-    "gpt-5.3-chat-latest": _openai("deprecated", "2026-08-10", "gpt-5.6-sol"),
+    "gpt-5.2-chat-latest": _openai("retired", "2026-08-10", "gpt-5.6-sol"),
+    "gpt-5.3-chat-latest": _openai("retired", "2026-08-10", "gpt-5.6-sol"),
     # 2026-04-22 announcement, shutdown 2026-10-23
-    "gpt-3.5-turbo-0125": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
-    "gpt-3.5-turbo": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
-    "gpt-3.5-turbo-completions": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
-    "gpt-4-0613": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4-0613-completions": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4-completions": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4-turbo": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4-turbo-2024-04-09": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4-turbo-completions": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4o-2024-05-13": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "o1-2024-12-17": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "o1": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "o3-mini-2025-01-31": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "o3-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-3.5-turbo-0125": _openai("retired", "2026-10-23", "gpt-5.6-terra"),
+    "gpt-3.5-turbo": _openai("retired", "2026-10-23", "gpt-5.6-terra"),
+    "gpt-3.5-turbo-completions": _openai("retired", "2026-10-23", "gpt-5.6-terra"),
+    "gpt-4-0613": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4-0613-completions": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4-completions": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4-turbo": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4-turbo-2024-04-09": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4-turbo-completions": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4o-2024-05-13": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "o1-2024-12-17": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "o1": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "o3-mini-2025-01-31": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "o3-mini": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
     # The page lists gpt-4-1106-preview once, in this 2026-04-22 batch.
-    "gpt-4-1106-preview": _openai("deprecated", "2026-10-23", "gpt-5.6-sol"),
-    "gpt-4.1-nano": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
-    "gpt-4.1-nano-2025-04-14": _openai("deprecated", "2026-10-23", "gpt-5.6-luna"),
+    "gpt-4-1106-preview": _openai("retired", "2026-10-23", "gpt-5.6-sol"),
+    "gpt-4.1-nano": _openai("retired", "2026-10-23", "gpt-5.6-luna"),
+    "gpt-4.1-nano-2025-04-14": _openai("retired", "2026-10-23", "gpt-5.6-luna"),
     # The page names gpt-5.6-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
-    "o1-pro-2025-03-19": _openai("deprecated", "2026-10-23"),
-    "o1-pro": _openai("deprecated", "2026-10-23"),
-    "o4-mini-2025-04-16": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
-    "o4-mini": _openai("deprecated", "2026-10-23", "gpt-5.6-terra"),
+    "o1-pro-2025-03-19": _openai("retired", "2026-10-23"),
+    "o1-pro": _openai("retired", "2026-10-23"),
+    "o4-mini-2025-04-16": _openai("retired", "2026-10-23", "gpt-5.6-terra"),
+    "o4-mini": _openai("retired", "2026-10-23", "gpt-5.6-terra"),
     # 2026-04-22 announcement, shutdown 2026-07-23
     "gpt-4o-mini-search-preview-2025-03-11": _openai(
-        "deprecated", "2026-07-23", "gpt-5.6-terra"
+        "retired", "2026-07-23", "gpt-5.6-terra"
     ),
     "gpt-4o-search-preview-2025-03-11": _openai(
-        "deprecated", "2026-07-23", "gpt-5.6-terra"
+        "retired", "2026-07-23", "gpt-5.6-terra"
     ),
-    "gpt-5.1-codex-mini": _openai("deprecated", "2026-07-23", "gpt-5.6-terra"),
-    "gpt-5-chat-latest": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "gpt-5-codex": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "gpt-5.1-chat-latest": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "gpt-5.1-codex": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "gpt-5.1-codex-max": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "gpt-5.2-codex": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "o3-deep-research-2025-06-26": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "o3-deep-research": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
-    "o4-mini-deep-research-2025-06-26": _openai(
-        "deprecated", "2026-07-23", "gpt-5.6-sol"
-    ),
-    "o4-mini-deep-research": _openai("deprecated", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5.1-codex-mini": _openai("retired", "2026-07-23", "gpt-5.6-terra"),
+    "gpt-5-chat-latest": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5-codex": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5.1-chat-latest": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5.1-codex": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5.1-codex-max": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "gpt-5.2-codex": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "o3-deep-research-2025-06-26": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "o3-deep-research": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "o4-mini-deep-research-2025-06-26": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
+    "o4-mini-deep-research": _openai("retired", "2026-07-23", "gpt-5.6-sol"),
     # 2025-09-26 announcement
-    "gpt-3.5-turbo-instruct": _openai("deprecated", "2026-09-28", "gpt-5.6-terra"),
-    "gpt-3.5-turbo-1106": _openai("deprecated", "2026-09-28", "gpt-5.6-terra"),
+    "gpt-3.5-turbo-instruct": _openai("retired", "2026-09-28", "gpt-5.6-terra"),
+    "gpt-3.5-turbo-1106": _openai("retired", "2026-09-28", "gpt-5.6-terra"),
     # 2025-09-26 announcement; the page names "gpt-5 or gpt-4.1*", so no
     # single replacement is recorded.
-    "gpt-4-0314": _openai("deprecated", "2026-03-26"),
-    "gpt-4-0125-preview": _openai("deprecated", "2026-03-26"),
-    "gpt-4-turbo-preview": _openai("deprecated", "2026-03-26"),
-    "gpt-4-turbo-preview-completions": _openai("deprecated", "2026-03-26"),
+    "gpt-4-0314": _openai("retired", "2026-03-26"),
+    "gpt-4-0125-preview": _openai("retired", "2026-03-26"),
+    "gpt-4-turbo-preview": _openai("retired", "2026-03-26"),
+    "gpt-4-turbo-preview-completions": _openai("retired", "2026-03-26"),
     # 2025-04-28 and earlier announcements
     # The page names o3, whose only dated snapshot retires on 2026-12-11; not
     # recorded.
-    "o1-preview": _openai("deprecated", "2025-07-28"),
+    "o1-preview": _openai("retired", "2025-07-28"),
     # The page names o4-mini, itself retiring on 2026-10-23; not recorded.
-    "o1-mini": _openai("deprecated", "2025-10-27"),
+    "o1-mini": _openai("retired", "2025-10-27"),
     # The page names gpt-4.1, now deprecated itself; not recorded.
-    "gpt-4.5-preview": _openai("deprecated", "2025-07-14"),
-    "gpt-4-32k": _openai("deprecated", "2025-06-06"),
-    "gpt-4-32k-0613": _openai("deprecated", "2025-06-06"),
-    "gpt-4-32k-0314": _openai("deprecated", "2025-06-06"),
-    "gpt-4-vision-preview": _openai("deprecated", "2024-12-06"),
-    "gpt-4-1106-vision-preview": _openai("deprecated", "2024-12-06"),
+    "gpt-4.5-preview": _openai("retired", "2025-07-14"),
+    "gpt-4-32k": _openai("retired", "2025-06-06"),
+    "gpt-4-32k-0613": _openai("retired", "2025-06-06"),
+    "gpt-4-32k-0314": _openai("retired", "2025-06-06"),
+    "gpt-4-vision-preview": _openai("retired", "2024-12-06"),
+    "gpt-4-1106-vision-preview": _openai("retired", "2024-12-06"),
     # The page names gpt-3.5-turbo, itself retiring on 2026-10-23; not recorded.
-    "gpt-3.5-turbo-0613": _openai("deprecated", "2024-09-13"),
-    "gpt-3.5-turbo-16k-0613": _openai("deprecated", "2024-09-13"),
-    "gpt-3.5-turbo-0301": _openai("deprecated", "2024-09-13"),
+    "gpt-3.5-turbo-0613": _openai("retired", "2024-09-13"),
+    "gpt-3.5-turbo-16k-0613": _openai("retired", "2024-09-13"),
+    "gpt-3.5-turbo-0301": _openai("retired", "2024-09-13"),
 }
 
 _GEMINI = {

@@ -257,7 +257,8 @@ workload, not production approval.
 
 ## 2026-11-18 GPT-6.2 Sol
 
-`gpt-6.2-sol` had a bundled price from 2.25.6 but no measurement. On
+`gpt-6.2-sol` had a bundled price on the development branch after 2.25.6
+(unreleased) but no measurement. On
 **2026-11-18** a separate approved run, with source build 2.25.6, measured it
 on the same eight cases and settings as the 2026-10-29 rows: native OpenAI
 Responses route, low reasoning effort, a 1,024-token output allowance shared

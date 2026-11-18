@@ -782,6 +782,18 @@
     },
     {
       "provider": "openai",
+      "model": "gpt-6.2-astra",
+      "tier": 1,
+      "reason": "newest OpenAI top size, listed on the official models page 2026-11-18"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.2-sol",
+      "tier": 1,
+      "reason": "newest OpenAI flagship, listed on the official models page 2026-11-18"
+    },
+    {
+      "provider": "openai",
       "model": "o1",
       "tier": 3,
       "reason": "deprecated, retirement 2026-10-23"

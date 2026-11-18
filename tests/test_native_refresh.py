@@ -459,6 +459,8 @@ def test_mistral_request_omits_undocumented_stream_options():
         ("minimax", "MiniMax-M3", {"service_tier": "priority"}),
         ("openai", "gpt-6.1-terra", {"service_tier": "fast"}),
         ("openai", "gpt-6.1-terra", {"prompt_cache_retention": "12h"}),
+        ("openai", "gpt-6.2-sol", {"service_tier": "fast"}),
+        ("openai", "gpt-6.2-sol", {"prompt_cache_retention": "12h"}),
         ("anthropic", "claude-mythos-5-1", {"thinking": {"type": "disabled"}}),
         ("anthropic", "claude-mythos-5-1", {"tool_choice": {"type": "any"}}),
         ("anthropic", "claude-mythos-5-2", {"speed": "fast"}),

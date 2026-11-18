@@ -29,6 +29,7 @@ GEMINI_4_THINKING_LEVELS = {
     "gemini-4-hydrogen": (*_GEMINI_4_THINKING_LEVELS, "XHIGH"),
 }
 GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
+_GPT_6_PREFIXES = ("gpt-6-", "gpt-6.1-", "gpt-6.2-")
 _NO_INFERENCE_GEO_MODELS = {"claude-haiku-4-5-20251001", "claude-opus-4-5-20251101"}
 
 _QWEN_COMBINED_OUTPUT_MODELS = {
@@ -51,7 +52,7 @@ def _supports_temperature(model: dict[str, Any]) -> bool:
     if provider == "openai":
         return not (
             model_id == "gpt-5.5"
-            or model_id.startswith(("gpt-5.5-", "gpt-5.6-", "gpt-6-", "gpt-6.1-"))
+            or model_id.startswith(("gpt-5.5-", "gpt-5.6-", *_GPT_6_PREFIXES))
         )
     if provider in {"moonshot", "minimax"}:
         return False
@@ -117,7 +118,7 @@ def validate_native_request_options(
     """Keep native request identity and limits aligned with the shared plan."""
     provider = str(model.get("provider") or "")
     model_id = model.get("model", "")
-    strict_openai = provider == "openai" and model_id.startswith(("gpt-6-", "gpt-6.1-"))
+    strict_openai = provider == "openai" and model_id.startswith(_GPT_6_PREFIXES)
     strict_claude = provider == "anthropic" and model_id in {
         "claude-fable-5-1",
         "claude-fable-5-2",
@@ -945,7 +946,7 @@ class OpenAIResponsesClient(OpenAICompatibleClient):
                 status = payload.get("status")
                 requires_status = self.model.get("provider") == "openai" and self.model[
                     "model"
-                ].startswith(("gpt-6-", "gpt-6.1-"))
+                ].startswith(_GPT_6_PREFIXES)
                 if payload.get("error") or (
                     status != "completed" and (status is not None or requires_status)
                 ):

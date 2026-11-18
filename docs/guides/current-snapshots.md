@@ -19,7 +19,8 @@ row was reviewed on 2026-11-11 and becomes stale on 2026-12-12. The `gpt-6-cyber
 `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
 `claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
 `deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
-2026-11-17 and become stale on 2026-12-18. Explicit owner overrides
+2026-11-17 and become stale on 2026-12-18. The `gpt-6.2-astra` and `gpt-6.2-sol`
+rows were reviewed on 2026-11-18 and become stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 27 models with
@@ -81,6 +82,8 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-11-04 |
 | `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-11-04 |
 | `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-11-04 |
+| `openai` | `gpt-6.2-astra` | 8.00 | 40.00 | 2026-11-18 |
+| `openai` | `gpt-6.2-sol` | 2.00 | 10.00 | 2026-11-18 |
 | `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-11-04 |
 | `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-11-04 |
 | `openai` | `gpt-6-cyber` | 20.00 | 100.00 | 2026-11-13 |

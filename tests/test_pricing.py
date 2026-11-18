@@ -531,6 +531,37 @@ def test_gpt_6_1_cost_uses_total_input_tier_and_separate_cache_rates(
     )
 
 
+@pytest.mark.parametrize(
+    "model_id,rates",
+    [
+        ("gpt-6.2-astra", (8.0, 40.0, 0.4, 10.0, 16.0, 60.0, 0.8, 20.0)),
+        ("gpt-6.2-sol", (2.0, 10.0, 0.1, 2.5, 4.0, 15.0, 0.2, 5.0)),
+    ],
+)
+@pytest.mark.parametrize("input_tokens", [272_000, 272_001])
+def test_gpt_6_2_tiers_and_cache_rates(model_id, rates, input_tokens):
+    inp, out, cached_rate, write_rate, inp2, out2, cached2, write2 = rates
+    model = apply_public_pricing({"provider": "openai", "model": model_id})
+    sample = {
+        "input_tokens": input_tokens,
+        "cached_input_tokens": 1_000,
+        "cache_write_input_tokens": 2_000,
+        "output_tokens": 100,
+    }
+    long = input_tokens > 272_000
+    i, o, c, w = (
+        (inp2, out2, cached2, write2) if long else (inp, out, cached_rate, write_rate)
+    )
+    expected = (
+        (input_tokens - 3_000) * i + 1_000 * c + 2_000 * w + 100 * o
+    ) / 1_000_000
+
+    assert estimate_sample_cost(sample, model) == pytest.approx(expected)
+    assert model["pricing_metadata"]["source_url"] == (
+        f"https://developers.openai.com/api/docs/models/{model_id}"
+    )
+
+
 @pytest.mark.parametrize("written", [-1, 0.5, True, "10", float("nan"), 51])
 def test_invalid_cache_write_usage_cannot_produce_a_cost(written):
     model = apply_public_pricing({"provider": "openai", "model": "gpt-6.1-sol"})
@@ -774,6 +805,8 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("openai", "gpt-6-astra"): (10.0, 50.0, "2026-11-04"),
         ("openai", "gpt-6.1-sol"): (2.0, 10.0, "2026-11-04"),
         ("openai", "gpt-6.1-terra"): (1.0, 5.0, "2026-11-04"),
+        ("openai", "gpt-6.2-astra"): (8.0, 40.0, "2026-11-18"),
+        ("openai", "gpt-6.2-sol"): (2.0, 10.0, "2026-11-18"),
         ("openai", "gpt-6-sol"): (2.0, 10.0, "2026-11-04"),
         ("openai", "gpt-6-luna"): (0.1, 0.5, "2026-11-04"),
         ("openai", "gpt-6-cyber"): (20.0, 100.0, "2026-11-13"),

@@ -2,11 +2,36 @@
 
 **Last reviewed:** 2026-11-18 · **As of:** v2.25.8
 
-**Latest measurement:** 2026-11-18, `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **29 measured models** in all (the README image summarizes the same 29), plus the one attempted route; eight cases each.
+**Latest measurement:** 2026-11-18, `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each) and the re-measure of `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` (see [the re-measure section](#2026-11-18-re-measure-of-glm-53-and-kimi-k31-pro); it replaces their 2026-10-29 rows in the README summary), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **29 measured models** in all (the README image summarizes the same 29), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
 production traffic, a universal ranking or production approval.
+
+## 2026-11-18 re-measure of GLM 5.3 and Kimi K3.1 Pro
+
+The three GLM 5.3 sizes and Kimi K3.1 Pro were measured again on 2026-11-18
+with the method of the 2026-10-29 rows: the same eight cases, native Z.ai and
+Moonshot routes, low reasoning effort, a 1,024-token output allowance, one
+attempt and no retries (2.25.8 source checkout). Each run made 8 requests; the
+planned maximum from `--dry-run` was $0.036832, $0.010448, $0.004181 and
+$0.083044 per model, inside the approved $0.40 per model.
+
+| Model | 2026-10-29 | 2026-11-18 | Change |
+|---|---|---|---|
+| `glm-5.3` | 7/8, invoice-request chose `account` | 7/8, invoice-request failed the queue check again | same |
+| `glm-5.3-flashx` | 7/8, ticket-extraction fenced JSON | 8/8, $0.000372, 1.067s | improved: ticket-extraction now passes |
+| `glm-5.3-flash` | 7/8, ticket-extraction fenced JSON | 7/8, ticket-extraction fenced JSON again | same |
+| `kimi-k3.1-pro` | 3/3 responses, 5 HTTP 429 | 3/3 responses, 5 HTTP 429 | same: rate limits not gone |
+
+Kimi returned HTTP 429 on the same five cases in the first run. The messages
+named an organization limit of 3 requests per minute. After a pause of more than
+10 minutes the card's one full re-run returned the same result (3 responses and
+5 HTTP 429); the data file records that second run and the first attempt is
+noted in its method. Kimi's JSON tasks therefore still have no quality result.
+The new rows are in `docs/data/model-comparison-2026-11-18-<model>.json`; the
+2026-10-29 file stays unchanged as history. This is one call per case on a small
+synthetic workload, so a one-case difference is not evidence of a real trend.
 
 ## 2026-10-29 bounded comparison, plus Claude Fable 5.2 on 2026-11-11
 
@@ -27,7 +52,7 @@ were on different days and builds, so the added row is not a same-run comparison
 Its [machine-readable aggregate](../data/model-comparison-2026-11-11.json) retains
 the row, settings, config and result hashes.
 
-The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
+The 2026-10-29 run itself is described next (the four GLM and Kimi rows below are re-measured on 2026-11-18, above). All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
 returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.

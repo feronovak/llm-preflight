@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-18",
+  "reviewed_on": "2026-11-18",
+  "tool_version": "2.25.8",
+  "source_commit": "5efcadb6f942d1e4ed0d0794f306d7c9588cf205",
+  "source_dirty": false,
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.4,
+  "planned_maximum_token_estimate_usd": 0.010448,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Z.ai route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval",
+    "comparison_note": "Same cases, settings and routes as the 2026-10-29 row for this model, re-measured on 2026-11-18."
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.00037238,
+    "known_cost_subtotal_usd": 0.00037238,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "zai",
+      "model": "glm-5.3-flashx",
+      "display_name": "GLM 5.3 FlashX",
+      "route": "Z.ai",
+      "observed_on": "2026-11-18",
+      "observed_model": "glm-5.3-flashx",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.066922894999152,
+      "latency_p50_seconds": 1.0487574794969987,
+      "latency_p95_seconds": 1.253911719836469,
+      "mean_ttft_seconds": 0.9857505708750978,
+      "input_tokens": 574,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 128,
+      "estimated_cost_usd": 0.00037238,
+      "known_cost_subtotal_usd": 0.00037238,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.010448,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "zai": {
+            "thinking": {
+              "type": "enabled"
+            },
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-zai-glm-5.3-flashx",
+        "models": [
+          {
+            "provider": "zai",
+            "model": "glm-5.3-flashx"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "zai": {
+              "thinking": {
+                "type": "enabled"
+              },
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.010448,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "9aaf820e0509af8c25de199800768f100c153dfe47e64ae22e71a11c4c5693fa",
+      "result_sha256": "6707538ff511f7e193c08b550d89c6392fc43ea9343a8ecddef2f32c28471564",
+      "pricing_fingerprint": "4176d5e5652b71f373ef8cb76d661768840ed250d4f8a45aef25c4bdd8ccd922",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

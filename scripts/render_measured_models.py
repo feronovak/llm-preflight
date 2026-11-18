@@ -23,6 +23,10 @@ DEFAULT_DATA = (
     ROOT / "docs/data/model-comparison-2026-11-17.json",
     ROOT / "docs/data/model-comparison-2026-11-18.json",
     ROOT / "docs/data/model-comparison-2026-11-18-gpt-6-2-astra.json",
+    ROOT / "docs/data/model-comparison-2026-11-18-glm-5.3.json",
+    ROOT / "docs/data/model-comparison-2026-11-18-glm-5.3-flashx.json",
+    ROOT / "docs/data/model-comparison-2026-11-18-glm-5.3-flash.json",
+    ROOT / "docs/data/model-comparison-2026-11-18-kimi-k3.1-pro.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (
@@ -84,15 +88,15 @@ MODEL_NAMES = {
 
 
 def load_data(data_paths: Path | tuple[Path, ...] | None = None) -> dict:
-    """Read one aggregate, or merge the rows of several in display order."""
+    """Read one aggregate, or merge several in display order; a later row for a model and route replaces an earlier one."""
     hidden = DEFAULT_HIDDEN if data_paths is None else set()
     if data_paths is None:
         data_paths = DEFAULT_DATA
     if isinstance(data_paths, Path):
         data_paths = (data_paths,)
     first, *rest = (json.loads(path.read_text()) for path in data_paths)
-    rows = [*first["rows"], *(r for d in rest for r in d["rows"])]
-    rows = [row for row in rows if row["model"] not in hidden]
+    latest = {(r["model"], r["route"]): r for d in (first, *rest) for r in d["rows"]}
+    rows = [row for row in latest.values() if row["model"] not in hidden]
     return {**first, "rows": in_display_order(rows)}
 
 

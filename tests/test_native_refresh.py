@@ -974,6 +974,7 @@ def test_terra_responses_refuses_unsupported_options_before_plan_or_request(
         dry_run_plan({"prompt": "billing", "models": [model], "request": request})
 
 
+@pytest.mark.parametrize("model_id", ["gpt-6.1-terra", "gpt-6.2-astra", "gpt-6.2-sol"])
 @pytest.mark.parametrize(
     "patch,success",
     [
@@ -1017,11 +1018,11 @@ def test_terra_responses_refuses_unsupported_options_before_plan_or_request(
     ],
 )
 def test_terra_responses_requires_complete_well_formed_evidence(
-    monkeypatch, patch, success
+    monkeypatch, model_id, patch, success
 ):
     payload = {
         "status": "completed",
-        "model": "gpt-6.1-terra",
+        "model": model_id,
         "output_text": "billing",
         "usage": {"input_tokens": 30, "output_tokens": 2},
         **patch,
@@ -1042,7 +1043,7 @@ def test_terra_responses_requires_complete_well_formed_evidence(
         "llm_preflight.client.open_public_url", lambda *args, **kwargs: Response()
     )
     sample = create_client(
-        {"provider": "openai", "model": "gpt-6.1-terra", "adapter": "openai_responses"},
+        {"provider": "openai", "model": model_id, "adapter": "openai_responses"},
         10,
     ).run("billing", {"retry": {"max_attempts": 1}})
     assert sample["ok"] is success, sample

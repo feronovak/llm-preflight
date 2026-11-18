@@ -147,22 +147,22 @@ is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 ## Observed results on a support-routing contract
 
 We ran **29 native model routes** through eight synthetic support-routing and
-strict JSON cases each. **224 of 232 checks passed**: three outputs failed their
-contract and five Kimi calls returned HTTP 429. **25 models passed all eight
+strict JSON cases each. **225 of 232 checks passed**: two outputs failed their
+contract and five Kimi calls returned HTTP 429. **26 models passed all eight
 checks.** These are observations for this workload as of 2026-11-18, not a
 ranking of general intelligence or production approval.
 
 <a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
 <picture>
 <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
-<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="29 models attempted on 8 checks: 25 passed 8/8, 3 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="29 models attempted on 8 checks: 26 passed 8/8, 2 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
 </picture>
 </a>
 
 Each request used a 1,024-token output allowance and one attempt, with no
 retries. Passed counts valid outputs out of API responses; API errors are
 separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
-averages API responses only. The known token-cost subtotal is **$0.11351584**
+averages API responses only. The known token-cost subtotal is **$0.11353669**
 across 227 calls with usage; the total is unknown because the five error
 responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
@@ -171,37 +171,39 @@ before comparing rows. It has the method and the failure analysis.
 <details>
 <summary>The same 29 rows as a table</summary>
 
-| Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured |
-|---|---|---|---|---|---|---|---|
-| GPT-6.2 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 3.370s | $0.008224 | 2026-11-18 |
-| GPT-6.2 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.471s | $0.002076 | 2026-11-18 |
-| GPT-6 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 2.089s | $0.010580 | 2026-10-29 |
-| GPT-6.1 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.476s | $0.002116 | 2026-10-29 |
-| GPT-6.1 Terra | OpenAI | Passed 8/8 | 8/8 | 0 | 1.192s | $0.001218 | 2026-10-29 |
-| GPT-6 Luna | OpenAI | Passed 8/8 | 8/8 | 0 | 1.205s | $0.000174 | 2026-10-29 |
-| Claude Fable 5.2 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.923s | $0.013160 | 2026-11-11 |
-| Claude Fable 5.1 | Anthropic | Passed 8/8 | 8/8 | 0 | 0.923s | $0.014500 | 2026-10-29 |
-| Claude Opus 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.497s | $0.005740 | 2026-10-29 |
-| Claude Sonnet 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.421s | $0.002870 | 2026-10-29 |
-| Claude Haiku 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.758s | $0.000150 | 2026-10-29 |
-| Gemini 4 Argon | Gemini | Passed 8/8 | 8/8 | 0 | 5.186s | $0.002728 | 2026-10-29 |
-| Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 |
-| Gemini 4 Hydrogen | Gemini | Passed 8/8 | 8/8 | 0 | 2.784s | $0.007221 | 2026-11-13 |
-| Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 |
-| Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 |
-| Gemini 3.1 Flash-Lite | Gemini | Passed 8/8 | 8/8 | 0 | 1.050s | $0.001793 | 2026-11-11 |
-| Grok 4.7 | xAI | Passed 8/8 | 8/8 | 0 | 1.567s | $0.007536 | 2026-10-29 |
-| DeepSeek V4 Pro | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.766s | $0.004220 | 2026-10-29 |
-| DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 |
-| Qwen4 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.676s | $0.002148 | 2026-11-17 |
-| Qwen 3.8 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 3.834s | $0.006034 | 2026-10-29 |
-| Qwen 3.8 Flash | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.689s | $0.000547 | 2026-11-11 |
-| MiniMax M3 | MiniMax | Passed 8/8 | 8/8 | 0 | 2.119s | $0.000680 | 2026-11-11 |
-| Mistral Large 4 | Mistral | Passed 8/8 | 8/8 | 0 | 7.043s | $0.005918 | 2026-11-11 |
-| GLM 5.3 | Z.ai | Contract failures | 7/8 · 1 wrong queue | 0 | 1.461s | $0.001398 | 2026-10-29 |
-| GLM 5.3 FlashX | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.091s | $0.000391 | 2026-10-29 |
-| GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.832s | $0.000162 | 2026-10-29 |
-| Kimi K3.1 Pro | Moonshot/Kimi | Incomplete | 3/3 | 5 rate limits | 2.217s | $0.001668 known | 2026-10-29 |
+| Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured | Against 2026-10-29 |
+|---|---|---|---|---|---|---|---|---|
+| GPT-6.2 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 3.370s | $0.008224 | 2026-11-18 | — |
+| GPT-6.2 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.471s | $0.002076 | 2026-11-18 | — |
+| GPT-6 Astra | OpenAI | Passed 8/8 | 8/8 | 0 | 2.089s | $0.010580 | 2026-10-29 | — |
+| GPT-6.1 Sol | OpenAI | Passed 8/8 | 8/8 | 0 | 1.476s | $0.002116 | 2026-10-29 | — |
+| GPT-6.1 Terra | OpenAI | Passed 8/8 | 8/8 | 0 | 1.192s | $0.001218 | 2026-10-29 | — |
+| GPT-6 Luna | OpenAI | Passed 8/8 | 8/8 | 0 | 1.205s | $0.000174 | 2026-10-29 | — |
+| Claude Fable 5.2 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.923s | $0.013160 | 2026-11-11 | — |
+| Claude Fable 5.1 | Anthropic | Passed 8/8 | 8/8 | 0 | 0.923s | $0.014500 | 2026-10-29 | — |
+| Claude Opus 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.497s | $0.005740 | 2026-10-29 | — |
+| Claude Sonnet 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.421s | $0.002870 | 2026-10-29 | — |
+| Claude Haiku 5.5 | Anthropic | Passed 8/8 | 8/8 | 0 | 1.758s | $0.000150 | 2026-10-29 | — |
+| Gemini 4 Argon | Gemini | Passed 8/8 | 8/8 | 0 | 5.186s | $0.002728 | 2026-10-29 | — |
+| Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 | — |
+| Gemini 4 Hydrogen | Gemini | Passed 8/8 | 8/8 | 0 | 2.784s | $0.007221 | 2026-11-13 | — |
+| Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 | — |
+| Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 | — |
+| Gemini 3.1 Flash-Lite | Gemini | Passed 8/8 | 8/8 | 0 | 1.050s | $0.001793 | 2026-11-11 | — |
+| Grok 4.7 | xAI | Passed 8/8 | 8/8 | 0 | 1.567s | $0.007536 | 2026-10-29 | — |
+| DeepSeek V4 Pro | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.766s | $0.004220 | 2026-10-29 | — |
+| DeepSeek Flash | DeepSeek | Passed 8/8 | 8/8 | 0 | 1.297s | $0.000809 | 2026-10-29 | — |
+| Qwen4 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.676s | $0.002148 | 2026-11-17 | — |
+| Qwen 3.8 Max | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 3.834s | $0.006034 | 2026-10-29 | — |
+| Qwen 3.8 Flash | Alibaba Singapore | Passed 8/8 | 8/8 | 0 | 2.689s | $0.000547 | 2026-11-11 | — |
+| MiniMax M3 | MiniMax | Passed 8/8 | 8/8 | 0 | 2.119s | $0.000680 | 2026-11-11 | — |
+| Mistral Large 4 | Mistral | Passed 8/8 | 8/8 | 0 | 7.043s | $0.005918 | 2026-11-11 | — |
+| GLM 5.3 | Z.ai | Contract failures | 7/8 · 1 wrong queue | 0 | 1.511s | $0.001327 | 2026-11-18 | Same: invoice-request still fails |
+| GLM 5.3 FlashX | Z.ai | Passed 8/8 | 8/8 | 0 | 1.067s | $0.000372 | 2026-11-18 | Improved: ticket-extraction now passes |
+| GLM 5.3 Flash | Z.ai | Contract failures | 7/8 · 1 fenced JSON | 0 | 1.226s | $0.000162 | 2026-11-18 | Same: ticket-extraction still fenced JSON |
+| Kimi K3.1 Pro | Moonshot/Kimi | Incomplete | 3/3 | 5 rate limits | 1.930s | $0.001778 known | 2026-11-18 | Same: the same five cases hit HTTP 429, again on a retry 10 minutes later |
+
+"Against 2026-10-29" compares the four models measured again on 2026-11-18 with their earlier row; a dash means the row was not measured again.
 
 </details>
 

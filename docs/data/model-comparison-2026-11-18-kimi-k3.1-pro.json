@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-18",
+  "reviewed_on": "2026-11-18",
+  "tool_version": "2.25.8",
+  "source_commit": "5efcadb6f942d1e4ed0d0794f306d7c9588cf205",
+  "source_dirty": false,
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.4,
+  "planned_maximum_token_estimate_usd": 0.083044,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Moonshot/Kimi route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval",
+    "comparison_note": "Same cases, settings and routes as the 2026-10-29 row for this model, re-measured on 2026-11-18.",
+    "kimi_attempts": "Two full runs, 10 minutes apart: both returned 3 responses and 5 HTTP 429 rate limits (account limit of 3 requests per minute); this row records the second run."
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 3,
+    "api_failures": 5,
+    "valid": 3,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": null,
+    "known_cost_subtotal_usd": 0.001778,
+    "known_cost_requests": 3,
+    "missing_usage_requests": 5
+  },
+  "rows": [
+    {
+      "provider": "moonshot",
+      "model": "kimi-k3.1-pro",
+      "display_name": "Kimi K3.1 Pro",
+      "route": "Moonshot/Kimi",
+      "observed_on": "2026-11-18",
+      "observed_model": "kimi-k3.1-pro",
+      "requests": 8,
+      "api_successful": 3,
+      "api_failures": 5,
+      "valid": 3,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 1.9301432146846007,
+      "latency_p50_seconds": 1.7396637970232405,
+      "latency_p95_seconds": 2.301827661410789,
+      "mean_ttft_seconds": 1.9137012613452196,
+      "input_tokens": 394,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 99,
+      "estimated_cost_usd": null,
+      "known_cost_subtotal_usd": 0.001778,
+      "cost_coverage": {
+        "known_requests": 3,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 5,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.083044,
+      "decision": "fail",
+      "failures": [
+        {
+          "case": "ticket-extraction",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "duplicate-charge-injection",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "active-technical-outage",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "account-email-change",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        },
+        {
+          "case": "invoice-request",
+          "kind": "api_error",
+          "category": "rate_limit",
+          "http_status": 429
+        }
+      ],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "moonshot": {
+            "reasoning_effort": "low"
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-moonshot-kimi-k3.1-pro",
+        "models": [
+          {
+            "provider": "moonshot",
+            "model": "kimi-k3.1-pro"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "moonshot": {
+              "reasoning_effort": "low"
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.083044,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "2efdc4ed3987c7723ef23352815aacb8877fd1a3c619bd3c4c8b754a3279a871",
+      "result_sha256": "ec44c2e2457295092f092adcb36c4bb394e485af3a6a9a313c7957847229d472",
+      "pricing_fingerprint": "7d375e7ea0f8915cb39d735547c09bf75e6953d0837c22d01a32916849b7f527",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

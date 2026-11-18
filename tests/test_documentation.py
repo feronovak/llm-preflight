@@ -80,8 +80,9 @@ def load_measured_data():
 
 
 def _all_measured_rows():
-    return [
-        row
+    """Every row, a model re-measured later replacing its earlier row."""
+    latest = {
+        (row["model"], row["route"]): row
         for day in (
             "2026-10-29",
             "2026-11-11-five-models",
@@ -91,11 +92,16 @@ def _all_measured_rows():
             "2026-11-17",
             "2026-11-18",
             "2026-11-18-gpt-6-2-astra",
+            "2026-11-18-glm-5.3",
+            "2026-11-18-glm-5.3-flashx",
+            "2026-11-18-glm-5.3-flash",
+            "2026-11-18-kimi-k3.1-pro",
         )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
         )["rows"]
-    ]
+    }
+    return list(latest.values())
 
 
 def _summary_rows():
@@ -218,7 +224,7 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     known = sum(row["known_cost_subtotal_usd"] or 0 for row in rows)
     calls = sum(row["cost_coverage"]["known_requests"] for row in rows)
     full = sum(row["valid"] == row["requests"] for row in rows)
-    assert (len(rows), checks, passed, full, calls) == (29, 232, 224, 25, 227)
+    assert (len(rows), checks, passed, full, calls) == (29, 232, 225, 26, 227)
     assert sum(row["api_failures"] for row in rows) == 5
     assert f"**{passed} of {checks} checks" in readme
     assert f"**{full} models passed all eight\nchecks.**" in readme
@@ -229,7 +235,7 @@ def test_readme_counts_and_alt_text_follow_the_measured_data():
     assert "as of 2026-11-18" in readme
     assert "between 2026-10-29" not in readme and "All 20" not in readme
     assert (
-        "29 models attempted on 8 checks: 25 passed 8/8, 3 passed 7/8, "
+        "29 models attempted on 8 checks: 26 passed 8/8, 2 passed 7/8, "
         "Kimi 3 responses and 5 rate limits"
     ) in readme
 
@@ -1721,6 +1727,10 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
             "2026-11-17",
             "2026-11-18",
             "2026-11-18-gpt-6-2-astra",
+            "2026-11-18-glm-5.3",
+            "2026-11-18-glm-5.3-flashx",
+            "2026-11-18-glm-5.3-flash",
+            "2026-11-18-kimi-k3.1-pro",
         )
         for row in json.loads(
             (ROOT / f"docs/data/model-comparison-{day}.json").read_text()
@@ -1737,7 +1747,7 @@ def test_default_measured_image_adds_the_later_runs_without_redating_earlier_row
         "2026-11-17",
         "2026-11-18",
     }
-    assert len([row for row in rows if row["date"] == "2026-10-29"]) == 19
+    assert len([row for row in rows if row["date"] == "2026-10-29"]) == 15
     assert len([row for row in rows if row["date"] != "2026-10-29"]) == len(later) - 1
 
 
@@ -1933,16 +1943,16 @@ def test_measured_image_explains_contract_failures_api_errors_and_partial_cost()
     assert rows["Kimi K3.1 Pro"][1:] == [
         "3/3",
         "5 rate limits",
-        "2.217s",
-        "$0.001668 known",
+        "1.930s",
+        "$0.001778 known",
     ]
     assert rows["GLM 5.3"][1:3] == ["7/8 · 1 wrong queue", "0"]
-    for model in ("GLM 5.3 Flash", "GLM 5.3 FlashX"):
-        assert rows[model][1] == "7/8 · 1 fenced JSON"
+    assert rows["GLM 5.3 Flash"][1] == "7/8 · 1 fenced JSON"
+    assert rows["GLM 5.3 FlashX"][1] == "8/8"
     assert rows["GPT-6.1 Terra"][1] == "8/8"
     assert rows["GPT-6.1 Terra"][4] == "$0.001218"
     assert svg.find("svg:desc", ns).text == (
-        "29 models attempted on 8 checks: 25 passed 8/8, 3 passed 7/8, "
+        "29 models attempted on 8 checks: 26 passed 8/8, 2 passed 7/8, "
         "Kimi K3.1 Pro 3 responses and 5 rate limits. "
         "Small synthetic sample, not a ranking or production approval."
     )

@@ -644,7 +644,7 @@ def test_visitor_docs_stamp_json_evidence_and_release_scope_are_current():
         in (ROOT / "docs/index.md").read_text()
     )
     assert (
-        "**Last reviewed:** 2026-11-11 · **As of:** v2.25.0"
+        "**Last reviewed:** 2026-11-18 · **As of:** v2.25.8"
         in (ROOT / "README.md").read_text()
     )
     assert (

@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.25.8 - 2026-11-18
+
 ### Changed
 
 - Added `gpt-6.2-astra` to the measured-models comparison: an eight-case run on the native `openai` route, rendered into the results image and the README table.

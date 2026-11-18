@@ -1,8 +1,8 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-11-18 · **As of:** v2.25.6
+**Last reviewed:** 2026-11-18 · **As of:** v2.25.7
 
-**Latest measurement:** 2026-11-18, `gpt-6.2-sol` (native OpenAI route, eight cases), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **28 measured models** in all (the README image summarizes the same 28), plus the one attempted route; eight cases each.
+**Latest measurement:** 2026-11-18, `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **29 measured models** in all (the README image summarizes the same 29), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -29,7 +29,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next. All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 22 of 27 with all added rows). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -255,6 +255,29 @@ It was measured on a different day and build than the 2026-10-29 rows, so it is
 not a same-run comparison. This is scoped evidence on a small synthetic
 workload, not production approval.
 
+## 2026-11-18 GPT-6.2 Astra
+
+`gpt-6.2-astra` had a bundled price from 2.25.7 but no measurement. On
+**2026-11-18** a separate approved run, with source build 2.25.6, measured it
+on the same eight cases and settings as the 2026-10-29 rows: native OpenAI
+Responses route, reasoning effort low, a 1,024-token output allowance shared by
+reasoning and answer, one attempt, no warmups, no retries. The approved ceiling
+was 8 requests and $0.40.
+
+All 8 calls returned API responses and passed validation. The planned maximum
+estimate was **$0.3333** and the measured cost was **$0.008224** (548 input,
+96 output tokens, usage on all 8 calls). Mean latency was 3.370s. The
+[machine-readable aggregate](../data/model-comparison-2026-11-18-gpt-6-2-astra.json)
+retains the row, settings, config and result hashes.
+
+| Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
+|---|---|---:|---:|---:|---:|
+| OpenAI | `gpt-6.2-astra` | 8/8 | 8/8 | 3.370s | $0.008224 |
+
+It was measured on a different day and build than the 2026-10-29 rows, so it is
+not a same-run comparison. This is scoped evidence on a small synthetic
+workload, not production approval.
+
 ## 2026-11-18 GPT-6.2 Sol
 
 `gpt-6.2-sol` had a bundled price on the development branch after 2.25.6
@@ -273,6 +296,7 @@ retains the row, settings, config and result hashes.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
 |---|---|---:|---:|---:|---:|
+| OpenAI (added 2026-11-18) | `gpt-6.2-astra` | 8/8 | 8/8 | 3.370s | $0.008224 |
 | OpenAI | `gpt-6.2-sol` | 8/8 | 8/8 | 1.471s | $0.002076 |
 
 It was measured on a different day and build than the 2026-10-29 rows, so it is

@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Changed
 
 - Added `gpt-6.2-astra` to the measured-models comparison: an eight-case run on the native `openai` route, rendered into the results image and the README table.
+- All bundled price and retirement rows were re-checked against their official pages on 2026-11-18; prices, retirement dates and replacements are unchanged. The review dates moved, so the rows now become stale on 2026-12-19 (strict pricing, and `--ci` exit 3 for retirement rows). Two groups keep their earlier date: `gpt-5.6-sol` stays 2026-11-04 and becomes stale on 2026-12-05, because its promotional price ends 2026-11-30, and the DeepSeek, Qwen and Claude 4 rows reviewed on 2026-11-17 stay stale on 2026-12-18. `gpt-5.4-cyber` is now listed as `retired` (its shutdown date, 2026-10-01, had already passed, so no verdict changes). Breaking: approval receipts recorded for a plan that names any of the 53 re-dated price rows verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1 where it exited 0), because the pricing review date is part of the plan; record them again with `--dry-run --approval-receipt --replace-approval-receipt`.
 
 ## 2.25.7 - 2026-11-18
 

@@ -282,7 +282,7 @@ def test_reviewed_native_prices_keep_cache_partitions_and_provenance(
     assert priced.get("cached_input_cost_per_million") == cache_rate
     assert priced.get("cache_write_input_cost_per_million") == write_rate
     as_of = priced["pricing_metadata"]["as_of"]
-    assert as_of == ("2026-11-09" if model.endswith("-5-2") else "2026-11-04")
+    assert as_of == ("2026-11-04" if model == "gpt-5.6-sol" else "2026-11-18")
     assert priced["pricing_metadata"]["source_url"].startswith("https://")
     sample = {
         "input_tokens": 1000,

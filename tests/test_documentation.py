@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-17 · **As of:** v2.25.7" in page
+    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.7" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -853,7 +853,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-10 · **As of:** v2.24.0" in guide
+    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.8" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
@@ -916,7 +916,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
-    assert "stale from the 31st day after the 2026-11-04 review date" in guide
+    assert "stale from the 31st day after the 2026-11-18 review date" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 

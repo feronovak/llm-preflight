@@ -84,10 +84,10 @@ def test_openai_retirement_reaches_source_audit_ci(monkeypatch, tmp_path, capsys
     ],
 )
 def test_gemini_stable_alias_is_active_and_reports_its_route(model, replacement):
-    verdict = retirement_verdict("gemini", model, date(2026, 11, 4))
+    verdict = retirement_verdict("gemini", model, date(2026, 11, 18))
     assert verdict["status"] == "active"
     assert verdict["decision"] == "pass"
-    assert verdict["as_of"] == "2026-11-04"
+    assert verdict["as_of"] == "2026-11-18"
     assert "retirement_date" not in verdict
     assert "replacement" not in verdict
     assert "next_command" not in verdict
@@ -166,7 +166,7 @@ def test_gemini_4_hydrogen_pricing_is_flat(monkeypatch, day):
 
 @pytest.mark.parametrize(
     "model_id,as_of",
-    [("gemini-4-argon", "2026-11-04"), ("gemini-4-carbon", "2026-11-11")],
+    [("gemini-4-argon", "2026-11-18"), ("gemini-4-carbon", "2026-11-18")],
 )
 @pytest.mark.parametrize(
     "day,rates",
@@ -289,7 +289,7 @@ def test_gemini_4_example_is_a_bounded_fixture_verified_plan(snapshot_review_day
     assert check_contract(config)["ok"] is True
     assert (
         pricing_coverage_report(
-            models, today=date(2026, 11, 4), require_current_pricing=True
+            models, today=date(2026, 11, 18), require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
@@ -341,7 +341,8 @@ def test_published_openai_cache_writes_use_the_full_request_context_boundary(
         + 1000 * output_rate
     ) / 1_000_000
     assert estimate_sample_cost(sample, model) == pytest.approx(expected)
-    assert model["pricing_metadata"]["as_of"] == "2026-11-04"
+    expected_as_of = "2026-11-04" if model_id == "gpt-5.6-sol" else "2026-11-18"
+    assert model["pricing_metadata"]["as_of"] == expected_as_of
 
 
 @pytest.mark.parametrize(
@@ -396,65 +397,33 @@ def test_october_dated_openai_ids_reach_their_announced_retirement_boundary(
 def test_current_release_refreshes_every_reviewed_snapshot_row():
     from llm_preflight.pricing import PUBLIC_PRICING
 
-    new_ids = {"claude-fable-5-2", "claude-mythos-5-2"}
-    pricing_dates = {"2026-11-04", "2026-11-09"}
-    cyber_ids = {
-        "gpt-6-cyber",
-        "gpt-5.6-cyber",
-        "gemini-4-hydrogen",
-        "grok-4.20-0309-reasoning",
-        "grok-4.20-0309-non-reasoning",
-        "grok-4.20-multi-agent-0309",
-    }
-    retirement_dates = {*pricing_dates, "2026-11-12", "2026-11-13"}
+    def priced_on(day):
+        return {m for (_, m), rates in PUBLIC_PRICING.items() if rates[2] == day}
+
     assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
-        *pricing_dates,
-        "2026-11-11",
-        "2026-11-13",
+        "2026-11-04",
         "2026-11-17",
         "2026-11-18",
     }
-    assert {
-        model
-        for (_, model), rates in PUBLIC_PRICING.items()
-        if rates[2] == "2026-11-18"
-    } == {"gpt-6.2-astra", "gpt-6.2-sol"}
-    assert {
-        model
-        for (_, model), rates in PUBLIC_PRICING.items()
-        if rates[2] == "2026-11-13"
-    } == cyber_ids
-    assert {
-        model
-        for (_, model), rates in PUBLIC_PRICING.items()
-        if rates[2] == "2026-11-11"
-    } == {"gemini-4-carbon"}
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == retirement_dates
-    assert {
-        model
-        for (_, model), rates in PUBLIC_PRICING.items()
-        if rates[2] == "2026-11-09"
-    } == new_ids
-    assert {
-        model
-        for (_, model), row in PUBLIC_RETIREMENTS.items()
-        if row["as_of"] == "2026-11-09"
-    } == new_ids
-    assert {
-        model
-        for (_, model), row in PUBLIC_RETIREMENTS.items()
-        if row["as_of"] == "2026-11-12"
-    } == {"gpt-5.5-cyber-preview"}
-    assert {
-        model
-        for (_, model), row in PUBLIC_RETIREMENTS.items()
-        if row["as_of"] == "2026-11-13"
-    } == {
-        "gpt-5-2025-08-07",
-        "gpt-5-mini-2025-08-07",
-        "gpt-5-nano-2025-08-07",
-        "o3-2025-04-16",
+    # The promotional gpt-5.6-sol price ends 2026-11-30; its review date stays
+    # at the last full review so the row goes stale before the promotion ends.
+    assert priced_on("2026-11-04") == {"gpt-5.6-sol"}
+    assert priced_on("2026-11-17") == {
+        "claude-opus-4-5-20251101",
+        "claude-opus-4-6",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "deepseek-flash",
+        "deepseek-v4-flash",
+        "deepseek-v4-flash-vision-exp",
+        "deepseek-v4-pro",
+        "qwen4-max",
+        "qwen3.8-max",
+        "qwen3.8-flash",
+        "qwen3.7-plus",
     }
+    assert {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-cyber"} <= priced_on("2026-11-18")
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-18"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

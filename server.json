@@ -8,12 +8,12 @@
     "url": "https://github.com/feronovak/llm-preflight",
     "source": "github"
   },
-  "version": "2.25.7",
+  "version": "2.25.8",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "llm-preflight",
-      "version": "2.25.7",
+      "version": "2.25.8",
       "transport": {
         "type": "stdio"
       },

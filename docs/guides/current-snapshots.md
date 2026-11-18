@@ -1,12 +1,12 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-18 · **As of:** v2.25.7
+**Last reviewed:** 2026-11-18 · **As of:** v2.25.8
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
 are described in [native provider checks](native-providers.md).
 
-Package version: **2.25.7**. The table records this version's reviewed
+Package version: **2.25.8**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 2026-12-05. Strict pricing then blocks execution. The `qwen4-max`, `qwen3.8-max`,

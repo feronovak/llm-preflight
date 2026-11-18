@@ -1680,3 +1680,20 @@ def test_snapshot_review_day_covers_every_bundled_review_date(snapshot_review_da
 
     assert max(dates) <= snapshot_review_day, message
     assert snapshot_review_day <= min(dates) + timedelta(days=30), message
+
+
+def test_top_level_cache_rates_match_the_first_pricing_tier():
+    from llm_preflight.pricing import PUBLIC_PRICING_DETAILS
+
+    checked = 0
+    for key, detail in PUBLIC_PRICING_DETAILS.items():
+        tiers = detail.get("pricing_tiers")
+        if not tiers:
+            continue
+        for field in (
+            "cached_input_cost_per_million",
+            "cache_write_input_cost_per_million",
+        ):
+            assert detail.get(field) == tiers[0].get(field), (key, field)
+        checked += 1
+    assert checked

@@ -271,6 +271,9 @@ _GEMINI = {
         "active",
         source_url="https://aistudio.google.com/docs/models/gemini-4-argon",
     ),
+    "gemini-4-neon": _row(
+        "active", source_url=GEMINI_DEPRECATIONS_URL, as_of="2026-11-19"
+    ),
     **{
         model: {
             **_row("active", source_url=GEMINI_DEPRECATIONS_URL),

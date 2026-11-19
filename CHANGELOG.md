@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- `gemini-4-neon` now has an official snapshot price, an active retirement row and tier 1 in the model importance list. Rates are flat across the 1M window, in USD per million tokens (input / output / cached input): 3.00 / 15.00 / 0.15, read from Google's pricing page on 2026-11-19. It takes the Gemini 4 request checks with `XHIGH` thinking, like `gemini-4-hydrogen`; the eight-case measured run is a follow-up. Breaking: configs that name `gemini-4-neon` change results. `--pricing-check` exits 0 instead of 1; `--dry-run` with `require_current_pricing` or `max_estimated_cost_usd` exits 0 instead of 2; approval receipts recorded without a cost cap now report `mismatch`; the retirement verdict is `active` instead of `unknown`, so `--ci` exits 3 once the row is stale (from 2026-12-20); `--verify-approval-receipt` exits 1 instead of 0 for approval receipts recorded with no cost cap. A `cachedContent` setting, a thinking level outside `LOW`/`MEDIUM`/`HIGH`/`XHIGH` (`MINIMAL` is rejected) or a synchronous output cap over 65,536 now fails before any request (`--dry-run` does not check these). Sampling parameters are omitted, and catalog discovery no longer claims temperature support.
+
 ### Changed
 
 - Re-measured `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` on 2026-11-18 (eight cases each, same method as 2026-10-29) and updated the README table, comparison guide and results image. `glm-5.3-flashx` improved from 7/8 to 8/8; the other two GLM sizes are unchanged at 7/8; Kimi K3.1 Pro is still incomplete (3 responses and 5 HTTP 429 rate limits). The README now shows 225 of 232 checks passed and 26 of 29 models passing all eight.

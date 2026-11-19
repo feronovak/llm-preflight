@@ -818,6 +818,7 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-11-18"),
         ("gemini", "gemini-4-carbon"): (2.0, 10.0, "2026-11-18"),
         ("gemini", "gemini-4-hydrogen"): (1.5, 7.5, "2026-11-18"),
+        ("gemini", "gemini-4-neon"): (3.0, 15.0, "2026-11-19"),
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-18"),
         ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-18"),
         ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-18"),

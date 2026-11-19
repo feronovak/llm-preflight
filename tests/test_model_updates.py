@@ -165,6 +165,18 @@ def test_gemini_4_hydrogen_pricing_is_flat(monkeypatch, day):
 
 
 @pytest.mark.parametrize(
+    "day", [date(2026, 11, 19), date(2026, 12, 1), date(2027, 1, 1)]
+)
+def test_gemini_4_neon_pricing_is_flat(monkeypatch, day):
+    pricing_day(monkeypatch, day)
+    model = apply_public_pricing({"provider": "gemini", "model": "gemini-4-neon"})
+    assert model["input_cost_per_million"] == 3.0
+    assert model["output_cost_per_million"] == 15.0
+    assert model["cached_input_cost_per_million"] == 0.15
+    assert "pricing_tiers" not in model
+
+
+@pytest.mark.parametrize(
     "model_id,as_of",
     [("gemini-4-argon", "2026-11-18"), ("gemini-4-carbon", "2026-11-18")],
 )
@@ -404,6 +416,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "2026-11-04",
         "2026-11-17",
         "2026-11-18",
+        "2026-11-19",
     }
     # The promotional gpt-5.6-sol price ends 2026-11-30; its review date stays
     # at the last full review so the row goes stale before the promotion ends.
@@ -423,7 +436,16 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "qwen3.7-plus",
     }
     assert {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-cyber"} <= priced_on("2026-11-18")
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-18"}
+    assert priced_on("2026-11-19") == {"gemini-4-neon"}
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {
+        "2026-11-18",
+        "2026-11-19",
+    }
+    assert {
+        model
+        for (_, model), row in PUBLIC_RETIREMENTS.items()
+        if row["as_of"] == "2026-11-19"
+    } == {"gemini-4-neon"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

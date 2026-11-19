@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-19",
+  "tool_version": "2.25.8",
+  "model": "gemini-4-neon",
+  "route": "Gemini native",
+  "purpose": "one live request through the shipped Gemini 4 request checks",
+  "requests": 1,
+  "request": {
+    "max_output_tokens": 256,
+    "retry": {
+      "max_attempts": 1
+    },
+    "provider_options": {
+      "gemini": {
+        "generationConfig": {
+          "thinkingConfig": {
+            "thinkingLevel": "LOW"
+          }
+        }
+      }
+    }
+  },
+  "thinking_levels_checked_offline": {
+    "MINIMAL": "rejected before any request",
+    "LOW": "accepted",
+    "MEDIUM": "accepted",
+    "HIGH": "accepted",
+    "XHIGH": "accepted"
+  },
+  "observed_model": "gemini-4-neon",
+  "valid": true,
+  "latency_seconds": 2.67592590698041,
+  "input_tokens": 36,
+  "output_tokens": 32,
+  "estimated_cost_usd": 0.000588,
+  "bundled_rates_usd_per_million": {
+    "input": 3.0,
+    "output": 15.0,
+    "cached_input": 0.15
+  },
+  "cost_check": "36 x 3.00/1e6 + 32 x 15.00/1e6 = 0.000588",
+  "pricing_fingerprint": "eaa1155a13e3ba729d0fc759ee0063723f4cb67abb9148a59290e58445feac3b",
+  "result_sha256": "03e5544db7235731ad7b5c9a4b80d8c888fedc118a1b42af9c0a53928285ca64"
+}

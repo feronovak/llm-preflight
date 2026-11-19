@@ -2993,6 +2993,20 @@ def test_main_pricing_check_exits_nonzero_for_unknown_pricing(
     )
 
 
+def test_pricing_check_prices_gemini_4_neon(monkeypatch, tmp_path, capsys):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        '{"prompt":"hello","models":[{"provider":"gemini","model":"gemini-4-neon"}]}'
+    )
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--pricing-check"])
+
+    cli.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert output["ok"] is True
+    assert output["summary"]["priced"] == 1 and output["summary"]["unknown"] == 0
+
+
 def test_main_pricing_check_allows_undated_override_unless_current_pricing_is_required(
     monkeypatch, tmp_path, capsys
 ):

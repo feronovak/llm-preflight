@@ -52,7 +52,7 @@ PROVIDER_DEFAULTS = {
         "api_key_env": "COHERE_API_KEY",
     },
     "foundry": {
-        "api_key_env": "FOUNDRY_API_KEY",
+        "api_key_env": "FOUNDRY_API_KEY",  # pragma: allowlist secret
         "max_tokens_parameter": "max_completion_tokens",
     },
     "typesafe": {

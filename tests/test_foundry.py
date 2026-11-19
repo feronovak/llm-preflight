@@ -330,9 +330,8 @@ def test_route_fingerprint_unchanged_without_deployment():
         },
     ]
     hashed = provenance({"prompt": "hi", "models": models}, models, "p")
-    assert hashed["routes_sha256"] == (
-        "e6bfe76404ec4ac49684b43646203feeb8579bc0a5648453393fad9f8adb6295"
-    )
+    expected = "e6bfe76404ec4ac49684b43646203feeb8579bc0a5648453393fad9f8adb6295"  # pragma: allowlist secret
+    assert hashed["routes_sha256"] == expected
 
 
 def test_route_fingerprint_changes_with_deployment():

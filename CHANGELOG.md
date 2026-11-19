@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Native `foundry` provider for Microsoft Foundry's v1 OpenAI-compatible route. Set `base_url` to your resource route (`https`, ending `/openai/v1`); `model` is the catalog ID, and an optional `deployment` names the deployment sent as the request `model`. The key comes from `FOUNDRY_API_KEY` as a Bearer token. `api_version` is refused, requests are text only through the Chat adapter, and a stream must end with `stop` (`length` and `content_filter` fail). Foundry models have no bundled price or retirement row yet, so `--pricing-check` exits 1, and the dry run refuses when `max_estimated_cost_usd` or `require_current_pricing` is set, until you supply your own rates. `deployment` joins the route fingerprint, `--replay` and `models approve` only when set. `init --template provider --provider foundry` refuses with a pointer to `examples/foundry-mai-thinking-1.json`.
+
 ### Changed
 
 - Measured `gemini-4-neon` on 2026-11-19 (eight cases, same method as 2026-10-29): 8/8 valid, $0.024972, mean latency 15.874s. The README table, comparison guide and results image now show 30 models; 233 of 240 checks passed and 27 models passed all eight.

@@ -239,6 +239,10 @@ keeping its existing fields, to check the validator locally:
 }
 ```
 
+Microsoft Foundry has no starter, because every resource has its own URL: copy
+`examples/foundry-mai-thinking-1.json` and set `base_url` to your resource's
+`/openai/v1` route (key in `FOUNDRY_API_KEY`).
+
 Set `OPENAI_API_KEY` in your shell or in an uncommitted `.env.production`
 beside `live.json`. The config stores the variable name, never the key.
 Preview the check without making a generation request:

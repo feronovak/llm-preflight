@@ -51,6 +51,10 @@ PROVIDER_DEFAULTS = {
         "base_url": "https://api.cohere.com/v2",
         "api_key_env": "COHERE_API_KEY",
     },
+    "foundry": {
+        "api_key_env": "FOUNDRY_API_KEY",  # pragma: allowlist secret
+        "max_tokens_parameter": "max_completion_tokens",
+    },
     "typesafe": {
         "base_url": "https://api.typesafe.ai/v1",
         "api_key_env": "TYPESAFE_API_KEY",

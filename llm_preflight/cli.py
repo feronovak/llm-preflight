@@ -1083,6 +1083,11 @@ SMOKE_REQUEST: dict[str, Any] = {
 def _provider_starter_config(
     provider: str, model: str, api_key_env: str, env_file: str | None = None
 ) -> dict[str, Any]:
+    if provider == "foundry":
+        raise ValueError(
+            "no starter for foundry: every resource has its own base_url; "
+            "copy examples/foundry-mai-thinking-1.json and set base_url"
+        )
     if provider not in PROVIDER_DEFAULTS or provider in {"mock", "openai_compatible"}:
         raise ValueError(f"unsupported starter provider {provider!r}")
     if not model.strip():
@@ -1999,6 +2004,7 @@ def _approve_model_main(argv: list[str]) -> None:
         "base_url",
         "api_key_env",
         "api_version",
+        "deployment",
         "max_tokens_parameter",
         "capabilities",
         "supports_temperature",

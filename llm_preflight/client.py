@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -113,6 +115,41 @@ def _reject_mistral_greedy_without_top_p_one(
         )
 
 
+_FOUNDRY_DEPLOYMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", re.ASCII)
+_FOUNDRY_ROUTE_HINT = (
+    "foundry base_url must be an https URL ending /openai/v1, "
+    "for example https://<resource>.services.ai.azure.com/openai/v1"
+)
+
+
+def validate_foundry_route(model: dict[str, Any]) -> None:
+    """Refuse a Foundry route that is not the keyed v1 OpenAI-compatible one."""
+    base_url = model.get("base_url")
+    if not isinstance(base_url, str) or not base_url:
+        raise ValueError("foundry requires base_url; " + _FOUNDRY_ROUTE_HINT)
+    parsed = urllib.parse.urlsplit(base_url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.query
+        or parsed.fragment
+        or not parsed.path.rstrip("/").endswith("/openai/v1")
+    ):
+        raise ValueError(_FOUNDRY_ROUTE_HINT)
+    if model.get("api_version") is not None:
+        raise ValueError(
+            "foundry does not accept api_version: the v1 route has no version query"
+        )
+    deployment = model.get("deployment")
+    if "deployment" in model and not (
+        isinstance(deployment, str) and _FOUNDRY_DEPLOYMENT.fullmatch(deployment)
+    ):
+        raise ValueError(
+            "foundry deployment must be 1-64 ASCII letters, digits, '.', '_' or '-', "
+            "starting with a letter or digit"
+        )
+
+
 def validate_native_request_options(
     model: dict[str, Any], options: dict[str, Any]
 ) -> None:
@@ -163,6 +200,7 @@ def validate_native_request_options(
         "minimax",
         "mistral",
         "cohere",
+        "foundry",
     } and not (strict_openai or strict_claude):
         return
     provider_options = _provider_options(options, provider)
@@ -207,18 +245,31 @@ def validate_native_request_options(
     }
     if new_generation and {"temperature", "top_p", "top_k"} & provider_options.keys():
         raise ValueError("Fable/Mythos 5.2 do not accept sampling parameters")
-    if provider in {"moonshot", "minimax", "mistral", "cohere"}:
+    if provider == "foundry":
+        validate_foundry_route(model)
+    if provider in {"moonshot", "minimax", "mistral", "cohere", "foundry"}:
         expected_adapter = (
             "cohere_chat" if provider == "cohere" else "openai_compatible_chat"
         )
         if model.get("adapter") not in {None, expected_adapter}:
             raise ValueError(f"native {provider} requires adapter={expected_adapter}")
         expected_parameter = (
-            "max_completion_tokens" if provider == "minimax" else "max_tokens"
+            "max_completion_tokens"
+            if provider in {"minimax", "foundry"}
+            else "max_tokens"
         )
-        if model.get("max_tokens_parameter", expected_parameter) != expected_parameter:
+        allowed_parameters = (
+            {"max_completion_tokens", "max_tokens"}
+            if provider == "foundry"
+            else {expected_parameter}
+        )
+        if (
+            model.get("max_tokens_parameter", expected_parameter)
+            not in allowed_parameters
+        ):
             raise ValueError(
-                f"native {provider} requires max_tokens_parameter={expected_parameter}"
+                f"native {provider} requires max_tokens_parameter="
+                + " or ".join(sorted(allowed_parameters))
             )
         if options.get("input_images"):
             raise ValueError(
@@ -226,7 +277,10 @@ def validate_native_request_options(
             )
         if provider_options.get("service_tier", "standard") not in {"standard", "auto"}:
             raise ValueError("native provider service_tier requires standard pricing")
-        if {"tools", "documents", "connectors", "web_search"} & provider_options.keys():
+        hosted = {"tools", "documents", "connectors", "web_search"}
+        if provider == "foundry":
+            hosted.add("data_sources")
+        if hosted & provider_options.keys():
             raise ValueError(
                 "native text preflight does not execute tools or hosted retrieval"
             )
@@ -781,6 +835,27 @@ class NativeTextClient(OpenAICompatibleClient):
         return any(c.get("finish_reason") == "stop" for c in event.get("choices", []))
 
 
+class FoundryClient(NativeTextClient):
+    """Microsoft Foundry's keyed v1 route: the request names the deployment."""
+
+    def body(self, prompt: str, options: dict[str, Any]) -> dict[str, Any]:
+        body = super().body(prompt, options)
+        body["model"] = self.model.get("deployment") or self.model["model"]
+        return body
+
+    def parse_event(self, event: dict[str, Any]) -> tuple[str | None, TokenUsage]:
+        choices = event.get("choices") if isinstance(event, dict) else None
+        if isinstance(choices, list) and any(
+            isinstance(c, dict) and c.get("finish_reason") == "content_filter"
+            for c in choices
+        ):
+            raise ValueError(
+                "Foundry content filter stopped the response (finish_reason "
+                "content_filter)"
+            )
+        return super().parse_event(event)
+
+
 class CohereClient(NativeTextClient):
     """Cohere v2 Chat SSE, normalized using billed rather than injected tokens."""
 
@@ -1325,7 +1400,7 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
     if "[REDACTED]" in str(resolved["base_url"]):
         raise ValueError("base_url is masked; copy the route from your config")
     require_http_url(resolved["base_url"], resolve_host=False)
-    if provider in {"moonshot", "minimax", "mistral", "cohere"}:
+    if provider in {"moonshot", "minimax", "mistral", "cohere", "foundry"}:
         validate_native_request_options(resolved, {})
     adapters: dict[str, Any] = {
         "openai": OpenAICompatibleClient,
@@ -1339,6 +1414,7 @@ def create_client(model: dict[str, Any], timeout: float) -> ProviderClient:
         "minimax": NativeTextClient,
         "mistral": NativeTextClient,
         "cohere": CohereClient,
+        "foundry": FoundryClient,
         "anthropic": AnthropicClient,
         "gemini": GeminiClient,
         "mock": MockClient,

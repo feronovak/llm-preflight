@@ -2,7 +2,7 @@
 
 **Last reviewed:** 2026-11-18 · **As of:** v2.25.8
 
-**Latest measurement:** 2026-11-18, `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each) and the re-measure of `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` (see [the re-measure section](#2026-11-18-re-measure-of-glm-53-and-kimi-k31-pro); it replaces their 2026-10-29 rows in the README summary), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **29 measured models** in all (the README image summarizes the same 29), plus the one attempted route; eight cases each.
+**Latest measurement:** 2026-11-19, `gemini-4-neon` (native Gemini route, eight cases; see [its section](#2026-11-19-gemini-4-neon)), beside the 2026-11-18 measurements: `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each) and the re-measure of `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` (see [the re-measure section](#2026-11-18-re-measure-of-glm-53-and-kimi-k31-pro); it replaces their 2026-10-29 rows in the README summary), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **30 measured models** in all (the README image summarizes the same 30), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and
 routes below. API rejection, rate limits and contract failures are separate
 observations. These repository-owned synthetic cases are not confirmed
@@ -54,7 +54,7 @@ the row, settings, config and result hashes.
 
 The 2026-10-29 run itself is described next (the four GLM and Kimi rows below are re-measured on 2026-11-18, above). All **152** planned calls were attempted: **147** returned API responses,
 **144** passed validation, **three** failed the output contract, and **five**
-returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows before the 2026-11-18 re-measure, 26 of 29 after it). No automatic retries,
+returned API errors. **15 of 19 models passed 8/8 checks** in that run (16 of 20 with Claude Fable 5.2, 25 of 29 with all added rows before the 2026-11-18 re-measure, 26 of 29 after it, 27 of 30 with Gemini 4 Neon). No automatic retries,
 provider fallback, alternative routes or additional paid probes were made.
 
 | Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
@@ -256,6 +256,30 @@ smoke request and the eight cases used 9 requests.
 It was measured on a different day and build than the 2026-10-29 rows, so it is
 not a same-run comparison. This is scoped evidence on a small synthetic
 workload, not production approval.
+
+## 2026-11-19 Gemini 4 Neon
+
+`gemini-4-neon` had bundled prices and Gemini 4 request checks (`XHIGH` accepted,
+`MINIMAL` rejected) from 2.25.8 but no eight-case measurement. On **2026-11-19**
+a separate owner-approved run measured it on the same eight cases and settings
+as the 2026-10-29 rows: native Gemini route, `LOW` thinking, 1,024-token output
+allowance, one attempt, no warmups, no retries, 2.25.8 source checkout. The
+planned maximum from `--dry-run` was **$0.124566** for 8 requests, inside the
+approved $0.30 and 8 requests.
+
+All 8 calls returned API responses and passed validation. The measured cost was
+**$0.024972** (759 input, 1,513 output tokens, usage on all 8 calls). Mean latency
+was 15.874s (p50 14.773s, p95 32.009s), the slowest of the measured Gemini rows. The
+[machine-readable aggregate](../data/model-comparison-2026-11-19.json) retains
+the row, settings, config and result hashes.
+
+| Provider route | Exact API model ID | Checks passed / 8 | API successes / 8 | Mean latency | Estimated cost / 8 |
+|---|---|---:|---:|---:|---:|
+| Gemini | `gemini-4-neon` | 8/8 | 8/8 | 15.874s | $0.024972 |
+
+It was measured on a different day than the 2026-10-29 rows, so it is not a
+same-run comparison. This is scoped evidence on a small synthetic workload, not
+production approval.
 
 ## 2026-11-17 Qwen4 Max
 

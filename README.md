@@ -146,30 +146,30 @@ is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 
 ## Observed results on a support-routing contract
 
-We ran **29 native model routes** through eight synthetic support-routing and
-strict JSON cases each. **225 of 232 checks passed**: two outputs failed their
-contract and five Kimi calls returned HTTP 429. **26 models passed all eight
-checks.** These are observations for this workload as of 2026-11-18, not a
+We ran **30 native model routes** through eight synthetic support-routing and
+strict JSON cases each. **233 of 240 checks passed**: two outputs failed their
+contract and five Kimi calls returned HTTP 429. **27 models passed all eight
+checks.** These are observations for this workload as of 2026-11-19, not a
 ranking of general intelligence or production approval.
 
 <a href="https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md">
 <picture>
 <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11-light.svg">
-<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="29 models attempted on 8 checks: 26 passed 8/8, 2 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
+<img src="https://raw.githubusercontent.com/feronovak/llm-preflight/main/docs/images/measured-models-2026-11-11.svg" alt="30 models attempted on 8 checks: 27 passed 8/8, 2 passed 7/8, Kimi 3 responses and 5 rate limits" width="830">
 </picture>
 </a>
 
 Each request used a 1,024-token output allowance and one attempt, with no
 retries. Passed counts valid outputs out of API responses; API errors are
 separate, so Kimi's 3/3 with 5 errors is an incomplete evaluation. Latency
-averages API responses only. The known token-cost subtotal is **$0.11353669**
-across 227 calls with usage; the total is unknown because the five error
+averages API responses only. The known token-cost subtotal is **$0.13850869**
+across 235 calls with usage; the total is unknown because the five error
 responses supplied no usage. Routes and settings differ, so read the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md)
 before comparing rows. It has the method and the failure analysis.
 
 <details>
-<summary>The same 29 rows as a table</summary>
+<summary>The same 30 rows as a table</summary>
 
 | Model | Route | Group | Contract passed | API errors | Latency | Est. cost | Measured | Against 2026-10-29 |
 |---|---|---|---|---|---|---|---|---|
@@ -187,6 +187,7 @@ before comparing rows. It has the method and the failure analysis.
 | Gemini 4 Argon | Gemini | Passed 8/8 | 8/8 | 0 | 5.186s | $0.002728 | 2026-10-29 | — |
 | Gemini 4 Carbon | Gemini | Passed 8/8 | 8/8 | 0 | 4.687s | $0.002728 | 2026-11-11 | — |
 | Gemini 4 Hydrogen | Gemini | Passed 8/8 | 8/8 | 0 | 2.784s | $0.007221 | 2026-11-13 | — |
+| Gemini 4 Neon | Gemini | Passed 8/8 | 8/8 | 0 | 15.874s | $0.024972 | 2026-11-19 | — |
 | Gemini 3.8 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 2.621s | $0.002723 | 2026-10-29 | — |
 | Gemini 3.6 Flash | Gemini | Passed 8/8 | 8/8 | 0 | 1.359s | $0.004005 | 2026-10-29 | — |
 | Gemini 3.1 Flash-Lite | Gemini | Passed 8/8 | 8/8 | 0 | 1.050s | $0.001793 | 2026-11-11 | — |

@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-11-19",
+  "reviewed_on": "2026-11-19",
+  "tool_version": "2.25.8",
+  "source_commit": "e19f6ceccb519f656ef5a4f30fd251cebcaa1910",
+  "source_dirty": false,
+  "approved_maximum_requests": 8,
+  "approved_maximum_token_estimate_usd": 0.3,
+  "planned_maximum_token_estimate_usd": 0.124566,
+  "display_title": "Observed results on a support-routing contract",
+  "method": {
+    "case_source": "examples/current-model-comparison.json",
+    "case_set_sha256": "44818b3e81922a95709dd7553d10553153eb51098bbec48d32c2c2244688483e",
+    "case_count": 8,
+    "suite_repetitions": 1,
+    "warmups": 0,
+    "concurrency": 1,
+    "attempts": 1,
+    "max_output_tokens": 1024,
+    "temperature": "omitted",
+    "reasoning": "low effort where supported; provider-specific options retained per row",
+    "response_retention": "full response fields retained for failures only; bounded previews and evaluation flags may remain for passing calls",
+    "latency_scope": "successful API responses only, including contract failures; excludes API errors",
+    "native_routes": "Native Gemini route. No OpenRouter fallback.",
+    "sample_limit": "single host, one call per case/model; not a model ranking or production approval"
+  },
+  "totals": {
+    "requests": 8,
+    "api_successful": 8,
+    "api_failures": 0,
+    "valid": 8,
+    "contract_failures": 0,
+    "retry_count": 0,
+    "estimated_cost_usd": 0.024972,
+    "known_cost_subtotal_usd": 0.024972,
+    "known_cost_requests": 8,
+    "missing_usage_requests": 0
+  },
+  "rows": [
+    {
+      "provider": "gemini",
+      "model": "gemini-4-neon",
+      "display_name": "Gemini 4 Neon",
+      "route": "Gemini",
+      "observed_on": "2026-11-19",
+      "observed_model": "gemini-4-neon",
+      "requests": 8,
+      "api_successful": 8,
+      "api_failures": 0,
+      "valid": 8,
+      "contract_failures": 0,
+      "retry_count": 0,
+      "mean_latency_seconds": 15.87440667363262,
+      "latency_p50_seconds": 14.773451729502995,
+      "latency_p95_seconds": 32.00900323648529,
+      "mean_ttft_seconds": 15.856116837385343,
+      "input_tokens": 759,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1513,
+      "estimated_cost_usd": 0.024972,
+      "known_cost_subtotal_usd": 0.024972,
+      "cost_coverage": {
+        "known_requests": 8,
+        "unobserved_retry_requests": 0,
+        "missing_usage_requests": 0,
+        "missing_price_requests": 0
+      },
+      "configured_cap_usd": 0.3,
+      "decision": "pass",
+      "failures": [],
+      "request": {
+        "max_output_tokens": 1024,
+        "retry": {
+          "max_attempts": 1
+        },
+        "provider_options": {
+          "gemini": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "LOW"
+              }
+            }
+          }
+        }
+      },
+      "configuration": {
+        "name": "latest-models-gemini-gemini-4-neon",
+        "models": [
+          {
+            "provider": "gemini",
+            "model": "gemini-4-neon"
+          }
+        ],
+        "request": {
+          "max_output_tokens": 1024,
+          "retry": {
+            "max_attempts": 1
+          },
+          "provider_options": {
+            "gemini": {
+              "generationConfig": {
+                "thinkingConfig": {
+                  "thinkingLevel": "LOW"
+                }
+              }
+            }
+          }
+        },
+        "suite_repetitions": 1,
+        "warmups": 0,
+        "concurrency": 1,
+        "timeout_seconds": 120,
+        "max_requests": 8,
+        "max_estimated_cost_usd": 0.3,
+        "require_current_pricing": true,
+        "save_responses": "failures"
+      },
+      "config_sha256": "7a4cd6305e0eb77814118210274cf807ab8096254b8e923878d0ab937c716949",
+      "result_sha256": "ca576b8de6b23a9f27939b0739f773e00feba19c25cbd8706c68cef0050aaea1",
+      "pricing_fingerprint": "eaa1155a13e3ba729d0fc759ee0063723f4cb67abb9148a59290e58445feac3b",
+      "validator_version": "output-schema-4"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Observed model comparison: support-routing example
 
-**Last reviewed:** 2026-11-18 · **As of:** v2.25.8
+**Last reviewed:** 2026-11-18 · **As of:** v2.25.9
 
 **Latest measurement:** 2026-11-18, `gpt-6.2-sol` and `gpt-6.2-astra` (native OpenAI route, eight cases each) and the re-measure of `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` (see [the re-measure section](#2026-11-18-re-measure-of-glm-53-and-kimi-k31-pro); it replaces their 2026-10-29 rows in the README summary), beside the 2026-11-17 measurement of `qwen4-max`, the 2026-11-13 measurement of `gemini-4-hydrogen` and the 2026-11-11 measurement of four measured native model IDs (`gemini-4-carbon`, `MiniMax-M3`, `mistral-large-4`, `qwen3.8-flash`) and one attempted (`claude-mythos-5-2`, HTTP 404 on all eight calls, no result), and `claude-fable-5-2` and `gemini-3.1-flash-lite` (both 2026-11-11) and the 19 native model IDs measured on 2026-10-29: **29 measured models** in all (the README image summarizes the same 29), plus the one attempted route; eight cases each.
 The previous 12-model run and earlier tables retain their original dates and

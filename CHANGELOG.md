@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Measured `gemini-4-neon` on 2026-11-19 (eight cases, same method as 2026-10-29): 8/8 valid, $0.024972, mean latency 15.874s. The README table, comparison guide and results image now show 30 models; 233 of 240 checks passed and 27 models passed all eight.
+
 ## 2.25.9 - 2026-11-19
 
 ### Added
@@ -12,7 +16,6 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- Measured `gemini-4-neon` on 2026-11-19 (eight cases, same method as 2026-10-29): 8/8 valid, $0.024972, mean latency 15.874s. The README table, comparison guide and results image now show 30 models; 233 of 240 checks passed and 27 models passed all eight.
 - Re-measured `glm-5.3`, `glm-5.3-flashx`, `glm-5.3-flash` and `kimi-k3.1-pro` on 2026-11-18 (eight cases each, same method as 2026-10-29) and updated the README table, comparison guide and results image. `glm-5.3-flashx` improved from 7/8 to 8/8; the other two GLM sizes are unchanged at 7/8; Kimi K3.1 Pro is still incomplete (3 responses and 5 HTTP 429 rate limits). The README now shows 225 of 232 checks passed and 26 of 29 models passing all eight.
 
 ## 2.25.8 - 2026-11-18

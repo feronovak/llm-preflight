@@ -233,8 +233,8 @@ rejects explicit `cachedContent` because only implicit caching is supported.
 Carbon takes the same request shape and the same checks, per Google's
 [Gemini 4 Carbon notes](https://aistudio.google.com/docs/whats-new-gemini-4-carbon);
 its prices above were read from the official pricing page on 2026-11-11.
-Neon takes the Hydrogen request shape, including `XHIGH`, per Google's
-[model page](https://aistudio.google.com/docs/models/gemini-4-neon). Its
+Neon takes the Argon checks plus `XHIGH`; `MINIMAL` is rejected, per Google's
+[Gemini 4 Neon notes](https://aistudio.google.com/docs/whats-new-gemini-4-neon). Its
 rates are flat across the whole window: 3.00 input, 0.15 cached input and
 15.00 output (USD per million tokens), read from the official pricing page on
 2026-11-19.

@@ -20,6 +20,7 @@ from .contracts import (
     DEFAULT_REQUEST,
     check_contract,
     contract_fixtures_declared,
+    foundry_route_keys,
     profile_request_options,
     provenance,
     selection_fingerprint,
@@ -1015,12 +1016,7 @@ def run_benchmark(
                 sample.get("observed_model") for sample in [*samples, *warmup_samples]
             ),
             "base_url": client.model["base_url"],
-            **(
-                {"deployment": model["deployment"]}
-                if model.get("provider") == "foundry"
-                and model.get("deployment") is not None
-                else {}
-            ),
+            **foundry_route_keys(model),
             "capabilities": model.get("capabilities", {}),
             "context_length": model.get("context_length"),
             "max_output_tokens": model.get("max_output_tokens"),

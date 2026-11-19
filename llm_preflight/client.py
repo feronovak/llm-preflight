@@ -14,7 +14,7 @@ from typing import Any
 from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
 from .images import input_image_parts
 from .pricing import valid_token_count
-from .providers import PROVIDER_DEFAULTS
+from .providers import FOUNDRY_DEPLOYMENT_TYPES, PROVIDER_DEFAULTS
 from .redaction import credential_from_env
 from .security import open_public_url, require_http_url
 
@@ -147,6 +147,12 @@ def validate_foundry_route(model: dict[str, Any]) -> None:
         raise ValueError(
             "foundry deployment must be 1-64 ASCII letters, digits, '.', '_' or '-', "
             "starting with a letter or digit"
+        )
+    deployment_type = model.get("deployment_type")
+    if "deployment_type" in model and deployment_type not in FOUNDRY_DEPLOYMENT_TYPES:
+        raise ValueError(
+            "foundry deployment_type must be one of "
+            + ", ".join(FOUNDRY_DEPLOYMENT_TYPES)
         )
 
 

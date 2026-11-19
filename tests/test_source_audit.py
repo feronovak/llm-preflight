@@ -49,6 +49,7 @@ def test_source_audit_reports_literal_model_ids_without_network(tmp_path):
     assert report["confidence"] == "limited_static_pricing_and_retirement"
     assert report["retirement_snapshot"]["providers"] == [
         "anthropic",
+        "foundry",
         "gemini",
         "openai",
     ]
@@ -243,7 +244,8 @@ def test_source_audit_notes_name_every_provider_in_the_retirement_snapshot():
         if note.startswith("Retirement verdicts")
     )
 
-    for provider in retirements.RETIREMENT_PROVIDERS:
+    # The scan has no Foundry model prefix, so it never reports a Foundry verdict.
+    for provider in set(retirements.RETIREMENT_PROVIDERS) - {"foundry"}:
         assert provider in note.casefold()
 
 

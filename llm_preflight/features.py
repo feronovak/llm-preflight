@@ -756,6 +756,7 @@ def replay_config(
         "api_key_env",
         "api_version",
         "deployment",
+        "deployment_type",
         "max_tokens_parameter",
         "capabilities",
         "supports_temperature",

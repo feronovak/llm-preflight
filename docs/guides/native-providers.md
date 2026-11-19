@@ -63,17 +63,24 @@ route, which must be `https` and end `/openai/v1`, for example
 - A stream must end with `finish_reason: stop`; `length` and `content_filter`
   fail, and the error names the content filter. Azure's leading
   `prompt_filter_results` chunk is accepted. Usage comes from the final chunk.
-- No Foundry model has a bundled price, retirement row or importance tier in
-  this release: cost is unknown, so `--pricing-check` exits 1, and the dry run refuses when
-  `max_estimated_cost_usd` or `require_current_pricing` is set, until you supply
-  your own rates. A `foundry:gpt-*` model does not
+- `MAI-Thinking-1` has a bundled retirement row (Preview, retires 2027-03-02)
+  and an importance tier, but no bundled price: Microsoft's pricing page lists
+  its rates as `$-`. Cost is unknown, so `--pricing-check` exits 1, and the dry run
+  refuses when `max_estimated_cost_usd` or `require_current_pricing` is set,
+  until you supply your own rates. `MAI-Code-2` and `MAI-Code-2-Flash` are not
+  on Microsoft's pages and have no row. A `foundry:gpt-*` model does not
   reuse OpenAI prices, retirement rows or GPT-6 checks.
+- A bundled Foundry price applies only on an Azure host
+  (`https://<name>.services.ai.azure.com/.../openai/v1` or
+  `https://<name>.openai.azure.com/openai/v1`) and only when `deployment_type`
+  (`global`, `data_zone` or `regional`) names a type the row prices. A gateway
+  host or a missing or other type leaves the price unknown.
 - Entra ID sign-in is not supported; use a resource key.
 - `init --template provider --provider foundry` and `init --interactive` refuse,
   because a starter cannot know your resource URL; copy the example and set
   `base_url`. `catalog init --providers foundry` refuses as for `zai`.
-- `deployment`, when set, is part of the route fingerprint, `--replay` and
-  `models approve`; configs without it hash as before.
+- `deployment` and `deployment_type`, when set, are part of the route
+  fingerprint, `--replay` and `models approve`; configs without it hash as before.
 
 ## Run the checks without spending
 

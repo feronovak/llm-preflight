@@ -66,8 +66,8 @@ The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
 Bundled retirement rows were rechecked on **2026-11-18**, except
-`gemini-4-neon` (**2026-11-19**). Non-retired rows
-become stale on **2026-12-19** (day 31; `gemini-4-neon` on 2026-12-20), and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
+`gemini-4-neon` and `mai-thinking-1` (**2026-11-19**). Non-retired rows
+become stale on **2026-12-19** (day 31; those two on 2026-12-20), and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## What the scan does not see
 
@@ -189,6 +189,12 @@ from the ID.
   as its replacement. `gemini-3.1-pro-preview` has no row because the page
   states no shutdown date or replacement. Other Gemini IDs remain unknown;
   this is partial coverage.
+- Foundry: one row, `MAI-Thinking-1`, from the Microsoft table of the
+  [model retirement schedule](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule).
+  It is Preview and retires on 2027-03-02; the page names no replacement.
+  Azure OpenAI models, other MAI models and `MAI-Code-2` are not in the
+  snapshot, so a Foundry model without a row is `unknown`. The source scan does
+  not read Foundry model IDs.
 - Text-generation models only. Audio, realtime, image, transcription,
   embedding and fine-tuning retirements are not in the snapshot.
 - A page entry that names more than one replacement, a replacement that
@@ -197,9 +203,9 @@ from the ID.
 
 ## Release retirement review
 
-The snapshot contains 121 rows: 38 Anthropic, 76 OpenAI and seven Gemini.
+The snapshot contains 122 rows: 38 Anthropic, 76 OpenAI, seven Gemini and one Foundry.
 120 rows were reviewed on 2026-11-18 and become stale on 2026-12-19; the
-`gemini-4-neon` row was reviewed on 2026-11-19 and becomes stale on 2026-12-20
+`gemini-4-neon` and `mai-thinking-1` rows were reviewed on 2026-11-19 and become stale on 2026-12-20
 (non-retired rows only; retired rows remain failures). The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
 2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and

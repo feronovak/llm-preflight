@@ -64,8 +64,9 @@ route, which must be `https` and end `/openai/v1`, for example
   fail, and the error names the content filter. Azure's leading
   `prompt_filter_results` chunk is accepted. Usage comes from the final chunk.
 - No Foundry model has a bundled price, retirement row or importance tier in
-  this release: cost is unknown, so `--pricing-check` exits 1 and the dry run
-  refuses until you supply your own rates. A `foundry:gpt-*` model does not
+  this release: cost is unknown, so `--pricing-check` exits 1, and the dry run refuses when
+  `max_estimated_cost_usd` or `require_current_pricing` is set, until you supply
+  your own rates. A `foundry:gpt-*` model does not
   reuse OpenAI prices, retirement rows or GPT-6 checks.
 - Entra ID sign-in is not supported; use a resource key.
 - `init --template provider --provider foundry` and `init --interactive` refuse,

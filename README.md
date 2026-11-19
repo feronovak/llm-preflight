@@ -227,10 +227,7 @@ llm-preflight init live.json --template provider \
   --provider openai --model gpt-6.1-sol --api-key-env OPENAI_API_KEY
 ```
 
-The starter asks for exactly `ok`. Microsoft Foundry has no starter, because
-every resource has its own URL: copy `examples/foundry-mai-thinking-1.json` and
-set `base_url` to your resource's `/openai/v1` route (key in `FOUNDRY_API_KEY`).
- Add this top-level field to `live.json`,
+The starter asks for exactly `ok`. Add this top-level field to `live.json`,
 keeping its existing fields, to check the validator locally:
 
 ```json
@@ -241,6 +238,10 @@ keeping its existing fields, to check the validator locally:
   ]
 }
 ```
+
+Microsoft Foundry has no starter, because every resource has its own URL: copy
+`examples/foundry-mai-thinking-1.json` and set `base_url` to your resource's
+`/openai/v1` route (key in `FOUNDRY_API_KEY`).
 
 Set `OPENAI_API_KEY` in your shell or in an uncommitted `.env.production`
 beside `live.json`. The config stores the variable name, never the key.

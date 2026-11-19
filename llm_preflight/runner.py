@@ -1017,7 +1017,8 @@ def run_benchmark(
             "base_url": client.model["base_url"],
             **(
                 {"deployment": model["deployment"]}
-                if model.get("deployment") is not None
+                if model.get("provider") == "foundry"
+                and model.get("deployment") is not None
                 else {}
             ),
             "capabilities": model.get("capabilities", {}),

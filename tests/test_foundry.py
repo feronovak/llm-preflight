@@ -334,6 +334,27 @@ def test_route_fingerprint_unchanged_without_deployment():
     assert hashed["routes_sha256"] == expected
 
 
+def test_stray_deployment_on_another_provider_keeps_its_hash():
+    model = {
+        "provider": "openai_compatible",
+        "model": "gpt-x",
+        "base_url": "https://example.com/v1",
+        "deployment": "d1",
+    }
+    hashed = provenance({"prompt": "hi", "models": [model]}, [model], "p")
+    expected = "8d9d4e371b5be2ac6bb58e73087bcdd50d02c56cda143ecdfe1eea94d88b861b"  # pragma: allowlist secret
+    assert hashed["routes_sha256"] == expected
+
+
+def test_foundry_dry_run_refuses_unknown_price_under_a_cost_cap(
+    monkeypatch, tmp_path, capsys
+):
+    config = _config(max_estimated_cost_usd=0.5, max_requests=1)
+    code, out = _cli(monkeypatch, tmp_path, capsys, config, "--dry-run", "--json")
+    assert code == 2
+    assert "pricing is unknown" in out
+
+
 def test_route_fingerprint_changes_with_deployment():
     hashes = {
         _routes(dict(MODEL)),

@@ -260,10 +260,11 @@ workload, not production approval.
 ## 2026-11-19 Gemini 4 Neon
 
 `gemini-4-neon` had bundled prices and Gemini 4 request checks (`XHIGH` accepted,
-`MINIMAL` rejected) from 2.25.8 but no eight-case measurement. On **2026-11-19**
+`MINIMAL` rejected) in the unreleased source after 2.25.8 (commit `e19f6ce`) but
+no eight-case measurement. On **2026-11-19**
 a separate owner-approved run measured it on the same eight cases and settings
 as the 2026-10-29 rows: native Gemini route, `LOW` thinking, 1,024-token output
-allowance, one attempt, no warmups, no retries, 2.25.8 source checkout. The
+allowance, one attempt, no warmups, no retries, source checkout at `e19f6ce` (version 2.25.8, unreleased Neon rows). The
 planned maximum from `--dry-run` was **$0.124566** for 8 requests, inside the
 approved $0.30 and 8 requests.
 

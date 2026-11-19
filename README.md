@@ -138,9 +138,9 @@ For benchmark runs, read the decision before acting:
 
 ## New
 
-Claude Fable 5.2, Gemini 3.1 Flash-Lite, Gemini 4 Hydrogen, Qwen4 Max, GPT-6.2 Sol, GPT-6.2 Astra and four more models in the
+Claude Fable 5.2, Gemini 3.1 Flash-Lite, Gemini 4 Hydrogen, Gemini 4 Neon, Qwen4 Max, GPT-6.2 Sol, GPT-6.2 Astra and four more models in the
 [comparison guide](https://github.com/feronovak/llm-preflight/blob/main/docs/guides/observed-model-comparison.md).
-The guide covers 30 routes; the 30th, Claude Mythos 5.2, returned HTTP 404 on
+The guide covers 31 routes; the 31st, Claude Mythos 5.2, returned HTTP 404 on
 all eight calls. Everything else
 is on the [releases page](https://github.com/feronovak/llm-preflight/releases).
 

@@ -29,6 +29,7 @@ with the exact reviewed ID your application uses:
 | `minimax` | `MINIMAX_API_KEY` |
 | `mistral` | `MISTRAL_API_KEY` |
 | `cohere` | `COHERE_API_KEY` |
+| `foundry` | `FOUNDRY_API_KEY` |
 | `typesafe` | `TYPESAFE_API_KEY` |
 | `openai_compatible` | configured with `api_key_env` |
 

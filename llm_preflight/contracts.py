@@ -459,6 +459,12 @@ def provenance(
             "headers": _route_headers(model.get("headers") or {}),
             # The mock provider answers with its configured response.
             "response": model.get("response"),
+            # Hashed only when set, so routes without it keep their hash.
+            **(
+                {"deployment": model["deployment"]}
+                if model.get("deployment") is not None
+                else {}
+            ),
         }
         for model in models
     ]

@@ -43,6 +43,7 @@ coverage; this pricing table does not establish access or model quality.
 | `minimax` | `MINIMAX_API_KEY` | MiniMax native text chat |
 | `mistral` | `MISTRAL_API_KEY` | Mistral native text chat |
 | `cohere` | `COHERE_API_KEY` | Cohere native v2 text Chat |
+| `foundry` | `FOUNDRY_API_KEY` | Microsoft Foundry v1 text chat; your resource `base_url`, no bundled rows |
 | `openrouter` | `OPENROUTER_API_KEY` | Routed catalog; live prices when present |
 | `openai_compatible` | `api_key_env` | Caller-supplied OpenAI-compatible base URL |
 | `typesafe` | `TYPESAFE_API_KEY` | Catalogue-only typed-decision (Jev); not text smoke |
@@ -51,7 +52,7 @@ coverage; this pricing table does not establish access or model quality.
 `catalog init` can include `openai`, `anthropic`, `gemini`, `xai`, `openrouter`,
 `deepseek`, `qwen`, `typesafe`, `moonshot`, `minimax`, `mistral`, and `cohere`.
 Z.ai supports configured native models; no documented metadata discovery
-endpoint is integrated.
+endpoint is integrated. `foundry` has no default URL and no discovery; `catalog init` refuses it.
 
 Bundled native prices apply to the reviewed default base URL. A different
 endpoint leaves the price unknown, including persisted official snapshots;

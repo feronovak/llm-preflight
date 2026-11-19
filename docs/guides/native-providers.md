@@ -31,12 +31,48 @@ parser or grant approval for a live request.
 | `mistral` | `mistral-large-4` | `MISTRAL_API_KEY` | [Mistral Large 4](../../examples/mistral-large-4.json) |
 | `cohere` | `command-a-plus-05-2026` | `COHERE_API_KEY` | [Cohere Command A+](../../examples/cohere-command-a-plus.json) |
 | `anthropic` | `claude-mythos-5-1` | `ANTHROPIC_API_KEY` | [Restricted Mythos](../../examples/mythos-5.1-restricted.json) |
+| `foundry` | `MAI-Thinking-1` | `FOUNDRY_API_KEY` | [Foundry MAI](../../examples/foundry-mai-thinking-1.json) |
 
 Model IDs are case-sensitive. The `moonshot` provider names Kimi's native API;
 it uses `https://api.moonshot.ai/v1`. MiniMax uses `https://api.minimax.io/v1`,
 Mistral uses `https://api.mistral.ai/v1`, and Cohere uses
 `https://api.cohere.com/v2`. Each route authenticates with its own environment
 variable. Provider credentials and output caps never come from discovery.
+
+## Microsoft Foundry
+
+`provider: "foundry"` calls the keyed v1 OpenAI-compatible route of your own
+Foundry resource, so it has no default URL. Set `base_url` to the resource
+route, which must be `https` and end `/openai/v1`, for example
+`https://<resource>.services.ai.azure.com/openai/v1` (a project path such as
+`.../api/projects/<project>/openai/v1` also works). Requests go to
+`<base_url>/chat/completions` with `Authorization: Bearer` and the key from
+`FOUNDRY_API_KEY`.
+
+- `model` is the catalog ID. The optional `deployment` names your deployment
+  and is sent as the request `model`; it defaults to `model`. It must be 1-64
+  ASCII letters, digits, `.`, `_` or `-`, starting with a letter or digit.
+- `api_version` is refused: the v1 route takes no version query.
+- Only the Chat adapter is supported (`openai_responses` is refused), text
+  only. `tools`, `documents`, `connectors`, `web_search` and `data_sources`
+  in `provider_options` are refused, as is a `service_tier` other than
+  `standard` or `auto`.
+- The output cap is sent as `max_completion_tokens`, which bounds reasoning and
+  answer together. Set `max_tokens_parameter` to `max_tokens` to use the other
+  name.
+- A stream must end with `finish_reason: stop`; `length` and `content_filter`
+  fail, and the error names the content filter. Azure's leading
+  `prompt_filter_results` chunk is accepted. Usage comes from the final chunk.
+- No Foundry model has a bundled price, retirement row or importance tier in
+  this release: cost is unknown, so `--pricing-check` exits 1 and the dry run
+  refuses until you supply your own rates. A `foundry:gpt-*` model does not
+  reuse OpenAI prices, retirement rows or GPT-6 checks.
+- Entra ID sign-in is not supported; use a resource key.
+- `init --template provider --provider foundry` and `init --interactive` refuse,
+  because a starter cannot know your resource URL; copy the example and set
+  `base_url`. `catalog init --providers foundry` refuses as for `zai`.
+- `deployment`, when set, is part of the route fingerprint, `--replay` and
+  `models approve`; configs without it hash as before.
 
 ## Run the checks without spending
 

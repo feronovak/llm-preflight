@@ -1015,6 +1015,11 @@ def run_benchmark(
                 sample.get("observed_model") for sample in [*samples, *warmup_samples]
             ),
             "base_url": client.model["base_url"],
+            **(
+                {"deployment": model["deployment"]}
+                if model.get("deployment") is not None
+                else {}
+            ),
             "capabilities": model.get("capabilities", {}),
             "context_length": model.get("context_length"),
             "max_output_tokens": model.get("max_output_tokens"),

@@ -19,11 +19,11 @@ on 2026-11-19 and becomes stale on 2026-12-20. Every other row was reviewed on
 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
-The [latest comparison](observed-model-comparison.md) measured 29 models with
+The [latest comparison](observed-model-comparison.md) measured 30 models with
 eight cases each: 19 native routes on 2026-10-29, Claude Fable 5.2 and
 Gemini 3.1 Flash-Lite on 2026-11-11, four more models on 2026-11-11 and
-Gemini 4 Hydrogen on 2026-11-13, Qwen4 Max on 2026-11-17, GPT-6.2 Sol and GPT-6.2 Astra on 2026-11-18, and a 2026-11-18 re-measure of the three GLM 5.3 sizes and Kimi K3.1 Pro that replaces their 2026-10-29 rows in the summary.
-A 30th route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
+Gemini 4 Hydrogen on 2026-11-13, Gemini 4 Neon on 2026-11-19, Qwen4 Max on 2026-11-17, GPT-6.2 Sol and GPT-6.2 Astra on 2026-11-18, and a 2026-11-18 re-measure of the three GLM 5.3 sizes and Kimi K3.1 Pro that replaces their 2026-10-29 rows in the summary.
+A 31st route, `claude-mythos-5-2`, was attempted and returned only HTTP 404 for this account (8 calls), so it has no quality, latency or cost result. The first 20 models gave 152 of 160 validated
 outputs, three contract failures and five Kimi rate-limit errors; after the GLM re-measure one of the three contract failures is gone and the Kimi rate limits remain. Historical **16/16** Gemini evidence
 from October 14 is retained separately. Unmeasured added providers keep fixture-only
 coverage; this pricing table does not establish access or model quality.

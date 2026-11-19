@@ -27,6 +27,7 @@ DEFAULT_DATA = (
     ROOT / "docs/data/model-comparison-2026-11-18-glm-5.3-flashx.json",
     ROOT / "docs/data/model-comparison-2026-11-18-glm-5.3-flash.json",
     ROOT / "docs/data/model-comparison-2026-11-18-kimi-k3.1-pro.json",
+    ROOT / "docs/data/model-comparison-2026-11-19.json",
 )
 DEFAULT_OUTPUT = ROOT / f"docs/images/measured-models-{CURRENT_MEASUREMENT}.svg"
 DEFAULT_LIGHT_OUTPUT = (
@@ -48,6 +49,7 @@ MODEL_ORDER = (
     "gemini-4-argon",
     "gemini-4-carbon",
     "gemini-4-hydrogen",
+    "gemini-4-neon",
     "gemini-3.8-flash",
     "gemini-3.6-flash",
     "gemini-3.1-flash-lite",
@@ -76,6 +78,7 @@ MODEL_NAMES = {
     "claude-sonnet-5-5": "Claude Sonnet 5.5",
     "claude-haiku-5-5": "Claude Haiku 5.5",
     "gemini-4-argon": "Gemini 4 Argon",
+    "gemini-4-neon": "Gemini 4 Neon",
     "gemini-4-hydrogen": "Gemini 4 Hydrogen",
     "gemini-3.8-flash": "Gemini 3.8 Flash",
     "gemini-3.1-flash-lite": "Gemini 3.1 Flash-Lite",

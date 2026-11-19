@@ -22,11 +22,12 @@ MIN_GENERATION_WINDOW_SECONDS = 0.1
 DEFAULT_MAX_OUTPUT_TOKENS = 256
 MAX_OBSERVED_MODEL_CHARS = 256
 _GEMINI_4_THINKING_LEVELS = ("LOW", "MEDIUM", "HIGH")
-# Model-specific thinking levels; Hydrogen adds XHIGH and rejects MINIMAL.
+# Model-specific thinking levels; Hydrogen and Neon add XHIGH and rejects MINIMAL.
 GEMINI_4_THINKING_LEVELS = {
     "gemini-4-argon": _GEMINI_4_THINKING_LEVELS,
     "gemini-4-carbon": _GEMINI_4_THINKING_LEVELS,
     "gemini-4-hydrogen": (*_GEMINI_4_THINKING_LEVELS, "XHIGH"),
+    "gemini-4-neon": (*_GEMINI_4_THINKING_LEVELS, "XHIGH"),
 }
 GEMINI_4_MODELS = frozenset(GEMINI_4_THINKING_LEVELS)
 _GPT_6_PREFIXES = ("gpt-6-", "gpt-6.1-", "gpt-6.2-")

@@ -330,11 +330,16 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "as_of": "2026-11-18",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
+    assert PUBLIC_RETIREMENTS[("gemini", "gemini-4-neon")] == {
+        "status": "active",
+        "as_of": "2026-11-19",
+        "source_url": GEMINI_DEPRECATIONS_URL,
+    }
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
     assert providers == {"anthropic", "gemini", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 38
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 76
-    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 6
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 7
 
 
 @pytest.mark.parametrize("model", ["claude-fable-5-2", "claude-mythos-5-2"])
@@ -549,7 +554,7 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
     assert summary["oldest_as_of"] == "2026-11-18"
-    assert summary["newest_as_of"] == "2026-11-18"
+    assert summary["newest_as_of"] == "2026-11-19"
     assert (
         retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 18))[
             "decision"

@@ -14,7 +14,8 @@ The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
 `claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
 `deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
-2026-11-17 and become stale on 2026-12-18. Every other row was reviewed on
+2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` row was reviewed
+on 2026-11-19 and becomes stale on 2026-12-20. Every other row was reviewed on
 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
@@ -110,6 +111,7 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-18 |
 | `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-18 |
 | `gemini` | `gemini-4-hydrogen` | 1.50 | 7.50 | 2026-11-18 |
+| `gemini` | `gemini-4-neon` | 3.00 | 15.00 | 2026-11-19 |
 | `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-18 |
 | `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-18 |
 | `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-18 |
@@ -231,6 +233,11 @@ rejects explicit `cachedContent` because only implicit caching is supported.
 Carbon takes the same request shape and the same checks, per Google's
 [Gemini 4 Carbon notes](https://aistudio.google.com/docs/whats-new-gemini-4-carbon);
 its prices above were read from the official pricing page on 2026-11-11.
+Neon takes the Hydrogen request shape, including `XHIGH`, per Google's
+[model page](https://aistudio.google.com/docs/models/gemini-4-neon). Its
+rates are flat across the whole window: 3.00 input, 0.15 cached input and
+15.00 output (USD per million tokens), read from the official pricing page on
+2026-11-19.
 Provider options cannot override the output cap used in the plan. Background
 long decode and server-managed conversation state are outside this adapter.
 

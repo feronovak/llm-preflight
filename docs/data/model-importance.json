@@ -313,6 +313,12 @@
       "reason": "Gemini 4 generation, measured 2026-11-13"
     },
     {
+      "provider": "gemini",
+      "model": "gemini-4-neon",
+      "tier": 1,
+      "reason": "Gemini 4 generation, listed on the official models page 2026-11-19"
+    },
+    {
       "provider": "minimax",
       "model": "MiniMax-M3",
       "tier": 1,

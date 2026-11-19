@@ -623,7 +623,8 @@ def test_typesafe_catalog_marks_jev_as_a_decision_model(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "model_id", ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen"]
+    "model_id",
+    ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen", "gemini-4-neon"],
 )
 def test_gemini_4_discovery_keeps_limits_and_does_not_claim_sampling_support(
     monkeypatch, snapshot_review_day, model_id

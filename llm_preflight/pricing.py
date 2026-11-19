@@ -49,6 +49,7 @@ PUBLIC_PRICING: dict[tuple[str, str], tuple[float, float, str]] = {
     ("gemini", "gemini-4-argon"): (2.0, 10.0, "2026-11-18"),
     ("gemini", "gemini-4-carbon"): (2.0, 10.0, "2026-11-18"),
     ("gemini", "gemini-4-hydrogen"): (1.5, 7.5, "2026-11-18"),
+    ("gemini", "gemini-4-neon"): (3.0, 15.0, "2026-11-19"),
     ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-18"),
     ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-18"),
     ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-18"),
@@ -463,6 +464,9 @@ PUBLIC_PRICING_DETAILS: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("gemini", "gemini-4-hydrogen"): {
         "cached_input_cost_per_million": 0.075,
+    },
+    ("gemini", "gemini-4-neon"): {
+        "cached_input_cost_per_million": 0.15,
     },
     ("deepseek", "deepseek-flash"): {
         "cached_input_cost_per_million": 0.006,

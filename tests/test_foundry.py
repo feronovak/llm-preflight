@@ -310,7 +310,8 @@ def test_foundry_openai_model_does_not_reuse_openai_rows(monkeypatch, tmp_path, 
 
 
 def test_foundry_retirement_without_row_is_inconclusive():
-    report = retirement_report([MODEL], date(2026, 11, 19))
+    unbundled = {**MODEL, "model": "gpt-5.4"}
+    report = retirement_report([unbundled], date(2026, 11, 19))
     assert report["decision"] != "pass"
     assert report["models"][0]["status"] == "unknown"
 

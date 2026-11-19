@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Added
 
 - Native `foundry` provider for Microsoft Foundry's v1 OpenAI-compatible route. Set `base_url` to your resource route (`https`, ending `/openai/v1`); `model` is the catalog ID, and an optional `deployment` names the deployment sent as the request `model`. The key comes from `FOUNDRY_API_KEY` as a Bearer token. `api_version` is refused, requests are text only through the Chat adapter, and a stream must end with `stop` (`length` and `content_filter` fail). Foundry models have no bundled price or retirement row yet, so `--pricing-check` exits 1, and the dry run refuses when `max_estimated_cost_usd` or `require_current_pricing` is set, until you supply your own rates. `deployment` joins the route fingerprint, `--replay` and `models approve` only when set. `init --template provider --provider foundry` refuses with a pointer to `examples/foundry-mai-thinking-1.json`.
+- Bundled retirement row and importance tier for Microsoft Foundry `MAI-Thinking-1` (Preview, retires 2027-03-02), read from Microsoft's model retirement schedule. Microsoft's pricing page still lists MAI rates as `$-`, so there is no bundled price and Foundry cost stays unknown until you supply your own rates. New optional model key `deployment_type` (`global`, `data_zone`, `regional`) for `foundry`: a bundled Foundry price applies only on an Azure host with a priced type, and the key joins the route fingerprint, `--replay` and `models approve` only when set.
 
 ### Changed
 

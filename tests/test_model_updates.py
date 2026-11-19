@@ -445,7 +445,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         model
         for (_, model), row in PUBLIC_RETIREMENTS.items()
         if row["as_of"] == "2026-11-19"
-    } == {"gemini-4-neon"}
+    } == {"gemini-4-neon", "mai-thinking-1"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

@@ -259,6 +259,12 @@
       "reason": "newest DeepSeek flagship, measured 2026-10-29"
     },
     {
+      "provider": "foundry",
+      "model": "mai-thinking-1",
+      "tier": 3,
+      "reason": "preview, retires 2027-03-02"
+    },
+    {
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
       "tier": 3,

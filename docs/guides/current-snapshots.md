@@ -14,8 +14,9 @@ The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
 `claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
 `deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
-2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` row was reviewed
-on 2026-11-19 and becomes stale on 2026-12-20. Every other row was reviewed on
+2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` and Foundry
+`mai-thinking-1` retirement rows were reviewed on 2026-11-19 and become stale
+on 2026-12-20. Every other row was reviewed on
 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
@@ -43,7 +44,7 @@ coverage; this pricing table does not establish access or model quality.
 | `minimax` | `MINIMAX_API_KEY` | MiniMax native text chat |
 | `mistral` | `MISTRAL_API_KEY` | Mistral native text chat |
 | `cohere` | `COHERE_API_KEY` | Cohere native v2 text Chat |
-| `foundry` | `FOUNDRY_API_KEY` | Microsoft Foundry v1 text chat; your resource `base_url`, no bundled rows |
+| `foundry` | `FOUNDRY_API_KEY` | Microsoft Foundry v1 text chat; your resource `base_url`; a retirement row for `MAI-Thinking-1`, no bundled price |
 | `openrouter` | `OPENROUTER_API_KEY` | Routed catalog; live prices when present |
 | `openai_compatible` | `api_key_env` | Caller-supplied OpenAI-compatible base URL |
 | `typesafe` | `TYPESAFE_API_KEY` | Catalogue-only typed-decision (Jev); not text smoke |

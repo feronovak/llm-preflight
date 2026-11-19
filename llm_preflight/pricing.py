@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import urllib.parse
 from datetime import date, datetime, timezone
 from typing import Any, TypeGuard, cast
 
@@ -162,6 +163,14 @@ _MODEL_PRICING_PAGES = {
         "qwen3.7-plus",
     ): "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
 }
+# Deployment types a bundled Foundry price covers, per model. Microsoft prices
+# each type separately; a type not listed here has no bundled price.
+FOUNDRY_PRICED_DEPLOYMENT_TYPES: dict[str, frozenset[str]] = {}
+_FOUNDRY_HOSTS = (
+    (".services.ai.azure.com", None),
+    (".openai.azure.com", "/openai/v1"),
+)
+
 PUBLIC_PRICING_SOURCES: dict[tuple[str, str], str] = {
     key: _MODEL_PRICING_PAGES.get(key, _PROVIDER_PRICING_PAGES[key[0]])
     for key in PUBLIC_PRICING
@@ -791,6 +800,38 @@ def estimate_sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float
     return sample_cost_evidence(sample, model)[0]
 
 
+def _foundry_price_applies(model: dict[str, Any]) -> bool:
+    """A Foundry price holds only on an Azure host and a priced deployment type."""
+    parsed = urllib.parse.urlsplit(str(model.get("base_url") or ""))
+    host = parsed.hostname or ""
+    path = parsed.path.rstrip("/")
+    on_azure = (
+        parsed.scheme == "https"
+        and not parsed.username
+        and parsed.port is None
+        and path.endswith("/openai/v1")
+        and any(
+            host.endswith(suffix)
+            and host.count(".") == suffix.count(".")
+            and (exact is None or path == exact)
+            for suffix, exact in _FOUNDRY_HOSTS
+        )
+    )
+    return on_azure and model.get("deployment_type") in (
+        FOUNDRY_PRICED_DEPLOYMENT_TYPES.get(model["model"], frozenset())
+    )
+
+
+def _route_voids_public_price(provider: str, model: dict[str, Any]) -> bool:
+    """Whether the route is not the one the bundled public price was read for."""
+    if provider == "foundry":
+        return not _foundry_price_applies(model)
+    if provider not in PROVIDER_DEFAULTS:
+        return False
+    public_url = PROVIDER_DEFAULTS[provider]["base_url"]
+    return str(model.get("base_url", public_url)).rstrip("/") != public_url
+
+
 def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
     if (
         model.get("input_cost_per_million") is not None
@@ -805,25 +846,23 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
         if metadata.get("source") != "official snapshot":
             return {**model, "pricing_metadata": {"source": "user override"}}
     key = (model.get("provider", "openai_compatible"), model["model"])
-    if key in PUBLIC_PRICING and key[0] in PROVIDER_DEFAULTS:
-        public_url = PROVIDER_DEFAULTS[key[0]]["base_url"]
-        if str(model.get("base_url", public_url)).rstrip("/") != public_url:
-            return {
-                **{
-                    k: v
-                    for k, v in model.items()
-                    if k
-                    not in {
-                        "input_cost_per_million",
-                        "output_cost_per_million",
-                        "cached_input_cost_per_million",
-                        "cache_write_input_cost_per_million",
-                        "pricing_tiers",
-                        "pricing_metadata",
-                    }
-                },
-                "pricing_metadata": {"source": "unknown"},
-            }
+    if key in PUBLIC_PRICING and _route_voids_public_price(key[0], model):
+        return {
+            **{
+                k: v
+                for k, v in model.items()
+                if k
+                not in {
+                    "input_cost_per_million",
+                    "output_cost_per_million",
+                    "cached_input_cost_per_million",
+                    "cache_write_input_cost_per_million",
+                    "pricing_tiers",
+                    "pricing_metadata",
+                }
+            },
+            "pricing_metadata": {"source": "unknown"},
+        }
     pricing = PUBLIC_PRICING.get(key)
     if pricing is None:
         if key[0] == "gemini" and key[1] in GEMINI_MODEL_REDIRECTS:

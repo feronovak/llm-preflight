@@ -972,3 +972,63 @@ def test_failed_official_page_does_not_mark_openrouter_findings(sw, monkeypatch)
     assert "fetch-failed:https://developers.openai.com/models" in {
         f["key"] for f in findings
     }
+
+
+ACK_KEY = ("zai", "glm-5.3-flash")
+ACK_ROW = ((0.15, 0.5), (0.0399, 0.0784), "2026-11-21")
+
+
+def _ack(sw, monkeypatch, bundled=(0.15, 0.5), seen=("0.0000000399", "0.0000000784")):
+    monkeypatch.setattr(sw, "PUBLIC_PRICING", {ACK_KEY: (*bundled, "2026-11-21")})
+    monkeypatch.setattr(sw, "ACKNOWLEDGED_PRICE_SIGNALS", {ACK_KEY: ACK_ROW})
+    item = {
+        "id": "z-ai/glm-5.3-flash",
+        "pricing": {"prompt": seen[0], "completion": seen[1]},
+    }
+    acknowledged: list = []
+    findings = sw.openrouter_findings({"data": [item]}, acknowledged=acknowledged)
+    return findings, acknowledged
+
+
+def test_seeded_acknowledgement_is_the_zai_flash_pair():
+    assert _load().ACKNOWLEDGED_PRICE_SIGNALS == {ACK_KEY: ACK_ROW}
+
+
+def test_acknowledged_price_signal_is_listed_not_a_finding(sw, monkeypatch):
+    findings, acknowledged = _ack(sw, monkeypatch)
+    assert findings == []
+    [item] = acknowledged
+    assert item["key"] == "price-signal:zai:glm-5.3-flash"
+    assert item["checked"] == "2026-11-21"
+
+
+def test_price_signal_refires_when_openrouter_price_moves(sw, monkeypatch):
+    findings, acknowledged = _ack(sw, monkeypatch, seen=("0.0000000399", "0.0000001"))
+    assert [f["key"] for f in findings] == ["price-signal:zai:glm-5.3-flash"]
+    assert acknowledged == []
+
+
+def test_price_signal_refires_when_bundled_price_moves(sw, monkeypatch):
+    findings, acknowledged = _ack(sw, monkeypatch, bundled=(0.2, 0.5))
+    assert [f["key"] for f in findings] == ["price-signal:zai:glm-5.3-flash"]
+    assert acknowledged == []
+
+
+def test_main_lists_acknowledged_in_json_and_text(sw, monkeypatch, capsys):
+    monkeypatch.setattr(sw, "PUBLIC_PRICING", {ACK_KEY: (0.15, 0.5, "2026-11-21")})
+    monkeypatch.setattr(sw, "ACKNOWLEDGED_PRICE_SIGNALS", {ACK_KEY: ACK_ROW})
+    pricing = {"prompt": "0.0000000399", "completion": "0.0000000784"}
+    router = json.dumps({"data": [{"id": "z-ai/glm-5.3-flash", "pricing": pricing}]})
+
+    def read(url):
+        if url == ROUTER:
+            return router.encode()
+        raise sw.FetchError("HTTP 503")
+
+    assert sw.main(["--json"], read) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert [f for f in out["findings"] if f["type"] == "price-signal"] == []
+    assert [a["key"] for a in out["acknowledged"]] == ["price-signal:zai:glm-5.3-flash"]
+    assert sw.main([], read) == 0
+    text = capsys.readouterr().out
+    assert "acknowledged price signal: price-signal:zai:glm-5.3-flash" in text

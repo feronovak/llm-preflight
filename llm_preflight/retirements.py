@@ -29,7 +29,7 @@ _DATED_SUFFIX = {
 }
 _ANTHROPIC_ALIAS_TAIL = re.compile(r"-(?:latest|0)$")
 EXPIRY_NOTICE_DAYS = 7
-_REVIEWED = "2026-11-18"
+_REVIEWED = "2026-11-21"
 
 
 def _row(
@@ -83,8 +83,8 @@ def _openai(
 # dates are floors, not retirements. Partner platforms (Bedrock, Vertex) set
 # their own schedules and are not represented.
 _ANTHROPIC: dict[str, dict[str, Any]] = {
-    "claude-fable-5-2": _anthropic("active", as_of="2026-11-18"),
-    "claude-mythos-5-2": _anthropic("active", as_of="2026-11-18"),
+    "claude-fable-5-2": _anthropic("active", as_of="2026-11-21"),
+    "claude-mythos-5-2": _anthropic("active", as_of="2026-11-21"),
     "claude-fable-5-1": _anthropic("active"),
     "claude-mythos-5-1": _anthropic("active"),
     "claude-fable-5": _anthropic("active"),
@@ -152,7 +152,7 @@ _ANTHROPIC: dict[str, dict[str, Any]] = {
 # itself deprecated, carries none.
 _OPENAI: dict[str, dict[str, Any]] = {
     # 2026-11-05 announcement: no replacement named on the page
-    "gpt-5.5-cyber-preview": _openai("deprecated", "2027-02-01", as_of="2026-11-18"),
+    "gpt-5.5-cyber-preview": _openai("deprecated", "2027-02-01", as_of="2026-11-21"),
     # 2026-10-14 announcement; aliases map to these dated snapshots on the
     # official model pages. The older gpt-4o-2024-05-13 keeps its October date.
     "gpt-4o": _openai("deprecated", "2027-01-14", "gpt-6-luna"),
@@ -174,19 +174,19 @@ _OPENAI: dict[str, dict[str, Any]] = {
     "gpt-5.4-cyber": _openai("retired", "2026-10-01"),
     # 2026-06-11 announcement
     "gpt-5-2025-08-07": _openai(
-        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-18"
+        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-21"
     ),
     "gpt-5-mini-2025-08-07": _openai(
-        "deprecated", "2026-12-11", "gpt-6.1-terra", as_of="2026-11-18"
+        "deprecated", "2026-12-11", "gpt-6.1-terra", as_of="2026-11-21"
     ),
     "gpt-5-nano-2025-08-07": _openai(
-        "deprecated", "2026-12-11", "gpt-6-luna", as_of="2026-11-18"
+        "deprecated", "2026-12-11", "gpt-6-luna", as_of="2026-11-21"
     ),
     # The page names gpt-6.1-sol with reasoning.mode: pro; a replacement that needs a mode setting is not recorded.
     "gpt-5-pro-2025-10-06": _openai("deprecated", "2026-12-11"),
     "o3-pro-2025-06-10": _openai("deprecated", "2026-12-11"),
     "o3-2025-04-16": _openai(
-        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-18"
+        "deprecated", "2026-12-11", "gpt-6.1-sol", as_of="2026-11-21"
     ),
     # 2026-05-08 announcement
     "gpt-5.2-chat-latest": _openai("retired", "2026-08-10", "gpt-5.6-sol"),
@@ -272,7 +272,7 @@ _GEMINI = {
         source_url="https://aistudio.google.com/docs/models/gemini-4-argon",
     ),
     "gemini-4-neon": _row(
-        "active", source_url=GEMINI_DEPRECATIONS_URL, as_of="2026-11-19"
+        "active", source_url=GEMINI_DEPRECATIONS_URL, as_of="2026-11-21"
     ),
     **{
         model: {

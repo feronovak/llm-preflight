@@ -73,4 +73,4 @@ def test_price_sensitive_example_overrides_have_been_re_reviewed(name):
         for model in config["models"]
         if "pricing_metadata" in model
     ]
-    assert dated == ["2026-11-04"]
+    assert dated == ["2026-11-21"]

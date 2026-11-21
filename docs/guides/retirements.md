@@ -1,6 +1,6 @@
 # Model retirements: the bundled snapshot and its verdict
 
-**Last reviewed:** 2026-11-18 · **As of:** v2.25.8
+**Last reviewed:** 2026-11-21 · **As of:** v2.25.8
 
 Providers retire models on published schedules. llm-preflight bundles a
 hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
@@ -65,9 +65,8 @@ including in submodules. Global and system Git configuration still apply.
 The same verdict appears in `--doctor` and `--dry-run` for the models a
 configuration approves.
 
-Bundled retirement rows were rechecked on **2026-11-18**, except
-`gemini-4-neon` (**2026-11-19**). Non-retired rows
-become stale on **2026-12-19** (day 31; `gemini-4-neon` on 2026-12-20), and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
+Bundled retirement rows were rechecked on **2026-11-21**. Non-retired rows
+become stale on **2026-12-22** (day 31), and `--ci` then returns `3`; retired models still return `1`. Pricing snapshots have their own review dates and expiry.
 
 ## What the scan does not see
 
@@ -131,7 +130,7 @@ model exits 3 in all three commands, and a scan that read no file exits 3.
 The doctor fails a retired model without `--ci`, as it fails any configuration
 check; pipelines running `--doctor` turn red on the retirement date. Rows go
 stale 30 days after their review date (the bundled rows are stale from the 31st
-day after the 2026-11-18 review date), after which `--ci` returns 3 for
+day after the 2026-11-21 review date), after which `--ci` returns 3 for
 every non-retired model in the snapshot (retired stays 1) until the package is
 updated; models with no row stay at 0.
 
@@ -198,8 +197,7 @@ from the ID.
 ## Release retirement review
 
 The snapshot contains 121 rows: 38 Anthropic, 76 OpenAI and seven Gemini.
-120 rows were reviewed on 2026-11-18 and become stale on 2026-12-19; the
-`gemini-4-neon` row was reviewed on 2026-11-19 and becomes stale on 2026-12-20
+All 121 rows were reviewed on 2026-11-21 and become stale on 2026-12-22
 (non-retired rows only; retired rows remain failures). The added dated OpenAI IDs
 `gpt-5.4-nano-2026-03-17` and `gpt-5.1-2025-11-13` share the published
 2027-04-01 retirement date of their aliases. The GPT-4o, GPT-4o mini, GPT-4.1 and

@@ -17,7 +17,7 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
 
     page = (ROOT / "docs/guides/current-snapshots.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.9" in page
+    assert "**Last reviewed:** 2026-11-21 · **As of:** v2.25.9" in page
     from llm_preflight import __version__
 
     assert f"Package version: **{__version__}**" in page
@@ -25,12 +25,12 @@ def test_current_snapshots_doc_lists_every_official_pricing_id():
     assert "Gemini 4" in page
     assert "no live Gemini 4 result has been measured" not in page
     assert "16/16" in page and "observed-model-comparison.md" in page
-    assert "| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |" in page
+    assert "| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-21 |" in page
     for model, rates in (
         ("qwen3.8-max", "2.00 | 6.00"),
         ("qwen3.8-flash", "0.15 | 0.47"),
     ):
-        assert f"| `qwen` | `{model}` | {rates} | 2026-11-17 |" in page
+        assert f"| `qwen` | `{model}` | {rates} | 2026-11-21 |" in page
     assert "Model Studio" in page and "account console" in page
     for (provider, model_id), (_, _, as_of) in PUBLIC_PRICING.items():
         rows = [
@@ -860,7 +860,7 @@ def test_retirements_guide_documents_the_verdict_and_its_upkeep():
     agent_validation = (ROOT / "docs/automation/agent-validation.md").read_text()
     changelog = (ROOT / "CHANGELOG.md").read_text()
 
-    assert "**Last reviewed:** 2026-11-18 · **As of:** v2.25.8" in guide
+    assert "**Last reviewed:** 2026-11-21 · **As of:** v2.25.8" in guide
     assert "`.gitignore`" in guide and "`--all`" in guide
     assert "| `--all` | off | With `--audit-source`" in cli_reference
     results_reference = (ROOT / "docs/reference/results.md").read_text()
@@ -923,7 +923,7 @@ def test_stale_cliff_wording_spares_retired_models_and_names_the_date():
 
     assert "returns 3 for every non-retired model in the snapshot" in guide
     assert "retired stays 1" in guide
-    assert "stale from the 31st day after the 2026-11-18 review date" in guide
+    assert "stale from the 31st day after the 2026-11-21 review date" in guide
     assert "returns 3 for every non-retired model in the snapshot" in changelog
     assert "2026-11-09" in changelog
 

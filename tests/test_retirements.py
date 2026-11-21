@@ -287,39 +287,39 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "status": "deprecated",
         "retirement_date": "2026-11-30",
         "replacement": "claude-sonnet-5-5",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-mythos-preview")] == {
         "status": "deprecated",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-sonnet-5-5")]["status"] == "active"
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.4-cyber")] == {
         "status": "retired",
         "retirement_date": "2026-10-01",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.5-cyber-preview")] == {
         "status": "deprecated",
         "retirement_date": "2027-02-01",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-5.1")] == {
         "status": "deprecated",
         "retirement_date": "2027-04-01",
         "replacement": "gpt-6-sol",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("openai", "gpt-4-1106-preview")] == {
         "status": "retired",
         "retirement_date": "2026-10-23",
         "replacement": "gpt-5.6-sol",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": OPENAI_DEPRECATIONS_URL,
     }
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-pro")]
@@ -327,12 +327,12 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
     assert "replacement" not in PUBLIC_RETIREMENTS[("openai", "o1-preview")]
     assert PUBLIC_RETIREMENTS[("anthropic", "claude-fable-5-2")] == {
         "status": "active",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
     assert PUBLIC_RETIREMENTS[("gemini", "gemini-4-neon")] == {
         "status": "active",
-        "as_of": "2026-11-19",
+        "as_of": "2026-11-21",
         "source_url": GEMINI_DEPRECATIONS_URL,
     }
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
@@ -346,7 +346,7 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
 def test_claude_5_2_rows_are_active_and_dated_per_row(model):
     assert PUBLIC_RETIREMENTS[("anthropic", model)] == {
         "status": "active",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": ANTHROPIC_DEPRECATIONS_URL,
     }
 
@@ -354,17 +354,17 @@ def test_claude_5_2_rows_are_active_and_dated_per_row(model):
 def test_gpt_5_5_cyber_preview_is_retiring_without_replacement():
     model = "gpt-5.5-cyber-preview"
     row = PUBLIC_RETIREMENTS[("openai", model)]
-    assert row["as_of"] == "2026-11-18"
+    assert row["as_of"] == "2026-11-21"
     assert row["source_url"] == OPENAI_DEPRECATIONS_URL
     now = retirement_verdict("openai", model, date(2026, 11, 18))
     assert (now["status"], now["decision"]) == ("retiring", "inconclusive")
     assert "replacement" not in now
     assert (
-        retirement_verdict("openai", model, date(2026, 12, 18))["status"] == "retiring"
+        retirement_verdict("openai", model, date(2026, 12, 21))["status"] == "retiring"
     )
     last = retirement_verdict("openai", model, date(2027, 2, 1))
     assert (last["status"], last["decision"]) == ("retired", "fail")
-    assert retirement_verdict("openai", model, date(2026, 12, 19))["status"] == "stale"
+    assert retirement_verdict("openai", model, date(2026, 12, 22))["status"] == "stale"
     assert retirement_verdict("openai", "gpt-5.5", date(2026, 11, 18))["status"] == (
         "unknown"
     )
@@ -375,7 +375,7 @@ def test_gemini_3_1_flash_lite_retires_on_2027_05_07():
         "status": "deprecated",
         "retirement_date": "2027-05-07",
         "replacement": "gemini-3.5-flash-lite",
-        "as_of": "2026-11-18",
+        "as_of": "2026-11-21",
         "source_url": GEMINI_DEPRECATIONS_URL,
     }
     now = retirement_verdict("gemini", "gemini-3.1-flash-lite", date(2026, 11, 18))
@@ -393,7 +393,7 @@ def test_gemini_alias_rows_are_active_and_carry_their_route():
         assert row["redirected"] is True
         assert row["routes_to"] == route
         assert "replacement" not in row
-        assert row["as_of"] == "2026-11-18"
+        assert row["as_of"] == "2026-11-21"
     assert ("gemini", "gemini-3.1-pro-preview") not in PUBLIC_RETIREMENTS
 
 
@@ -553,22 +553,22 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
-    assert summary["oldest_as_of"] == "2026-11-18"
-    assert summary["newest_as_of"] == "2026-11-19"
+    assert summary["oldest_as_of"] == "2026-11-21"
+    assert summary["newest_as_of"] == "2026-11-21"
     assert (
-        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 18))[
+        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 21))[
             "decision"
         ]
         == "pass"
     )
     assert (
-        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 19))[
+        retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 22))[
             "decision"
         ]
         == "inconclusive"
     )
     assert (
-        retirement_verdict("anthropic", "claude-3-haiku-20240307", date(2026, 12, 19))[
+        retirement_verdict("anthropic", "claude-3-haiku-20240307", date(2026, 12, 22))[
             "decision"
         ]
         == "fail"
@@ -762,7 +762,7 @@ def test_openai_june_2026_batch_names_page_replacements():
         assert row["status"] == "deprecated"
         assert row["retirement_date"] == "2026-12-11"
         assert row["replacement"] == replacement
-        assert row["as_of"] == "2026-11-18"
+        assert row["as_of"] == "2026-11-21"
     for model in ("gpt-5-pro-2025-10-06", "o3-pro-2025-06-10"):
         assert "replacement" not in PUBLIC_RETIREMENTS[("openai", model)]
     verdict = retirement_verdict("openai", "gpt-5-2025-08-07", date(2026, 11, 18))

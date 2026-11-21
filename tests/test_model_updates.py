@@ -87,7 +87,7 @@ def test_gemini_stable_alias_is_active_and_reports_its_route(model, replacement)
     verdict = retirement_verdict("gemini", model, date(2026, 11, 18))
     assert verdict["status"] == "active"
     assert verdict["decision"] == "pass"
-    assert verdict["as_of"] == "2026-11-18"
+    assert verdict["as_of"] == "2026-11-21"
     assert "retirement_date" not in verdict
     assert "replacement" not in verdict
     assert "next_command" not in verdict
@@ -178,7 +178,7 @@ def test_gemini_4_neon_pricing_is_flat(monkeypatch, day):
 
 @pytest.mark.parametrize(
     "model_id,as_of",
-    [("gemini-4-argon", "2026-11-18"), ("gemini-4-carbon", "2026-11-18")],
+    [("gemini-4-argon", "2026-11-21"), ("gemini-4-carbon", "2026-11-21")],
 )
 @pytest.mark.parametrize(
     "day,rates",
@@ -301,7 +301,7 @@ def test_gemini_4_example_is_a_bounded_fixture_verified_plan(snapshot_review_day
     assert check_contract(config)["ok"] is True
     assert (
         pricing_coverage_report(
-            models, today=date(2026, 11, 18), require_current_pricing=True
+            models, today=date(2026, 11, 21), require_current_pricing=True
         )["enforcement_ok"]
         is True
     )
@@ -353,7 +353,7 @@ def test_published_openai_cache_writes_use_the_full_request_context_boundary(
         + 1000 * output_rate
     ) / 1_000_000
     assert estimate_sample_cost(sample, model) == pytest.approx(expected)
-    expected_as_of = "2026-11-04" if model_id == "gpt-5.6-sol" else "2026-11-18"
+    expected_as_of = "2026-11-04" if model_id == "gpt-5.6-sol" else "2026-11-21"
     assert model["pricing_metadata"]["as_of"] == expected_as_of
 
 
@@ -414,14 +414,15 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
 
     assert {rates[2] for rates in PUBLIC_PRICING.values()} == {
         "2026-11-04",
-        "2026-11-17",
         "2026-11-18",
-        "2026-11-19",
+        "2026-11-21",
     }
     # The promotional gpt-5.6-sol price ends 2026-11-30; its review date stays
     # at the last full review so the row goes stale before the promotion ends.
     assert priced_on("2026-11-04") == {"gpt-5.6-sol"}
-    assert priced_on("2026-11-17") == {
+    # Moonshot's page renders no prices, so the two Kimi rows keep their date.
+    assert priced_on("2026-11-18") == {"kimi-k3.1-pro", "kimi-k3.1-pro-highspeed"}
+    assert priced_on("2026-11-21") >= {
         "claude-opus-4-5-20251101",
         "claude-opus-4-6",
         "claude-opus-4-7",
@@ -434,18 +435,12 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "qwen3.8-max",
         "qwen3.8-flash",
         "qwen3.7-plus",
+        "gemini-4-neon",
+        "gpt-6.2-astra",
+        "gpt-6.2-sol",
+        "gpt-6-cyber",
     }
-    assert {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-cyber"} <= priced_on("2026-11-18")
-    assert priced_on("2026-11-19") == {"gemini-4-neon"}
-    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {
-        "2026-11-18",
-        "2026-11-19",
-    }
-    assert {
-        model
-        for (_, model), row in PUBLIC_RETIREMENTS.items()
-        if row["as_of"] == "2026-11-19"
-    } == {"gemini-4-neon"}
+    assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {"2026-11-21"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

@@ -1,6 +1,6 @@
 # Official pricing snapshots and native routes
 
-**Last reviewed:** 2026-11-18 · **As of:** v2.25.9
+**Last reviewed:** 2026-11-21 · **As of:** v2.25.9
 
 This is not a ranking or a complete list of callable models. The catalogue can
 discover IDs returned by supported metadata endpoints; configured native routes
@@ -9,14 +9,10 @@ are described in [native provider checks](native-providers.md).
 Package version: **2.25.9**. The table records this version's reviewed
 public-route rates, not account access or model quality.
 The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
-2026-12-05. Strict pricing then blocks execution. The `qwen4-max`, `qwen3.8-max`,
-`qwen3.8-flash`, `qwen3.7-plus`,
-`claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
-`claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
-`deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
-2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` row was reviewed
-on 2026-11-19 and becomes stale on 2026-12-20. Every other row was reviewed on
-2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
+2026-12-05. Strict pricing then blocks execution. The `kimi-k3.1-pro` and `kimi-k3.1-pro-highspeed` rows were reviewed on
+2026-11-18 and become stale on 2026-12-19: Moonshot's pricing page rendered no
+prices on 2026-11-21, so their rates could not be re-read. Every other row was
+reviewed on 2026-11-21 and becomes stale on 2026-12-22. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 30 models with
@@ -76,75 +72,75 @@ Responses API, so a run needs `adapter: openai_responses`.
 
 | Provider | Model ID | Input | Output | Last checked |
 |---|---|---:|---:|---|
-| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-11-18 |
-| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-11-18 |
-| `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-11-18 |
-| `openai` | `gpt-6.2-astra` | 8.00 | 40.00 | 2026-11-18 |
-| `openai` | `gpt-6.2-sol` | 2.00 | 10.00 | 2026-11-18 |
-| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-11-18 |
-| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-11-18 |
-| `openai` | `gpt-6-cyber` | 20.00 | 100.00 | 2026-11-18 |
-| `openai` | `gpt-5.6-cyber` | 12.50 | 75.00 | 2026-11-18 |
+| `openai` | `gpt-6-astra` | 10.00 | 50.00 | 2026-11-21 |
+| `openai` | `gpt-6.1-sol` | 2.00 | 10.00 | 2026-11-21 |
+| `openai` | `gpt-6.1-terra` | 1.00 | 5.00 | 2026-11-21 |
+| `openai` | `gpt-6.2-astra` | 8.00 | 40.00 | 2026-11-21 |
+| `openai` | `gpt-6.2-sol` | 2.00 | 10.00 | 2026-11-21 |
+| `openai` | `gpt-6-sol` | 2.00 | 10.00 | 2026-11-21 |
+| `openai` | `gpt-6-luna` | 0.10 | 0.50 | 2026-11-21 |
+| `openai` | `gpt-6-cyber` | 20.00 | 100.00 | 2026-11-21 |
+| `openai` | `gpt-5.6-cyber` | 12.50 | 75.00 | 2026-11-21 |
 | `openai` | `gpt-5.6-sol` | 4.00 | 20.00 | 2026-11-04 |
-| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-11-18 |
-| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-11-18 |
-| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-11-18 |
-| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-11-18 |
-| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-11-18 |
-| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-11-18 |
-| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-18 |
-| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-18 |
-| `anthropic` | `claude-fable-5-2` | 8.00 | 40.00 | 2026-11-18 |
-| `anthropic` | `claude-mythos-5-2` | 8.00 | 40.00 | 2026-11-18 |
-| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-18 |
-| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-18 |
-| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-18 |
-| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-11-18 |
-| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-18 |
-| `anthropic` | `claude-opus-4-7` | 5.00 | 25.00 | 2026-11-17 |
-| `anthropic` | `claude-opus-4-6` | 5.00 | 25.00 | 2026-11-17 |
-| `anthropic` | `claude-opus-4-5-20251101` | 5.00 | 25.00 | 2026-11-17 |
-| `anthropic` | `claude-sonnet-4-6` | 3.00 | 15.00 | 2026-11-17 |
-| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-11-18 |
-| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-11-18 |
-| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-18 |
-| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-18 |
-| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-18 |
-| `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-18 |
-| `gemini` | `gemini-4-hydrogen` | 1.50 | 7.50 | 2026-11-18 |
-| `gemini` | `gemini-4-neon` | 3.00 | 15.00 | 2026-11-19 |
-| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-18 |
-| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-18 |
-| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-18 |
-| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-11-18 |
-| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-18 |
-| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-17 |
-| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-17 |
-| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-17 |
-| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-17 |
-| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-17 |
-| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-17 |
-| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-17 |
-| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-17 |
-| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-11-18 |
-| `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-11-18 |
-| `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-11-18 |
-| `anthropic` | `claude-mythos-5-1` | 10.00 | 50.00 | 2026-11-18 |
+| `openai` | `gpt-5.6-terra` | 2.00 | 12.00 | 2026-11-21 |
+| `openai` | `gpt-5.6-luna` | 0.20 | 1.20 | 2026-11-21 |
+| `openai` | `gpt-5.5` | 5.00 | 30.00 | 2026-11-21 |
+| `openai` | `gpt-5.4-mini` | 0.75 | 4.50 | 2026-11-21 |
+| `openai` | `gpt-5.4-nano` | 0.20 | 1.25 | 2026-11-21 |
+| `openai` | `gpt-4.1` | 2.00 | 8.00 | 2026-11-21 |
+| `openai` | `gpt-4.1-mini` | 0.40 | 1.60 | 2026-11-21 |
+| `openai` | `gpt-4.1-nano` | 0.10 | 0.40 | 2026-11-21 |
+| `anthropic` | `claude-fable-5-2` | 8.00 | 40.00 | 2026-11-21 |
+| `anthropic` | `claude-mythos-5-2` | 8.00 | 40.00 | 2026-11-21 |
+| `anthropic` | `claude-fable-5-1` | 10.00 | 50.00 | 2026-11-21 |
+| `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-4-7` | 5.00 | 25.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-4-6` | 5.00 | 25.00 | 2026-11-21 |
+| `anthropic` | `claude-opus-4-5-20251101` | 5.00 | 25.00 | 2026-11-21 |
+| `anthropic` | `claude-sonnet-4-6` | 3.00 | 15.00 | 2026-11-21 |
+| `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-11-21 |
+| `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-11-21 |
+| `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-21 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-21 |
+| `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-21 |
+| `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-21 |
+| `gemini` | `gemini-4-hydrogen` | 1.50 | 7.50 | 2026-11-21 |
+| `gemini` | `gemini-4-neon` | 3.00 | 15.00 | 2026-11-21 |
+| `gemini` | `gemini-3.8-flash` | 0.75 | 3.75 | 2026-11-21 |
+| `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-21 |
+| `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-21 |
+| `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-11-21 |
+| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-11-21 |
+| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-21 |
+| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-21 |
+| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-21 |
+| `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-21 |
+| `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-21 |
+| `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-21 |
+| `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-21 |
+| `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-21 |
+| `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-21 |
+| `deepseek` | `deepseek-v4-pro` | 1.32 | 3.96 | 2026-11-21 |
+| `qwen` | `qwen4-max` | 1.50 | 4.50 | 2026-11-21 |
+| `qwen` | `qwen3.8-max` | 2.00 | 6.00 | 2026-11-21 |
+| `qwen` | `qwen3.8-flash` | 0.15 | 0.47 | 2026-11-21 |
+| `qwen` | `qwen3.7-plus` | 0.40 | 1.60 | 2026-11-21 |
+| `zai` | `glm-5.3` | 1.40 | 4.40 | 2026-11-21 |
+| `zai` | `glm-5.3-flash` | 0.15 | 0.50 | 2026-11-21 |
+| `zai` | `glm-5.3-flashx` | 0.37 | 1.25 | 2026-11-21 |
+| `anthropic` | `claude-mythos-5-1` | 10.00 | 50.00 | 2026-11-21 |
 | `moonshot` | `kimi-k3.1-pro` | 2.00 | 10.00 | 2026-11-18 |
 | `moonshot` | `kimi-k3.1-pro-highspeed` | 4.00 | 20.00 | 2026-11-18 |
-| `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-11-18 |
-| `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-11-18 |
-| `mistral` | `mistral-large-4` | 0.70 | 2.10 | 2026-11-18 |
-| `mistral` | `mistral-large-4-0` | 0.70 | 2.10 | 2026-11-18 |
-| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-11-18 |
-| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-11-18 |
-| `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-11-18 |
+| `minimax` | `MiniMax-M3.1-Flash` | 0.15 | 0.60 | 2026-11-21 |
+| `minimax` | `MiniMax-M3` | 0.30 | 1.20 | 2026-11-21 |
+| `mistral` | `mistral-large-4` | 0.70 | 2.10 | 2026-11-21 |
+| `mistral` | `mistral-large-4-0` | 0.70 | 2.10 | 2026-11-21 |
+| `typesafe` | `jev-latest` | 0.042 | 0.00 | 2026-11-21 |
+| `typesafe` | `jev-1.13.0` | 0.042 | 0.00 | 2026-11-21 |
+| `typesafe` | `jev-1.14.0` | 0.042 | 0.00 | 2026-11-21 |
 
 DeepSeek rows use peak rates (input, cache hit, output); off-peak is half. Qwen rows use USD list rates; the
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
@@ -185,7 +181,7 @@ route, settings and date.
 
 The Max and Flash rows use Model Studio Singapore/International standard
 input/output prices, rechecked against [Alibaba's pricing page](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
-on November 17. Other regions and deployment scopes require their own reviewed
+on November 21. Other regions and deployment scopes require their own reviewed
 overrides. For these models, [cache prices](https://www.alibabacloud.com/help/en/model-studio/context-cache)
 must come from the account console. The source defaults their cache-hit rate
 to `null`, so reported cache hits leave cost unknown until an explicit reviewed
@@ -330,7 +326,7 @@ transition is invented.
 
 ### Cache-read rates for older OpenAI and Claude rows
 
-Checked 2026-11-12 against each model's official pricing page; the rows in the table above were reviewed again on 2026-11-18. These seven
+Checked 2026-11-12 against each model's official pricing page; the rows in the table above were reviewed again on 2026-11-21. These seven
 rows now price cache reads at the published rate instead of the full input
 rate. Standard USD rates per million tokens:
 

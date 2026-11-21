@@ -35,7 +35,7 @@ def test_release_freshness_passes_on_the_snapshot_review_day(
 
 def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
     script = _script()
-    assert script.main(["--today", "2026-12-19"]) == 1
+    assert script.main(["--today", "2026-12-22"]) == 1
 
     output = capsys.readouterr().out
     failed = [
@@ -51,11 +51,11 @@ def test_release_freshness_names_each_stale_example_and_its_reason(capsys):
     assert "mistral/mistral-large-4: official pricing snapshot is stale by 31 days" in (
         output
     )
-    assert "Release freshness on 2026-12-19: fail" in output
+    assert "Release freshness on 2026-12-22: fail" in output
 
 
 def test_release_freshness_names_the_stale_override_example(capsys):
-    assert _script().main(["--today", "2026-12-05"]) == 1
+    assert _script().main(["--today", "2026-12-22"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL pricing-check examples/glm-5.3-openrouter-comparison.json" in output
@@ -96,9 +96,9 @@ def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys)
     script = _script()
     script.EXAMPLES = ()
 
-    assert script.main(["--today", "2026-12-18"]) == 0
+    assert script.main(["--today", "2026-12-21"]) == 0
     capsys.readouterr()
-    assert script.main(["--today", "2026-12-19"]) == 1
+    assert script.main(["--today", "2026-12-22"]) == 1
 
     output = capsys.readouterr().out
     assert "FAIL audit-source examples: inconclusive" in output
@@ -107,7 +107,7 @@ def test_release_freshness_reports_stale_retirement_rows_in_the_examples(capsys)
 
 def test_release_freshness_script_exits_non_zero_on_a_stale_day():
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--today", "2026-12-19"],
+        [sys.executable, str(SCRIPT), "--today", "2026-12-22"],
         cwd=ROOT.parent,
         capture_output=True,
         text=True,
@@ -131,10 +131,10 @@ def test_make_release_freshness_and_the_release_workflow_run_the_script():
 
 def test_release_freshness_without_today_uses_the_real_utc_date(monkeypatch, capsys):
     script = _script()
-    monkeypatch.setattr(script, "today_utc", lambda: date(2026, 12, 19))
+    monkeypatch.setattr(script, "today_utc", lambda: date(2026, 12, 22))
 
     assert script.main([]) == 1
-    assert "Release freshness on 2026-12-19: fail" in capsys.readouterr().out
+    assert "Release freshness on 2026-12-22: fail" in capsys.readouterr().out
 
 
 def _cli_json(monkeypatch, capsys, arguments):
@@ -178,8 +178,8 @@ def _pin_cli_day(monkeypatch, today):
             "2026-12-01",
             "2026-12-04",
             "2026-12-05",
-            "2026-12-18",
-            "2026-12-19",
+            "2026-12-21",
+            "2026-12-22",
             "2027-01-01",
         )
     ],
@@ -280,7 +280,7 @@ def test_release_retirement_gate_matches_cli_for_each_decision(
 
 
 def test_latest_comparison_is_checked_for_release_price_freshness(capsys):
-    assert _script().main(["--today", "2026-12-19"]) == 1
+    assert _script().main(["--today", "2026-12-22"]) == 1
     assert (
         "FAIL pricing-check examples/current-model-comparison.json"
         in capsys.readouterr().out

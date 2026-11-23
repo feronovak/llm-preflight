@@ -811,7 +811,7 @@ def _foundry_price_applies(model: dict[str, Any]) -> bool:
     path = parsed.path.rstrip("/")
     on_azure = (
         parsed.scheme == "https"
-        and not parsed.username
+        and "@" not in parsed.netloc
         and explicit_port is None
         and path.endswith("/openai/v1")
         and any(
@@ -822,7 +822,7 @@ def _foundry_price_applies(model: dict[str, Any]) -> bool:
         )
     )
     return on_azure and model.get("deployment_type") in (
-        FOUNDRY_PRICED_DEPLOYMENT_TYPES.get(model["model"], frozenset())
+        FOUNDRY_PRICED_DEPLOYMENT_TYPES.get(model["model"].lower(), frozenset())
     )
 
 
@@ -849,7 +849,12 @@ def apply_public_pricing(model: dict[str, Any]) -> dict[str, Any]:
         # sufficient to refresh direct-provider prices.
         if metadata.get("source") != "official snapshot":
             return {**model, "pricing_metadata": {"source": "user override"}}
-    key = (model.get("provider", "openai_compatible"), model["model"])
+    provider = model.get("provider", "openai_compatible")
+    # Foundry catalog IDs are written in mixed case; bundled rows are lower case.
+    key = (
+        provider,
+        model["model"].lower() if provider == "foundry" else model["model"],
+    )
     if key in PUBLIC_PRICING and _route_voids_public_price(key[0], model):
         return {
             **{

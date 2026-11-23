@@ -558,20 +558,23 @@ def test_path_allowlist_is_pinned():
             "_MODEL_PRICING_PAGES",
             "PUBLIC_PRICING_CHANGES",
             "PUBLIC_PRICING_DETAILS",
+            "FOUNDRY_PRICED_DEPLOYMENT_TYPES",
         ),
         RETIREMENTS: (
             "_ANTHROPIC",
             "_OPENAI",
             "_GEMINI",
+            "_FOUNDRY",
             "_REVIEWED",
             "ANTHROPIC_DEPRECATIONS_URL",
             "OPENAI_DEPRECATIONS_URL",
             "GEMINI_DEPRECATIONS_URL",
+            "FOUNDRY_RETIREMENTS_URL",
         ),
     }
     assert rc.BUILDERS == {
         PRICING: ("date",),
-        RETIREMENTS: ("_row", "_anthropic", "_openai"),
+        RETIREMENTS: ("_row", "_anthropic", "_openai", "_foundry"),
     }
     assert rc.VERSION_FILES == (
         "pyproject.toml",

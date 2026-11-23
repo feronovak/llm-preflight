@@ -60,6 +60,8 @@ def test_foundry_price_applies_on_azure_host_with_matching_deployment_type(price
         {"base_url": "https://a.b.services.ai.azure.com/openai/v1"},
         {"base_url": "https://res.openai.azure.com/api/projects/p/openai/v1"},
         {"base_url": "https://u@res.services.ai.azure.com/openai/v1"},
+        {"base_url": "https://:pw@res.openai.azure.com/openai/v1"},
+        {"base_url": "https://u:@res.openai.azure.com/openai/v1"},
         {"base_url": "https://res.services.ai.azure.com:8443/openai/v1"},
         {"base_url": "http://res.services.ai.azure.com/openai/v1"},
         {"deployment_type": "data_zone"},
@@ -178,3 +180,11 @@ def test_foundry_price_unknown_for_an_out_of_range_or_non_numeric_port(priced):
     ):
         result = pricing.apply_public_pricing({**MODEL, "base_url": url})
         assert result["pricing_metadata"]["source"] == "unknown"
+
+
+def test_foundry_price_lookup_ignores_the_case_of_the_model_id(priced):
+    lower = pricing.apply_public_pricing(MODEL)
+    mixed = pricing.apply_public_pricing({**MODEL, "model": "MAI-Test"})
+    assert lower["input_cost_per_million"] == 1.0
+    assert mixed["input_cost_per_million"] == lower["input_cost_per_million"]
+    assert mixed["output_cost_per_million"] == lower["output_cost_per_million"]

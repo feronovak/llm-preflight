@@ -2087,11 +2087,22 @@ def test_decision_and_docs_without_main_branch_notes():
 
 
 @pytest.mark.parametrize("tool", ["validate_config", "dry_run_plan"])
-def test_mcp_malformed_config_shape_is_an_error_naming_the_field(tmp_path, tool):
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"profiles": [{"a": 1}]}, "'profiles' must be a string or a list of strings"),
+        ({"models": 5}, "'models' must be a list, got int"),
+        ({"prompt": 5}, "'prompt' must be a string, got int"),
+    ],
+    ids=["profiles", "models", "prompt"],
+)
+def test_mcp_malformed_config_shape_is_an_error_naming_the_field(
+    tmp_path, tool, override, message
+):
     config = {
         "prompt": "hi",
         "models": [{"provider": "mock", "model": "local", "response": "ok"}],
-        "profiles": [{"a": 1}],
+        **override,
     }
     (tmp_path / "benchmark.json").write_text(json.dumps(config))
     response = mcp._response(
@@ -2106,7 +2117,7 @@ def test_mcp_malformed_config_shape_is_an_error_naming_the_field(tmp_path, tool)
     result = response["result"]
     assert result["isError"] is True
     text = json.dumps(result)
-    assert "'profiles' must be a string or a list of strings" in text
+    assert message in text
     assert "has no attribute" not in text
 
 

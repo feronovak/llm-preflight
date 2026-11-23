@@ -146,6 +146,12 @@ def _is_string_list(value: Any) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
+def _reject_number_or_boolean(config: dict[str, Any], key: str, expected: str) -> None:
+    value = config.get(key)
+    if isinstance(value, (bool, int, float)):
+        raise ValueError(f"'{key}' must be {expected}, got {type(value).__name__}")  # noqa: TRY004
+
+
 def validate_config_shape(config: Any) -> None:
     """Raise a config error naming the field when a config key has the wrong type.
 
@@ -154,6 +160,8 @@ def validate_config_shape(config: Any) -> None:
     """
     if not isinstance(config, dict):
         raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
+    _reject_number_or_boolean(config, "models", "a list")
+    _reject_number_or_boolean(config, "prompt", "a string")
     profiles = config.get("profiles")
     if profiles and not (
         isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))

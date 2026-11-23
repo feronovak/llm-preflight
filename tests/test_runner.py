@@ -3373,6 +3373,20 @@ def test_load_config_rejects_malformed_profiles(tmp_path, profiles):
         load_config(_write_config(tmp_path, config))
 
 
+@pytest.mark.parametrize("models", [5, True, 1.5, 0, False])
+def test_load_config_rejects_numeric_models(tmp_path, models):
+    config = {"prompt": "hi", "models": models, "discovery": {"provider": "mock"}}
+    with pytest.raises(ValueError, match="'models' must be a list, got"):
+        load_config(_write_config(tmp_path, config))
+
+
+@pytest.mark.parametrize("prompt", [5, True, 1.5, 0, False])
+def test_load_config_rejects_numeric_prompt(tmp_path, prompt):
+    config = {"prompt": prompt, "models": MODELS}
+    with pytest.raises(ValueError, match="'prompt' must be a string, got"):
+        load_config(_write_config(tmp_path, config))
+
+
 @pytest.mark.parametrize("presets", [5, None, False, [5], [["a"]]])
 def test_load_config_rejects_malformed_presets(tmp_path, presets):
     config = {"prompt": "hi", "models": MODELS, "presets": presets}

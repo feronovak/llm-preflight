@@ -4825,6 +4825,8 @@ _ISSUE_SHAPES = {
         {"prompt": "hi", "models": _MOCK_MODELS, "presets": 5},
         "'presets'",
     ),
+    "models-int": ({"prompt": "hi", "models": 5}, "'models'"),
+    "prompt-int": ({"prompt": 5, "models": _MOCK_MODELS}, "'prompt'"),
 }
 
 
@@ -4905,6 +4907,50 @@ def test_environment_overlay_with_malformed_presets_is_a_config_error(
     err = capsys.readouterr().err
     assert exc.value.code == 2
     assert "'presets' must be a list of strings" in err
+
+
+@pytest.mark.parametrize(
+    "overlay", [{"models": 5}, {"prompt": 5}], ids=["models", "prompt"]
+)
+def test_environment_overlay_with_numeric_models_or_prompt_is_a_config_error(
+    monkeypatch, tmp_path, capsys, overlay
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": _MOCK_MODELS,
+                "environments": {"ci": overlay},
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--env", "ci"]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert f"'{next(iter(overlay))}' must be" in err
+    assert "Traceback" not in err
+
+
+@pytest.mark.parametrize(
+    "extra", [{"prompt": "hi"}, {"prompt": None}, {"prompt": ""}], ids=str
+)
+def test_string_null_and_empty_prompt_still_dry_run(
+    monkeypatch, tmp_path, capsys, extra
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"models": _MOCK_MODELS, **extra}))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--dry-run"])
+
+    cli.main()
+
+    assert "Traceback" not in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])

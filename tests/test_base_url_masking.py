@@ -429,3 +429,48 @@ def test_replayed_openai_responses_model_uses_the_responses_endpoint():
     model = features.replay_config(result)["models"][0]
     replayed = client.create_client(model, 1.0)
     assert replayed.endpoint() == "https://api.openai.com/v1/responses"
+
+
+def test_cli_replay_with_env_never_sends_redacted_headers(monkeypatch, tmp_path):
+    stage = {
+        "provider": "mock",
+        "model": "m",
+        "base_url": "https://stage.test/v1",
+        "response": "ok",
+    }
+    redacted = {**stage, "headers": {"X-Token": "[REDACTED]"}}
+    source = tmp_path / "benchmark.json"
+    source.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [{**stage, "base_url": "https://prod.test/v1"}],
+                "environments": {
+                    "ci": {"models": [{**stage, "headers": {"X-Token": "STAGING"}}]}
+                },
+            }
+        )
+    )
+    result = {
+        "source_config": {
+            "prompt": "hi",
+            "models": [redacted],
+            "environments": {"ci": {"models": [redacted]}},
+        },
+        "models": [{"provider": "mock", "model": "m", "base_url": stage["base_url"]}],
+        "settings": {},
+        "source_config_path": str(source),
+    }
+    result_path = tmp_path / "run.json"
+    result_path.write_text(json.dumps(result))
+    seen = []
+
+    def stop(config, **kwargs):
+        seen.append(config)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(cli, "run_benchmark", stop)
+    run_cli(monkeypatch, "--replay", str(result_path), "--env", "ci", "--no-env-file")
+
+    assert seen[0]["models"][0]["headers"] == {"X-Token": "STAGING"}
+    assert "[REDACTED]" not in json.dumps(seen[0])

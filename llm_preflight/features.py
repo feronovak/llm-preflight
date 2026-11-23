@@ -752,22 +752,21 @@ def _matching_source_model(
     entries = config.get("models") if isinstance(config, dict) else None
     entries = [entry for entry in entries or [] if isinstance(entry, dict)]
     provider = model.get("provider", "openai_compatible")
-    for matches in (
-        [
-            entry
-            for entry in entries
-            if (entry.get("provider") or "openai_compatible", entry.get("model"))
-            == (provider, model.get("model"))
-        ],
-        [
-            entry
-            for entry in entries
-            if model.get("name") is not None and entry.get("name") == model["name"]
-        ],
-    ):
-        if matches:
-            return matches[0] if len(matches) == 1 else {}
-    return {}
+    name = model.get("name")
+    same_model = [
+        entry
+        for entry in entries
+        if (entry.get("provider") or "openai_compatible", entry.get("model"))
+        == (provider, model.get("model"))
+    ]
+    if len(same_model) > 1 and name is not None:
+        same_model = [entry for entry in same_model if entry.get("name") == name]
+    if same_model:
+        return same_model[0] if len(same_model) == 1 else {}
+    named = [
+        entry for entry in entries if name is not None and entry.get("name") == name
+    ]
+    return named[0] if len(named) == 1 else {}
 
 
 def _file_model_entries(source: dict[str, Any] | None) -> Iterator[Any]:
@@ -788,25 +787,70 @@ def _file_model_entries(source: dict[str, Any] | None) -> Iterator[Any]:
     yield from aliases.values()
 
 
-def _route(entry: dict[str, Any], provider: str) -> Any:
-    return entry.get("base_url") or PROVIDER_DEFAULTS.get(provider, {}).get("base_url")
+def _route(entry: dict[str, Any], provider: str) -> str | None:
+    route = entry.get("base_url") or PROVIDER_DEFAULTS.get(provider, {}).get("base_url")
+    return str(route).rstrip("/") if route else None
+
+
+def _header_names(headers: Any) -> set[str]:
+    return (
+        {str(key).casefold() for key in headers} if isinstance(headers, dict) else set()
+    )
 
 
 def _file_headers(
-    model: dict[str, Any], source: dict[str, Any] | None
+    model: dict[str, Any],
+    source: dict[str, Any] | None,
+    recorded: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Headers of the one file entry for this provider, model and route, or none."""
+    """Headers of the one file entry for this provider, model and route, or none.
+
+    An entry without headers counts as an empty set, so a config whose entries
+    disagree sends nothing. With a recorded model, its header names must match.
+    """
     provider = model.get("provider", "openai_compatible")
     found = {
-        json.dumps(entry["headers"], sort_keys=True): entry["headers"]
+        json.dumps(entry.get("headers") or {}, sort_keys=True): entry.get("headers")
         for entry in _file_model_entries(source)
         if isinstance(entry, dict)
-        and isinstance(entry.get("headers"), dict)
         and (entry.get("provider") or "openai_compatible") == provider
         and entry.get("model") == model.get("model")
         and _route(entry, provider) == _route(model, provider)
     }
-    return {"headers": next(iter(found.values()))} if len(found) == 1 else {}
+    if len(found) != 1:
+        return {}
+    headers = next(iter(found.values()))
+    if not isinstance(headers, dict) or not headers:
+        return {}
+    if recorded is not None and _header_names(headers) != _header_names(
+        recorded.get("headers")
+    ):
+        return {}
+    return {"headers": headers}
+
+
+def _replay_overlays(config: dict[str, Any], source: dict[str, Any] | None) -> None:
+    """Drop the recorded `[REDACTED]` headers from the copied overlays.
+
+    An `--env` or alias overlay replaces the replayed models, so its entries
+    take their headers from the config file the same way the models do.
+    """
+    aliases = config.get("aliases")
+    entries = [*(aliases.values() if isinstance(aliases, dict) else [])]
+    environments = config.get("environments")
+    for overlay in environments.values() if isinstance(environments, dict) else []:
+        if not isinstance(overlay, dict):
+            continue
+        entries += [
+            item for item in overlay.get("models") or [] if isinstance(item, dict)
+        ]
+        for item in overlay.get("discovery") or []:
+            if isinstance(item, dict):
+                item.pop("headers", None)
+    for entry in entries:
+        if isinstance(entry, dict):
+            recorded = {"headers": entry.pop("headers", None)}
+            entry.update(_file_headers(entry, source, recorded))
 
 
 def _source_model_extras(
@@ -871,7 +915,12 @@ def replay_config(
         ]
     ]
     for model in config["models"]:
-        model.update(_file_headers(model, source))
+        model.update(
+            _file_headers(
+                model, source, _matching_source_model(model, result["source_config"])
+            )
+        )
+    _replay_overlays(config, source)
     config["discovery"] = []
     settings = result.get("settings", {})
     for key in ("repetitions", "warmups", "concurrency", "suite_repetitions"):

@@ -1352,3 +1352,17 @@ def test_replay_config_names_an_unnamed_entry_by_its_model_id():
     }
     model = replay_config(result)["models"][0]
     assert model["adapter"] == "openai_responses"
+
+
+def test_replay_config_name_fallback_ignores_an_unnamed_entry_of_another_provider():
+    gateway = {
+        "provider": "openai_compatible",
+        "model": "gpt-x",
+        "base_url": "https://gw.example.test/v1",
+        "adapter": "openai_responses",
+    }
+    result = {
+        "source_config": {"prompt": "hi", "models": [gateway]},
+        "models": [{"provider": "openai", "model": "gpt-x", "name": "gpt-x"}],
+    }
+    assert "adapter" not in replay_config(result)["models"][0]

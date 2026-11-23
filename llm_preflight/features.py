@@ -769,7 +769,7 @@ def _matching_source_model(
     if same_model:
         return same_model[0] if len(same_model) == 1 else {}
     named = [
-        entry for entry in entries if name is not None and _entry_name(entry) == name
+        entry for entry in entries if name is not None and entry.get("name") == name
     ]
     return named[0] if len(named) == 1 else {}
 

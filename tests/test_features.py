@@ -1202,3 +1202,167 @@ def test_greedy_presets_need_top_p_one_for_mistral_large_4(monkeypatch, preset):
         check_budget({**config, "request": request})
     request["provider_options"]["mistral"] = {"top_p": 1}
     check_budget({**config, "request": request})
+
+
+def _replay_result(source_model, model=None):
+    return {
+        "source_config": {"prompt": "hi", "models": [source_model]},
+        "models": [model or {"provider": "mock", "model": "m"}],
+    }
+
+
+def test_replay_config_restores_adapter_response_and_mock_timings():
+    source_model = {
+        "provider": "mock",
+        "model": "m",
+        "adapter": "openai_responses",
+        "response": {"text": "x"},
+        "latency_seconds": 0.2,
+        "ttft_seconds": 0.1,
+        "headers": {"X-Key": "[REDACTED]"},
+    }
+    model = replay_config(_replay_result(source_model))["models"][0]
+    assert model["adapter"] == "openai_responses"
+    assert model["response"] == {"text": "x"}
+    assert (model["latency_seconds"], model["ttft_seconds"]) == (0.2, 0.1)
+    assert "headers" not in model
+
+
+def test_replay_config_takes_headers_only_from_the_config_file():
+    recorded = {"provider": "mock", "model": "m", "headers": {"X-Key": "[REDACTED]"}}
+    file_config = {
+        "models": [{"provider": "mock", "model": "m", "headers": {"X-Key": "real"}}]
+    }
+    model = replay_config(_replay_result(recorded), file_config)["models"][0]
+    assert model["headers"] == {"X-Key": "real"}
+
+
+def test_replay_config_matches_by_name_and_skips_unmatched_or_ambiguous():
+    named = {"provider": "mock", "model": "other", "name": "n", "adapter": "a"}
+    model = {"provider": "mock", "model": "m", "name": "n"}
+    assert replay_config(_replay_result(named, model))["models"][0]["adapter"] == "a"
+    unmatched = {"provider": "mock", "model": "zzz", "adapter": "a"}
+    assert "adapter" not in replay_config(_replay_result(unmatched))["models"][0]
+    result = _replay_result({"provider": "mock", "model": "m", "adapter": "a"})
+    result["source_config"]["models"].append(
+        {"provider": "mock", "model": "m", "adapter": "b"}
+    )
+    assert "adapter" not in replay_config(result)["models"][0]
+
+
+def _header_file():
+    prod = {"provider": "mock", "model": "m", "base_url": "https://prod.test/v1"}
+    stage = {"provider": "mock", "model": "m", "base_url": "https://stage.test/v1"}
+    return {
+        "models": [{**prod, "headers": {"X-Token": "PROD"}}],
+        "environments": {
+            "ci": {"models": [{**stage, "headers": {"X-Token": "STAGING"}}]}
+        },
+    }
+
+
+def test_replay_config_sends_headers_only_to_the_route_that_carried_them():
+    recorded = {
+        "provider": "mock",
+        "model": "m",
+        "base_url": "https://stage.test/v1",
+        "headers": {"X-Token": "[REDACTED]"},
+    }
+    result = _replay_result(recorded, dict(recorded))
+    model = replay_config(result, _header_file())["models"][0]
+    assert model["headers"] == {"X-Token": "STAGING"}
+    other = {**recorded, "base_url": "https://other.test/v1"}
+    result = _replay_result(other, dict(other))
+    assert "headers" not in replay_config(result, _header_file())["models"][0]
+
+
+def test_replay_config_finds_headers_of_alias_entries_and_refuses_conflicts():
+    entry = {"provider": "mock", "model": "m", "headers": {"X": "1"}}
+    aliased = {"models": ["fast"], "aliases": {"fast": entry}}
+    result = _replay_result(
+        {"provider": "mock", "model": "m", "headers": {"X": "[REDACTED]"}}
+    )
+    assert replay_config(result, aliased)["models"][0]["headers"] == {"X": "1"}
+    clash = {"models": [entry, {**entry, "headers": {"X": "2"}}]}
+    assert "headers" not in replay_config(result, clash)["models"][0]
+
+
+def test_replay_config_sends_no_headers_when_an_entry_has_none():
+    recorded = {"provider": "mock", "model": "m", "headers": {"X": "[REDACTED]"}}
+    entry = {"provider": "mock", "model": "m"}
+    file_config = {
+        "models": [entry],
+        "environments": {"ci": {"models": [{**entry, "headers": {"X": "1"}}]}},
+    }
+    result = _replay_result(recorded)
+    assert "headers" not in replay_config(result, file_config)["models"][0]
+    no_record = _replay_result({"provider": "mock", "model": "m"})
+    only = {"models": [{**entry, "headers": {"X": "1"}}]}
+    assert "headers" not in replay_config(no_record, only)["models"][0]
+
+
+def test_replay_config_ignores_a_trailing_slash_on_the_route():
+    recorded = {
+        "provider": "mock",
+        "model": "m",
+        "base_url": "https://gw.example.test/",
+        "headers": {"X": "[REDACTED]"},
+    }
+    entry = {**recorded, "base_url": "https://gw.example.test", "headers": {"X": "1"}}
+    result = _replay_result(recorded, dict(recorded))
+    model = replay_config(result, {"models": [entry]})["models"][0]
+    assert model["headers"] == {"X": "1"}
+
+
+def test_replay_config_narrows_several_matches_by_name():
+    direct = {"provider": "mock", "model": "m", "name": "direct", "adapter": "a"}
+    gateway = {"provider": "mock", "model": "m", "name": "gateway"}
+    result = _replay_result(
+        direct, {"provider": "mock", "model": "m", "name": "direct"}
+    )
+    result["source_config"]["models"].append(gateway)
+    assert replay_config(result)["models"][0]["adapter"] == "a"
+
+
+def test_replay_config_takes_env_overlay_headers_from_the_file_not_the_record():
+    recorded = {"provider": "mock", "model": "m", "headers": {"X": "[REDACTED]"}}
+    result = _replay_result(recorded)
+    result["source_config"]["environments"] = {
+        "ci": {
+            "models": [dict(recorded)],
+            "discovery": [{"headers": {"X": "[REDACTED]"}}],
+        }
+    }
+    result["source_config"]["aliases"] = {"fast": dict(recorded)}
+    file_config = {"models": [{**recorded, "headers": {"X": "1"}}]}
+    config = replay_config(result, file_config)
+    overlay = config["environments"]["ci"]
+    assert overlay["models"][0]["headers"] == {"X": "1"}
+    assert "headers" not in overlay["discovery"][0]
+    assert config["aliases"]["fast"]["headers"] == {"X": "1"}
+    assert "[REDACTED]" not in json.dumps(config)
+
+
+def test_replay_config_names_an_unnamed_entry_by_its_model_id():
+    direct = {"provider": "openai", "model": "gpt-x", "adapter": "openai_responses"}
+    gateway = {"provider": "openai", "model": "gpt-x", "name": "gw", "base_url": "u"}
+    result = {
+        "source_config": {"prompt": "hi", "models": [direct, gateway]},
+        "models": [{"provider": "openai", "model": "gpt-x", "name": "gpt-x"}],
+    }
+    model = replay_config(result)["models"][0]
+    assert model["adapter"] == "openai_responses"
+
+
+def test_replay_config_name_fallback_ignores_an_unnamed_entry_of_another_provider():
+    gateway = {
+        "provider": "openai_compatible",
+        "model": "gpt-x",
+        "base_url": "https://gw.example.test/v1",
+        "adapter": "openai_responses",
+    }
+    result = {
+        "source_config": {"prompt": "hi", "models": [gateway]},
+        "models": [{"provider": "openai", "model": "gpt-x", "name": "gpt-x"}],
+    }
+    assert "adapter" not in replay_config(result)["models"][0]

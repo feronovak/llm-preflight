@@ -742,6 +742,139 @@ def restored_base_url(
     return matches.pop()
 
 
+_SOURCE_MODEL_KEYS = ("adapter", "response", "latency_seconds", "ttft_seconds")
+
+
+def _entry_name(entry: dict[str, Any]) -> Any:
+    """The name a run gives a model: its `name`, else its model ID."""
+    return entry.get("name", entry.get("model"))
+
+
+def _matching_source_model(
+    model: dict[str, Any], config: dict[str, Any] | None
+) -> dict[str, Any]:
+    """The one config model a result model came from, or {} when none or several."""
+    entries = config.get("models") if isinstance(config, dict) else None
+    entries = [entry for entry in entries or [] if isinstance(entry, dict)]
+    provider = model.get("provider", "openai_compatible")
+    name = model.get("name")
+    same_model = [
+        entry
+        for entry in entries
+        if (entry.get("provider") or "openai_compatible", entry.get("model"))
+        == (provider, model.get("model"))
+    ]
+    if len(same_model) > 1 and name is not None:
+        same_model = [entry for entry in same_model if _entry_name(entry) == name]
+    if same_model:
+        return same_model[0] if len(same_model) == 1 else {}
+    named = [
+        entry for entry in entries if name is not None and entry.get("name") == name
+    ]
+    return named[0] if len(named) == 1 else {}
+
+
+def _alias_map(config: Any) -> dict[str, Any]:
+    aliases = config.get("aliases") if isinstance(config, dict) else None
+    return aliases if isinstance(aliases, dict) else {}
+
+
+def _file_model_entries(source: dict[str, Any] | None) -> Iterator[Any]:
+    """Every model a raw config can run: its models, environments and aliases."""
+    if not isinstance(source, dict):
+        return
+    top = _alias_map(source)
+    environments = source.get("environments")
+    overlays = (
+        [env for env in (environments or {}).values() if isinstance(env, dict)]
+        if isinstance(environments, dict)
+        else []
+    )
+    for scope in [source, *overlays]:
+        aliases = {**top, **_alias_map(scope)} if scope is not source else top
+        models = scope.get("models")
+        for entry in models if isinstance(models, list) else []:
+            yield aliases.get(entry) if isinstance(entry, str) else entry
+        yield from aliases.values()
+
+
+def _route(entry: dict[str, Any], provider: str) -> str | None:
+    route = entry.get("base_url") or PROVIDER_DEFAULTS.get(provider, {}).get("base_url")
+    return str(route).rstrip("/") if route else None
+
+
+def _header_names(headers: Any) -> set[str]:
+    return (
+        {str(key).casefold() for key in headers} if isinstance(headers, dict) else set()
+    )
+
+
+def _file_headers(
+    model: dict[str, Any],
+    source: dict[str, Any] | None,
+    recorded: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Headers of the one file entry for this provider, model and route, or none.
+
+    An entry without headers counts as an empty set, so a config whose entries
+    disagree sends nothing. With a recorded model, its header names must match.
+    """
+    provider = model.get("provider", "openai_compatible")
+    found = {
+        json.dumps(entry.get("headers") or {}, sort_keys=True): entry.get("headers")
+        for entry in _file_model_entries(source)
+        if isinstance(entry, dict)
+        and (entry.get("provider") or "openai_compatible") == provider
+        and entry.get("model") == model.get("model")
+        and _route(entry, provider) == _route(model, provider)
+    }
+    if len(found) != 1:
+        return {}
+    headers = next(iter(found.values()))
+    if not isinstance(headers, dict) or not headers:
+        return {}
+    if recorded is not None and _header_names(headers) != _header_names(
+        recorded.get("headers")
+    ):
+        return {}
+    return {"headers": headers}
+
+
+def _replay_overlays(config: dict[str, Any], source: dict[str, Any] | None) -> None:
+    """Drop the recorded `[REDACTED]` headers from the copied overlays.
+
+    An `--env` or alias overlay replaces the replayed models, so its entries
+    take their headers from the config file the same way the models do.
+    """
+    entries = [*_alias_map(config).values()]
+    environments = config.get("environments")
+    for overlay in environments.values() if isinstance(environments, dict) else []:
+        if not isinstance(overlay, dict):
+            continue
+        entries += [
+            item for item in overlay.get("models") or [] if isinstance(item, dict)
+        ]
+        entries += _alias_map(overlay).values()
+        for item in overlay.get("discovery") or []:
+            if isinstance(item, dict):
+                item.pop("headers", None)
+    for entry in entries:
+        if isinstance(entry, dict):
+            recorded = {"headers": entry.pop("headers", None)}
+            entry.update(_file_headers(entry, source, recorded))
+
+
+def _source_model_extras(
+    model: dict[str, Any], recorded: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Keys the result's model rows drop, from the recorded source config."""
+    return {
+        key: value
+        for key, value in _matching_source_model(model, recorded).items()
+        if key in _SOURCE_MODEL_KEYS
+    }
+
+
 def replay_config(
     result: dict[str, Any], source: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -783,6 +916,7 @@ def replay_config(
                 else {}
             ),
             **{key: pricing[key] for key in pricing_model_keys if key in pricing},
+            **_source_model_extras(model, result["source_config"]),
         }
         for model in result["models"]
         for pricing in [
@@ -791,6 +925,13 @@ def replay_config(
             )
         ]
     ]
+    for model in config["models"]:
+        model.update(
+            _file_headers(
+                model, source, _matching_source_model(model, result["source_config"])
+            )
+        )
+    _replay_overlays(config, source)
     config["discovery"] = []
     settings = result.get("settings", {})
     for key in ("repetitions", "warmups", "concurrency", "suite_repetitions"):

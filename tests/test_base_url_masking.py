@@ -251,6 +251,35 @@ def test_cli_replay_sends_the_raw_route_from_the_recorded_source_config(
     assert seen[0]["models"][0]["base_url"] == raw
 
 
+def test_cli_replay_keeps_adapter_mock_keys_and_file_headers(monkeypatch, tmp_path):
+    keys = {"adapter": "openai_responses", "response": "ok", "latency_seconds": 0.5}
+    file_model = {"provider": "mock", "model": "local", **keys, "headers": {"X": "1"}}
+    source = tmp_path / "benchmark.json"
+    source.write_text(json.dumps({"prompt": "hi", "models": [file_model]}))
+    result = {
+        "source_config": {
+            "prompt": "hi",
+            "models": [{**file_model, "headers": {"X": "[REDACTED]"}}],
+        },
+        "models": [{"provider": "mock", "model": "local", "name": "local"}],
+        "settings": {},
+        "source_config_path": str(source),
+    }
+    result_path = tmp_path / "run.json"
+    result_path.write_text(json.dumps(result))
+    seen = []
+
+    def stop(config, **kwargs):
+        seen.append(config)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(cli, "run_benchmark", stop)
+    run_cli(monkeypatch, "--replay", str(result_path), "--no-env-file")
+
+    assert {k: seen[0]["models"][0][k] for k in keys} == keys
+    assert seen[0]["models"][0]["headers"] == {"X": "1"}
+
+
 def test_cli_replay_refuses_a_masked_route_it_cannot_restore(
     monkeypatch, tmp_path, capsys
 ):
@@ -349,3 +378,149 @@ def test_routes_fingerprint_distinguishes_routes_that_mask_alike():
 
     assert first["models"][0]["base_url"] == second["models"][0]["base_url"]
     assert first["provenance"]["routes_sha256"] != second["provenance"]["routes_sha256"]
+
+
+@pytest.mark.parametrize(("response", "code"), [("yes", 3), ("nope", 1)])
+def test_cli_mock_replay_exits_as_the_run_did(monkeypatch, tmp_path, response, code):
+    config = {
+        "prompt": "hi",
+        "validation": {"exact": "yes"},
+        "models": [
+            {
+                "provider": "mock",
+                "model": "m",
+                "response": response,
+                "latency_seconds": 0.001,
+            }
+        ],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    saved = tmp_path / "saved"
+    codes = []
+    for index in (0, 1):
+        argv = (
+            (str(path), "--no-env-file", "--output", str(saved))
+            if index == 0
+            else ("--replay", str(next(saved.glob("*.json"))), "--no-env-file")
+        )
+        monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+        with pytest.raises(SystemExit) as exc:
+            cli.main()
+        codes.append(exc.value.code)
+    assert codes == [code, code]
+
+
+def test_replayed_openai_responses_model_uses_the_responses_endpoint():
+    source = {
+        "provider": "openai",
+        "model": "gpt-x",
+        "base_url": "https://api.openai.com/v1",
+        "adapter": "openai_responses",
+    }
+    result = {
+        "source_config": {"prompt": "hi", "models": [source]},
+        "models": [
+            {"provider": "openai", "model": "gpt-x", "base_url": source["base_url"]}
+        ],
+    }
+    model = features.replay_config(result)["models"][0]
+    replayed = client.create_client(model, 1.0)
+    assert replayed.endpoint() == "https://api.openai.com/v1/responses"
+
+
+def test_cli_replay_with_env_never_sends_redacted_headers(monkeypatch, tmp_path):
+    stage = {
+        "provider": "mock",
+        "model": "m",
+        "base_url": "https://stage.test/v1",
+        "response": "ok",
+    }
+    redacted = {**stage, "headers": {"X-Token": "[REDACTED]"}}
+    source = tmp_path / "benchmark.json"
+    source.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [{**stage, "base_url": "https://prod.test/v1"}],
+                "environments": {
+                    "ci": {"models": [{**stage, "headers": {"X-Token": "STAGING"}}]}
+                },
+            }
+        )
+    )
+    result = {
+        "source_config": {
+            "prompt": "hi",
+            "models": [redacted],
+            "environments": {"ci": {"models": [redacted]}},
+        },
+        "models": [{"provider": "mock", "model": "m", "base_url": stage["base_url"]}],
+        "settings": {},
+        "source_config_path": str(source),
+    }
+    result_path = tmp_path / "run.json"
+    result_path.write_text(json.dumps(result))
+    seen = []
+
+    def stop(config, **kwargs):
+        seen.append(config)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(cli, "run_benchmark", stop)
+    run_cli(monkeypatch, "--replay", str(result_path), "--env", "ci", "--no-env-file")
+
+    assert seen[0]["models"][0]["headers"] == {"X-Token": "STAGING"}
+    assert "[REDACTED]" not in json.dumps(seen[0])
+
+
+def test_cli_replay_with_env_aliases_never_sends_redacted_headers(
+    monkeypatch, tmp_path
+):
+    entry = {
+        "provider": "mock",
+        "model": "m",
+        "base_url": "https://gw.example.test",
+        "response": "ok",
+    }
+    source = tmp_path / "benchmark.json"
+    source.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": [{**entry, "base_url": "https://prod.test/v1"}],
+                "environments": {
+                    "ci": {
+                        "models": ["fast"],
+                        "aliases": {"fast": {**entry, "headers": {"X-Token": "REAL"}}},
+                    }
+                },
+            }
+        )
+    )
+    redacted = {**entry, "headers": {"X-Token": "[REDACTED]"}}
+    result = {
+        "source_config": {
+            "prompt": "hi",
+            "models": [redacted],
+            "environments": {"ci": {"models": ["fast"], "aliases": {"fast": redacted}}},
+        },
+        "models": [{"provider": "mock", "model": "m", "base_url": entry["base_url"]}],
+        "settings": {},
+        "source_config_path": str(source),
+    }
+    result_path = tmp_path / "run.json"
+    result_path.write_text(json.dumps(result))
+    seen = []
+
+    def stop(config, **kwargs):
+        seen.append(config)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(cli, "run_benchmark", stop)
+    run_cli(monkeypatch, "--replay", str(result_path), "--env", "ci", "--no-env-file")
+
+    assert seen[0]["models"][0]["headers"] == {"X-Token": "REAL"}
+    assert "[REDACTED]" not in json.dumps(seen[0])

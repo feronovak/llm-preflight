@@ -11,6 +11,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- `--change-plan` reads a staged file with the explicit stage `:0:<path>`, so a staged file whose name starts like a stage prefix (`0:foo.py`) is no longer read as another path (`foo.py`) and its model ID is reported.
 - Terminal text for a retiring model with no recorded retirement date now says `(date not recorded)`, as retired rows and the report do, instead of `date to be announced`.
 - Measured `gemini-4-neon` on 2026-11-19 (eight cases, same method as 2026-10-29): 8/8 valid, $0.024972, mean latency 15.874s. The README table, comparison guide and results image now show 30 models; 233 of 240 checks passed and 27 models passed all eight.
 

@@ -148,7 +148,7 @@ def _read_regular(path: Path) -> str | None:
 
 
 def _index_text(root: Path, relative: str) -> str | None:
-    completed = run_git(root, "show", f":{relative}", check=False)
+    completed = run_git(root, "show", f":0:{relative}", check=False)
     return completed.stdout if completed.returncode == 0 else None
 
 

@@ -1,5 +1,8 @@
 """Native public routes shared by transports and pricing provenance checks."""
 
+# Foundry bills a deployment per type; a bundled price names the types it covers.
+FOUNDRY_DEPLOYMENT_TYPES = ("global", "data_zone", "regional")
+
 PROVIDER_DEFAULTS = {
     "openai": {
         "base_url": "https://api.openai.com/v1",

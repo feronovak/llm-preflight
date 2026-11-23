@@ -6,6 +6,7 @@ import pytest
 from llm_preflight import retirements
 from llm_preflight.retirements import (
     ANTHROPIC_DEPRECATIONS_URL,
+    FOUNDRY_RETIREMENTS_URL,
     GEMINI_DEPRECATIONS_URL,
     GEMINI_MODEL_REDIRECTS,
     OPENAI_DEPRECATIONS_URL,
@@ -107,7 +108,7 @@ def test_unknown_model_is_not_a_verdict(table):
     verdict = retirement_verdict("openai", "gpt-nothing", TODAY)
     assert verdict["status"] == "unknown"
     assert verdict["decision"] == "none"
-    assert "anthropic, gemini, openai" in verdict["next_step"]
+    assert "anthropic, foundry, gemini, openai" in verdict["next_step"]
     assert "next_command" not in verdict
 
 
@@ -246,8 +247,11 @@ def test_every_snapshot_row_is_well_formed():
 
     for (provider, model), row in PUBLIC_RETIREMENTS.items():
         assert provider in RETIREMENT_PROVIDERS, model
-        assert _provider_for(model) == provider, model
-        assert _MODEL_PREFIX.match(model), model
+        # The source scanner has no Foundry model prefix yet, so Foundry rows
+        # are checked for their own source only.
+        if provider != "foundry":
+            assert _provider_for(model) == provider, model
+            assert _MODEL_PREFIX.match(model), model
         assert row["status"] in {"active", "deprecated", "retired"}, model
         date.fromisoformat(row["as_of"])
         assert (
@@ -259,6 +263,7 @@ def test_every_snapshot_row_is_well_formed():
                     GEMINI_DEPRECATIONS_URL,
                     "https://aistudio.google.com/docs/models/gemini-4-argon",
                 },
+                "foundry": {FOUNDRY_RETIREMENTS_URL},
             }[provider]
         ), model
         assert set(row) <= {
@@ -275,7 +280,7 @@ def test_every_snapshot_row_is_well_formed():
         if "retirement_date" in row:
             date.fromisoformat(row["retirement_date"])
             assert row["status"] != "active", model
-        if "replacement" in row:
+        if "replacement" in row and provider != "foundry":
             replacement = row["replacement"]
             assert _MODEL_PREFIX.match(replacement), model
             assert _provider_for(replacement) == provider, model
@@ -336,10 +341,11 @@ def test_snapshot_pins_reviewed_rows_for_this_release():
         "source_url": GEMINI_DEPRECATIONS_URL,
     }
     providers = {provider for provider, _ in PUBLIC_RETIREMENTS}
-    assert providers == {"anthropic", "gemini", "openai"}
+    assert providers == {"anthropic", "foundry", "gemini", "openai"}
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "anthropic") == 38
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "openai") == 76
     assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "gemini") == 7
+    assert sum(1 for p, _ in PUBLIC_RETIREMENTS if p == "foundry") == 1
 
 
 @pytest.mark.parametrize("model", ["claude-fable-5-2", "claude-mythos-5-2"])
@@ -399,7 +405,7 @@ def test_gemini_alias_rows_are_active_and_carry_their_route():
 
 def test_snapshot_summary_reports_coverage_and_dates():
     summary = snapshot_summary()
-    assert summary["providers"] == ["anthropic", "gemini", "openai"]
+    assert summary["providers"] == ["anthropic", "foundry", "gemini", "openai"]
     assert summary["rows"] == len(PUBLIC_RETIREMENTS)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", summary["oldest_as_of"])
     assert summary["oldest_as_of"] <= summary["newest_as_of"]
@@ -507,7 +513,12 @@ def test_retirement_report_summarises_a_model_list(table):
         'llm-preflight --quick "<your prompt>" --models openai:gpt-gone,openai:gpt-new --dry-run',
         'llm-preflight --quick "<your prompt>" --models openai:gpt-going,openai:gpt-new --dry-run',
     ]
-    assert report["snapshot"]["providers"] == ["anthropic", "gemini", "openai"]
+    assert report["snapshot"]["providers"] == [
+        "anthropic",
+        "foundry",
+        "gemini",
+        "openai",
+    ]
 
 
 def test_retirement_report_is_inconclusive_without_a_retired_model(table):

@@ -459,14 +459,7 @@ def provenance(
             "headers": _route_headers(model.get("headers") or {}),
             # The mock provider answers with its configured response.
             "response": model.get("response"),
-            # Hashed only for foundry and only when set, so other routes keep
-            # their hash.
-            **(
-                {"deployment": model["deployment"]}
-                if model.get("provider") == "foundry"
-                and model.get("deployment") is not None
-                else {}
-            ),
+            **foundry_route_keys(model),
         }
         for model in models
     ]
@@ -577,6 +570,17 @@ def _request_fingerprint(options: dict[str, Any]) -> str:
             for image in images
         ]
     return _fingerprint(without_credentials(request))
+
+
+def foundry_route_keys(model: Mapping[str, Any]) -> dict[str, Any]:
+    """The Foundry route settings that are set; other routes keep their hash."""
+    if model.get("provider") != "foundry":
+        return {}
+    return {
+        key: model[key]
+        for key in ("deployment", "deployment_type")
+        if model.get(key) is not None
+    }
 
 
 def _safe_base_url(value: Any) -> str | None:

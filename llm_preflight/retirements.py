@@ -17,7 +17,11 @@ ANTHROPIC_DEPRECATIONS_URL = (
 )
 OPENAI_DEPRECATIONS_URL = "https://developers.openai.com/api/docs/deprecations"
 GEMINI_DEPRECATIONS_URL = "https://aistudio.google.com/docs/deprecations"
-RETIREMENT_PROVIDERS: tuple[str, ...] = ("anthropic", "gemini", "openai")
+FOUNDRY_RETIREMENTS_URL = (
+    "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/"
+    "model-retirement-schedule"
+)
+RETIREMENT_PROVIDERS: tuple[str, ...] = ("anthropic", "foundry", "gemini", "openai")
 GEMINI_MODEL_REDIRECTS = {
     "gemini-3.5-flash": "gemini-3.6-flash",
     "gemini-3.7-flash": "gemini-3.8-flash",
@@ -72,6 +76,21 @@ def _openai(
     return _row(
         status,
         source_url=OPENAI_DEPRECATIONS_URL,
+        retirement_date=retirement_date,
+        replacement=replacement,
+        as_of=as_of,
+    )
+
+
+def _foundry(
+    status: str,
+    retirement_date: str | None = None,
+    replacement: str | None = None,
+    as_of: str = _REVIEWED,
+) -> dict[str, Any]:
+    return _row(
+        status,
+        source_url=FOUNDRY_RETIREMENTS_URL,
         retirement_date=retirement_date,
         replacement=replacement,
         as_of=as_of,
@@ -290,10 +309,19 @@ _GEMINI = {
     ),
 }
 
+# Foundry: the "Microsoft" table of the official retirement schedule, keyed by
+# the catalog ID in lower case. Only text models are listed; Azure OpenAI rows
+# follow Azure's own dates and are not represented. The page names no
+# replacement for this row.
+_FOUNDRY: dict[str, dict[str, Any]] = {
+    "mai-thinking-1": _foundry("deprecated", "2027-03-02", as_of="2026-11-19"),
+}
+
 PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {
     **{("anthropic", model): row for model, row in _ANTHROPIC.items()},
     **{("openai", model): row for model, row in _OPENAI.items()},
     **{("gemini", model): row for model, row in _GEMINI.items()},
+    **{("foundry", model): row for model, row in _FOUNDRY.items()},
 }
 
 

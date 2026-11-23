@@ -34,21 +34,24 @@ DATA_TABLES: dict[str, tuple[str, ...]] = {
         "_MODEL_PRICING_PAGES",
         "PUBLIC_PRICING_CHANGES",
         "PUBLIC_PRICING_DETAILS",
+        "FOUNDRY_PRICED_DEPLOYMENT_TYPES",
     ),
     "llm_preflight/retirements.py": (
         "_ANTHROPIC",
         "_OPENAI",
         "_GEMINI",
+        "_FOUNDRY",
         "_REVIEWED",
         "ANTHROPIC_DEPRECATIONS_URL",
         "OPENAI_DEPRECATIONS_URL",
         "GEMINI_DEPRECATIONS_URL",
+        "FOUNDRY_RETIREMENTS_URL",
     ),
 }
 # Functions a table value may call. Their definitions stay in the skeleton.
 BUILDERS: dict[str, tuple[str, ...]] = {
     "llm_preflight/pricing.py": ("date",),
-    "llm_preflight/retirements.py": ("_row", "_anthropic", "_openai"),
+    "llm_preflight/retirements.py": ("_row", "_anthropic", "_openai", "_foundry"),
 }
 
 PYPROJECT = "pyproject.toml"

@@ -88,7 +88,8 @@ Supported provider names are `openai`, `anthropic`, `gemini`, `xai`,
 Native `zai` text runs are supported; its catalogue is not implemented.
 `foundry` requires `base_url` (`https`, ending `/openai/v1`) and accepts an
 optional `deployment` (1-64 ASCII letters, digits, `.`, `_`, `-`; defaults to
-`model`); it refuses `api_version`. See
+`model`), an optional `deployment_type` (`global`, `data_zone` or `regional`;
+selects which bundled price applies), and refuses `api_version`. See
 [native provider checks](../guides/native-providers.md#microsoft-foundry).
 TypeSafe Jev models are catalogue-visible typed-decision routes and are not
 eligible for the generic text smoke adapter. A discovery object requires

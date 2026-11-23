@@ -356,10 +356,7 @@ def _retirement_exit(decision: str, ci: bool) -> None:
 def _retirement_phrase(verdict: dict[str, Any]) -> str:
     status = verdict["status"]
     if status in {"retired", "retiring"}:
-        when = verdict.get(
-            "retirement_date",
-            "(date not recorded)" if status == "retired" else "date to be announced",
-        )
+        when = verdict.get("retirement_date", "(date not recorded)")
         replacement = verdict.get("replacement")
         tail = (
             f"replacement {replacement}"

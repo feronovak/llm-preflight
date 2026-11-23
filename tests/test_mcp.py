@@ -2086,7 +2086,7 @@ def test_decision_and_docs_without_main_branch_notes():
     assert "behind an approval receipt" not in flat["docs/DECISIONS.md"]
 
 
-@pytest.mark.parametrize("tool", ["validate_config", "dry_run_plan"])
+@pytest.mark.parametrize("tool", ["validate_config", "dry_run_plan", "run_preflight"])
 @pytest.mark.parametrize(
     ("override", "message"),
     [

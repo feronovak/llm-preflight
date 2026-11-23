@@ -152,6 +152,11 @@ def _reject_number_or_boolean(config: dict[str, Any], key: str, expected: str) -
         raise ValueError(f"'{key}' must be {expected}, got {type(value).__name__}")  # noqa: TRY004
 
 
+def validate_prompt_type(config: dict[str, Any]) -> None:
+    """Raise a config error when the prompt that runs is a number or boolean."""
+    _reject_number_or_boolean(config, "prompt", "a string")
+
+
 def validate_config_shape(config: Any) -> None:
     """Raise a config error naming the field when a config key has the wrong type.
 
@@ -161,7 +166,6 @@ def validate_config_shape(config: Any) -> None:
     if not isinstance(config, dict):
         raise ValueError(f"config must be a JSON object, got {type(config).__name__}")  # noqa: TRY004
     _reject_number_or_boolean(config, "models", "a list")
-    _reject_number_or_boolean(config, "prompt", "a string")
     profiles = config.get("profiles")
     if profiles and not (
         isinstance(profiles, str) or (_is_string_list(profiles) and all(profiles))

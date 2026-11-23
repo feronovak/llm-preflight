@@ -113,6 +113,7 @@ from .runner import (
     selected_profiles,
     validate_config_shape,
     validate_config_validations,
+    validate_prompt_type,
 )
 from .source_audit import audit_source
 
@@ -3391,6 +3392,8 @@ def main() -> None:
                 raise SystemExit(1)
             return
         if args.doctor:
+            if not args.prompt_name and not args.interactive:
+                validate_prompt_type(config)
             report_data = doctor_report(config, environment, today=today_utc())
             print(
                 json.dumps(report_data, indent=2)
@@ -3464,6 +3467,7 @@ def main() -> None:
                     environment = _load_config_env_file(deferred_env_path, args, config)
                 elif args.quick:
                     _load_quick_env_file(args)
+        validate_prompt_type(config)
         if args.dry_run:
             plan = dry_run_plan(
                 config,

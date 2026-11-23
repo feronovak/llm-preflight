@@ -39,6 +39,7 @@ from .runner import (
     load_config,
     run_benchmark,
     validate_config_validations,
+    validate_prompt_type,
 )
 from .source_audit import audit_source
 
@@ -978,6 +979,7 @@ def _call(
         )
     if name == "validate_config":
         config = _readonly_config(_path(arguments["config"], workspace))
+        validate_prompt_type(config)
         return _tool_result(
             {
                 "ok": True,
@@ -988,6 +990,7 @@ def _call(
         )
     if name == "dry_run_plan":
         config = _readonly_config(_path(arguments["config"], workspace))
+        validate_prompt_type(config)
         plan = dry_run_plan(config, today=today_utc(), pricing_evidence=True)
         return _tool_result(
             {"ok": not plan["budget_limits"]["violations"], **dry_run_output(plan)},
@@ -1034,6 +1037,7 @@ def _call(
     if name == "run_preflight":
         config_path = _path(arguments["config"], workspace)
         config = _config(config_path)
+        validate_prompt_type(config)
         config["_source_config_path"] = str(config_path)
         live = bool(config.get("discovery")) or any(
             model.get("provider") != "mock" for model in config.get("models", [])

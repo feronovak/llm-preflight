@@ -23,6 +23,7 @@ from llm_preflight.runner import (
     select_custom_prompt,
     select_test_profiles,
     validate_config_validations,
+    validate_prompt_type,
 )
 
 
@@ -3381,10 +3382,20 @@ def test_load_config_rejects_numeric_models(tmp_path, models):
 
 
 @pytest.mark.parametrize("prompt", [5, True, 1.5, 0, False])
-def test_load_config_rejects_numeric_prompt(tmp_path, prompt):
+def test_load_config_keeps_a_numeric_or_boolean_prompt(tmp_path, prompt):
     config = {"prompt": prompt, "models": MODELS}
+    assert load_config(_write_config(tmp_path, config))["prompt"] == prompt
+
+
+@pytest.mark.parametrize("prompt", [5, True, 1.5, 0, False])
+def test_validate_prompt_type_rejects_numbers_and_booleans(prompt):
     with pytest.raises(ValueError, match="'prompt' must be a string, got"):
-        load_config(_write_config(tmp_path, config))
+        validate_prompt_type({"prompt": prompt})
+
+
+@pytest.mark.parametrize("prompt", ["hi", "", None, ["a"], {"a": 1}])
+def test_validate_prompt_type_keeps_other_prompt_shapes(prompt):
+    validate_prompt_type({"prompt": prompt})
 
 
 @pytest.mark.parametrize("presets", [5, None, False, [5], [["a"]]])

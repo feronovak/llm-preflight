@@ -251,6 +251,35 @@ def test_cli_replay_sends_the_raw_route_from_the_recorded_source_config(
     assert seen[0]["models"][0]["base_url"] == raw
 
 
+def test_cli_replay_keeps_adapter_mock_keys_and_file_headers(monkeypatch, tmp_path):
+    keys = {"adapter": "openai_responses", "response": "ok", "latency_seconds": 0.5}
+    file_model = {"provider": "mock", "model": "local", **keys, "headers": {"X": "1"}}
+    source = tmp_path / "benchmark.json"
+    source.write_text(json.dumps({"prompt": "hi", "models": [file_model]}))
+    result = {
+        "source_config": {
+            "prompt": "hi",
+            "models": [{**file_model, "headers": {"X": "[REDACTED]"}}],
+        },
+        "models": [{"provider": "mock", "model": "local", "name": "local"}],
+        "settings": {},
+        "source_config_path": str(source),
+    }
+    result_path = tmp_path / "run.json"
+    result_path.write_text(json.dumps(result))
+    seen = []
+
+    def stop(config, **kwargs):
+        seen.append(config)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(cli, "run_benchmark", stop)
+    run_cli(monkeypatch, "--replay", str(result_path), "--no-env-file")
+
+    assert {k: seen[0]["models"][0][k] for k in keys} == keys
+    assert seen[0]["models"][0]["headers"] == {"X": "1"}
+
+
 def test_cli_replay_refuses_a_masked_route_it_cannot_restore(
     monkeypatch, tmp_path, capsys
 ):

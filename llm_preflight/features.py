@@ -742,6 +742,51 @@ def restored_base_url(
     return matches.pop()
 
 
+_SOURCE_MODEL_KEYS = ("adapter", "response", "latency_seconds", "ttft_seconds")
+
+
+def _matching_source_model(
+    model: dict[str, Any], config: dict[str, Any] | None
+) -> dict[str, Any]:
+    """The one config model a result model came from, or {} when none or several."""
+    entries = config.get("models") if isinstance(config, dict) else None
+    entries = [entry for entry in entries or [] if isinstance(entry, dict)]
+    provider = model.get("provider", "openai_compatible")
+    for matches in (
+        [
+            entry
+            for entry in entries
+            if (entry.get("provider") or "openai_compatible", entry.get("model"))
+            == (provider, model.get("model"))
+        ],
+        [
+            entry
+            for entry in entries
+            if model.get("name") is not None and entry.get("name") == model["name"]
+        ],
+    ):
+        if matches:
+            return matches[0] if len(matches) == 1 else {}
+    return {}
+
+
+def _source_model_extras(
+    model: dict[str, Any],
+    recorded: dict[str, Any] | None,
+    source: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Keys the result's model rows drop: shape from the record, headers from disk."""
+    extras = {
+        key: value
+        for key, value in _matching_source_model(model, recorded).items()
+        if key in _SOURCE_MODEL_KEYS
+    }
+    headers = _matching_source_model(model, source).get("headers")
+    if headers is not None:
+        extras["headers"] = headers
+    return extras
+
+
 def replay_config(
     result: dict[str, Any], source: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -783,6 +828,7 @@ def replay_config(
                 else {}
             ),
             **{key: pricing[key] for key in pricing_model_keys if key in pricing},
+            **_source_model_extras(model, result["source_config"], source),
         }
         for model in result["models"]
         for pricing in [

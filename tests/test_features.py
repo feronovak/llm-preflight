@@ -1202,3 +1202,49 @@ def test_greedy_presets_need_top_p_one_for_mistral_large_4(monkeypatch, preset):
         check_budget({**config, "request": request})
     request["provider_options"]["mistral"] = {"top_p": 1}
     check_budget({**config, "request": request})
+
+
+def _replay_result(source_model, model=None):
+    return {
+        "source_config": {"prompt": "hi", "models": [source_model]},
+        "models": [model or {"provider": "mock", "model": "m"}],
+    }
+
+
+def test_replay_config_restores_adapter_response_and_mock_timings():
+    source_model = {
+        "provider": "mock",
+        "model": "m",
+        "adapter": "openai_responses",
+        "response": {"text": "x"},
+        "latency_seconds": 0.2,
+        "ttft_seconds": 0.1,
+        "headers": {"X-Key": "[REDACTED]"},
+    }
+    model = replay_config(_replay_result(source_model))["models"][0]
+    assert model["adapter"] == "openai_responses"
+    assert model["response"] == {"text": "x"}
+    assert (model["latency_seconds"], model["ttft_seconds"]) == (0.2, 0.1)
+    assert "headers" not in model
+
+
+def test_replay_config_takes_headers_only_from_the_config_file():
+    recorded = {"provider": "mock", "model": "m", "headers": {"X-Key": "[REDACTED]"}}
+    file_config = {
+        "models": [{"provider": "mock", "model": "m", "headers": {"X-Key": "real"}}]
+    }
+    model = replay_config(_replay_result(recorded), file_config)["models"][0]
+    assert model["headers"] == {"X-Key": "real"}
+
+
+def test_replay_config_matches_by_name_and_skips_unmatched_or_ambiguous():
+    named = {"provider": "mock", "model": "other", "name": "n", "adapter": "a"}
+    model = {"provider": "mock", "model": "m", "name": "n"}
+    assert replay_config(_replay_result(named, model))["models"][0]["adapter"] == "a"
+    unmatched = {"provider": "mock", "model": "zzz", "adapter": "a"}
+    assert "adapter" not in replay_config(_replay_result(unmatched))["models"][0]
+    result = _replay_result({"provider": "mock", "model": "m", "adapter": "a"})
+    result["source_config"]["models"].append(
+        {"provider": "mock", "model": "m", "adapter": "b"}
+    )
+    assert "adapter" not in replay_config(result)["models"][0]

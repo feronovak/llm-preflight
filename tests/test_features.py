@@ -1341,3 +1341,14 @@ def test_replay_config_takes_env_overlay_headers_from_the_file_not_the_record():
     assert "headers" not in overlay["discovery"][0]
     assert config["aliases"]["fast"]["headers"] == {"X": "1"}
     assert "[REDACTED]" not in json.dumps(config)
+
+
+def test_replay_config_names_an_unnamed_entry_by_its_model_id():
+    direct = {"provider": "openai", "model": "gpt-x", "adapter": "openai_responses"}
+    gateway = {"provider": "openai", "model": "gpt-x", "name": "gw", "base_url": "u"}
+    result = {
+        "source_config": {"prompt": "hi", "models": [direct, gateway]},
+        "models": [{"provider": "openai", "model": "gpt-x", "name": "gpt-x"}],
+    }
+    model = replay_config(result)["models"][0]
+    assert model["adapter"] == "openai_responses"

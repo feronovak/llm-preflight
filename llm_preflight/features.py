@@ -745,6 +745,11 @@ def restored_base_url(
 _SOURCE_MODEL_KEYS = ("adapter", "response", "latency_seconds", "ttft_seconds")
 
 
+def _entry_name(entry: dict[str, Any]) -> Any:
+    """The name a run gives a model: its `name`, else its model ID."""
+    return entry.get("name", entry.get("model"))
+
+
 def _matching_source_model(
     model: dict[str, Any], config: dict[str, Any] | None
 ) -> dict[str, Any]:
@@ -760,31 +765,37 @@ def _matching_source_model(
         == (provider, model.get("model"))
     ]
     if len(same_model) > 1 and name is not None:
-        same_model = [entry for entry in same_model if entry.get("name") == name]
+        same_model = [entry for entry in same_model if _entry_name(entry) == name]
     if same_model:
         return same_model[0] if len(same_model) == 1 else {}
     named = [
-        entry for entry in entries if name is not None and entry.get("name") == name
+        entry for entry in entries if name is not None and _entry_name(entry) == name
     ]
     return named[0] if len(named) == 1 else {}
+
+
+def _alias_map(config: Any) -> dict[str, Any]:
+    aliases = config.get("aliases") if isinstance(config, dict) else None
+    return aliases if isinstance(aliases, dict) else {}
 
 
 def _file_model_entries(source: dict[str, Any] | None) -> Iterator[Any]:
     """Every model a raw config can run: its models, environments and aliases."""
     if not isinstance(source, dict):
         return
-    aliases = source.get("aliases")
-    aliases = aliases if isinstance(aliases, dict) else {}
+    top = _alias_map(source)
     environments = source.get("environments")
-    groups = [source.get("models")]
-    if isinstance(environments, dict):
-        groups += [
-            env.get("models") for env in environments.values() if isinstance(env, dict)
-        ]
-    for group in groups:
-        for entry in group if isinstance(group, list) else []:
+    overlays = (
+        [env for env in (environments or {}).values() if isinstance(env, dict)]
+        if isinstance(environments, dict)
+        else []
+    )
+    for scope in [source, *overlays]:
+        aliases = {**top, **_alias_map(scope)} if scope is not source else top
+        models = scope.get("models")
+        for entry in models if isinstance(models, list) else []:
             yield aliases.get(entry) if isinstance(entry, str) else entry
-    yield from aliases.values()
+        yield from aliases.values()
 
 
 def _route(entry: dict[str, Any], provider: str) -> str | None:
@@ -835,8 +846,7 @@ def _replay_overlays(config: dict[str, Any], source: dict[str, Any] | None) -> N
     An `--env` or alias overlay replaces the replayed models, so its entries
     take their headers from the config file the same way the models do.
     """
-    aliases = config.get("aliases")
-    entries = [*(aliases.values() if isinstance(aliases, dict) else [])]
+    entries = [*_alias_map(config).values()]
     environments = config.get("environments")
     for overlay in environments.values() if isinstance(environments, dict) else []:
         if not isinstance(overlay, dict):
@@ -844,6 +854,7 @@ def _replay_overlays(config: dict[str, Any], source: dict[str, Any] | None) -> N
         entries += [
             item for item in overlay.get("models") or [] if isinstance(item, dict)
         ]
+        entries += _alias_map(overlay).values()
         for item in overlay.get("discovery") or []:
             if isinstance(item, dict):
                 item.pop("headers", None)

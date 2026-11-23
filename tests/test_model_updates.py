@@ -417,6 +417,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
         "2026-11-17",
         "2026-11-18",
         "2026-11-19",
+        "2026-11-23",
     }
     # The promotional gpt-5.6-sol price ends 2026-11-30; its review date stays
     # at the last full review so the row goes stale before the promotion ends.
@@ -437,6 +438,7 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
     }
     assert {"gpt-6.2-astra", "gpt-6.2-sol", "gpt-6-cyber"} <= priced_on("2026-11-18")
     assert priced_on("2026-11-19") == {"gemini-4-neon"}
+    assert priced_on("2026-11-23") == {"claude-haiku-4-5-20251001", "claude-opus-4-8"}
     assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {
         "2026-11-18",
         "2026-11-19",

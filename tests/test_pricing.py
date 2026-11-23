@@ -822,12 +822,12 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-sonnet-5"): (2.0, 10.0, "2026-11-18"),
         ("anthropic", "claude-sonnet-5-5"): (2.0, 10.0, "2026-11-18"),
         ("anthropic", "claude-haiku-5-5"): (0.1, 0.5, "2026-11-18"),
-        ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-18"),
+        ("anthropic", "claude-haiku-4-5-20251001"): (1.0, 5.0, "2026-11-23"),
         ("anthropic", "claude-fable-5"): (10.0, 50.0, "2026-11-18"),
         ("anthropic", "claude-fable-5-1"): (10.0, 50.0, "2026-11-18"),
         ("anthropic", "claude-fable-5-2"): (8.0, 40.0, "2026-11-18"),
         ("anthropic", "claude-mythos-5-2"): (8.0, 40.0, "2026-11-18"),
-        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-18"),
+        ("anthropic", "claude-opus-4-8"): (5.0, 25.0, "2026-11-23"),
         ("anthropic", "claude-opus-4-5-20251101"): (5.0, 25.0, "2026-11-17"),
         ("anthropic", "claude-opus-4-6"): (5.0, 25.0, "2026-11-17"),
         ("anthropic", "claude-opus-4-7"): (5.0, 25.0, "2026-11-17"),
@@ -871,7 +871,7 @@ def test_approved_smoke_cohort_has_complete_current_pricing(snapshot_review_day)
 
     report = pricing_coverage_report(
         resolve_pricing(approved["models"])["models"],
-        today=date(2026, 11, 18),
+        today=date(2026, 11, 23),
         require_current_pricing=True,
     )
 
@@ -1437,8 +1437,29 @@ CLAUDE_4_X_ROWS = [
 ]
 
 
+CACHE_READ_FIX_ROWS = [
+    (
+        "claude-haiku-4-5-20251001",
+        1.0,
+        0.1,
+        "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
+    ),
+    (
+        "claude-opus-4-8",
+        5.0,
+        0.5,
+        "https://platform.claude.com/docs/en/about-claude/pricing",
+    ),
+]
+
+
 @pytest.mark.parametrize(
-    "model_id", ["claude-sonnet-5", *[r[0] for r in CLAUDE_4_X_ROWS]]
+    "model_id",
+    [
+        "claude-sonnet-5",
+        *[r[0] for r in CLAUDE_4_X_ROWS],
+        *[r[0] for r in CACHE_READ_FIX_ROWS],
+    ],
 )
 def test_cache_writes_stay_unpriced_for_new_cache_read_rows(model_id):
     model = apply_public_pricing({"provider": "anthropic", "model": model_id})
@@ -1450,6 +1471,54 @@ def test_cache_writes_stay_unpriced_for_new_cache_read_rows(model_id):
         )
         is None
     )
+
+
+@pytest.mark.parametrize(("model_id", "inp", "cached", "url"), CACHE_READ_FIX_ROWS)
+def test_haiku_4_5_and_opus_4_8_price_cache_reads(model_id, inp, cached, url):
+    model = apply_public_pricing({"provider": "anthropic", "model": model_id})
+
+    assert model["cached_input_cost_per_million"] == cached
+    assert model["pricing_metadata"]["as_of"] == "2026-11-23"
+    assert model["pricing_metadata"]["source_url"] == url
+    assert "cache_write_input_cost_per_million" not in model
+    assert estimate_sample_cost(
+        {"input_tokens": 1_000_000, "cached_input_tokens": 800_000, "output_tokens": 0},
+        model,
+    ) == pytest.approx(0.2 * inp + 0.8 * cached)
+
+
+def test_opus_4_8_cache_reads_take_us_inference_multiplier():
+    usage = {
+        "input_tokens": 1_000_000,
+        "cached_input_tokens": 800_000,
+        "output_tokens": 0,
+    }
+    model = apply_public_pricing({"provider": "anthropic", "model": "claude-opus-4-8"})
+
+    assert estimate_sample_cost({**usage, "inference_geo": "us"}, model) == (
+        pytest.approx(1.1 * estimate_sample_cost(usage, model))
+    )
+
+
+@pytest.mark.parametrize(("model_id", "inp", "cached", "url"), CACHE_READ_FIX_ROWS)
+def test_owner_cached_only_price_on_claude_4_5_and_4_8_warns(
+    model_id, inp, cached, url
+):
+    from llm_preflight.catalog import resolve_models
+
+    models = [
+        {
+            "provider": "anthropic",
+            "model": model_id,
+            "cached_input_cost_per_million": 0.9,
+        }
+    ]
+    warnings = _owner_warnings(models)
+
+    assert [w["code"] for w in warnings] == ["owner_price_ignored"]
+    assert f"ignored (applied {cached})" in warnings[0]["message"]
+    resolved = resolve_models({"models": models})[0]
+    assert resolved["cached_input_cost_per_million"] == cached
 
 
 @pytest.mark.parametrize(("model_id", "inp", "out", "cached"), CLAUDE_4_X_ROWS)

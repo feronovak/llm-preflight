@@ -16,8 +16,9 @@ The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 `deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
 2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` and Foundry
 `mai-thinking-1` retirement rows were reviewed on 2026-11-19 and become stale
-on 2026-12-20. Every other row was reviewed on
-2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
+on 2026-12-20. The `claude-haiku-4-5-20251001` and `claude-opus-4-8` rows were
+reviewed on 2026-11-23 and become stale on 2026-12-24. Every other row was
+reviewed on 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
 The [latest comparison](observed-model-comparison.md) measured 30 models with
@@ -101,7 +102,7 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `anthropic` | `claude-fable-5` | 10.00 | 50.00 | 2026-11-18 |
 | `anthropic` | `claude-opus-5-5` | 4.00 | 20.00 | 2026-11-18 |
 | `anthropic` | `claude-opus-5` | 5.00 | 25.00 | 2026-11-18 |
-| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-18 |
+| `anthropic` | `claude-opus-4-8` | 5.00 | 25.00 | 2026-11-23 |
 | `anthropic` | `claude-opus-4-7` | 5.00 | 25.00 | 2026-11-17 |
 | `anthropic` | `claude-opus-4-6` | 5.00 | 25.00 | 2026-11-17 |
 | `anthropic` | `claude-opus-4-5-20251101` | 5.00 | 25.00 | 2026-11-17 |
@@ -109,7 +110,7 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `anthropic` | `claude-sonnet-5` | 2.00 | 10.00 | 2026-11-18 |
 | `anthropic` | `claude-sonnet-5-5` | 2.00 | 10.00 | 2026-11-18 |
 | `anthropic` | `claude-haiku-5-5` | 0.10 | 0.50 | 2026-11-18 |
-| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-18 |
+| `anthropic` | `claude-haiku-4-5-20251001` | 1.00 | 5.00 | 2026-11-23 |
 | `gemini` | `gemini-4-argon` | 2.00 | 10.00 | 2026-11-18 |
 | `gemini` | `gemini-4-carbon` | 2.00 | 10.00 | 2026-11-18 |
 | `gemini` | `gemini-4-hydrogen` | 1.50 | 7.50 | 2026-11-18 |

@@ -305,8 +305,10 @@ def test_foundry_openai_model_does_not_reuse_openai_rows(monkeypatch, tmp_path, 
     retirement = retirement_report([model], date(2026, 11, 19))
     assert retirement["decision"] != "pass"
     assert retirement["models"][0]["status"] == "unknown"
-    # No GPT-6 gate applies: a non-standard tier is refused only by the Foundry rule.
-    validate_native_request_options(model, {"provider_options": {"foundry": {"x": 1}}})
+    # No GPT-6 gate applies: prompt_cache_retention is refused for openai GPT-6 but accepted here.
+    validate_native_request_options(
+        model, {"provider_options": {"foundry": {"prompt_cache_retention": "24h"}}}
+    )
 
 
 def test_foundry_retirement_without_row_is_inconclusive():

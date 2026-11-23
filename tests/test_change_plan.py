@@ -740,6 +740,22 @@ def test_git_change_plan_reads_the_staged_copy_of_a_file(tmp_path):
     ]
 
 
+def test_git_change_plan_reads_a_staged_file_named_like_a_stage_prefix(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "foo.py").write_text("x = 1\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "foo")
+    (tmp_path / "0:foo.py").write_text('model = "gpt-5.5"\n')
+    _git(tmp_path, "add", "0:foo.py")
+    (tmp_path / "0:foo.py").unlink()
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert [(item["path"], item["model"]) for item in plan["triggers"]] == [
+        ("0:foo.py", "gpt-5.5")
+    ]
+
+
 def test_git_change_plan_scans_a_deleted_non_utf8_file_the_audit_skips(tmp_path):
     _commit_initial(tmp_path)
     (tmp_path / "notes.txt").write_bytes(

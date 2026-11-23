@@ -2993,7 +2993,9 @@ def test_main_pricing_check_exits_nonzero_for_unknown_pricing(
     )
 
 
-def test_pricing_check_prices_gemini_4_neon(monkeypatch, tmp_path, capsys):
+def test_pricing_check_prices_gemini_4_neon(
+    monkeypatch, tmp_path, capsys, snapshot_review_day
+):
     config = tmp_path / "benchmark.json"
     config.write_text(
         '{"prompt":"hello","models":[{"provider":"gemini","model":"gemini-4-neon"}]}'

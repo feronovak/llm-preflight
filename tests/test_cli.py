@@ -4189,6 +4189,31 @@ def test_audit_source_prints_a_retired_model_without_a_recorded_date(
     )
 
 
+def test_audit_source_prints_a_retiring_model_without_a_recorded_date(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setattr(
+        _retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("openai", "gpt-undated"): {
+                "status": "deprecated",
+                "as_of": "2026-10-01",
+                "source_url": _RETIREMENT_URL,
+            }
+        },
+    )
+    monkeypatch.setattr(cli, "today_utc", lambda: _date(2026, 10, 9))
+    (tmp_path / "app.py").write_text('a = "gpt-undated"\n')
+
+    lines = _audit_text(monkeypatch, capsys, tmp_path)
+
+    assert any(
+        "retiring (date not recorded)" in line and "to be announced" not in line
+        for line in lines
+    )
+
+
 def test_audit_source_terminal_output_shows_a_stale_reference(
     monkeypatch, tmp_path, capsys, retirement_table
 ):

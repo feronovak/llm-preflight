@@ -803,12 +803,16 @@ def estimate_sample_cost(sample: dict[str, Any], model: dict[str, Any]) -> float
 def _foundry_price_applies(model: dict[str, Any]) -> bool:
     """A Foundry price holds only on an Azure host and a priced deployment type."""
     parsed = urllib.parse.urlsplit(str(model.get("base_url") or ""))
+    try:
+        explicit_port = parsed.port
+    except ValueError:
+        return False
     host = parsed.hostname or ""
     path = parsed.path.rstrip("/")
     on_azure = (
         parsed.scheme == "https"
         and not parsed.username
-        and parsed.port is None
+        and explicit_port is None
         and path.endswith("/openai/v1")
         and any(
             host.endswith(suffix)

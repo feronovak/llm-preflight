@@ -1,10 +1,11 @@
 """Foundry MAI rows: retirement, tier, deployment_type and the pricing route rule."""
 
+import json
 from datetime import date
 
 import pytest
 
-from llm_preflight import pricing
+from llm_preflight import migrate, pricing, retirements
 from llm_preflight.client import create_client
 from llm_preflight.contracts import provenance
 from llm_preflight.retirements import (
@@ -133,3 +134,47 @@ def test_mai_models_without_an_official_page_row_are_absent():
     assert ("foundry", "mai-code-2") not in PUBLIC_RETIREMENTS
     assert ("foundry", "mai-code-2-flash") not in PUBLIC_RETIREMENTS
     assert ("foundry", "mai-thinking-1") not in pricing.PUBLIC_PRICING
+
+
+def test_migrate_foundry_replacement_does_not_inherit_deployment_or_type(
+    monkeypatch, tmp_path
+):
+    url = "https://example.test/deprecations"
+    monkeypatch.setattr(
+        retirements,
+        "PUBLIC_RETIREMENTS",
+        {
+            ("foundry", "mai-old"): {
+                "status": "retired",
+                "retirement_date": "2026-10-01",
+                "replacement": "mai-new",
+                "as_of": "2026-11-01",
+                "source_url": url,
+            },
+            ("foundry", "mai-new"): {
+                "status": "active",
+                "as_of": "2026-11-01",
+                "source_url": url,
+            },
+        },
+    )
+    model = {
+        **MODEL,
+        "model": "mai-old",
+        "deployment": "prod-mai",
+        "deployment_type": "regional",
+    }
+    path = tmp_path / "bench.json"
+    path.write_text(json.dumps({"prompt": "hi", "models": [model]}), encoding="utf-8")
+    entry = migrate.build_report(path, date(2026, 11, 5))["models"][0]
+    assert entry["outcome"] == "route_base_url"
+    assert migrate._row_for(model, entry, [model]) is None
+
+
+def test_foundry_price_unknown_for_an_out_of_range_or_non_numeric_port(priced):
+    for url in (
+        "https://res.openai.azure.com:99999/openai/v1",
+        "https://res.openai.azure.com:abc/openai/v1",
+    ):
+        result = pricing.apply_public_pricing({**MODEL, "base_url": url})
+        assert result["pricing_metadata"]["source"] == "unknown"

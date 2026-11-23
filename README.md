@@ -14,7 +14,8 @@ Define the JSON shape, routing labels, or exact output your feature needs.
 Check responses against those rules, preview provider requests and estimated
 cost, and keep the decision, latency and cost as evidence for the change review.
 It also tells you which literal model IDs in your code are retired or retiring
-(Anthropic, OpenAI and selected Gemini models).
+(Anthropic, OpenAI and selected Gemini models; Foundry `MAI-Thinking-1` for
+configured models, not the source scan).
 
 A passing run is evidence for your account, prompts and validators. It is not
 production approval.

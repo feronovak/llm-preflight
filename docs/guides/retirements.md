@@ -3,8 +3,8 @@
 **Last reviewed:** 2026-11-18 · **As of:** v2.25.8
 
 Providers retire models on published schedules. llm-preflight bundles a
-hand-reviewed snapshot of the official Anthropic, OpenAI and selected Gemini
-deprecation/model pages
+hand-reviewed snapshot of the official Anthropic, OpenAI, selected Gemini and Foundry
+(`MAI-Thinking-1`) deprecation/model pages
 and reports, for every model ID it meets, whether that page lists it as
 retired or retiring, the retirement date, and the replacement the provider
 names. No network request is made; the snapshot ships with the package.

@@ -378,3 +378,54 @@ def test_routes_fingerprint_distinguishes_routes_that_mask_alike():
 
     assert first["models"][0]["base_url"] == second["models"][0]["base_url"]
     assert first["provenance"]["routes_sha256"] != second["provenance"]["routes_sha256"]
+
+
+@pytest.mark.parametrize(("response", "code"), [("yes", 3), ("nope", 1)])
+def test_cli_mock_replay_exits_as_the_run_did(monkeypatch, tmp_path, response, code):
+    config = {
+        "prompt": "hi",
+        "validation": {"exact": "yes"},
+        "models": [
+            {
+                "provider": "mock",
+                "model": "m",
+                "response": response,
+                "latency_seconds": 0.001,
+            }
+        ],
+        "repetitions": 1,
+        "warmups": 0,
+    }
+    path = tmp_path / "benchmark.json"
+    path.write_text(json.dumps(config))
+    saved = tmp_path / "saved"
+    codes = []
+    for index in (0, 1):
+        argv = (
+            (str(path), "--no-env-file", "--output", str(saved))
+            if index == 0
+            else ("--replay", str(next(saved.glob("*.json"))), "--no-env-file")
+        )
+        monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+        with pytest.raises(SystemExit) as exc:
+            cli.main()
+        codes.append(exc.value.code)
+    assert codes == [code, code]
+
+
+def test_replayed_openai_responses_model_uses_the_responses_endpoint():
+    source = {
+        "provider": "openai",
+        "model": "gpt-x",
+        "base_url": "https://api.openai.com/v1",
+        "adapter": "openai_responses",
+    }
+    result = {
+        "source_config": {"prompt": "hi", "models": [source]},
+        "models": [
+            {"provider": "openai", "model": "gpt-x", "base_url": source["base_url"]}
+        ],
+    }
+    model = features.replay_config(result)["models"][0]
+    replayed = client.create_client(model, 1.0)
+    assert replayed.endpoint() == "https://api.openai.com/v1/responses"

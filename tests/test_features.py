@@ -1248,3 +1248,33 @@ def test_replay_config_matches_by_name_and_skips_unmatched_or_ambiguous():
         {"provider": "mock", "model": "m", "adapter": "b"}
     )
     assert "adapter" not in replay_config(result)["models"][0]
+
+
+def _header_file():
+    prod = {"provider": "mock", "model": "m", "base_url": "https://prod.test/v1"}
+    stage = {"provider": "mock", "model": "m", "base_url": "https://stage.test/v1"}
+    return {
+        "models": [{**prod, "headers": {"X-Token": "PROD"}}],
+        "environments": {
+            "ci": {"models": [{**stage, "headers": {"X-Token": "STAGING"}}]}
+        },
+    }
+
+
+def test_replay_config_sends_headers_only_to_the_route_that_carried_them():
+    recorded = {"provider": "mock", "model": "m", "base_url": "https://stage.test/v1"}
+    result = _replay_result(recorded, dict(recorded))
+    model = replay_config(result, _header_file())["models"][0]
+    assert model["headers"] == {"X-Token": "STAGING"}
+    other = {"provider": "mock", "model": "m", "base_url": "https://other.test/v1"}
+    result = _replay_result(other, dict(other))
+    assert "headers" not in replay_config(result, _header_file())["models"][0]
+
+
+def test_replay_config_finds_headers_of_alias_entries_and_refuses_conflicts():
+    entry = {"provider": "mock", "model": "m", "headers": {"X": "1"}}
+    aliased = {"models": ["fast"], "aliases": {"fast": entry}}
+    result = _replay_result({"provider": "mock", "model": "m"})
+    assert replay_config(result, aliased)["models"][0]["headers"] == {"X": "1"}
+    clash = {"models": [entry, {**entry, "headers": {"X": "2"}}]}
+    assert "headers" not in replay_config(result, clash)["models"][0]

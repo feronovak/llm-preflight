@@ -770,21 +770,54 @@ def _matching_source_model(
     return {}
 
 
-def _source_model_extras(
-    model: dict[str, Any],
-    recorded: dict[str, Any] | None,
-    source: dict[str, Any] | None,
+def _file_model_entries(source: dict[str, Any] | None) -> Iterator[Any]:
+    """Every model a raw config can run: its models, environments and aliases."""
+    if not isinstance(source, dict):
+        return
+    aliases = source.get("aliases")
+    aliases = aliases if isinstance(aliases, dict) else {}
+    environments = source.get("environments")
+    groups = [source.get("models")]
+    if isinstance(environments, dict):
+        groups += [
+            env.get("models") for env in environments.values() if isinstance(env, dict)
+        ]
+    for group in groups:
+        for entry in group if isinstance(group, list) else []:
+            yield aliases.get(entry) if isinstance(entry, str) else entry
+    yield from aliases.values()
+
+
+def _route(entry: dict[str, Any], provider: str) -> Any:
+    return entry.get("base_url") or PROVIDER_DEFAULTS.get(provider, {}).get("base_url")
+
+
+def _file_headers(
+    model: dict[str, Any], source: dict[str, Any] | None
 ) -> dict[str, Any]:
-    """Keys the result's model rows drop: shape from the record, headers from disk."""
-    extras = {
+    """Headers of the one file entry for this provider, model and route, or none."""
+    provider = model.get("provider", "openai_compatible")
+    found = {
+        json.dumps(entry["headers"], sort_keys=True): entry["headers"]
+        for entry in _file_model_entries(source)
+        if isinstance(entry, dict)
+        and isinstance(entry.get("headers"), dict)
+        and (entry.get("provider") or "openai_compatible") == provider
+        and entry.get("model") == model.get("model")
+        and _route(entry, provider) == _route(model, provider)
+    }
+    return {"headers": next(iter(found.values()))} if len(found) == 1 else {}
+
+
+def _source_model_extras(
+    model: dict[str, Any], recorded: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Keys the result's model rows drop, from the recorded source config."""
+    return {
         key: value
         for key, value in _matching_source_model(model, recorded).items()
         if key in _SOURCE_MODEL_KEYS
     }
-    headers = _matching_source_model(model, source).get("headers")
-    if headers is not None:
-        extras["headers"] = headers
-    return extras
 
 
 def replay_config(
@@ -828,7 +861,7 @@ def replay_config(
                 else {}
             ),
             **{key: pricing[key] for key in pricing_model_keys if key in pricing},
-            **_source_model_extras(model, result["source_config"], source),
+            **_source_model_extras(model, result["source_config"]),
         }
         for model in result["models"]
         for pricing in [
@@ -837,6 +870,8 @@ def replay_config(
             )
         ]
     ]
+    for model in config["models"]:
+        model.update(_file_headers(model, source))
     config["discovery"] = []
     settings = result.get("settings", {})
     for key in ("repetitions", "warmups", "concurrency", "suite_repetitions"):

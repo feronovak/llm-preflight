@@ -73,6 +73,14 @@ OPENROUTER_AUTHORS = {
     "mistral": "mistralai",
     "zai": "z-ai",
 }
+# Price signals reviewed against the official page and closed as no change:
+# (provider, model) -> (bundled in/out, OpenRouter in/out, checked date). Only an
+# exact match on both pairs is listed as acknowledged; any price move fires again.
+ACKNOWLEDGED_PRICE_SIGNALS: dict[
+    tuple[str, str], tuple[tuple[float, float], tuple[float, float], str]
+] = {
+    ("zai", "glm-5.3-flash"): ((0.15, 0.5), (0.0399, 0.0784), "2026-11-21"),
+}
 BOT_WALL_MARKERS = (
     "just a moment",
     "enable javascript",
@@ -395,7 +403,9 @@ def _per_million(value: Any) -> float | None:
 
 
 def openrouter_findings(
-    payload: Any, listed: dict[str, set[str]] | None = None
+    payload: Any,
+    listed: dict[str, set[str]] | None = None,
+    acknowledged: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """`new-model` and `price-signal` findings for covered providers only.
 
@@ -437,12 +447,18 @@ def openrouter_findings(
         if seen_in is None or seen_out is None:
             continue
         if (seen_in, seen_out) != (bundled_in, bundled_out):
-            findings.append(
-                {"key": f"price-signal:{provider}:{model}", "type": "price-signal",
-                 "provider": provider, "model": model,
-                 "bundled_per_million": {"input": bundled_in, "output": bundled_out},
-                 "openrouter_per_million": {"input": seen_in, "output": seen_out}}
-            )  # fmt: skip
+            signal = {
+                "key": f"price-signal:{provider}:{model}", "type": "price-signal",
+                "provider": provider, "model": model,
+                "bundled_per_million": {"input": bundled_in, "output": bundled_out},
+                "openrouter_per_million": {"input": seen_in, "output": seen_out},
+            }  # fmt: skip
+            known = ACKNOWLEDGED_PRICE_SIGNALS.get((provider, model))
+            if known and known[:2] == ((bundled_in, bundled_out), (seen_in, seen_out)):
+                if acknowledged is not None:
+                    acknowledged.append({**signal, "checked": known[2]})
+            else:
+                findings.append(signal)
     return findings
 
 
@@ -571,11 +587,14 @@ def run(
     previous: dict[str, Any] | None,
     read: Any = fetch,
     ignored: list[dict[str, Any]] | None = None,
+    acknowledged: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """All findings plus the snapshot to write."""
     findings, listed = official_findings(read)
     try:
-        findings += openrouter_findings(json.loads(read(OPENROUTER_URL)), listed)
+        findings += openrouter_findings(
+            json.loads(read(OPENROUTER_URL)), listed, acknowledged
+        )
     except (FetchError, ValueError) as error:
         reason = str(error) if isinstance(error, FetchError) else "invalid JSON"
         findings.append(
@@ -625,7 +644,9 @@ def write_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
 
 
 def render_text(
-    findings: list[dict[str, Any]], ignored: list[dict[str, Any]] | None = None
+    findings: list[dict[str, Any]],
+    ignored: list[dict[str, Any]] | None = None,
+    acknowledged: list[dict[str, Any]] | None = None,
 ) -> str:
     lines = [
         f"{item['type']}: {item['key']}"
@@ -638,6 +659,10 @@ def render_text(
             f"ignored page change (no cited model, price, date or retirement word): {item['url']}"
         )
         lines += [f"  {line}" for line in item["changed_lines"]]
+    for item in acknowledged or []:
+        lines.append(
+            f"acknowledged price signal: {item['key']} (checked {item['checked']})"
+        )
     return "\n".join(lines)
 
 
@@ -653,11 +678,15 @@ def main(argv: list[str] | None = None, read: Any = fetch) -> int:
         print(f"source watch: cannot read previous snapshot: {error}", file=sys.stderr)
         return 2
     ignored: list[dict[str, Any]] = []
-    findings, snapshot = run(previous, read, ignored)
+    acknowledged: list[dict[str, Any]] = []
+    findings, snapshot = run(previous, read, ignored, acknowledged)
     print(
-        json.dumps({"findings": findings, "ignored": ignored}, indent=2)
+        json.dumps(
+            {"findings": findings, "ignored": ignored, "acknowledged": acknowledged},
+            indent=2,
+        )
         if args.json
-        else render_text(findings, ignored)
+        else render_text(findings, ignored, acknowledged)
     )
     if args.write:
         try:

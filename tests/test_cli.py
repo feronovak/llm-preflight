@@ -3305,18 +3305,28 @@ def test_replay_loads_env_file_beside_the_recorded_source_config(tmp_path, monke
     assert loaded == [source_config.parent / ".env.production"]
 
 
-def test_replay_rejects_a_source_config_with_a_wrong_typed_presets_field(
-    tmp_path, monkeypatch, capsys
+@pytest.mark.parametrize(
+    ("source_config", "message"),
+    [
+        (
+            {"prompt": "Reply with ok.", "models": [], "presets": 7},
+            "'presets' must be a list of strings",
+        ),
+        (
+            {"prompt": "Reply with ok.", "models": 5},
+            "'models' must be a list, got int",
+        ),
+    ],
+    ids=["presets", "models"],
+)
+def test_replay_rejects_a_source_config_with_a_wrong_typed_field(
+    tmp_path, monkeypatch, capsys, source_config, message
 ):
     result_path = tmp_path / "run.json"
     result_path.write_text(
         json.dumps(
             {
-                "source_config": {
-                    "prompt": "Reply with ok.",
-                    "models": [],
-                    "presets": 7,
-                },
+                "source_config": source_config,
                 "models": [],
                 "settings": {},
             }
@@ -3330,7 +3340,7 @@ def test_replay_rejects_a_source_config_with_a_wrong_typed_presets_field(
         cli.main()
 
     assert exc_info.value.code == 2
-    assert "'presets' must be a list of strings" in capsys.readouterr().err
+    assert message in capsys.readouterr().err
 
 
 def test_models_from_cli_rejects_an_unprefixed_non_openai_model_name():
@@ -4825,6 +4835,8 @@ _ISSUE_SHAPES = {
         {"prompt": "hi", "models": _MOCK_MODELS, "presets": 5},
         "'presets'",
     ),
+    "models-int": ({"prompt": "hi", "models": 5}, "'models'"),
+    "prompt-int": ({"prompt": 5, "models": _MOCK_MODELS}, "'prompt'"),
 }
 
 
@@ -4905,6 +4917,116 @@ def test_environment_overlay_with_malformed_presets_is_a_config_error(
     err = capsys.readouterr().err
     assert exc.value.code == 2
     assert "'presets' must be a list of strings" in err
+
+
+@pytest.mark.parametrize(
+    "overlay", [{"models": 5}, {"prompt": 5}], ids=["models", "prompt"]
+)
+def test_environment_overlay_with_numeric_models_or_prompt_is_a_config_error(
+    monkeypatch, tmp_path, capsys, overlay
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "models": _MOCK_MODELS,
+                "environments": {"ci": overlay},
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["llm-preflight", str(config), "--dry-run", "--env", "ci"]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert f"'{next(iter(overlay))}' must be" in err
+    assert "Traceback" not in err
+
+
+def _exit_code(monkeypatch, capsys, argv):
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", *argv])
+    try:
+        cli.main()
+    except SystemExit as exc:
+        code = exc.code
+    else:
+        code = 0
+    assert "Traceback" not in capsys.readouterr().err
+    return code
+
+
+def test_numeric_prompt_real_run_is_a_config_error(monkeypatch, tmp_path, capsys):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"prompt": 5, "models": _MOCK_MODELS}))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--no-save"])
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    err = capsys.readouterr().err
+    assert exc.value.code == 2
+    assert "'prompt'" in err
+    assert "Traceback" not in err
+
+
+def test_numeric_prompt_with_selected_tests_is_a_config_error(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"prompt": 5, "models": _MOCK_MODELS}))
+
+    code = _exit_code(
+        monkeypatch,
+        capsys,
+        [str(config), "--tests", "structured-output-check", "--dry-run"],
+    )
+
+    assert code == 2
+
+
+_REPLACEMENT_CONFIGS = {
+    "prompt-flag": (
+        {"prompts": [{"name": "a", "prompt": "hi"}]},
+        ["--prompt", "a"],
+    ),
+    "env": ({"environments": {"ci": {"prompt": "hi"}}}, ["--env", "ci"]),
+}
+
+
+@pytest.mark.parametrize("mode", [["--dry-run"], ["--doctor"], ["--no-save"]])
+@pytest.mark.parametrize("replacement", sorted(_REPLACEMENT_CONFIGS))
+@pytest.mark.parametrize("prompt", [5, False, 0])
+def test_replaced_numeric_prompt_keeps_its_exit_codes(
+    monkeypatch, tmp_path, capsys, prompt, replacement, mode
+):
+    extra, flags = _REPLACEMENT_CONFIGS[replacement]
+    codes = []
+    for base in ("hi", prompt):
+        config = tmp_path / f"{len(codes)}.json"
+        config.write_text(json.dumps({"prompt": base, "models": _MOCK_MODELS, **extra}))
+        codes.append(_exit_code(monkeypatch, capsys, [str(config), *flags, *mode]))
+
+    assert codes[1] == codes[0]
+
+
+@pytest.mark.parametrize(
+    "extra", [{"prompt": "hi"}, {"prompt": None}, {"prompt": ""}], ids=str
+)
+def test_string_null_and_empty_prompt_still_dry_run(
+    monkeypatch, tmp_path, capsys, extra
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(json.dumps({"models": _MOCK_MODELS, **extra}))
+    monkeypatch.setattr(sys, "argv", ["llm-preflight", str(config), "--dry-run"])
+
+    cli.main()
+
+    assert "Traceback" not in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("flag", ["--dry-run", "--doctor"])

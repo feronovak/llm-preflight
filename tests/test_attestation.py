@@ -2545,3 +2545,16 @@ def test_card_record_needs_the_svg_format_and_output_writes_a_file(
     assert code == 0
     assert out == "Saved svg report to card.svg\n"
     assert (tmp_path / "card.svg").read_text(encoding="utf-8").startswith("<svg ")
+
+
+def test_current_fingerprints_with_a_numeric_base_prompt_and_selected_prompt(tmp_path):
+    config = {
+        "prompt": 5,
+        "prompts": [{"name": "a", "prompt": "hi"}],
+        "models": [{"provider": "mock", "model": "local", "response": "ok"}],
+    }
+    path = _config(tmp_path, config)
+
+    current = attestation.current_fingerprints(path, {"prompt": "a"})
+
+    assert len(current["contract_sha256"]) == 64

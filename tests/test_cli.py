@@ -3305,18 +3305,28 @@ def test_replay_loads_env_file_beside_the_recorded_source_config(tmp_path, monke
     assert loaded == [source_config.parent / ".env.production"]
 
 
-def test_replay_rejects_a_source_config_with_a_wrong_typed_presets_field(
-    tmp_path, monkeypatch, capsys
+@pytest.mark.parametrize(
+    ("source_config", "message"),
+    [
+        (
+            {"prompt": "Reply with ok.", "models": [], "presets": 7},
+            "'presets' must be a list of strings",
+        ),
+        (
+            {"prompt": "Reply with ok.", "models": 5},
+            "'models' must be a list, got int",
+        ),
+    ],
+    ids=["presets", "models"],
+)
+def test_replay_rejects_a_source_config_with_a_wrong_typed_field(
+    tmp_path, monkeypatch, capsys, source_config, message
 ):
     result_path = tmp_path / "run.json"
     result_path.write_text(
         json.dumps(
             {
-                "source_config": {
-                    "prompt": "Reply with ok.",
-                    "models": [],
-                    "presets": 7,
-                },
+                "source_config": source_config,
                 "models": [],
                 "settings": {},
             }
@@ -3330,7 +3340,7 @@ def test_replay_rejects_a_source_config_with_a_wrong_typed_presets_field(
         cli.main()
 
     assert exc_info.value.code == 2
-    assert "'presets' must be a list of strings" in capsys.readouterr().err
+    assert message in capsys.readouterr().err
 
 
 def test_models_from_cli_rejects_an_unprefixed_non_openai_model_name():

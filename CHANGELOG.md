@@ -11,7 +11,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- A `models` value that is a number or boolean now gives a config error naming the field and exits 2, instead of a traceback, also inside a selected `environments` entry; MCP reports the same error. A top-level `prompt` that is a number or boolean now does the same under `--dry-run`, `--doctor` and a run, before any provider request, instead of a traceback after the run's requests, or exit 0 under `--doctor` and for `0`/`false` under `--dry-run`. A `prompt` that `--prompt` or `--env` replaces still runs as before.
+- A `models` value that is a number or boolean now gives a config error naming the field and exits 2, instead of a traceback, also inside a selected `environments` entry; MCP reports the same error. A top-level `prompt` that is a number or boolean now does the same under `--dry-run`, `--doctor` and a run, before any provider request, instead of a traceback after the run's requests, or exit 0 under `--doctor`, for `0`/`false` under `--dry-run`, and under `--dry-run` for any number or boolean `prompt` when `profiles`, `--tests` or `--migration-check` selected test profiles (a real run of those configs crashed). A `prompt` that `--prompt` or `--env` replaces still runs as before.
 
 ### Changed
 

@@ -923,12 +923,12 @@ _MISTRAL_MEDIUM = {
 }
 _MISTRAL_LARGE_4 = {"provider": "mistral", "model": "mistral-large-4"}
 _PINNED_AGENT_SMOKE_REQUESTS = [
-    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",
-    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",
-    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",
-    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",
-    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",
-    "ea99718f0b030820e9e48e9875cc67c6ce31f016b43e27f5e2fbc3a2b06a2c53",
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",  # pragma: allowlist secret
+    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",  # pragma: allowlist secret
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "ea99718f0b030820e9e48e9875cc67c6ce31f016b43e27f5e2fbc3a2b06a2c53",  # pragma: allowlist secret
 ]
 
 
@@ -951,11 +951,11 @@ def _agent_smoke_provenance(models, request=None):
     [
         (
             [_OPENAI],
-            "ef5d75242d21f9daa20a0c8addec4869ea8b8ae4926bad604653a80c55b5b2d3",
+            "ef5d75242d21f9daa20a0c8addec4869ea8b8ae4926bad604653a80c55b5b2d3",  # pragma: allowlist secret
         ),
         (
             [_OPENAI, _MISTRAL_MEDIUM],
-            "7ef147f1db4663981a4106539b6a1e815dd5878b44493433fb71c747aba0151a",
+            "7ef147f1db4663981a4106539b6a1e815dd5878b44493433fb71c747aba0151a",  # pragma: allowlist secret
         ),
     ],
 )

@@ -485,7 +485,8 @@ def _with_mistral_top_p(
     profile_request: dict[str, Any], run_request: dict[str, Any]
 ) -> dict[str, Any]:
     """Copy the run request's Mistral ``top_p`` into a profile's provider options."""
-    run_mistral = (run_request.get("provider_options") or {}).get("mistral")
+    run_options = run_request.get("provider_options")
+    run_mistral = run_options.get("mistral") if isinstance(run_options, dict) else None
     provider_options = profile_request.get("provider_options")
     if (
         not isinstance(run_mistral, dict)

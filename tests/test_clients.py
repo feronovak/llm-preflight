@@ -2962,3 +2962,22 @@ def test_other_mistral_model_keeps_builtin_tests(monkeypatch, tmp_path, capsys, 
         monkeypatch, tmp_path, capsys, config, "--tests", tests
     )
     assert code == 0, err
+
+
+@pytest.mark.parametrize("provider_options", ["x", [1], 5])
+def test_native_mistral_large_4_builtin_tests_refuse_non_object_provider_options(
+    monkeypatch, tmp_path, capsys, provider_options
+):
+    from llm_preflight.features import doctor_report
+
+    config = _mistral_large_4_config(
+        "mistral-large-4", {"provider_options": provider_options}
+    )
+    code, err = _mistral_dry_run(
+        monkeypatch, tmp_path, capsys, config, "--tests", "agent-smoke"
+    )
+    assert code == 2
+    assert "top_p" in err
+    report = doctor_report({**config, "profiles": "agent-smoke"})
+    assert report["ok"] is False
+    assert any("top_p" in check["message"] for check in report["checks"])

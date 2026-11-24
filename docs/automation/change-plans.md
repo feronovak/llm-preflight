@@ -34,7 +34,10 @@ The JSON `change_plan` object reports `files_unreadable` (a count, named as in
 (`true` when any file was unreadable). A path Git lists as deleted but the
 command may not look at is reported as unreadable, not as deleted. A directory
 Git could not open is listed with a trailing `/`, because the files in it were
-not listed. The plan does not treat a file it counted as unreadable as touching no
+not listed; that entry counts as one, and tracked files under it that could not be
+read are listed and counted as well. Each path is listed once, however many of its
+copies (reference, index, work tree) could not be read, and `files_unreadable` is the
+length of `unreadable_files`. The plan does not treat a file it counted as unreadable as touching no
 model ID, prompt, schema or tool definition, so `requires_preflight_review` is
 also `true`, and the first note says the plan is incomplete. The text output
 prints the same sentence and the paths. A deleted file is read from the Git

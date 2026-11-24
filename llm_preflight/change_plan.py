@@ -42,6 +42,11 @@ class _Findings:
         self.triggers: list[dict[str, Any]] = []
         self.unreadable: list[str] = []
 
+    def unreadable_path(self, shown: str) -> None:
+        """Record a path once, however many of its copies could not be read."""
+        if shown not in self.unreadable:
+            self.unreadable.append(shown)
+
     def add(self, text: str, relative: str, source: Path, change: str | None) -> None:
         shown = display_path(relative)
         if _not_utf8(text):
@@ -50,7 +55,7 @@ class _Findings:
             # in one is not flagged: an accepted limit, documented. A deleted
             # file's old text is still scanned, as before.
             if _audit_selects(relative, source):
-                self.unreadable.append(shown)
+                self.unreadable_path(shown)
                 return
             if change != "deleted":
                 return
@@ -81,14 +86,15 @@ def git_change_plan(repository: Path, reference: str = "HEAD") -> dict[str, Any]
     _validate_reference(reference)
     listing = _changed_files(root, reference)
     found = _Findings()
-    found.unreadable.extend(display_path(item) for item in listing.unopened)
+    for item in listing.unopened:
+        found.unreadable_path(display_path(item))
     # Git reports a path it cannot lstat as deleted; only a missing path is.
     gone = {item for item in listing.deleted if _may_be_deleted(root / item)}
     # Paths stay as Git listed them for file and Git access, and are displayed
     # as UTF-8 text.
     for relative in listing.changed:
         if relative in listing.deleted and relative not in gone:
-            found.unreadable.append(display_path(relative))
+            found.unreadable_path(display_path(relative))
             continue
         if relative in gone:
             previous = _git(root, "show", f"{reference}:{relative}").stdout
@@ -127,7 +133,7 @@ def _scan_work_tree(root: Path, relative: str, staged: bool, found: _Findings) -
     except (OSError, RuntimeError):
         # Unknown is never "no contract surface": report it. A symlink loop
         # raises RuntimeError from resolve() before Python 3.13.
-        found.unreadable.append(display_path(relative))
+        found.unreadable_path(display_path(relative))
         return
     if text is not None:
         found.add(text, relative, path, None)
@@ -283,8 +289,9 @@ def _unopened_directories(stderr: str) -> list[str]:
         if directory.is_absolute() or ".." in directory.parts:
             continue
         shown = directory.as_posix()
-        if shown not in found:
-            found.append(shown if shown == "." else shown + "/")
+        entry = shown if shown == "." else shown + "/"
+        if entry not in found:
+            found.append(entry)
     return found
 
 

@@ -531,12 +531,15 @@ def _locked_directory_repository(workspace):
     _git(workspace, "commit", "-m", "initial")
 
 
-def _lock_directory(monkeypatch, directory):
+def _lock_directory(monkeypatch, directory, names=()):
     directory.chmod(0)
     if os.geteuid() == 0:  # root ignores the mode: simulate the denial
         for method in ("lstat", "stat", "read_text"):
             _deny_reading(monkeypatch, "p.py", method)
         _deny_reading(monkeypatch, "new.py", "stat")
+        for name in names:
+            for method in ("lstat", "stat", "read_text"):
+                _deny_reading(monkeypatch, name, method)
 
 
 def test_git_change_plan_reports_a_file_in_a_directory_it_may_not_enter(
@@ -676,6 +679,80 @@ def test_git_change_plan_reports_a_directory_git_could_not_open(tmp_path, monkey
     assert plan["unreadable_files"] == ["secret/"]
     assert plan["plan_incomplete"] is True
     assert plan["requires_preflight_review"] is True
+
+
+def test_git_change_plan_counts_a_non_utf8_file_removed_from_the_index_once(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "s.py").write_bytes("x = 1\n".encode("utf-16"))
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "utf16")
+    _git(tmp_path, "rm", "--cached", "-q", "s.py")
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["unreadable_files"] == ["s.py"]
+    assert plan["files_unreadable"] == 1
+    assert plan["notes"][0].startswith("Plan incomplete: 1 file ")
+
+
+def test_git_change_plan_counts_a_staged_then_edited_non_utf8_file_once(tmp_path):
+    _commit_initial(tmp_path)
+    (tmp_path / "s.py").write_bytes("x = 1\n".encode("utf-16"))
+    _git(tmp_path, "add", "s.py")
+    (tmp_path / "s.py").write_bytes("x = 2\n".encode("utf-16"))
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["unreadable_files"] == ["s.py"]
+    assert plan["files_unreadable"] == 1
+
+
+def _warn_unopened(monkeypatch, warning):
+    """Add Git's warning to the untracked listing, as a locked directory would."""
+    real = change_plan_module.run_git
+
+    def warned(repository, *arguments, **kwargs):
+        done = real(repository, *arguments, **kwargs)
+        if "--others" in arguments:
+            done.stderr = warning
+        return done
+
+    monkeypatch.setattr(change_plan_module, "run_git", warned)
+
+
+def test_git_change_plan_lists_a_directory_git_warns_about_twice_once(
+    tmp_path, monkeypatch
+):
+    _commit_initial(tmp_path)
+    _warn_unopened(monkeypatch, "warning: could not open directory 'secret/': x\n" * 2)
+
+    plan = git_change_plan(tmp_path, "HEAD")
+
+    assert plan["unreadable_files"] == ["secret/"]
+    assert plan["files_unreadable"] == 1
+
+
+def test_git_change_plan_counts_an_unopened_directory_and_each_tracked_file_in_it(
+    tmp_path, monkeypatch
+):
+    _locked_directory_repository(tmp_path)
+    sub = tmp_path / "sub"
+    (sub / "b.py").write_text("y = 1\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "second")
+    (sub / "p.py").write_text("x = 2\n")
+    (sub / "b.py").write_text("y = 2\n")
+    _lock_directory(monkeypatch, sub, ("b.py",))
+    if os.geteuid() == 0:  # root lists the directory: add Git's warning
+        _warn_unopened(monkeypatch, "warning: could not open directory 'sub/': x\n")
+    try:
+        plan = git_change_plan(tmp_path, "HEAD")
+    finally:
+        sub.chmod(0o755)
+
+    assert plan["unreadable_files"] == ["sub/", "sub/b.py", "sub/p.py"]
+    assert plan["files_unreadable"] == 3
+    assert "3 files" in plan["notes"][0]
 
 
 def test_git_change_plan_reports_a_symlink_loop_as_unreadable(tmp_path):

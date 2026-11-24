@@ -2860,7 +2860,7 @@ def test_mistral_large_4_refusal_names_every_remedy(request_options):
     assert "provider_options.mistral.top_p to 1" in message
     assert "omit temperature" in message
     assert "built-in tests" in message
-    assert "custom prompt" in message
+    assert "run request" in message
     assert "remove the low-latency/structured preset" not in message
 
 
@@ -2900,7 +2900,7 @@ def _mistral_dry_run(monkeypatch, tmp_path, capsys, config, *extra):
         "agent-smoke",
     ],
 )
-def test_native_mistral_large_4_builtin_structured_tests_refused_with_accurate_message(
+def test_native_mistral_large_4_builtin_structured_tests_run_with_top_p_one(
     monkeypatch, tmp_path, capsys, model, tests
 ):
     config = _mistral_large_4_config(
@@ -2909,10 +2909,25 @@ def test_native_mistral_large_4_builtin_structured_tests_refused_with_accurate_m
     code, err = _mistral_dry_run(
         monkeypatch, tmp_path, capsys, config, "--tests", tests
     )
+    assert code == 0, err
+
+
+@pytest.mark.parametrize(
+    "provider_options",
+    [{}, {"mistral": {"top_p": 0.9}}, {"all": {"top_p": 1}}, {"mistral": {}}],
+)
+def test_native_mistral_large_4_builtin_tests_still_refused_without_top_p_one(
+    monkeypatch, tmp_path, capsys, provider_options
+):
+    config = _mistral_large_4_config(
+        "mistral-large-4", {"provider_options": provider_options}
+    )
+    code, err = _mistral_dry_run(
+        monkeypatch, tmp_path, capsys, config, "--tests", "agent-smoke"
+    )
     assert code == 2
+    assert "top_p" in err
     assert "built-in tests" in err
-    assert "custom prompt" in err
-    assert "remove the low-latency/structured preset" not in err
 
 
 @pytest.mark.parametrize(

@@ -2226,3 +2226,35 @@ def test_dry_run_plan_tool_reports_ignored_owner_price(tmp_path):
     assert [w["code"] for w in warnings if w["code"] == "owner_price_ignored"] == [
         "owner_price_ignored"
     ]
+
+
+def test_run_tool_agent_smoke_on_mistral_large_4_with_top_p_one(tmp_path, monkeypatch):
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    (tmp_path / "benchmark.json").write_text(
+        json.dumps(
+            {
+                "prompt": "hi",
+                "profiles": "agent-smoke",
+                "models": [{"provider": "mistral", "model": "mistral-large-4"}],
+                "request": {
+                    "temperature": 0,
+                    "max_output_tokens": 128,
+                    "provider_options": {"mistral": {"top_p": 1}},
+                },
+            }
+        )
+    )
+    plan = mcp._response(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "dry_run_plan",
+                "arguments": {"config": "benchmark.json"},
+            },
+        },
+        tmp_path,
+    )
+    assert plan["result"]["isError"] is False
+    assert plan["result"]["structuredContent"]["ok"] is True

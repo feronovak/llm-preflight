@@ -8,7 +8,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from .eligibility import IncompatibleCatalogTypeError, incompatible_text_smoke_reason
@@ -101,6 +101,18 @@ def _is_number(value: Any, expected: int) -> bool:
     )
 
 
+MISTRAL_GREEDY_TOP_P_MODELS = frozenset({"mistral-large-4", "mistral-large-4-0"})
+
+
+def needs_mistral_top_p(models: Sequence[dict[str, Any]]) -> bool:
+    """Whether any route is a Mistral model that needs ``top_p`` 1 at temperature 0."""
+    return any(
+        model.get("provider") == "mistral"
+        and model.get("model") in MISTRAL_GREEDY_TOP_P_MODELS
+        for model in models
+    )
+
+
 def _reject_mistral_greedy_without_top_p_one(
     options: dict[str, Any], provider_options: dict[str, Any]
 ) -> None:
@@ -110,8 +122,8 @@ def _reject_mistral_greedy_without_top_p_one(
             "Mistral Large 4 rejects temperature 0 unless top_p is 1 (greedy "
             "sampling); set provider_options.mistral.top_p to 1 or omit temperature "
             "in the run request. The built-in tests that use the structured preset "
-            "(such as agent-smoke) cannot run on this model: use a custom prompt "
-            "with its own request instead"
+            "(such as agent-smoke) take top_p from provider_options.mistral.top_p "
+            "in the run request"
         )
 
 
@@ -290,7 +302,7 @@ def validate_native_request_options(
             raise ValueError(
                 "native text preflight does not execute tools or hosted retrieval"
             )
-    if provider == "mistral" and model_id in {"mistral-large-4", "mistral-large-4-0"}:
+    if provider == "mistral" and model_id in MISTRAL_GREEDY_TOP_P_MODELS:
         _reject_mistral_greedy_without_top_p_one(options, provider_options)
     if provider == "moonshot":
         cache_options = provider_options.get("prompt_cache_options", {})

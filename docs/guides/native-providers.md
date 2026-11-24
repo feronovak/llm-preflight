@@ -138,9 +138,10 @@ the three commands above do not need a key or contact the provider.
   set `top_p` to 1 as well. The built-in tests that use the `structured`
   preset (`structured-output-check`, `strict-json-extraction`,
   `code-patch-summary`, `source-grounded-quiz`, and the `agent-smoke` suite
-  that contains them) cannot run on this model, because they replace
-  `provider_options` and drop `top_p`; use a custom prompt with its own request
-  instead.
+  that contains them) replace `provider_options` with their own, so when a run
+  has a Mistral Large 4 route they take `top_p` from the run request's
+  `provider_options.mistral.top_p`. Set it to 1 there; without it they are
+  refused like any other request.
 - Cohere's adapter uses v2 Chat and bills from `usage.billed_units`, not the
   larger count that can include provider-injected tokens. Cohere publishes no
   per-token price for Command A+, so the snapshot has no bundled price: cost is

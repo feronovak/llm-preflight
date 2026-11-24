@@ -13,6 +13,7 @@ from unicodedata import east_asian_width
 from .catalog import resolve_models
 from .client import (
     PROVIDER_DEFAULTS,
+    needs_mistral_top_p,
     requested_inference_geo,
     validate_native_request_options,
 )
@@ -131,7 +132,9 @@ def _retry_max_attempts(request: dict[str, Any]) -> int:
     return max(1, int(retry.get("max_attempts", 2)))
 
 
-def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+def _budget_work(
+    config: dict[str, Any], models: list[dict[str, Any]]
+) -> list[tuple[str, dict[str, Any]]]:
     """Return every nominal request shape, including warmups, for cost safety."""
     # Same default as the runner: presets expand onto an empty request.
     request = dict(
@@ -146,8 +149,14 @@ def _budget_work(config: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 
     work: list[tuple[str, dict[str, Any]]] = []
     repetitions = int(config.get("suite_repetitions", 1))
+    keep_top_p = needs_mistral_top_p(models)
     for profile in select_test_profiles(config, profile_selector_text(selector)):
-        options = profile_request_options(request, profile, config.get("presets"))
+        options = profile_request_options(
+            request,
+            profile,
+            config.get("presets"),
+            keep_mistral_top_p=keep_top_p,
+        )
         work.extend([(profile["cases"][0]["prompt"], options)] * warmups)
         if "concurrency_levels" in profile:
             for level in profile["concurrency_levels"]:
@@ -230,7 +239,7 @@ def estimate_budget(
         models if models is not None else resolve_models(config)
     )
     models = pricing_resolution["models"]
-    work = _budget_work(config)
+    work = _budget_work(config, models)
     requests = len(work) * len(models)
     possible_requests = len(models) * sum(
         _retry_max_attempts(options) for _, options in work
@@ -367,7 +376,7 @@ def doctor_report(
         provider = model.get("provider", "openai_compatible")
         resolved = {**PROVIDER_DEFAULTS.get(provider, {}), **model}
         try:
-            for _, options in _budget_work(config):
+            for _, options in _budget_work(config, models):
                 validate_native_request_options(model, options)
         except ValueError as exc:
             checks.append({"ok": False, "model": model["model"], "message": str(exc)})

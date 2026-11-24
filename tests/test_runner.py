@@ -799,7 +799,7 @@ def test_a_builtin_test_applies_its_own_presets_over_the_parent_request(
     }
     budgeted = {
         _request_fingerprint(options)
-        for _, options in _budget_work({**prepared, "profiles": selector})
+        for _, options in _budget_work({**prepared, "profiles": selector}, [])
     }
     assert sent == recorded == gated == budgeted
     assert len(sent) == 2
@@ -3446,3 +3446,72 @@ def test_custom_prompt_profile_rejects_numeric_presets(presets):
     prompt = {"name": "a", "prompt": "x", "presets": presets}
     with pytest.raises(ValueError, match="'presets' of prompt 'a' must be a list"):
         custom_prompt_profile(prompt)
+
+
+def _mistral_agent_smoke_config(models):
+    return {
+        "name": "mistral-builtin",
+        "request": {
+            "temperature": 0,
+            "max_output_tokens": 128,
+            "provider_options": {"mistral": {"top_p": 1}},
+        },
+        "models": models,
+        "warmups": 0,
+        "suite_repetitions": 1,
+    }
+
+
+def _capture_runs(monkeypatch):
+    captured = []
+
+    class FakeClient:
+        model: ClassVar = {"base_url": "https://example.test"}
+
+        def run(self, prompt, options):
+            captured.append(dict(options))
+            return {
+                "ok": True,
+                "latency_seconds": 1,
+                "ttft_seconds": 0.1,
+                "output_tokens_per_second": 2,
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "response_chars": 2,
+                "response": "ok",
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        "llm_preflight.runner.create_client", lambda model, timeout: FakeClient()
+    )
+    return captured
+
+
+def test_agent_smoke_run_on_mistral_large_4_sends_top_p_one(monkeypatch):
+    captured = _capture_runs(monkeypatch)
+    config = _mistral_agent_smoke_config(
+        [{"provider": "mistral", "model": "mistral-large-4"}]
+    )
+    run_benchmark(config, "agent-smoke")
+    assert captured
+    for options in captured:
+        assert options["temperature"] == 0
+        assert options["provider_options"]["mistral"]["top_p"] == 1
+
+
+def test_models_filter_without_mistral_large_4_keeps_fingerprints(monkeypatch):
+    from llm_preflight.contracts import _request_fingerprint
+
+    captured = _capture_runs(monkeypatch)
+    models = [{"provider": "openai", "model": "gpt-5.5"}]
+    result = run_benchmark(_mistral_agent_smoke_config(models), "agent-smoke")
+    sent = {_request_fingerprint(options) for options in captured}
+    assert sent == {e["request_sha256"] for e in result["provenance"]["prompts"]}
+    structured = [
+        options["provider_options"]["mistral"]
+        for options in captured
+        if "response_format" in options["provider_options"].get("mistral", {})
+    ]
+    assert structured
+    assert all("top_p" not in mistral for mistral in structured)

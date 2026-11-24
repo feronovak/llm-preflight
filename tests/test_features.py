@@ -1366,3 +1366,22 @@ def test_replay_config_name_fallback_ignores_an_unnamed_entry_of_another_provide
         "models": [{"provider": "openai", "model": "gpt-x", "name": "gpt-x"}],
     }
     assert "adapter" not in replay_config(result)["models"][0]
+
+
+def test_doctor_with_profiles_accepts_mistral_large_4_with_top_p_one(monkeypatch):
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    config = {
+        "prompt": "hi",
+        "profiles": "agent-smoke",
+        "models": [{"provider": "mistral", "model": "mistral-large-4"}],
+        "request": {
+            "temperature": 0,
+            "max_output_tokens": 128,
+            "provider_options": {"mistral": {"top_p": 1}},
+        },
+    }
+    report = doctor_report(config)
+    assert not [check for check in report["checks"] if "top_p" in check["message"]]
+    config["request"]["provider_options"] = {}
+    refused = doctor_report(config)
+    assert any("top_p" in check["message"] for check in refused["checks"])

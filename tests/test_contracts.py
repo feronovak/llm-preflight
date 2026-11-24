@@ -908,3 +908,115 @@ def test_routes_fingerprint_hashes_temperature_support_as_sent_not_as_spelled():
         )
         == 1
     )
+
+
+_STARTER_REQUEST = {
+    "temperature": 0,
+    "max_output_tokens": 128,
+    "provider_options": {"mistral": {"top_p": 1}},
+}
+_OPENAI = {"provider": "openai", "model": "gpt-5.5", "api_key_env": "K"}
+_MISTRAL_MEDIUM = {
+    "provider": "mistral",
+    "model": "mistral-medium-3",
+    "api_key_env": "M",
+}
+_MISTRAL_LARGE_4 = {"provider": "mistral", "model": "mistral-large-4"}
+_PINNED_AGENT_SMOKE_REQUESTS = [
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",  # pragma: allowlist secret
+    "bacb296fbffe72517a1968103c237686e53dbd3a3ae7e29cfc53fd5406ea0678",  # pragma: allowlist secret
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "ef818281119e3c598b0bf4c1c9079c8941623b33793c0214f200048791eb1456",  # pragma: allowlist secret
+    "ea99718f0b030820e9e48e9875cc67c6ce31f016b43e27f5e2fbc3a2b06a2c53",  # pragma: allowlist secret
+]
+
+
+def _agent_smoke_provenance(models, request=None):
+    from llm_preflight.runner import resolve_models, selected_profiles
+
+    config = {
+        "models": models,
+        "request": copy.deepcopy(request or _STARTER_REQUEST),
+        "prompt": "Say ok",
+        "profiles": "agent-smoke",
+    }
+    return provenance(
+        config, resolve_models(config), "", selected_profiles(config, "agent-smoke")
+    )
+
+
+@pytest.mark.parametrize(
+    "models, evidence",
+    [
+        (
+            [_OPENAI],
+            "ef5d75242d21f9daa20a0c8addec4869ea8b8ae4926bad604653a80c55b5b2d3",  # pragma: allowlist secret
+        ),
+        (
+            [_OPENAI, _MISTRAL_MEDIUM],
+            "7ef147f1db4663981a4106539b6a1e815dd5878b44493433fb71c747aba0151a",  # pragma: allowlist secret
+        ),
+    ],
+)
+def test_builtin_test_request_sha256_unchanged_without_mistral_large_4_route(
+    models, evidence
+):
+    # Hashes computed on origin/main before PREFL-273.
+    result = _agent_smoke_provenance(models)
+    assert [p["request_sha256"] for p in result["prompts"]] == (
+        _PINNED_AGENT_SMOKE_REQUESTS
+    )
+    assert result["evidence_sha256"] == evidence
+
+
+def _builtin_options(request, keep, presets=None):
+    from llm_preflight.contracts import profile_request_options
+    from llm_preflight.runner import selected_profiles
+
+    profile = selected_profiles({"profiles": "agent-smoke"}, "agent-smoke")[0]
+    return profile_request_options(request, profile, presets, keep_mistral_top_p=keep)
+
+
+def test_builtin_structured_test_keeps_mistral_top_p_for_mistral_large_4():
+    options = _builtin_options(_STARTER_REQUEST, True)
+    assert options["provider_options"]["mistral"]["top_p"] == 1
+    assert options["temperature"] == 0
+    assert options["provider_options"]["cohere"]["response_format"] == {
+        "type": "json_object"
+    }
+    assert options["max_output_tokens"] == 256
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [
+        {"temperature": 0},
+        {"provider_options": {"all": {"top_p": 1}}},
+        {"top_p": 1},
+        {"provider_options": {"mistral": {"top_p": 1}, "openai": {"user": "x"}}},
+    ],
+)
+def test_builtin_test_carries_only_the_mistral_top_p_key(request_options):
+    options = _builtin_options(request_options, True)
+    mistral = options["provider_options"].get("mistral", {})
+    expected = request_options.get("provider_options", {}).get("mistral", {})
+    assert mistral.get("top_p") == expected.get("top_p")
+    assert "all" not in options["provider_options"]
+    assert options.get("top_p") == request_options.get("top_p")
+    assert "user" not in options["provider_options"].get("openai", {})
+
+
+def test_builtin_test_without_the_flag_drops_mistral_top_p():
+    assert "top_p" not in _builtin_options(_STARTER_REQUEST, False)[
+        "provider_options"
+    ].get("mistral", {})
+
+
+def test_custom_prompt_request_unchanged_by_mistral_top_p_rule():
+    from llm_preflight.contracts import profile_request_options
+
+    profile = {"_custom_prompt": True, "request": {"temperature": 0.2}}
+    assert profile_request_options(
+        _STARTER_REQUEST, profile, keep_mistral_top_p=True
+    ) == profile_request_options(_STARTER_REQUEST, profile)

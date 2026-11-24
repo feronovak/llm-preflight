@@ -5634,3 +5634,31 @@ def test_interactive_changed_since_preview_shows_the_ignored_owner_price(
     monkeypatch.setattr(sys, "argv", [*argv, "--changed-since", str(previous)])
     cli.main()
     assert "owner cached_input_cost_per_million 0.9 ignored" in capsys.readouterr().err
+
+
+def test_dry_run_agent_smoke_on_mistral_large_4_with_top_p_one_exits_0(
+    monkeypatch, tmp_path, capsys
+):
+    config = tmp_path / "benchmark.json"
+    config.write_text(
+        json.dumps(
+            {
+                "prompt": "hello",
+                "models": [{"provider": "mistral", "model": "mistral-large-4"}],
+                "request": {
+                    "temperature": 0,
+                    "max_output_tokens": 128,
+                    "provider_options": {"mistral": {"top_p": 1}},
+                },
+                "warmups": 0,
+            }
+        )
+    )
+    monkeypatch.setenv("MISTRAL_API_KEY", "test")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["llm-preflight", str(config), "--tests", "agent-smoke", "--dry-run"],
+    )
+    cli.main()
+    assert "mistral-large-4" in capsys.readouterr().out

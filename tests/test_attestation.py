@@ -2558,3 +2558,27 @@ def test_current_fingerprints_with_a_numeric_base_prompt_and_selected_prompt(tmp
     current = attestation.current_fingerprints(path, {"prompt": "a"})
 
     assert len(current["contract_sha256"]) == 64
+
+
+def test_current_fingerprints_match_run_provenance_for_mistral_large_4_builtin_tests(
+    tmp_path,
+):
+    from llm_preflight.runner import selected_profiles
+
+    config = {
+        "prompt": "hi",
+        "models": [{"provider": "mistral", "model": "mistral-large-4"}],
+        "request": {
+            "temperature": 0,
+            "max_output_tokens": 128,
+            "provider_options": {"mistral": {"top_p": 1}},
+        },
+    }
+    path = _config(tmp_path, config)
+    profiles = selected_profiles(config, "agent-smoke")
+    models = resolve_pricing(resolve_models(config))["models"]
+    run = provenance(config, models, "", profiles)
+    current = attestation.current_fingerprints(path, {"tests": "agent-smoke"})
+    assert sorted(e["request_sha256"] for e in current["prompts"]) == sorted(
+        e["request_sha256"] for e in run["prompts"]
+    )

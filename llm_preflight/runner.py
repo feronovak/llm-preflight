@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, TypeGuard
 
 from .catalog import resolve_models
-from .client import create_client, observed_model
+from .client import create_client, needs_mistral_top_p, observed_model
 from .contracts import (
     DEFAULT_REQUEST,
     check_contract,
@@ -758,6 +758,7 @@ def _run_profiles(
     warmups: int,
     warmup_samples: list[dict[str, Any]],
     on_complete: Callable[[dict[str, Any], str], None] | None = None,
+    keep_mistral_top_p: bool = False,
 ) -> list[dict[str, Any]]:
     repetitions = int(config.get("suite_repetitions", 1))
     save_responses = config.get("save_responses", False)
@@ -765,7 +766,10 @@ def _run_profiles(
     for profile in profiles:
         progress_callback = _profile_progress_callback(on_complete, profile["name"])
         options = profile_request_options(
-            request_options, profile, config.get("presets")
+            request_options,
+            profile,
+            config.get("presets"),
+            keep_mistral_top_p=keep_mistral_top_p,
         )
         if options.get("input_images"):
             options["_image_base_dir"] = config.get("_config_dir")
@@ -993,6 +997,7 @@ def run_benchmark(
                 warmups,
                 warmup_samples,
                 on_complete=report_sample,
+                keep_mistral_top_p=needs_mistral_top_p(models),
             )
             if profiles
             else []

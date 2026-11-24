@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from .client import _supports_temperature
+from .client import _supports_temperature, needs_mistral_top_p
 from .presets import expand_presets
 from .profiles import (
     OUTPUT_VALIDATOR_VERSION,
@@ -427,7 +427,7 @@ def provenance(
     values masked; a string kept as text, such as a prompt name, is redacted
     before it is hashed, so the evidence hash covers exactly what is stored.
     """
-    prompts = _prompt_fingerprints(config, profiles)
+    prompts = _prompt_fingerprints(config, profiles, models)
     clean_config = without_private_fields(config)
     contract = {
         "validator_version": OUTPUT_VALIDATOR_VERSION,
@@ -481,17 +481,44 @@ def provenance(
     return result
 
 
+def _with_mistral_top_p(
+    profile_request: dict[str, Any], run_request: dict[str, Any]
+) -> dict[str, Any]:
+    """Copy the run request's Mistral ``top_p`` into a profile's provider options."""
+    run_options = run_request.get("provider_options")
+    run_mistral = run_options.get("mistral") if isinstance(run_options, dict) else None
+    provider_options = profile_request.get("provider_options")
+    if (
+        not isinstance(run_mistral, dict)
+        or "top_p" not in run_mistral
+        or not isinstance(provider_options, dict)
+    ):
+        return profile_request
+    mistral = provider_options.get("mistral", {})
+    if not isinstance(mistral, dict):
+        return profile_request
+    merged = {"top_p": run_mistral["top_p"], **mistral}
+    return {
+        **profile_request,
+        "provider_options": {**provider_options, "mistral": merged},
+    }
+
+
 def profile_request_options(
     request: dict[str, Any],
     profile: dict[str, Any],
     presets: Sequence[str] | None = None,
+    *,
+    keep_mistral_top_p: bool = False,
 ) -> dict[str, Any]:
     """The request options sent with every case of a profile.
 
     A built-in test, or any profile not marked ``_custom_prompt``, runs the
     same every time: its presets expand into its own request, which then
     replaces the run request's keys. Top-level presets reach it only through
-    the run request.
+    the run request. With ``keep_mistral_top_p`` (the run has a Mistral Large 4
+    route), a built-in test's ``provider_options.mistral`` also takes the run
+    request's ``top_p`` unless its presets set one; nothing else carries over.
 
     A custom prompt (marked ``_custom_prompt``) keeps explicit values: its
     request fields replace the run request, then its presets and top-level
@@ -511,6 +538,8 @@ def profile_request_options(
     else:
         if profile_presets:
             profile_request = expand_presets(profile_request, profile_presets)
+        if keep_mistral_top_p:
+            profile_request = _with_mistral_top_p(profile_request, request)
         options.update(profile_request)
     if profile.get("system_prompt"):
         options["system_prompt"] = profile["system_prompt"]
@@ -518,11 +547,14 @@ def profile_request_options(
 
 
 def _prompt_fingerprints(
-    config: dict[str, Any], profiles: Sequence[dict[str, Any]]
+    config: dict[str, Any],
+    profiles: Sequence[dict[str, Any]],
+    models: Sequence[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Fingerprint each prompt the run sent, and the request sent with it, once."""
     request = config.get("request", DEFAULT_REQUEST)
     prompts: list[tuple[str, str, dict[str, Any]]] = []
+    keep_top_p = needs_mistral_top_p(models)
     if profiles:
         # A profile run sends every case of every selected profile, a custom
         # prompt as one case under its own name, and never the top-level prompt.
@@ -530,7 +562,12 @@ def _prompt_fingerprints(
             (
                 case["id"],
                 case["prompt"],
-                profile_request_options(request, profile, config.get("presets")),
+                profile_request_options(
+                    request,
+                    profile,
+                    config.get("presets"),
+                    keep_mistral_top_p=keep_top_p,
+                ),
             )
             for profile in profiles
             for case in profile["cases"]

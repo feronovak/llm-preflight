@@ -122,10 +122,10 @@ def test_mai_thinking_1_retirement_row():
     assert PUBLIC_RETIREMENTS[("foundry", "mai-thinking-1")] == {
         "status": "deprecated",
         "retirement_date": "2027-03-02",
-        "as_of": "2026-11-19",
+        "as_of": "2026-11-26",
         "source_url": FOUNDRY_RETIREMENTS_URL,
     }
-    now = retirement_verdict("foundry", "MAI-Thinking-1", date(2026, 11, 19))
+    now = retirement_verdict("foundry", "MAI-Thinking-1", date(2026, 11, 26))
     assert (now["status"], now["decision"]) == ("retiring", "inconclusive")
     assert "replacement" not in now
     last = retirement_verdict("foundry", "MAI-Thinking-1", date(2027, 3, 2))

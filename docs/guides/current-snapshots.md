@@ -14,9 +14,10 @@ The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 `claude-opus-4-5-20251101`, `claude-opus-4-6`, `claude-opus-4-7`,
 `claude-sonnet-4-6`, `deepseek-flash`, `deepseek-v4-flash`,
 `deepseek-v4-flash-vision-exp` and `deepseek-v4-pro` rows were reviewed on
-2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` and Foundry
-`mai-thinking-1` retirement rows were reviewed on 2026-11-19 and become stale
-on 2026-12-20. The `claude-haiku-4-5-20251001` and `claude-opus-4-8` rows were
+2026-11-17 and become stale on 2026-12-18. The `gemini-4-neon` retirement row was
+reviewed on 2026-11-19 and becomes stale on 2026-12-20; the Foundry
+`mai-thinking-1` retirement row was reviewed on 2026-11-26 and becomes stale on
+2026-12-27. The `claude-haiku-4-5-20251001` and `claude-opus-4-8` rows were
 reviewed on 2026-11-23 and become stale on 2026-12-24. Every other row was
 reviewed on 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.

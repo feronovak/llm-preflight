@@ -442,12 +442,18 @@ def test_current_release_refreshes_every_reviewed_snapshot_row():
     assert {row["as_of"] for row in PUBLIC_RETIREMENTS.values()} == {
         "2026-11-18",
         "2026-11-19",
+        "2026-11-26",
     }
-    assert {
-        model
-        for (_, model), row in PUBLIC_RETIREMENTS.items()
-        if row["as_of"] == "2026-11-19"
-    } == {"gemini-4-neon", "mai-thinking-1"}
+
+    def retired_on(day):
+        return {
+            model
+            for (_, model), row in PUBLIC_RETIREMENTS.items()
+            if row["as_of"] == day
+        }
+
+    assert retired_on("2026-11-19") == {"gemini-4-neon"}
+    assert retired_on("2026-11-26") == {"mai-thinking-1"}
 
 
 def test_current_typesafe_catalog_snapshot_is_priced_but_not_text_callable():

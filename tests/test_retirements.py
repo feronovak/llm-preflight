@@ -565,7 +565,7 @@ def test_no_recorded_replacement_is_itself_deprecated_or_retired():
 def test_release_retirement_review_date_and_exact_freshness_boundary():
     summary = snapshot_summary()
     assert summary["oldest_as_of"] == "2026-11-18"
-    assert summary["newest_as_of"] == "2026-11-19"
+    assert summary["newest_as_of"] == "2026-11-26"
     assert (
         retirement_verdict("anthropic", "claude-sonnet-5-5", date(2026, 12, 18))[
             "decision"

@@ -314,7 +314,7 @@ _GEMINI = {
 # follow Azure's own dates and are not represented. The page names no
 # replacement for this row.
 _FOUNDRY: dict[str, dict[str, Any]] = {
-    "mai-thinking-1": _foundry("deprecated", "2027-03-02", as_of="2026-11-19"),
+    "mai-thinking-1": _foundry("deprecated", "2027-03-02", as_of="2026-11-26"),
 }
 
 PUBLIC_RETIREMENTS: dict[tuple[str, str], dict[str, Any]] = {

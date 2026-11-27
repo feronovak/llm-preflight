@@ -19,6 +19,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- The seven `xai` rows (`grok-4.3`, `grok-4.20-0309-reasoning`, `grok-4.20-0309-non-reasoning`, `grok-4.20-multi-agent-0309`, `grok-4.5`, `grok-4.6`, `grok-4.7`) were re-reviewed against the official pricing page on 2026-11-27; prices and the 200,000-token long-context threshold are unchanged, and they now become stale on 2026-12-28. Breaking: approval receipts recorded for a plan that names an xAI model before this change verify as `mismatch` (`--dry-run --verify-approval-receipt` exits 1 where it exited 0), because the pricing review date is part of the plan; record them again with `--dry-run --approval-receipt --replace-approval-receipt`.
 - `--change-plan` reads a staged file with the explicit stage `:0:<path>`, so a staged file whose name starts like a stage prefix (`0:foo.py`) is no longer read as another path (`foo.py`) and its model ID is reported.
 - Terminal text for a retiring model with no recorded retirement date now says `(date not recorded)`, as retired rows and the report do, instead of `date to be announced`.
 - Measured `gemini-4-neon` on 2026-11-19 (eight cases, same method as 2026-10-29): 8/8 valid, $0.024972, mean latency 15.874s. The README table, comparison guide and results image now show 30 models; 233 of 240 checks passed and 27 models passed all eight.

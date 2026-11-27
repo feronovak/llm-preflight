@@ -18,7 +18,9 @@ The `gpt-5.6-sol` row was reviewed on 2026-11-04 UTC and becomes stale on
 reviewed on 2026-11-19 and becomes stale on 2026-12-20; the Foundry
 `mai-thinking-1` retirement row was reviewed on 2026-11-26 and becomes stale on
 2026-12-27. The `claude-haiku-4-5-20251001` and `claude-opus-4-8` rows were
-reviewed on 2026-11-23 and become stale on 2026-12-24. Every other row was
+reviewed on 2026-11-23 and become stale on 2026-12-24. The seven `xai` rows
+(`grok-4.3`, the three `grok-4.20-0309` rows, `grok-4.5`, `grok-4.6` and
+`grok-4.7`) were reviewed on 2026-11-27 and become stale on 2026-12-28. Every other row was
 reviewed on 2026-11-18 and becomes stale on 2026-12-19. Explicit owner overrides
 retain their own evidence and review dates.
 
@@ -120,13 +122,13 @@ Responses API, so a run needs `adapter: openai_responses`.
 | `gemini` | `gemini-3.6-flash` | 0.75 | 3.75 | 2026-11-18 |
 | `gemini` | `gemini-3.1-pro-preview` | 2.00 | 12.00 | 2026-11-18 |
 | `gemini` | `gemini-3.1-flash-lite` | 0.25 | 1.50 | 2026-11-18 |
-| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-18 |
-| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-18 |
-| `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-18 |
+| `xai` | `grok-4.7` | 2.00 | 6.00 | 2026-11-27 |
+| `xai` | `grok-4.6` | 2.00 | 6.00 | 2026-11-27 |
+| `xai` | `grok-4.5` | 2.00 | 6.00 | 2026-11-27 |
+| `xai` | `grok-4.3` | 1.25 | 2.50 | 2026-11-27 |
+| `xai` | `grok-4.20-0309-reasoning` | 1.25 | 2.50 | 2026-11-27 |
+| `xai` | `grok-4.20-0309-non-reasoning` | 1.25 | 2.50 | 2026-11-27 |
+| `xai` | `grok-4.20-multi-agent-0309` | 1.25 | 2.50 | 2026-11-27 |
 | `deepseek` | `deepseek-flash` | 0.30 | 1.20 | 2026-11-17 |
 | `deepseek` | `deepseek-v4-flash` | 0.30 | 1.20 | 2026-11-17 |
 | `deepseek` | `deepseek-v4-flash-vision-exp` | 0.30 | 1.20 | 2026-11-17 |
@@ -153,7 +155,8 @@ DeepSeek rows use peak rates (input, cache hit, output); off-peak is half. Qwen 
 Qwen 3.7 Plus source currently shows a temporary 20% discount, so this snapshot
 is a conservative estimate for that model. It has a higher band above 256k
 input. GPT-5.5, GPT-6 and several Grok/Gemini IDs have long-context bands.
-Grok's long-context band starts at 200,000 input tokens. GPT-6.1 Sol
+Grok's higher rate applies to the whole request once the prompt, cached
+tokens included, reaches 200,000 input tokens. GPT-6.1 Sol
 has a $0.10 cached-input rate for up to 272k input tokens and $0.20 above
 that threshold. See
 [`pricing.py`](../../llm_preflight/pricing.py) and

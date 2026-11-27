@@ -258,6 +258,45 @@ def test_grok_long_context_rate_starts_at_200000_tokens(
 
 
 @pytest.mark.parametrize(
+    ("model_id", "short_rates", "long_rates"),
+    [
+        ("grok-4.3", (1.25, 0.2, 2.5), (2.5, 0.4, 5.0)),
+        ("grok-4.20-0309-reasoning", (1.25, 0.2, 2.5), (2.5, 0.4, 5.0)),
+        ("grok-4.20-0309-non-reasoning", (1.25, 0.2, 2.5), (2.5, 0.4, 5.0)),
+        ("grok-4.20-multi-agent-0309", (1.25, 0.2, 2.5), (2.5, 0.4, 5.0)),
+        ("grok-4.5", (2.0, 0.3, 6.0), (4.0, 0.6, 12.0)),
+        ("grok-4.6", (2.0, 0.5, 6.0), (4.0, 1.0, 12.0)),
+        ("grok-4.7", (2.0, 0.5, 6.0), (4.0, 1.0, 12.0)),
+    ],
+)
+def test_grok_long_context_tier_counts_cached_prompt_tokens(
+    model_id, short_rates, long_rates
+):
+    model = apply_public_pricing({"provider": "xai", "model": model_id})
+
+    def cost(input_tokens, rates):
+        fresh_rate, cached_rate, output_rate = rates
+        fresh = input_tokens - 150_000
+        return (
+            fresh * fresh_rate + 150_000 * cached_rate + 100 * output_rate
+        ) / 1_000_000
+
+    def sample(input_tokens):
+        return {
+            "input_tokens": input_tokens,
+            "cached_input_tokens": 150_000,
+            "output_tokens": 100,
+        }
+
+    assert estimate_sample_cost(sample(199_999), model) == pytest.approx(
+        cost(199_999, short_rates)
+    )
+    assert estimate_sample_cost(sample(200_000), model) == pytest.approx(
+        cost(200_000, long_rates)
+    )
+
+
+@pytest.mark.parametrize(
     "model_id",
     [
         "grok-4.20-0309-reasoning",
@@ -723,7 +762,7 @@ def test_grok_4_7_uses_official_200k_breakpoint():
         "output_cost_per_million": 12.0,
         "cached_input_cost_per_million": 1.0,
     }
-    assert model["pricing_metadata"]["as_of"] == "2026-11-18"
+    assert model["pricing_metadata"]["as_of"] == "2026-11-27"
 
 
 def test_claude_fable_5_1_official_snapshot_pricing():
@@ -834,13 +873,13 @@ def test_public_pricing_snapshot_is_reviewed_for_this_release():
         ("anthropic", "claude-sonnet-4-6"): (3.0, 15.0, "2026-11-17"),
         ("anthropic", "claude-opus-5"): (5.0, 25.0, "2026-11-18"),
         ("anthropic", "claude-opus-5-5"): (4.0, 20.0, "2026-11-18"),
-        ("xai", "grok-4.3"): (1.25, 2.5, "2026-11-18"),
-        ("xai", "grok-4.20-0309-reasoning"): (1.25, 2.5, "2026-11-18"),
-        ("xai", "grok-4.20-0309-non-reasoning"): (1.25, 2.5, "2026-11-18"),
-        ("xai", "grok-4.20-multi-agent-0309"): (1.25, 2.5, "2026-11-18"),
-        ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-18"),
-        ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-18"),
-        ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-18"),
+        ("xai", "grok-4.3"): (1.25, 2.5, "2026-11-27"),
+        ("xai", "grok-4.20-0309-reasoning"): (1.25, 2.5, "2026-11-27"),
+        ("xai", "grok-4.20-0309-non-reasoning"): (1.25, 2.5, "2026-11-27"),
+        ("xai", "grok-4.20-multi-agent-0309"): (1.25, 2.5, "2026-11-27"),
+        ("xai", "grok-4.5"): (2.0, 6.0, "2026-11-27"),
+        ("xai", "grok-4.6"): (2.0, 6.0, "2026-11-27"),
+        ("xai", "grok-4.7"): (2.0, 6.0, "2026-11-27"),
         ("deepseek", "deepseek-flash"): (0.3, 1.2, "2026-11-17"),
         ("deepseek", "deepseek-v4-flash"): (0.3, 1.2, "2026-11-17"),
         ("deepseek", "deepseek-v4-flash-vision-exp"): (0.3, 1.2, "2026-11-17"),
